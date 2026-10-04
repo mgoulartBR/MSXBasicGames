@@ -25,7 +25,7 @@ static void prompt(u8 row, u8 color, const char* a, const char* b)
 {
 	char buf[48];
 	char* p = buf;
-	const char* s = "[SPACE]  ";
+	const char* s = g_MouseOn ? "[CLICK]  " : "[SPACE]  ";
 	while (*s) *p++ = *s++;
 	while (*a) *p++ = *a++;
 	if (b)
@@ -54,14 +54,18 @@ void Ui_ShowPages(const char* msg, u8 col, u8 row0, u8 rows, u8 wtiles, u8 color
 			if (s_Lines[li].len)
 				Gfx_TextLine(col, row0 + i, wtiles, 1, msg + s_Lines[li].start, s_Lines[li].len, color);
 		}
-		if (page + 1 < pages)
-			prompt(promptRow, promptColor, "More...", 0);
-		else
-			prompt(promptRow, promptColor, finalLabel, 0);
+		const char* label = (page + 1 < pages) ? "More..." : finalLabel;
+		u8 lastMouse = g_MouseOn;
+		prompt(promptRow, promptColor, label, 0);
 		Ui_WaitRelease();
 		for (;;)
 		{
 			Ui_Frame();
+			if (g_MouseOn != lastMouse) // input device changed: SPACE <-> CLICK
+			{
+				lastMouse = g_MouseOn;
+				prompt(promptRow, promptColor, label, 0);
+			}
 			if (g_Push & IN_A)
 				break;
 		}

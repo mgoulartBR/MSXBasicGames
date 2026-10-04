@@ -3,6 +3,29 @@
 #include "logic.h"
 #include "../data/gfx_data.h"
 
+// Control hints and start prompt follow the active device (keyboard/joystick or mouse)
+static void title_controls(void)
+{
+	Gfx_FillPattern(15, 15, 17, 3, 0, 0);
+	if (g_MouseOn)
+	{
+		Gfx_Text(15, 15, 17, "Mouse: point to select", CT_INK);
+		Gfx_Text(15, 16, 17, "Left click: confirm", CT_INK);
+		Gfx_Text(15, 17, 17, "Right click: back", CT_INK);
+	}
+	else
+	{
+		Gfx_Text(15, 15, 17, "Arrows / joystick: move", CT_INK);
+		Gfx_Text(15, 16, 17, "SPACE / button A: confirm", CT_INK);
+		Gfx_Text(15, 17, 17, "ESC / TAB / button B: back", CT_INK);
+	}
+}
+
+static const char* start_text(void)
+{
+	return g_MouseOn ? "Click to start" : "Press SPACE to start";
+}
+
 u8 Scr_Title(void)
 {
 	Seg_Set(SEG_GFX);
@@ -14,23 +37,29 @@ u8 Scr_Title(void)
 	Gfx_Text(15, 10, 17, "Lucas Pope (@dukope)", CT_INK);
 	Gfx_Text(15, 12, 17, "MSX port by", CT_INK);
 	Gfx_TextCenter(15, 13, 17, "BIGFIVE STUDIOS", CT_INV);
-	Gfx_Text(15, 15, 17, "Arrows / joystick: move", CT_INK);
-	Gfx_Text(15, 16, 17, "SPACE / button A: confirm", CT_INK);
-	Gfx_Text(15, 17, 17, "ESC / TAB / button B: back", CT_INK);
+	title_controls();
 	Gfx_TextCenter(0, 22, 32, "Unofficial fan port. Non-commercial.", CT_INK);
 	Gfx_Text(0, 23, 32, "MSX1  64K ROM (ASCII8)  v" GAME_VERSION, CT_INK);
 	Gfx_Display(TRUE);
 	Music_Play(MUSIC_MORNING);
 
 	u16 t = 0;
-	Gfx_TextCenter(0, 20, 32, "Press SPACE to start", CT_INK);
+	u8 lastMouse = g_MouseOn;
+	Gfx_TextCenter(0, 20, 32, start_text(), CT_INK);
 	Ui_WaitRelease();
 	for (;;)
 	{
 		Ui_Frame();
 		++t;
+		if (g_MouseOn != lastMouse)
+		{
+			lastMouse = g_MouseOn;
+			title_controls();
+			t |= 31; // force a prompt redraw this frame
+			t &= ~32;
+		}
 		if (!(t & 31))
-			Gfx_TextCenter(0, 20, 32, (t & 32) ? "" : "Press SPACE to start", CT_INK);
+			Gfx_TextCenter(0, 20, 32, (t & 32) ? "" : start_text(), CT_INK);
 		if (g_Push & IN_A)
 			break;
 	}

@@ -12,5 +12,5 @@ rm -f screenshots/*.png
 if [ "$1" != "quick" ]; then ./scripts/test_morning.sh; fi
 ./scripts/test_mouse.sh
 python3 tests/check_shots.py 01_title 02_morning 03_play_feed 04_place_big 05_placed 06_two_articles \
-  08_endday_selected 09_popup 20_mouse_hover 21_mouse_place 22_mouse_placed 23_mouse_repick 24_mouse_discard 10_night_p1 11_morning_day2 \
+  08_endday_selected 09_popup 20_mouse_hover 21_mouse_place 22_mouse_placed 23_mouse_repick 24_mouse_discard 30_title_mouse 31_morning_mouse 32_play_mouse_hint 33_popup_mouse 10_night_p1 11_morning_day2 \
   $( [ "$1" != "quick" ] && echo m_d4_p1 m_d4f_p1 m_d6_p1 m_d8_p1 m_d11w_p1 m_d11l_p1 )

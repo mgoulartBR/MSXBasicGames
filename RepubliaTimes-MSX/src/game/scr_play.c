@@ -58,6 +58,7 @@ static u8 s_FpX, s_FpY, s_FpW, s_FpH; // painted footprint (tile rect), 0 width 
 static u16 s_Time;
 static u16 s_TickInc;
 static u8 s_LastFrame;
+static u8 s_LastMouse; // g_MouseOn as of the last hint redraw
 static u8 s_Speed10;           // End Day pressed
 static bool s_AlarmDone;
 static bool s_Over;
@@ -413,7 +414,7 @@ static void panel_draw(void)
 	{
 		panel_line(18, "Placing article. Pick a spot on the paper:", CT_INK);
 		panel_line(20, s_Label[s_PickSlot], CT_INK);
-		panel_hint("ARROWS:move  SPACE:drop  ESC:discard");
+		panel_hint(g_MouseOn ? "MOVE:aim  CLICK:drop  RIGHT CLICK:discard" : "ARROWS:move  SPACE:drop  ESC:discard");
 		return;
 	}
 	if (s_Mode == MODE_PAPER)
@@ -427,7 +428,7 @@ static void panel_draw(void)
 	{
 		panel_line(18, "End the day now: time runs 10x faster and", CT_INK);
 		panel_line(19, "the paper goes to print.", CT_INK);
-		panel_hint("UP:feed  SPACE:end day  ESC:paper");
+		panel_hint(g_MouseOn ? "CLICK:end day" : "UP:feed  SPACE:end day  ESC:paper");
 		return;
 	}
 	const char* t = s_Blurb[s_FeedSel];
@@ -438,14 +439,19 @@ static void panel_draw(void)
 	if (g_News[s_FeedItem[s_FeedSel]].head)
 	{
 		panel_size_selector();
-		panel_hint("UP/DN:item LT/RT:size SPACE:place ESC:paper");
+		panel_hint(g_MouseOn ? "POINT:item  CLICK SIZE  CLICK ITEM:place" : "UP/DN:item LT/RT:size SPACE:place ESC:paper");
 	}
 	else
-		panel_hint("UP/DN:item   (no article for this message)");
+		panel_hint(g_MouseOn ? "POINT:item   (no article for this message)" : "UP/DN:item   (no article for this message)");
 }
 
 //-----------------------------------------------------------------------------
 // Game flow
+
+static void popup_button(void)
+{
+	Gfx_TextCenter(7, 13, 18, g_MouseOn ? "[CLICK]  Send to Print" : "[SPACE]  Send to Print", CT_INK);
+}
 
 static void popup_dayover(void)
 {
@@ -455,7 +461,7 @@ static void popup_dayover(void)
 	Gfx_TextCenter(5, 9, 22, "The day is over. There is no", CT_INV);
 	Gfx_TextCenter(5, 10, 22, "more time. We must send to", CT_INV);
 	Gfx_TextCenter(5, 11, 22, "print immediately.", CT_INV);
-	Gfx_TextCenter(7, 13, 18, "[SPACE]  Send to Print", CT_INK);
+	popup_button();
 }
 
 static void summarize(void)
@@ -762,6 +768,7 @@ u8 Scr_Play(void)
 	s_Over = FALSE;
 	s_TickInc = Sys_Is60Hz() ? 10 : 12; // 1/600 s units per frame
 	s_LastFrame = g_Frames;
+	s_LastMouse = g_MouseOn;
 	Day_Generate(g_Game.day);
 
 	feed_draw();
@@ -805,6 +812,11 @@ u8 Scr_Play(void)
 
 		if (s_Over)
 		{
+			if (g_MouseOn != s_LastMouse)
+			{
+				s_LastMouse = g_MouseOn;
+				popup_button();
+			}
 			if (g_Push & IN_A)
 				break;
 			continue;
@@ -830,6 +842,11 @@ u8 Scr_Play(void)
 		}
 
 		// --- input
+		if (g_MouseOn != s_LastMouse) // SPACE/arrows hints <-> CLICK hints
+		{
+			s_LastMouse = g_MouseOn;
+			panel_draw();
+		}
 		if (g_MouseOn)
 			mouse_pre();
 		switch (s_Mode)
