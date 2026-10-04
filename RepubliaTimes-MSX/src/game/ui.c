@@ -7,11 +7,10 @@ void Ui_Frame(void)
 {
 	Halt(); // wait for the next VBlank (the hook has sampled input / run audio)
 	Input_Update();
+	Pointer_Update(g_MouseOn, g_MouseX, g_MouseY);
 	if (g_Push & IN_MUTE)
 	{
-		static bool muted;
-		muted = !muted;
-		Audio_Mute(muted);
+		Audio_Mute(!Audio_IsMuted());
 	}
 }
 

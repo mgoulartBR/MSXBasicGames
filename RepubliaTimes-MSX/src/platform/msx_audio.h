@@ -20,3 +20,4 @@ void Audio_Update(void); // called by the VBlank hook (ISR) once per frame; the 
 void Sfx_Play(u8 id);
 void Music_Play(u8 id);
 void Audio_Mute(bool mute);
+bool Audio_IsMuted(void);

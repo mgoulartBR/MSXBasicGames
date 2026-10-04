@@ -80,6 +80,11 @@ void Audio_Mute(bool mute)
 	s_Mute = mute;
 }
 
+bool Audio_IsMuted(void)
+{
+	return s_Mute;
+}
+
 void Sfx_Play(u8 id)
 {
 	if (id != SFX_NONE && id <= SFX_ERROR)
