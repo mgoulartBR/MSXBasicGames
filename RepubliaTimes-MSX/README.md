@@ -21,9 +21,9 @@ the original source; graphics were converted/adapted to print on a 256×192 scre
 ## Controls
 | action | keyboard | joystick |
 |---|---|---|
-| move / select | cursor keys | stick (port 1 or 2) |
-| confirm, pick up, drop | SPACE or RETURN | button A |
-| cancel / discard / switch feed↔paper | ESC or TAB | button B |
+| move / select | cursor keys or **MSX mouse** | stick (port 1 or 2) |
+| confirm, pick up, drop | SPACE or RETURN, mouse left button | button A |
+| cancel / discard / switch feed↔paper | ESC or TAB, mouse right button | button B |
 | sound on/off | M | – |
 
 In the **feed**: ↑/↓ choose a news item (the bottom panel shows the whole text), ←/→ choose the
@@ -31,6 +31,8 @@ article size (BIG 3×3, MED 2×2, SMALL 1×2 cells), `A` picks it up. In **place
 footprint over the 4×5 grid (green = free, red = overlapping), `A` drops, `B` discards. `B` in the
 feed switches to **paper mode** to pick placed articles up again. Select **End Day** (below the last
 feed item) to speed time up ×10. Longer briefings are paged with `A`.
+
+**Mouse** (MSX mouse in joystick port 1 or 2; plug it in *before* powering on / resetting and leave it still on the title screen so it is detected): a hand pointer appears as soon as the mouse moves. Hover a feed item to select it, click the BIG/MED/SMALL block at the bottom to choose the size, click the item to pick it up, move over the paper (the green/red footprint follows the pointer), left-click to drop, right-click or click outside the paper to discard. Click a placed article to pick it up again; click **End Day** to speed the day up. Pressing any keyboard key or joystick button hides the pointer and returns to the pad model.
 
 Loyalty goals, article size multipliers (×1 / ×3 / ×6), "interesting" topics (war, sports,
 entertainment, weather) and the rebel path work exactly as in the original; the in-game briefings

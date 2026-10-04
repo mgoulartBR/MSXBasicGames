@@ -14,7 +14,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000000  l__CABS                         
      00000000  l__DABS                         
      00000000  l__GSFINAL                      
-     00000000  l__GSINIT                       
      00000000  l__HEADER                       
      00000000  l__HEADER0                      
      00000000  l__HEAP                         
@@ -25,32 +24,33 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000000  s__HEADER0                      
      00000002  _g_STRSRC                          bios
      00000004  _g_CGTABL                          system
+     00000005  l__GSINIT                       
      00000006  _g_VDP_DR                          system
      00000007  _g_VDP_DW                          system
-     0000001E  l__INITIALIZED                  
-     0000001E  l__INITIALIZER                  
+     00000021  l__INITIALIZED                  
+     00000021  l__INITIALIZER                  
      0000002B  _g_BASRVN                          system
      0000002B  _g_ROMVersion                      system
      0000002D  _g_MSXVER                          system
      0000002E  _g_MSXMID                          system
      00000034  _g_CHAR_16                         system
      000001F6  l__HOME                         
-     000018E6  l__DATA                         
+     000018FB  l__DATA                         
      000018FC  l__SEG6                         
      00001B30  l__SEG5                         
      00001BAC  l__SEG4                         
      00004000  s__CODE                         
-     00004C8E  l__CODE                         
-     00008C8E  s__HOME                         
-     00008E84  s__INITIALIZER                  
-     00008E84  s__RODATA                       
-     00008EA2  s__GSFINAL                      
-     00008EA2  s__GSINIT                       
+     000054D9  l__CODE                         
+     000094D9  s__HOME                         
+     000096CF  s__INITIALIZER                  
+     000096CF  s__RODATA                       
+     000096F0  s__GSINIT                       
+     000096F5  s__GSFINAL                      
      0000C000  s__DATA                         
-     0000D8E6  s__INITIALIZED                  
-     0000D904  s__BSEG                         
-     0000D904  s__BSS                          
-     0000D904  s__HEAP                         
+     0000D8FB  s__INITIALIZED                  
+     0000D91C  s__BSEG                         
+     0000D91C  s__BSS                          
+     0000D91C  s__HEAP                         
      0000F30F  _g_KANJTABLE                       bios
      0000F323  _g_DISKVE                          bios
      0000F325  _g_BREAKV                          bios
@@ -288,7 +288,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00004C8E =       19598. bytes (REL,CON)
+_CODE                               00004000    000054D9 =       21721. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -298,204 +298,219 @@ _CODE                               00004000    00004C8E =       19598. bytes (R
      0000401F  crt0_p1_to_p2                      crt0
      0000403D  ctr0_init_mapper                   crt0
      00004059  crt0_init_globals                  crt0
-     0000406E  _main                              main
-     000040A0  _Gfx_Init                          msx_gfx
-     00004111  _Gfx_Display                       msx_gfx
-     00004121  _Gfx_Clear                         msx_gfx
-     0000413B  _Gfx_FillPattern                   msx_gfx
-     00004229  _Gfx_FillColor                     msx_gfx
-     00004296  _Gfx_Blit                          msx_gfx
-     0000430F  _Gfx_BlitCanvas                    msx_gfx
-     0000435C  _Cv_Clear                          msx_gfx
-     00004382  _Cv_Copy                           msx_gfx
-     000043E0  _Cv_Pixel                          msx_gfx
-     0000443D  _Cv_Line                           msx_gfx
-     0000458E  _Cv_HLine                          msx_gfx
-     000045C7  _Cv_VLine                          msx_gfx
-     00004600  _Cv_FillRect                       msx_gfx
-     000046E9  _Cv_Invert                         msx_gfx
-     0000471D  _Text_Width                        msx_gfx
-     000048C8  _Cv_Text                           msx_gfx
-     000048F5  _Cv_TextKnock                      msx_gfx
-     00004923  _Text_Wrap                         msx_gfx
-     00004B54  _Gfx_TextLine                      msx_gfx
-     00004BA9  _Gfx_TextCenter                    msx_gfx
-     00004C20  _Text_Len                          msx_gfx
-     00004C30  _Gfx_Text                          msx_gfx
-     00004C64  _Gfx_TextRight                     msx_gfx
-     00004CCE  _Input_Init                        msx_input
-     00004CE1  _Input_Sample                      msx_input
-     00004DCB  _Input_Update                      msx_input
-     00004F2C  _Audio_Init                        msx_audio
-     00004F60  _Audio_Mute                        msx_audio
-     00004F64  _Sfx_Play                          msx_audio
-     00004F6D  _Music_Play                        msx_audio
-     00005156  _Audio_Update                      msx_audio
-     000052C4  _Isr_Init                          msx_isr
-     000052D1  _Rand_Seed                         logic
-     000052DC  _Rand16                            logic
-     0000530A  _Rand8                             logic
-     00005363  _Goal_TargetDay                    logic
-     0000537A  _Goal_TargetLoyalty                logic
-     00005386  _Goal_TargetReaders                logic
-     00005395  _Goal_ForDay                       logic
-     000053B6  _Goal_IsMet                        logic
-     0000540D  _Game_LoyaltyDelta                 logic
-     00005415  _Game_ReadersDelta                 logic
+     00004090  _main                              main
+     000040C5  _Gfx_Init                          msx_gfx
+     0000414E  _Gfx_Display                       msx_gfx
+     0000415E  _Gfx_Clear                         msx_gfx
+     00004178  _Gfx_FillPattern                   msx_gfx
+     00004266  _Gfx_FillColor                     msx_gfx
+     000042D3  _Gfx_Blit                          msx_gfx
+     0000434C  _Gfx_BlitCanvas                    msx_gfx
+     00004399  _Cv_Clear                          msx_gfx
+     000043BF  _Cv_Copy                           msx_gfx
+     0000441D  _Cv_Pixel                          msx_gfx
+     0000447A  _Cv_Line                           msx_gfx
+     000045CB  _Cv_HLine                          msx_gfx
+     00004604  _Cv_VLine                          msx_gfx
+     0000463D  _Cv_FillRect                       msx_gfx
+     00004726  _Cv_Invert                         msx_gfx
+     0000475A  _Text_Width                        msx_gfx
+     00004905  _Cv_Text                           msx_gfx
+     00004932  _Cv_TextKnock                      msx_gfx
+     00004960  _Text_Wrap                         msx_gfx
+     00004B91  _Gfx_TextLine                      msx_gfx
+     00004BE6  _Gfx_TextCenter                    msx_gfx
+     00004C5D  _Text_Len                          msx_gfx
+     00004C6D  _Gfx_Text                          msx_gfx
+     00004CA1  _Gfx_TextRight                     msx_gfx
+     00004D0B  _Pointer_Update                    msx_gfx
+     00004DA6  _Input_Init                        msx_input
+     00004F4B  _Input_Sample                      msx_input
+     00005090  _Input_Update                      msx_input
+     000051F1  _Audio_Init                        msx_audio
+     00005225  _Audio_Mute                        msx_audio
+     00005229  _Audio_IsMuted                     msx_audio
+     0000522D  _Sfx_Play                          msx_audio
+     00005236  _Music_Play                        msx_audio
+     0000541F  _Audio_Update                      msx_audio
+     0000558D  _Isr_Init                          msx_isr
+     0000559A  _Rand_Seed                         logic
+     000055A5  _Rand16                            logic
+     000055D3  _Rand8                             logic
+     0000562C  _Goal_TargetDay                    logic
+     00005643  _Goal_TargetLoyalty                logic
+     0000564F  _Goal_TargetReaders                logic
+     0000565E  _Goal_ForDay                       logic
+     0000567F  _Goal_IsMet                        logic
 ASxxxx Linker V05.50.4-SDLD,  page 7.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00004C8E =       19598. bytes (REL,CON)
+_CODE                               00004000    000054D9 =       21721. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00005423  _Goal_Status                       logic
-     000054C3  _Game_Reset                        logic
-     000054FA  _Str_Expand                        logic
-     000055C7  _News_IsWeather                    logic
-     00005624  _News_IsRebel                      logic
-     0000563D  _News_MarkUsed                     logic
-     00005647  _News_Blurb                        logic
-     0000572B  _News_Head                         logic
-     0000575A  _Day_Generate                      logic
-     00005A17  _Summary_Init                      logic
-     00005A2D  _Summary_Add                       logic
-     00005AD7  _Readership_Apply                  logic
-     00005E23  _Clock_Init                        widgets
-     00005F5A  _Clock_Draw                        widgets
-     000061C2  _Meter_Draw                        widgets
-     000062DC  _Readers_Draw                      widgets
-     00006382  _Ui_Frame                          ui
-     0000639D  _Ui_WaitRelease                    ui
-     00006445  _Ui_ShowPages                      ui
-     000065B0  _Ui_Credits                        ui
-     00006606  _Scr_Title                         scr_title
-     0000684C  _Scr_Morning                       scr_morning
-     000069DE  _Scr_Night                         scr_night
-     00007D37  _Scr_Play                          scr_play
-     00007FDB  _g_Font_Silk                       font_data
-     000084B0  _g_MusicTracks                     music_data
-     000084B8  __divuchar                         divunsigned
-     000084BA  __divu8                            divunsigned
-     000084BD  __divu16                           divunsigned
-     000084BD  __divuint                          divunsigned
-     000084EC  _VDP_SetModeFlag                   vdp
-     00008515  _VDP_SetModeGraphic2               vdp
-     0000852C  _VDP_ClearVRAM                     vdp
-     00008538  _VDP_WriteVRAM_16K                 vdp
-     00008561  _VDP_FillVRAM_16K                  vdp
-     00008580  _VDP_ReadVRAM_16K                  vdp
-     000085A8  _VDP_Peek_16K                      vdp
-     000085B6  _VDP_Poke_16K                      vdp
-     000085C8  _VDP_Initialize                    vdp
-     000085D9  _VDP_SetMode                       vdp
-     00008608  _VDP_GetVersion                    vdp
-     00008657  _VDP_RegWrite                      vdp
-     00008663  _VDP_RegWriteBak                   vdp
-     00008676  _VDP_RegWriteBakMask               vdp
-     00008699  _VDP_ReadDefaultStatus             vdp
-     0000869C  _VDP_SetLayoutTable                vdp
-     000086AC  _VDP_SetColorTable                 vdp
-     000086C3  _VDP_SetPatternTable               vdp
-     000086DE  _VDP_LoadPattern_GM2               vdp
-     00008739  _VDP_LoadColor_GM2                 vdp
-     00008794  _VDP_WriteLayout_GM2               vdp
+     000056D6  _Game_LoyaltyDelta                 logic
+     000056DE  _Game_ReadersDelta                 logic
+     000056EC  _Goal_Status                       logic
+     0000578C  _Game_Reset                        logic
+     000057C3  _Str_Expand                        logic
+     00005890  _News_IsWeather                    logic
+     000058ED  _News_IsRebel                      logic
+     00005906  _News_MarkUsed                     logic
+     00005910  _News_Blurb                        logic
+     000059F4  _News_Head                         logic
+     00005A23  _Day_Generate                      logic
+     00005CE0  _Summary_Init                      logic
+     00005CF6  _Summary_Add                       logic
+     00005DA0  _Readership_Apply                  logic
+     000060EC  _Clock_Init                        widgets
+     00006223  _Clock_Draw                        widgets
+     0000648B  _Meter_Draw                        widgets
+     000065A5  _Readers_Draw                      widgets
+     0000664B  _Ui_Frame                          ui
+     0000666F  _Ui_WaitRelease                    ui
+     00006717  _Ui_ShowPages                      ui
+     00006882  _Ui_Credits                        ui
+     000068D8  _Scr_Title                         scr_title
+     00006B1E  _Scr_Morning                       scr_morning
+     00006CB0  _Scr_Night                         scr_night
+     000083EE  _Scr_Play                          scr_play
+     0000869B  _g_Font_Silk                       font_data
+     000089F2  _g_Sprite_Cursor                   font_data
+     00008BB0  _g_MusicTracks                     music_data
+     00008BB8  __divuchar                         divunsigned
+     00008BBA  __divu8                            divunsigned
+     00008BBD  __divu16                           divunsigned
+     00008BBD  __divuint                          divunsigned
+     00008BEC  _Input_Detect                      input
+     00008C09  _Joystick_Read                     input
+     00008C1A  _Mouse_Read                        input
+     00008C81  _Keyboard_Read                     input
+     00008C8C  _VDP_SetModeFlag                   vdp
+     00008CB5  _VDP_SetModeGraphic2               vdp
+     00008CD8  _VDP_ClearVRAM                     vdp
+     00008CE4  _VDP_WriteVRAM_16K                 vdp
+     00008D0D  _VDP_FillVRAM_16K                  vdp
+     00008D2C  _VDP_ReadVRAM_16K                  vdp
+     00008D54  _VDP_Peek_16K                      vdp
+     00008D62  _VDP_Poke_16K                      vdp
+     00008D74  _VDP_Initialize                    vdp
+     00008D85  _VDP_SetMode                       vdp
+     00008DB4  _VDP_GetVersion                    vdp
+     00008E03  _VDP_RegWrite                      vdp
+     00008E0F  _VDP_RegWriteBak                   vdp
+     00008E22  _VDP_RegWriteBakMask               vdp
 ASxxxx Linker V05.50.4-SDLD,  page 8.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00004C8E =       19598. bytes (REL,CON)
+_CODE                               00004000    000054D9 =       21721. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     000087F3  _VDP_FillLayout_GM2                vdp
-     0000883A  _Input_Detect                      input
-     00008857  _Joystick_Read                     input
-     00008868  _Mouse_Read                        input
-     000088CF  _Keyboard_Read                     input
-     000088DA  __moduchar                         modunsigned
-     000088E1  __moduint                          modunsigned
-     000088E6  __mulint                           mul
-     000088E8  __mul16                            mul
-     000088FD  _PSG_SetRegister                   psg
-     00008903  _PSG_GetRegister                   psg
-     00008908  _PSG_SetTone                       psg
-     00008917  _PSG_SetNoise                      psg
-     00008920  _PSG_SetMixer                      psg
-     0000892A  _PSG_SetVolume                     psg
-     00008932  _PSG_SetEnvelope                   psg
-     00008941  _PSG_SetShape                      psg
-     0000894A  _PSG_EnableTone                    psg
-     00008966  _PSG_EnableNoise                   psg
-     00008982  _PSG_EnableEnvelope                psg
-     00008993  _PSG_Mute                          psg
-     000089AC  _PSG_Resume                        psg
-     000089C2  _memset                            _memset
-     000089D8  _BIOS_Exit                         bios
-     000089E0  _BIOS_SetHookCallback              bios
-     000089FC  _BIOS_InterSlotRead                bios
-     00008A02  _BIOS_InterSlotWrite               bios
-     00008A18  _BIOS_InterSlotCall                bios
-     00008A2A  _BIOS_SwitchSlot                   bios
-     00008A36  _BIOS_WriteVDP                     bios
-     00008A3C  _BIOS_WriteVRAM                    bios
-     00008A41  _BIOS_FillVRAM                     bios
-     00008A52  _BIOS_CopyFromVRAM                 bios
-     00008A64  _BIOS_CopyToVRAM                   bios
-     00008A76  _BIOS_InitScreen3Ex                bios
-     00008ABE  _BIOS_GetSpritePatternAddress      bios
-     00008AC3  _BIOS_GetSpriteAttributeAddress    bios
-     00008AC8  _BIOS_WritePSG                     bios
-     00008ACD  _BIOS_PlayPSG                      bios
-     00008AEA  _BIOS_HasCharacter                 bios
-     00008AF4  _BIOS_ClearScreen                  bios
-     00008AF9  _BIOS_TextSetCursor                bios
-     00008AFE  ___sdcc_enter_ix                   
-     00008B08  _Sys_GetPageSlot                   system
-     00008B5A  _Sys_SetPageSlot                   system
-     00008B5B  _Sys_SetPage0Slot                  system
-     00008BA0  _Sys_CheckSlot                     system
-     00008C00  __modschar                         modsigned
-     00008C08  __modsint                          modsigned
-     00008C0E  ___mulsint2slong                   __mulsint2slong
-     00008C3C  __divschar                         divsigned
+     00008E45  _VDP_ReadDefaultStatus             vdp
+     00008E48  _VDP_SetLayoutTable                vdp
+     00008E58  _VDP_SetColorTable                 vdp
+     00008E6F  _VDP_SetPatternTable               vdp
+     00008E8A  _VDP_SetSpriteAttributeTable       vdp
+     00008EA7  _VDP_SetSpritePatternTable         vdp
+     00008EB8  _VDP_LoadSpritePattern             vdp
+     00008EE3  _VDP_SetSpriteSM1                  vdp
+     00008F1B  _VDP_SetSprite                     vdp
+     00008F50  _VDP_SetSpritePosition             vdp
+     00008F7D  _VDP_SetSpritePositionX            vdp
+     00008F8E  _VDP_SetSpritePositionY            vdp
+     00008F9E  _VDP_SetSpritePattern              vdp
+     00008FB0  _VDP_SetSpriteColorSM1             vdp
+     00008FC4  _VDP_DisableSpritesFrom            vdp
+     00008FC9  _VDP_LoadPattern_GM2               vdp
+     00009024  _VDP_LoadColor_GM2                 vdp
+     0000907F  _VDP_WriteLayout_GM2               vdp
+     000090DE  _VDP_FillLayout_GM2                vdp
+     00009125  __moduchar                         modunsigned
+     0000912C  __moduint                          modunsigned
+     00009131  __mulint                           mul
+     00009133  __mul16                            mul
+     00009148  _PSG_SetRegister                   psg
+     0000914E  _PSG_GetRegister                   psg
+     00009153  _PSG_SetTone                       psg
+     00009162  _PSG_SetNoise                      psg
+     0000916B  _PSG_SetMixer                      psg
+     00009175  _PSG_SetVolume                     psg
+     0000917D  _PSG_SetEnvelope                   psg
+     0000918C  _PSG_SetShape                      psg
+     00009195  _PSG_EnableTone                    psg
+     000091B1  _PSG_EnableNoise                   psg
+     000091CD  _PSG_EnableEnvelope                psg
+     000091DE  _PSG_Mute                          psg
+     000091F7  _PSG_Resume                        psg
+     0000920D  _memset                            _memset
+     00009223  _BIOS_Exit                         bios
+     0000922B  _BIOS_SetHookCallback              bios
+     00009247  _BIOS_InterSlotRead                bios
+     0000924D  _BIOS_InterSlotWrite               bios
+     00009263  _BIOS_InterSlotCall                bios
+     00009275  _BIOS_SwitchSlot                   bios
+     00009281  _BIOS_WriteVDP                     bios
+     00009287  _BIOS_WriteVRAM                    bios
+     0000928C  _BIOS_FillVRAM                     bios
+     0000929D  _BIOS_CopyFromVRAM                 bios
+     000092AF  _BIOS_CopyToVRAM                   bios
+     000092C1  _BIOS_InitScreen3Ex                bios
+     00009309  _BIOS_GetSpritePatternAddress      bios
+     0000930E  _BIOS_GetSpriteAttributeAddress    bios
 ASxxxx Linker V05.50.4-SDLD,  page 9.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00004C8E =       19598. bytes (REL,CON)
+_CODE                               00004000    000054D9 =       21721. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00008C3E  __div8                             divsigned
-     00008C42  __div_signexte                     divsigned
-     00008C46  __div16                            divsigned
-     00008C46  __divsint                          divsigned
-     00008C6C  __get_remainder                    divsigned
-     00008C76  ___muluint2ulong                   __muluint2slong
-     00008C8D  ___sdcc_call_hl                    
+     00009313  _BIOS_WritePSG                     bios
+     00009318  _BIOS_PlayPSG                      bios
+     00009335  _BIOS_HasCharacter                 bios
+     0000933F  _BIOS_ClearScreen                  bios
+     00009344  _BIOS_TextSetCursor                bios
+     00009349  ___sdcc_enter_ix                   
+     00009353  _Sys_GetPageSlot                   system
+     000093A5  _Sys_SetPageSlot                   system
+     000093A6  _Sys_SetPage0Slot                  system
+     000093EB  _Sys_CheckSlot                     system
+     0000944B  __modschar                         modsigned
+     00009453  __modsint                          modsigned
+     00009459  ___mulsint2slong                   __mulsint2slong
+     00009487  __divschar                         divsigned
+     00009489  __div8                             divsigned
+     0000948D  __div_signexte                     divsigned
+     00009491  __div16                            divsigned
+     00009491  __divsint                          divsigned
+     000094B7  __get_remainder                    divsigned
+     000094C1  ___muluint2ulong                   __muluint2slong
+     000094D8  ___sdcc_call_hl                    
+
 ASxxxx Linker V05.50.4-SDLD,  page 10.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_HOME                               00008C8E    000001F6 =         502. bytes (REL,CON)
+_HOME                               000094D9    000001F6 =         502. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00008C8E  __divslong                         _divslong
-     00008D1E  __divulong                         _divulong
-     00008DA1  __mullong                          _mullong
+     000094D9  __divslong                         _divslong
+     00009569  __divulong                         _divulong
+     000095EC  __mullong                          _mullong
 ASxxxx Linker V05.50.4-SDLD,  page 11.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZER                        00008E84    0000001E =          30. bytes (REL,CON)
+_INITIALIZER                        000096CF    00000021 =          33. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -504,18 +519,27 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_GSFINAL                            00008EA2    00000000 =           0. bytes (REL,CON)
+_GSINIT                             000096F0    00000005 =           5. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00008EA2  _g_LastAddr                        crt0
-
 ASxxxx Linker V05.50.4-SDLD,  page 13.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    000018E6 =        6374. bytes (REL,CON)
+_GSFINAL                            000096F5    00000000 =           0. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     000096F5  _g_LastAddr                        crt0
+
+ASxxxx Linker V05.50.4-SDLD,  page 14.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_DATA                               0000C000    000018FB =        6395. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -526,38 +550,48 @@ _DATA                               0000C000    000018E6 =        6374. bytes (R
      0000C005  _g_Bank2Segment                    crt0
      0000C005  _g_CurrentSegment                  crt0
      0000C006  _g_Bank3Segment                    crt0
-     0000C107  _gl_src                            msx_gfx
-     0000C109  _gl_dst                            msx_gfx
-     0000C10B  _gl_off                            msx_gfx
-     0000C10C  _gl_mode                           msx_gfx
-     0000C10D  _g_Held                            msx_input
-     0000C10E  _g_Push                            msx_input
-     0000C12D  _g_Frames                          msx_isr
-     0000C12E  _g_Game                            logic
-     0000C138  _g_Day                             logic
-     0000D8BC  _g_VDP_REGSAV                      vdp
-     0000D8D8  _g_VDP_Data                        vdp
-     0000D8DA  _g_ScreenLayoutLow                 vdp
-     0000D8DC  _g_ScreenColorLow                  vdp
-     0000D8DE  _g_ScreenPatternLow                vdp
-     0000D8E0  _g_Mouse_OffsetX                   input
-     0000D8E1  _g_Mouse_OffsetY                   input
-     0000D8E2  _g_Mouse_Buttons                   input
-     0000D8E3  _g_PSG_VolumeBackup                psg
-
-ASxxxx Linker V05.50.4-SDLD,  page 14.
+     0000C007  _clr_start                         main
+     0000C009  _clr_end                           main
+     0000C10B  _gl_src                            msx_gfx
+     0000C10D  _gl_dst                            msx_gfx
+     0000C10F  _gl_off                            msx_gfx
+     0000C110  _gl_mode                           msx_gfx
+     0000C114  _g_Held                            msx_input
+     0000C115  _g_Push                            msx_input
+     0000C11D  _g_MouseOn                         msx_input
+     0000C11E  _g_MouseBtn                        msx_input
+     0000C139  _g_Frames                          msx_isr
+     0000C13A  _g_Game                            logic
+     0000C144  _g_Day                             logic
+     0000D8C7  _g_Mouse_OffsetX                   input
+     0000D8C8  _g_Mouse_OffsetY                   input
+     0000D8C9  _g_Mouse_Buttons                   input
+     0000D8CA  _g_VDP_REGSAV                      vdp
+     0000D8E6  _g_VDP_Data                        vdp
+     0000D8E8  _g_VDP_Sprite                      vdp
+     0000D8EC  _g_ScreenLayoutLow                 vdp
+     0000D8EE  _g_ScreenColorLow                  vdp
+     0000D8F0  _g_ScreenPatternLow                vdp
+     0000D8F2  _g_SpriteAttributeLow              vdp
+     0000D8F4  _g_SpritePatternLow                vdp
+     0000D8F6  _g_SpriteColorLow                  vdp
+     0000D8F8  _g_PSG_VolumeBackup                psg
+ASxxxx Linker V05.50.4-SDLD,  page 15.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZED                        0000D8E6    0000001E =          30. bytes (REL,CON)
+_INITIALIZED                        0000D8FB    00000021 =          33. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000D8E6  _g_Strip                           msx_gfx
-     0000D903  _g_VDPInitilized                   vdp
+     0000D8FB  _g_Strip                           msx_gfx
+     0000D8FF  _g_MouseX                          msx_input
+     0000D900  _g_MouseY                          msx_input
+     0000D901  _g_MouseProbe                      msx_input
+     0000D91B  _g_VDPInitilized                   vdp
 
-ASxxxx Linker V05.50.4-SDLD,  page 15.
+ASxxxx Linker V05.50.4-SDLD,  page 16.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -568,7 +602,7 @@ _SEG4                               0004A000    00001BAC =        7084. bytes (R
          -----  --------------------------------   ------------------------
      0004A000  _g_News                            seg_s4_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 16.
+ASxxxx Linker V05.50.4-SDLD,  page 17.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -585,7 +619,7 @@ _SEG5                               0005A000    00001B30 =        6960. bytes (R
      0005B2A8  _g_Gfx_presses                     seg_s5_b3
      0005BA68  _g_Gfx_meter                       seg_s5_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 17.
+ASxxxx Linker V05.50.4-SDLD,  page 18.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -597,7 +631,7 @@ _SEG6                               0006A000    000018FC =        6396. bytes (R
      0006A80A  _Text_Morning                      seg_s6_b3
      0006B619  _Text_Night                        seg_s6_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 18.
+ASxxxx Linker V05.50.4-SDLD,  page 19.
 
 Files Linked                              [ module(s) ]
 
@@ -644,9 +678,9 @@ Libraries Linked                          [ object file ]
 /tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
                                           [ divunsigned.rel ]
 /home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
-                                          [ vdp.rel ]
-/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
                                           [ input.rel ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
+                                          [ vdp.rel ]
 /tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
                                           [ modunsigned.rel ]
 /tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
@@ -678,7 +712,7 @@ Libraries Linked                          [ object file ]
 /tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
                                           [ __sdcc_call_hl.rel ]
 
-ASxxxx Linker V05.50.4-SDLD,  page 19.
+ASxxxx Linker V05.50.4-SDLD,  page 20.
 
 User Base Address Definitions
 

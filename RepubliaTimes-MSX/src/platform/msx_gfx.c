@@ -24,6 +24,8 @@ void Gfx_Init(void)
 	VDP_WriteVRAM_16K(s_StripBuf, NT_BASE, 256);
 	VDP_WriteVRAM_16K(s_StripBuf, NT_BASE + 256, 256);
 	VDP_WriteVRAM_16K(s_StripBuf, NT_BASE + 512, 256);
+	VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
+	VDP_WriteVRAM_16K(g_Sprite_Cursor, 0x3800, 64); // pattern 0 = fill, pattern 4 = outline
 	VDP_FillVRAM_16K(0xD0, 0x1B00, 1); // sprite list terminator: no sprites
 	VDP_EnableDisplay(TRUE);
 }
@@ -403,4 +405,30 @@ void Gfx_TextRight(u8 col, u8 row, u8 wtiles, const char* s, u8 color)
 	u8 tw = Text_Width(s, len);
 	u16 px = (u16)wtiles << 3;
 	Gfx_TextLine(col, row, wtiles, tw + 1 < px ? px - tw - 1 : 0, s, len, color);
+}
+
+// Sprite attribute table at 1B00h: [y, x, pattern, colour] x2 + terminator.
+void Pointer_Update(bool show, u8 x, u8 y)
+{
+	static u8 s_Shown = 0xFF, s_X, s_Y;
+	if (!show)
+	{
+		if (s_Shown)
+		{
+			VDP_FillVRAM_16K(0xD0, 0x1B00, 1);
+			s_Shown = 0;
+		}
+		return;
+	}
+	if (s_Shown == 1 && x == s_X && y == s_Y)
+		return;
+	u8 sat[9];
+	u8 sx = x < 7 ? 0 : x - 7; // finger tip at pixel (7,0) of the 16x16 hand
+	sat[0] = y - 1; sat[1] = sx; sat[2] = 0; sat[3] = COLOR_WHITE;
+	sat[4] = y - 1; sat[5] = sx; sat[6] = 4; sat[7] = COLOR_BLACK;
+	sat[8] = 0xD0;
+	VDP_WriteVRAM_16K(sat, 0x1B00, 9);
+	s_Shown = 1;
+	s_X = x;
+	s_Y = y;
 }

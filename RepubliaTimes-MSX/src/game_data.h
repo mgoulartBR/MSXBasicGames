@@ -17,3 +17,6 @@ extern const NewsDef g_News[NEWS_COUNT];
 
 // Font record: [advance, row0..row7] for chars 32..126
 extern const unsigned char g_Font_Silk[];
+
+// Mouse pointer sprite patterns: 2 x 32 bytes (fill, outline)
+extern const unsigned char g_Sprite_Cursor[];

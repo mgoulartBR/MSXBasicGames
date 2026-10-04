@@ -31,4 +31,5 @@ Notes
 * `msxgl_config.h` is the stock MSXgl template with only the module switches changed
   (MSX1 / Graphic 2 / no sub-ROM / direct PSG access); see the diff against
   `MSXgl/projects/template/msxgl_config.h`.
+* MSXgl v1.5.0 quirk (not patched): `engine/src/mouse.c` uses `INPUT_DI/INPUT_EI` inside `__asm` blocks without including `input.h`, so the assembler fails. `project_config.js` passes `-DINPUT_DI=di -DINPUT_EI=ei` on the compile command line (same values as `input.h` with ISR protection on).
 * Versions are pinned in `scripts/env.sh`; do not bump them silently.

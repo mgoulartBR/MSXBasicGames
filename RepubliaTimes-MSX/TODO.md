@@ -9,7 +9,7 @@ Status legend: DONE / PARTIAL / TODO / BLOCKED
 ## Gameplay
 * DONE — day generation, readership/loyalty maths, goals, endings, restart as Democria.
 * DONE — placement/pick-up/discard, paper & feed modes, End Day, day-over popup.
-* TODO — MSX mouse support (original control scheme).
+* PARTIAL — MSX mouse support (hover/click/pointer sprite implemented and tested with injected state; real mouse motion untested).
 * TODO — playtest full 10-day run on both paths (only debug-start jumps were verified).
 
 ## Graphics
@@ -33,4 +33,5 @@ Status legend: DONE / PARTIAL / TODO / BLOCKED
 ## Testing
 * DONE — smoke (`tests/smoke.tcl`), gameplay (`tests/play.tcl`), story branches
   (`scripts/test_morning.sh`), audio register sampling (`tests/audio.tcl`), day length (`tests/daylen.tcl`).
-* TODO — joystick test (openMSX joystick plug), MSX2 / turbo R machines.
+* DONE — mouse logic test (`scripts/test_mouse.sh`).
+* TODO — real mouse movement test, joystick test (openMSX joystick plug), turbo R machine.

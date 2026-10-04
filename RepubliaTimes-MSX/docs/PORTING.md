@@ -136,7 +136,7 @@ audio (mp3 → PSG), fonts (TTF → 8-row proportional bitmaps), clock/dial (kep
 ## Video / Audio / Input / Memory / ROM mapper
 See above. Input: keyboard (cursor keys, SPACE/RETURN = A, ESC/TAB = B, M = mute) **and**
 joystick ports 1+2 (direction + two triggers) merged. Both are sampled in the VBlank hook so
-short taps are never lost. Mouse is **not implemented** (TODO).
+short taps are never lost. **Mouse**: MSX mouse protocol (MSXgl `Mouse_Read`) polled in the VBlank hook; it is detected on the title screen (a mouse at rest reads 0,0 while an idle joystick / empty port reads FFh,FFh), the pointer is a 2-sprite 16x16 hand cropped from the original `Cursor.png` (white fill + black outline, hotspot = finger tip) and mouse mode switches on at the first movement and off at the first key/joystick press. Hover = select, left = A, right = B.
 
 ## Features preserved
 * All 71 news items with original day ranges, loyalty effect and "interesting" flag.
@@ -169,11 +169,13 @@ short taps are never lost. Mouse is **not implemented** (TODO).
 * Real-time scaling: time unit 1/600 s so the day is 60 s on both 50 and 60 Hz.
 
 ## Features omitted
-Mouse control, the mute *button* (replaced by the M key), cursor image, mouse-over sounds,
+The mouse **drag** gesture (replaced by click-to-pick-up / click-to-drop with the same grid snapping), the mute *button* (replaced by the M key), mouse-over sounds,
 the animated "dragging" sprite.
 
 ## Known limitations
 * Emulator-only testing (openMSX 19.1 + C-BIOS). Joystick path implemented, **not tested**.
+* Mouse: the game logic is tested with injected pointer state; the hardware read path is only tested for *non-interference* (emulated mouse at rest, no phantom input) because openMSX cannot inject motion from Tcl. **Real mouse movement has not been tested.**
+* Boot-time RAM is not cleared by the MSXgl crt0; `main()` clears the uninitialised data area (a bug found by the mouse test).
 * 50 Hz and 60 Hz machines were both run in openMSX (day length measured, see `tests/`).
 * Music/SFX not listened to on real hardware.
 * "Loyalty" label under the dial loses the tail of the `y` (8-row font cell).

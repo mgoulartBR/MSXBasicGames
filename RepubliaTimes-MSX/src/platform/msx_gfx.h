@@ -62,5 +62,8 @@ void Gfx_TextRight(u8 col, u8 row, u8 wtiles, const char* s, u8 color);
 // Centered variant
 void Gfx_TextCenter(u8 col, u8 row, u8 wtiles, const char* s, u8 color);
 
+// Mouse pointer (2 hardware sprites: white hand + black outline). Hotspot = finger tip.
+void Pointer_Update(bool show, u8 x, u8 y);
+
 // Shared scratch strip (one tile row, full screen width)
 extern Canvas g_Strip;

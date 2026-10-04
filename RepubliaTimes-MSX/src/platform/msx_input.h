@@ -15,6 +15,16 @@
 extern u8 g_Held; // buttons currently down (as of the last Input_Update)
 extern u8 g_Push; // presses since the last Input_Update (directions auto-repeat)
 
+// Mouse (MSX mouse on joystick port 1 or 2). The pointer is shown/used only after the mouse moved;
+// any keyboard / joystick press switches back to the focus (pad) model.
+#define MB_LEFT  0x01
+#define MB_RIGHT 0x02
+extern volatile u8 g_MouseOn;  // 1 = mouse mode active
+extern volatile u8 g_MouseX;   // pointer position in pixels (0..255)
+extern volatile u8 g_MouseY;   // 0..191
+extern volatile u8 g_MouseBtn; // MB_* bits currently down
+extern u8 g_MouseProbe;        // TRUE on the title screen: look for a mouse (device at rest reads 0,0)
+
 void Input_Init(void);
 void Input_Sample(void); // ISR side
 void Input_Update(void); // main side

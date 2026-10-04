@@ -607,6 +607,15 @@ static void handle_place(void)
 	}
 }
 
+static void pick_placed(Art* a)
+{
+	u8 slot = a->slot, size = a->size, cx = a->cx, cy = a->cy;
+	fp_hide();
+	art_remove(a);
+	feed_redraw_entry(slot);
+	pick_up(slot, size, cx, cy);
+}
+
 static void handle_paper(void)
 {
 	bool moved = FALSE;
@@ -620,13 +629,7 @@ static void handle_paper(void)
 	{
 		Art* a = art_at(s_Cx, s_Cy);
 		if (a)
-		{
-			u8 slot = a->slot, size = a->size, cx = a->cx, cy = a->cy;
-			fp_hide();
-			art_remove(a);
-			feed_redraw_entry(slot);
-			pick_up(slot, size, cx, cy);
-		}
+			pick_placed(a);
 		else
 			Sfx_Play(SFX_ERROR);
 	}
@@ -635,6 +638,90 @@ static void handle_paper(void)
 		Sfx_Play(SFX_CLICK);
 		to_feed_mode();
 	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Mouse mode (MSX mouse): hover selects, left button = A, right button = B.
+// Translates the pointer into the same actions as the pad model by rewriting g_Push.
+static void mouse_pre(void)
+{
+	u8 mx = g_MouseX, my = g_MouseY;
+	u8 tc = mx >> 3, tr = my >> 3;
+	u8 push = g_Push & (IN_A | IN_B);
+	bool inside = mx >= PAPER_COL * 8 && my >= PAPER_ROW * 8 && my < (PAPER_ROW + GRID_H * CELL_H) * 8;
+	u8 pcx = inside ? (u8)((mx - PAPER_COL * 8) >> 5) : 0;
+	u8 pcy = inside ? (u8)((my - PAPER_ROW * 8) / (CELL_H * 8)) : 0;
+	g_Push = 0; // no direction presses in mouse mode
+
+	if (s_Mode == MODE_PAPER)
+		to_feed_mode();
+
+	if (s_Mode == MODE_PLACE)
+	{
+		if (inside)
+		{
+			u8 w = size_w(s_PickSize), h = size_h(s_PickSize);
+			u8 cx = pcx >= w / 2 ? pcx - w / 2 : 0;
+			u8 cy = pcy >= h / 2 ? pcy - h / 2 : 0;
+			if (cx > GRID_W - w) cx = GRID_W - w;
+			if (cy > GRID_H - h) cy = GRID_H - h;
+			if (cx != s_Cx || cy != s_Cy)
+			{
+				s_Cx = cx;
+				s_Cy = cy;
+				place_preview();
+			}
+		}
+		else if (push & IN_A)
+			push = IN_B; // clicked outside the paper: discard (as dropping outside in the original)
+		g_Push = push;
+		return;
+	}
+
+	// feed mode: hover selects
+	u8 sel = s_FeedSel;
+	if (tc >= FEED_COL && tc < FEED_COL + FEED_W && tr >= FEED_ROW && tr < FEED_ROW + FEED_ROWS)
+	{
+		for (u8 i = s_FeedTop; i < s_FeedCount; ++i)
+			if (entry_visible(i) && tr >= entry_row(i) && tr < entry_row(i) + s_Nl[i])
+				sel = i;
+	}
+	else if (tc < 5 && tr >= 7 && tr <= 9)
+		sel = s_FeedCount; // End Day button
+	if (sel != s_FeedSel)
+	{
+		s_FeedSel = sel;
+		Sfx_Play(SFX_CLICK);
+		panel_draw();
+		feed_colors();
+		end_button_draw(s_FeedSel >= s_FeedCount);
+	}
+	if (push & IN_A)
+	{
+		if (inside)
+		{
+			Art* a = art_at(pcx, pcy);
+			push &= ~IN_A;
+			if (a)
+				pick_placed(a);
+		}
+		else if (tr == 22 && s_FeedSel < s_FeedCount && g_News[s_FeedItem[s_FeedSel]].head)
+		{
+			// size selector blocks on the bottom panel (3 blocks of 9 tiles starting at tile 1)
+			for (u8 i = 0; i < 3; ++i)
+				if (tc >= 1 + i * 9 && tc < 9 + i * 9)
+				{
+					s_SelSize = i;
+					push &= ~IN_A;
+					Sfx_Play(SFX_CLICK);
+					panel_draw();
+				}
+		}
+		else if (!(tc >= FEED_COL && tc < FEED_COL + FEED_W && tr >= FEED_ROW && tr < FEED_ROW + FEED_ROWS) && !(tc < 5 && tr >= 7 && tr <= 9))
+			push &= ~IN_A; // clicked on empty space
+	}
+	g_Push = push;
 }
 
 u8 Scr_Play(void)
@@ -743,6 +830,8 @@ u8 Scr_Play(void)
 		}
 
 		// --- input
+		if (g_MouseOn)
+			mouse_pre();
 		switch (s_Mode)
 		{
 		case MODE_FEED:  handle_feed();  break;
