@@ -6,3 +6,4 @@ __pycache__/
 dist/*-d[0-9]*.rom
 dist/*-d[0-9]*.map
 dist/*-dbg*
+emul/
