@@ -84,12 +84,11 @@ void upd_cashout(void) BANKED
 
 static const char* const k_packTag[4] = { "ARC", "CEL", "BUF", "STD" };
 
-static u8 shop_cell(u8 i)
+static void shop_card(u8 i, u8 x, u8 y)
 {
 	u8 t = g.shopType[i], id = g.shopId[i];
-	if (t == 1) return g_Jokers[id].cell;
-	if (t == 2) return CELL_PLANET + id;
-	return CELL_TAROT + id;
+	if (t == 1) Vid_Joker(id, x, y);
+	else Vid_Card(t == 2 ? CELL_PLANET + id : CELL_TAROT + id, x, y);
 }
 
 static void draw_price(u8 x, u8 y, u8 price)
@@ -110,7 +109,7 @@ static void shop_item(u8 id)
 		u8 i = id - W_SHOPCARD, x = SHOP_X(i);
 		if (g.shopType[i])
 		{
-			Vid_Card(shop_cell(i), x, SHOP_Y);
+			shop_card(i, x, SHOP_Y);
 			if (foc) Vid_Frame(x, SHOP_Y, 24, 32, COL_GOLD);
 			draw_price(x, SHOP_Y + 34, shop_cost(i));
 		}
@@ -273,8 +272,8 @@ static void pack_item(u8 i)
 		if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
 		return;
 	}
-	u8 cell = g_packType[i] == 1 ? g_Jokers[g_packId[i]].cell : (g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i]);
-	Vid_Card(cell, x, 60);
+	if (g_packType[i] == 1) Vid_Joker(g_packId[i], x, 60);
+	else Vid_Card(g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i], x, 60);
 	if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
 }
 

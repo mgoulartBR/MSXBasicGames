@@ -398,7 +398,7 @@ void draw_jslot(u8 id) BANKED
 	if (present && ui.itemKind == (isJoker ? 1 : 2) && ui.itemIdx == idx) y = JOKER_Y + 3;     // selected: lowered
 	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
-	if (isJoker) { Vid_Card(g_Jokers[g.jk[idx].id].cell, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); }
+	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); }
 	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : CELL_TAROT + g.cons[idx] - 0x20, x, y);
 	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
 	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border

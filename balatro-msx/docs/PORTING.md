@@ -10,8 +10,9 @@ Place the extracted Balatro source (`game.lua`, `card.lua`, `resources/…`) in 
 3. MSXgl `node build.js` (SDCC 4.6.0) → ROM; `tools/memreport.py` prints budgets; SHA256 printed; MAP in `build/`.
 
 ## Architecture
-- Bank 0–2 fixed (~11.6 KB code/rodata of 24 KB), bank 2 swaps `__banked` code segments 24–31; bank 3 swaps data (atlas 4–15, logo 16, tags 17, text 20, descriptions 21). Strings shared across segments live in SEG20 or fixed memory.
-- VRAM: page 0 display; rows 212–227 tag icons; pages 1–3 card/joker atlas; BIOS sprite tables at the end.
+- Bank 0–2 fixed (~11.6 KB code/rodata of 24 KB), bank 2 swaps `__banked` code segments 24–31; bank 3 swaps data (atlas 4–11, logo 12, tags 13, joker art 14–18 (+19, 23 reserved), text 20, descriptions 21); code segment 22 holds the per-joker scoring phases. Strings shared across segments live in SEG20 or fixed memory.
+- VRAM: page 0 display; rows 212–227 tag icons; pages 1–2 atlas (cards, planets, tarots, vouchers, blind icons, font strips; 8 mapper segments). Page 3 is free.
+- Joker art is **streamed**: 24x32 cards live in ROM segments (21 per 8 KB segment, 384 bytes each, up to 7 segments = 147 jokers) and are blitted straight to the screen with HMMC by `Vid_Joker()`; nothing of it is kept in VRAM.
 - Rendering: HMMV/HMMM (even x/width) where possible, LMMV/LMMM otherwise; targeted redraw per widget/slot; display disabled during screen switches.
 - Scoring produces an event list (chips u32, mult ×100) replayed as animation. State in a single `Game g`.
 - Input: keyboard, joystick, MSX mouse (relative deltas, clamped cursor sprite) unified into widgets with focus; hover = focus, click = confirm.

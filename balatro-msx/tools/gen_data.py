@@ -71,7 +71,7 @@ def D(text):
 src.append('const JokerDef g_Jokers[JOKER_COUNT] = {')
 for i, k in enumerate(C.JOKERS):
     c = cen['j_' + k]
-    src.append('\t{ %s, %d, %d, %d, CELL_JOKER + %d },' % (cs(c['name']), D(C.JOKER_DESC[k]), int(c['cost']), int(c['rarity']), i))
+    src.append('\t{ %s, %d, %d, %d, %d },' % (cs(c['name']), D(C.JOKER_DESC[k]), int(c['cost']), int(c['rarity']), i))
 src.append('};')
 src.append('const TarotDef g_Tarots[TAROT_COUNT] = {')
 for i, k in enumerate(C.TAROTS):

@@ -197,7 +197,7 @@ blank = card_base()
 # -------------------------------------------------------------- the atlas ----
 CELLS_PER_ROW = 10
 ATLAS_Y0 = 256                         # VRAM page 1
-ATLAS_LINES = 736                      # pages 1-3 minus 32 lines reserved for the sprite tables
+ATLAS_LINES = 512                      # pages 1-2 (8 mapper segments); joker art is streamed from ROM instead of living here
 atlas = np.zeros((ATLAS_LINES, 256), dtype=np.uint8)
 
 def put_cell(idx, arr):
@@ -212,11 +212,11 @@ layout['back'] = n; put_cell(n, back); n += 1
 layout['blank'] = n; put_cell(n, blank); n += 1
 layout['planet'] = n
 for im in planet_src: put_cell(n, pal.quantize(im)); n += 1
-layout['joker'] = n
+joker_cells = []                       # 24x32 joker cards: not in VRAM, streamed from ROM segments (see Vid_Joker)
 for im in joker_src:
     c = card_base(); q = pal.quantize(im)
     c[1:31, 1:23] = q
-    put_cell(n, c); n += 1
+    joker_cells.append(c)
 layout['tarot'] = n
 for im in tarot_src: put_cell(n, pal.quantize(im)); n += 1
 layout['voucher'] = n
@@ -228,7 +228,7 @@ for k, _ in C.VOUCHERS:
     c[1:31, 1:23] = q
     put_cell(n, c); n += 1
 layout['end'] = n
-assert n <= 230, n
+assert n <= 120, n
 
 # blind chips: 16x16 icons in the right-hand column (x 240..255)
 BLIND_ORDER = ['bl_small', 'bl_big'] + [k for k, b in sorted(blinds.items(), key=lambda kv: kv[1]['order']) if b['boss']]
@@ -322,6 +322,15 @@ assert len(logo_bytes) <= SEG
 write_seg(LOGO_SEG, logo_bytes)
 TAG_SEG = LOGO_SEG + 1
 write_seg(TAG_SEG, pack4(tag_img))
+JOKER_BYTES = OUT_W * OUT_H // 2                     # 384 bytes per card, rows of 12 bytes (HMMC order)
+JOKER_PER_SEG = SEG // JOKER_BYTES
+pool = list(range(TAG_SEG + 1, 20)) + [23]          # segments 20/21 hold text, 22 + 24..31 code
+nj_segs = (len(joker_cells) + JOKER_PER_SEG - 1) // JOKER_PER_SEG
+assert nj_segs <= len(pool), (nj_segs, pool)
+JOKER_SEGS = pool[:nj_segs]
+for si, segno in enumerate(JOKER_SEGS):
+    chunk = joker_cells[si * JOKER_PER_SEG:(si + 1) * JOKER_PER_SEG]
+    write_seg(segno, b''.join(pack4(c) for c in chunk))
 # remove stale seg files
 for fn in os.listdir(OUT_SEG):
     if fn.startswith('seg_s') and fn.endswith('_b3.asm') and os.path.join(OUT_SEG, fn) not in seg_files:
@@ -340,12 +349,14 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
     f.write('#define GFX_LOGO_SEG %d\n#define GFX_LOGO_W %d\n#define GFX_LOGO_H %d\n' % (LOGO_SEG, lw, lh))
     f.write('#define GFX_TAG_SEG %d\n#define GFX_TAG_Y 212\n' % TAG_SEG)
     f.write('#define GFX_CELL_W %d\n#define GFX_CELL_H %d\n#define GFX_CELLS_PER_ROW %d\n' % (OUT_W, OUT_H, CELLS_PER_ROW))
-    for k in ('card', 'back', 'blank', 'planet', 'joker', 'tarot', 'voucher'):
+    for k in ('card', 'back', 'blank', 'planet', 'tarot', 'voucher'):
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))
     f.write('#define FONT_ROWS %d\n#define FONT_Y0 %d\n#define FONT_STRIP_H %d\n#define FONT_COLOR_COUNT %d\n' % (GLYPH_ROWS, FONT_Y0, FONT_STRIP_H, len(FONT_COLORS)))
     f.write('#define BLIND_ICON_COUNT %d\n' % len(BLIND_ORDER))
+    f.write('#define GFX_JOKER_PER_SEG %d\n#define GFX_JOKER_SEG_LIST { %s }\n' % (JOKER_PER_SEG, ', '.join(str(x) for x in JOKER_SEGS)))
     for nm, rgb in (('ICE', (170, 215, 250)), ('PURPLE', (150, 90, 210)), ('STEEL', (110, 130, 145)), ('STONE', (130, 130, 130))):
         f.write('#define COL_%s %d\n' % (nm, int(pal.nearest(np.array(rgb, dtype=np.float32)))))
     f.write('// blind icon rows (16px each) in atlas column x=240: ' + ', '.join('%s=%d' % (k, v) for k, v in blind_row.items()) + '\n')
 json.dump(dict(blind_order=BLIND_ORDER), open(os.path.join(ROOT, 'build', 'blind_order.json'), 'w'))
+print("joker art: %d cards in segments %s" % (len(joker_cells), JOKER_SEGS))
 print("atlas: %d cells used, %d bytes in %d segments; logo seg %d; font %d glyphs" % (layout['end'], len(blob), nseg, LOGO_SEG, len(glyphs)))

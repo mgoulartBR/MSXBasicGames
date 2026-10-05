@@ -2,13 +2,13 @@
 #pragma once
 #define GFX_PALETTE_INIT { 0x12, 0x02, 0x11, 0x01, 0x76, 0x07, 0x33, 0x03, 0x72, 0x03, 0x07, 0x04, 0x72, 0x05, 0x71, 0x03, 0x13, 0x04, 0x71, 0x01, 0x46, 0x06, 0x53, 0x05, 0x70, 0x05, 0x35, 0x04, 0x46, 0x03, 0x74, 0x06 }
 #define GFX_ATLAS_FIRST_SEG 4
-#define GFX_ATLAS_SEGS 12
-#define GFX_ATLAS_LINES 736
+#define GFX_ATLAS_SEGS 8
+#define GFX_ATLAS_LINES 512
 #define GFX_ATLAS_Y0 256
-#define GFX_LOGO_SEG 16
+#define GFX_LOGO_SEG 12
 #define GFX_LOGO_W 152
 #define GFX_LOGO_H 98
-#define GFX_TAG_SEG 17
+#define GFX_TAG_SEG 13
 #define GFX_TAG_Y 212
 #define GFX_CELL_W 24
 #define GFX_CELL_H 32
@@ -17,14 +17,15 @@
 #define CELL_BACK 52
 #define CELL_BLANK 53
 #define CELL_PLANET 54
-#define CELL_JOKER 66
-#define CELL_TAROT 154
-#define CELL_VOUCHER 176
+#define CELL_TAROT 66
+#define CELL_VOUCHER 88
 #define FONT_ROWS 9
-#define FONT_Y0 864
+#define FONT_Y0 576
 #define FONT_STRIP_H 18
 #define FONT_COLOR_COUNT 7
 #define BLIND_ICON_COUNT 30
+#define GFX_JOKER_PER_SEG 21
+#define GFX_JOKER_SEG_LIST { 14, 15, 16, 17, 18 }
 #define COL_ICE 10
 #define COL_PURPLE 14
 #define COL_STEEL 13

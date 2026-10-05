@@ -109,6 +109,14 @@ void Vid_Card(u8 cell, u8 x, u8 y)        // HMMM (x even): ~2.3x faster than th
 	VDP_CommandHMMM(sx, sy, x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
 }
 
+void Vid_Joker(u8 id, u8 x, u8 y)
+{
+	static const u8 segs[] = GFX_JOKER_SEG_LIST;
+	SET_BANK_SEGMENT(3, segs[id / GFX_JOKER_PER_SEG]);
+	VDP_CommandHMMC((const u8*)0xA000 + (u16)(id % GFX_JOKER_PER_SEG) * (GFX_CELL_W * GFX_CELL_H / 2), x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
+	SET_BANK_SEGMENT(3, SEG_TEXT);
+}
+
 void Vid_EdStripe(u8 ed, u8 x, u8 y)
 {
 	x &= 0xFE;

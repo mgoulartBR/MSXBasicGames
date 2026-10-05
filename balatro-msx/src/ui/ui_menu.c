@@ -333,7 +333,7 @@ void scr_win(void) BANKED
 	Vid_TextC(128, 64, g.endless ? "You beat the Ante 12 Boss Blind." : "You beat the Ante 8 Boss Blind.", TC_WHITE);
 	Vid_Text(76, 100, "Money", TC_SLATE); Vid_Num(160, 100, g.money, TC_GOLD);
 	Vid_Text(76, 112, "Jokers", TC_SLATE); Vid_Num(160, 112, g.nJk, TC_WHITE);
-	for (u8 i = 0; i < g.nJk; i++) Vid_Card(g_Jokers[g.jk[i].id].cell, 62 + i * 28, 134);
+	for (u8 i = 0; i < g.nJk; i++) Vid_Joker(g.jk[i].id, 62 + i * 28, 134);
 	ui.timer = 0;
 }
 
