@@ -1,8 +1,8 @@
 // Host simulation: random "bot" runs through the whole rules engine to catch crashes / invariant breaks.
-// gcc -I include tests/host_sim.c src/game/*.c src/seg/data_s20_b3.c
+// gcc -I include tests/host_sim.c src/game/*.c src/seg/seg_s20_b3.c
 #include <stdio.h>
 #include <stdlib.h>
-#include "game.h"
+#include "bgame.h"
 
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("INVARIANT FAILED: " __VA_ARGS__); printf("\n"); fails++; if (fails > 5) exit(1); } } while (0)

@@ -1,11 +1,11 @@
 // Run / round flow: deck, blinds, discards, round end, cash out.
 // Rules are those of Balatro (see docs/PORTING.md for the list of what is not ported).
-#include "game.h"
+#include "bgame.h"
 
 Game g;
 const char* const g_TextMsg[TX_COUNT] = { "Again!", "Upgrade!", "Reset", "Level Up!", "Debuffed", "Eaten!", "Extinct!", "Safe!", "Saved!" };
 
-void deck_new(void)
+void deck_new(void) BANKED
 {
 	u8 n = 0;
 	for (u8 s = 0; s < 4; s++)
@@ -13,7 +13,7 @@ void deck_new(void)
 	g.nDeck = n;
 }
 
-u8 bosses_for_ante(u8 ante)
+u8 bosses_for_ante(u8 ante) BANKED
 {
 	for (u8 pass = 0; pass < 2; pass++)
 	{
@@ -32,7 +32,7 @@ u8 bosses_for_ante(u8 ante)
 	return 0;
 }
 
-void run_new(void)
+void run_new(void) BANKED
 {
 	{ u8* p = (u8*)&g; for (u16 i = 0; i < sizeof(Game); i++) p[i] = 0; }
 	g.ante = 1; g.blind = BLIND_SMALL;
@@ -49,7 +49,7 @@ void run_new(void)
 //-----------------------------------------------------------------------------
 // blinds
 //-----------------------------------------------------------------------------
-u32 blind_target(void)
+u32 blind_target(void) BANKED
 {
 	u32 a = g_AnteAmount[g.ante - 1];
 	if (g.blind == BLIND_SMALL) return a;
@@ -57,14 +57,14 @@ u32 blind_target(void)
 	return a * g_Bosses[g.boss].mult2 / 2;
 }
 
-u8 blind_reward(void)
+u8 blind_reward(void) BANKED
 {
 	if (g.blind == BLIND_SMALL) return 3;
 	if (g.blind == BLIND_BIG) return 4;
 	return g_Bosses[g.boss].reward;
 }
 
-u8 hand_size(void)
+u8 hand_size(void) BANKED
 {
 	i8 n = (i8)(g.handSizeBase + g.handSizeMod);
 	if (bossActive(BS_MANACLE)) n -= 1;
@@ -84,7 +84,7 @@ static u8 sort_key(u8 slot, u8 mode)
 	return (u8)(suitRank[C_SUIT(c)] * 16 + C_RANK(c));
 }
 
-void hand_sort(u8 mode)
+void hand_sort(u8 mode) BANKED
 {
 	g.sortMode = mode;
 	for (u8 i = 1; i < g.nHand; i++)                      // insertion sort, descending
@@ -96,7 +96,7 @@ void hand_sort(u8 mode)
 	}
 }
 
-void draw_to_hand(void)
+void draw_to_hand(void) BANKED
 {
 	u8 n;
 	if (bossActive(BS_SERPENT) && (g.handsPlayed > 0 || g.discardsUsed > 0)) n = 3;
@@ -128,7 +128,7 @@ static void shuffle_pile(void)
 //-----------------------------------------------------------------------------
 // round start
 //-----------------------------------------------------------------------------
-void blind_start(void)
+void blind_start(void) BANKED
 {
 	i8 jh, jd;
 	joker_round_bonus(&jh, &jd);
@@ -167,7 +167,7 @@ void blind_start(void)
 //-----------------------------------------------------------------------------
 static u8 popcnt(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } return n; }
 
-bool round_can_play(u16 sel)
+bool round_can_play(u16 sel) BANKED
 {
 	u8 n = popcnt(sel);
 	return n >= 1 && n <= PLAY_MAX && g.handsLeft > 0;
@@ -181,7 +181,7 @@ static void remove_flagged_jokers(void)
 	}
 }
 
-void round_resolve_play(void)
+void round_resolve_play(void) BANKED
 {
 	for (u8 i = 0; i < g.nPlayed; i++) { g.loc[g.played[i]] = LOC_DISCARD; g.dflag[g.played[i]] |= DF_PILLAR; }
 	g.nPlayed = 0;
@@ -206,7 +206,7 @@ static void check_bones(void)
 	g.state = ROUND_LOST;
 }
 
-void round_check_end(void)
+void round_check_end(void) BANKED
 {
 	if (g.score >= g.target) { g.state = ROUND_WON; return; }
 	if (g.handsLeft == 0) { check_bones(); return; }
@@ -214,7 +214,7 @@ void round_check_end(void)
 	g.state = ROUND_PLAYING;
 }
 
-bool round_discard(u16 sel)
+bool round_discard(u16 sel) BANKED
 {
 	u8 n = popcnt(sel);
 	if (n < 1 || n > 5 || g.discardsLeft == 0) return FALSE;
@@ -253,7 +253,7 @@ bool round_discard(u16 sel)
 //-----------------------------------------------------------------------------
 // round end: joker state changes, then the cash out table
 //-----------------------------------------------------------------------------
-void round_end_effects(void)
+void round_end_effects(void) BANKED
 {
 	for (u8 i = 0; i < g.nJk; i++)
 	{
@@ -279,7 +279,7 @@ void round_end_effects(void)
 	joker_recalc_modifiers();
 }
 
-u8 cashout_build(Cash* rows, i16* total)
+u8 cashout_build(Cash* rows, i16* total) BANKED
 {
 	u8 n = 0; i16 sum = 0;
 	rows[n].kind = 0; rows[n].amount = blind_reward(); rows[n].who = 0; sum += rows[n].amount; n++;
@@ -316,7 +316,7 @@ u8 cashout_build(Cash* rows, i16* total)
 	return n;
 }
 
-void next_blind(void)
+void next_blind(void) BANKED
 {
 	if (g.blind == BLIND_BOSS)
 	{
@@ -327,4 +327,4 @@ void next_blind(void)
 	else g.blind++;
 }
 
-bool run_won(void) { return g.ante > MAX_ANTE; }
+bool run_won(void) BANKED { return g.ante > MAX_ANTE; }

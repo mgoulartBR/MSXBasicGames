@@ -18,5 +18,8 @@
 #define CELL_JOKER 80
 #define CELL_TAROT 168
 #define FONT_ROWS 9
+#define FONT_Y0 864
+#define FONT_STRIP_H 18
+#define FONT_COLOR_COUNT 7
 #define BLIND_ICON_COUNT 30
 // blind icon rows (16px each) in atlas column x=240: bl_small=0, bl_big=1, bl_hook=2, bl_ox=3, bl_house=4, bl_wall=5, bl_wheel=6, bl_arm=7, bl_club=8, bl_fish=9, bl_psychic=10, bl_goad=11, bl_water=12, bl_window=13, bl_manacle=14, bl_eye=15, bl_mouth=16, bl_plant=17, bl_serpent=18, bl_pillar=19, bl_needle=20, bl_head=21, bl_tooth=22, bl_flint=23, bl_mark=24, bl_final_acorn=25, bl_final_leaf=26, bl_final_vessel=27, bl_final_heart=28, bl_final_bell=29

@@ -185,68 +185,68 @@ bool rnd_odds(u8 n);                 // true with probability 1/n
 //-----------------------------------------------------------------------------
 // run.c - the run / round / shop rules
 //-----------------------------------------------------------------------------
-void run_new(void);
-u8   poker_rules(void);
-bool card_is_face(Card c);
-bool card_is_debuffed(u8 slot);
-bool bossActive(u8 b);
-void joker_round_bonus(i8* hands, i8* discards);
-u32  blind_target(void);
-u8   blind_reward(void);
-void blind_start(void);                       // start playing the current blind (draw, effects)
-bool round_can_play(u16 selMask);
-void round_play(u16 selMask, ScoreOut* out);  // play highlighted hand slots
-void round_resolve_play(void);                // after the UI replayed the events: move cards, draw
-bool round_discard(u16 selMask);
-void round_check_end(void);
-u8   hand_size(void);
-void hand_sort(u8 mode);                      // 0 rank, 1 suit
-void draw_to_hand(void);
-void round_end_effects(void);                 // joker end-of-round state changes
+void run_new(void) BANKED;
+u8   poker_rules(void) BANKED;
+bool card_is_face(Card c) BANKED;
+bool card_is_debuffed(u8 slot) BANKED;
+bool bossActive(u8 b) BANKED;
+void joker_round_bonus(i8* hands, i8* discards) BANKED;
+u32  blind_target(void) BANKED;
+u8   blind_reward(void) BANKED;
+void blind_start(void) BANKED;                       // start playing the current blind (draw, effects)
+bool round_can_play(u16 selMask) BANKED;
+void round_play(u16 selMask, ScoreOut* out) BANKED;  // play highlighted hand slots
+void round_resolve_play(void) BANKED;                // after the UI replayed the events: move cards, draw
+bool round_discard(u16 selMask) BANKED;
+void round_check_end(void) BANKED;
+u8   hand_size(void) BANKED;
+void hand_sort(u8 mode) BANKED;                      // 0 rank, 1 suit
+void draw_to_hand(void) BANKED;
+void round_end_effects(void) BANKED;                 // joker end-of-round state changes
 typedef struct { u8 kind; i16 amount; u8 who; } Cash;
 #define CASH_MAX 12
-u8   cashout_build(Cash* rows, i16* total);   // rows: blind, hands, jokers, interest
-void next_blind(void);                         // advance blind/ante after shop
-bool run_won(void);
+u8   cashout_build(Cash* rows, i16* total) BANKED;   // rows: blind, hands, jokers, interest
+void next_blind(void) BANKED;                         // advance blind/ante after shop
+bool run_won(void) BANKED;
 
 // consumables
-bool cons_needs_cards(u8 c, u8* minc, u8* maxc);
-bool cons_use(u8 slot, u16 selMask);
-bool cons_add(u8 c);
-void planet_use(u8 hand);
+bool cons_needs_cards(u8 c, u8* minc, u8* maxc) BANKED;
+bool cons_use(u8 slot, u16 selMask) BANKED;
+bool cons_add(u8 c) BANKED;
+void planet_use(u8 hand) BANKED;
 
 // jokers
-bool joker_add(u8 id);
-void joker_remove(u8 idx);
-u8   joker_sell_value(u8 idx);
-u8   joker_count(u8 id);
-u8   joker_slots(void);
-void joker_recalc_modifiers(void);            // hand size / hands / discards bonuses
-bool joker_has(u8 id);
+bool joker_add(u8 id) BANKED;
+void joker_remove(u8 idx) BANKED;
+u8   joker_sell_value(u8 idx) BANKED;
+u8   joker_count(u8 id) BANKED;
+u8   joker_slots(void) BANKED;
+void joker_recalc_modifiers(void) BANKED;            // hand size / hands / discards bonuses
+bool joker_has(u8 id) BANKED;
 
 // shop
-void shop_generate(void);
-bool shop_buy(u8 i);
-bool shop_reroll(void);
-u8   shop_cost(u8 i);
-bool pack_open(u8 slot);
+void shop_generate(void) BANKED;
+bool shop_buy(u8 i) BANKED;
+bool shop_reroll(void) BANKED;
+u8   shop_cost(u8 i) BANKED;
+bool pack_open(u8 slot) BANKED;
 extern u8 g_packN, g_packPick, g_packKind;
 extern u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
-bool pack_choose(u8 i);
-void joker_sell(u8 idx);
-void cons_sell(u8 slot);
-u8   cons_sell_value(u8 c);
-i16  debt_limit(void);
+bool pack_choose(u8 i) BANKED;
+void joker_sell(u8 idx) BANKED;
+void cons_sell(u8 slot) BANKED;
+u8   cons_sell_value(u8 c) BANKED;
+i16  debt_limit(void) BANKED;
 #define PACK_NORMAL 0
 #define PACK_JUMBO  1
 #define PACK_MEGA   2
 // pack kinds: 1..9 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon ; (kind-1)%3: size
 #define PACK_KIND(t, sz) ((u8)(1 + (t) * 3 + (sz)))
-u8   pack_cost(u8 kind);
+u8   pack_cost(u8 kind) BANKED;
 
 // misc
-void deck_new(void);
-u8   bosses_for_ante(u8 ante);                // picks a boss id for the ante
-u32  hand_chips(u8 type);
-u16  hand_mult(u8 type);
+void deck_new(void) BANKED;
+u8   bosses_for_ante(u8 ante) BANKED;                // picks a boss id for the ante
+u32  hand_chips(u8 type) BANKED;
+u16  hand_mult(u8 type) BANKED;
 extern const char* const g_TextMsg[TX_COUNT];

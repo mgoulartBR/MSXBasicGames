@@ -1,7 +1,7 @@
 // Host-side regression test for the poker evaluator: gcc -I include -I src/gen tests/host_poker.c src/game/poker.c ...
 #include <stdio.h>
 #include <string.h>
-#include "game.h"
+#include "bgame.h"
 static int fails = 0;
 static void chk(const char* name, const Card* c, u8 n, u8 rules, u8 type, u8 mask)
 {

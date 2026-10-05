@@ -1,23 +1,23 @@
 // Joker bookkeeping: acquiring, removing, sell values and passive modifiers.
 // Effects that fire while scoring live in score.c; round-end effects in run.c.
-#include "game.h"
+#include "bgame.h"
 
-u8 joker_slots(void) { return JOKER_MAX; }
+u8 joker_slots(void) BANKED { return JOKER_MAX; }
 
-bool joker_has(u8 id)
+bool joker_has(u8 id) BANKED
 {
 	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == id && !(g.jk[i].flags & JF_DEBUFF)) return TRUE;
 	return FALSE;
 }
 
-u8 joker_count(u8 id)
+u8 joker_count(u8 id) BANKED
 {
 	u8 n = 0;
 	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == id) n++;
 	return n;
 }
 
-u8 joker_sell_value(u8 idx)
+u8 joker_sell_value(u8 idx) BANKED
 {
 	u8 v = g_Jokers[g.jk[idx].id].cost >> 1;
 	if (v < 1) v = 1;
@@ -42,7 +42,7 @@ static i8 hand_size_mod(void)
 }
 
 // hands / discards bonuses coming from jokers (applied at the start of each round)
-void joker_round_bonus(i8* hands, i8* discards)
+void joker_round_bonus(i8* hands, i8* discards) BANKED
 {
 	*hands = 0; *discards = 0;
 	for (u8 i = 0; i < g.nJk; i++)
@@ -57,14 +57,14 @@ void joker_round_bonus(i8* hands, i8* discards)
 	}
 }
 
-void joker_recalc_modifiers(void)
+void joker_recalc_modifiers(void) BANKED
 {
 	g.handSizeMod = hand_size_mod();
 	g.interestBonus = 0;
 	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_TO_THE_MOON) g.interestBonus++;
 }
 
-bool joker_add(u8 id)
+bool joker_add(u8 id) BANKED
 {
 	if (g.nJk >= joker_slots()) return FALSE;
 	JokerInst* j = &g.jk[g.nJk++];
@@ -83,7 +83,7 @@ bool joker_add(u8 id)
 	return TRUE;
 }
 
-void joker_remove(u8 idx)
+void joker_remove(u8 idx) BANKED
 {
 	for (u8 i = idx; i + 1 < g.nJk; i++) g.jk[i] = g.jk[i + 1];
 	g.nJk--;

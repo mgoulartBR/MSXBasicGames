@@ -1,6 +1,6 @@
 // Host-side scoring checks against hand-computed values (rules taken from the original).
 #include <stdio.h>
-#include "game.h"
+#include "bgame.h"
 static int fails = 0;
 static void expect(const char* name, u32 got, u32 want)
 {

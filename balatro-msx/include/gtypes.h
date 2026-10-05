@@ -3,7 +3,9 @@
 #pragma once
 #ifdef __SDCC
 	#include "core.h"
+	#define BANKED __banked     /* function lives in a mapper code segment (bank 2) */
 #else
+	#define BANKED
 	#include <stdint.h>
 	#include <stdbool.h>
 	#include <stddef.h>

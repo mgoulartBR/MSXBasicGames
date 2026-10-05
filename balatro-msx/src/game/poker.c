@@ -1,7 +1,7 @@
 // Poker hand evaluation. Faithful port of evaluate_poker_hand / get_flush / get_straight /
 // get_X_same from the original (functions/misc_functions.lua), including Four Fingers,
 // Shortcut and Smeared Joker behaviour.
-#include "game.h"
+#include "bgame.h"
 
 static u8 suit_class(u8 s, u8 rules) { return (rules & PR_SMEARED) ? (u8)(s & 1) : s; }
 

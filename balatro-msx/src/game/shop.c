@@ -1,12 +1,12 @@
 // Shop, booster packs and consumables.
-#include "game.h"
+#include "bgame.h"
 
 u8 g_packN, g_packPick, g_packKind;
 u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
 
 enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT };
 
-i16 debt_limit(void) { return joker_has(JK_CREDIT_CARD) ? -20 : 0; }
+i16 debt_limit(void) BANKED { return joker_has(JK_CREDIT_CARD) ? -20 : 0; }
 
 static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } return n; }
 
@@ -44,34 +44,34 @@ static u8 random_tarot(void) { return rndn(TAROT_COUNT); }
 //-----------------------------------------------------------------------------
 // consumables
 //-----------------------------------------------------------------------------
-bool cons_add(u8 c)
+bool cons_add(u8 c) BANKED
 {
 	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i] == 0) { g.cons[i] = c; return TRUE; }
 	return FALSE;
 }
 
-u8 cons_sell_value(u8 c) { (void)c; return 1; }
+u8 cons_sell_value(u8 c) BANKED { (void)c; return 1; }
 
-void cons_sell(u8 slot)
+void cons_sell(u8 slot) BANKED
 {
 	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); g.cons[slot] = 0; }
 }
 
-void joker_sell(u8 idx)
+void joker_sell(u8 idx) BANKED
 {
 	g.money += joker_sell_value(idx);
 	joker_remove(idx);
 	if (g.blind == BLIND_BOSS && g.boss == BS_FINAL_LEAF) g.bossOff = 1;
 }
 
-void planet_use(u8 hand)
+void planet_use(u8 hand) BANKED
 {
 	g.handLevel[hand]++;
 	g.planetsUsed |= (u16)(1u << hand);
 	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_CONSTELLATION) g.jk[i].v += 10;
 }
 
-bool cons_needs_cards(u8 c, u8* minc, u8* maxc)
+bool cons_needs_cards(u8 c, u8* minc, u8* maxc) BANKED
 {
 	*minc = 0; *maxc = 0;
 	if (!CONS_IS_TAROT(c)) return FALSE;
@@ -92,7 +92,7 @@ static void hand_remove(u8 idx)
 }
 
 // use the consumable in slot (planets need no cards); sel = highlighted hand positions
-bool cons_use(u8 slot, u16 sel)
+bool cons_use(u8 slot, u16 sel) BANKED
 {
 	u8 c = g.cons[slot];
 	if (!c) return FALSE;
@@ -187,7 +187,7 @@ static void shop_roll_cards(void)
 	}
 }
 
-void shop_generate(void)
+void shop_generate(void) BANKED
 {
 	g.rerollCost = g.rerollBase;
 	shop_roll_cards();
@@ -200,7 +200,7 @@ void shop_generate(void)
 	g.shopOpen = 1;
 }
 
-u8 shop_cost(u8 i)
+u8 shop_cost(u8 i) BANKED
 {
 	switch (g.shopType[i])
 	{
@@ -210,9 +210,9 @@ u8 shop_cost(u8 i)
 	return 0;
 }
 
-u8 pack_cost(u8 kind) { u8 sz = (u8)((kind - 1) % 3); return (u8)(4 + 2 * sz); }
+u8 pack_cost(u8 kind) BANKED { u8 sz = (u8)((kind - 1) % 3); return (u8)(4 + 2 * sz); }
 
-bool shop_buy(u8 i)
+bool shop_buy(u8 i) BANKED
 {
 	u8 t = g.shopType[i];
 	if (!t) return FALSE;
@@ -226,7 +226,7 @@ bool shop_buy(u8 i)
 	return TRUE;
 }
 
-bool shop_reroll(void)
+bool shop_reroll(void) BANKED
 {
 	if (g.money - g.rerollCost < debt_limit()) return FALSE;
 	g.money -= g.rerollCost;
@@ -238,7 +238,7 @@ bool shop_reroll(void)
 //-----------------------------------------------------------------------------
 // booster packs: Arcana (tarots), Celestial (planets), Buffoon (jokers)
 //-----------------------------------------------------------------------------
-bool pack_open(u8 slot)
+bool pack_open(u8 slot) BANKED
 {
 	u8 kind = g.packType[slot];
 	if (!kind) return FALSE;
@@ -276,7 +276,7 @@ bool pack_open(u8 slot)
 	return TRUE;
 }
 
-bool pack_choose(u8 i)
+bool pack_choose(u8 i) BANKED
 {
 	if (i >= g_packN || !g_packType[i] || !g_packPick) return FALSE;
 	switch (g_packType[i])

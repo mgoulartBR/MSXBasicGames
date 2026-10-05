@@ -2,7 +2,7 @@
 // G.FUNCS.evaluate_play (functions/state_events.lua) and Card:calculate_joker (card.lua).
 // The whole hand is computed at once into a list of events (running chips/mult after each);
 // the UI replays that list as an animation.
-#include "game.h"
+#include "bgame.h"
 
 typedef struct
 {
@@ -26,7 +26,7 @@ static void x_mult(SC* s, u8 src, i16 x100) { s->mult = s->mult * (u32)x100 / 10
 static void add_money(SC* s, u8 src, i16 v) { g.money += v; push(s, EV_MONEY, src, v); }
 static void text(SC* s, u8 src, u8 id)      { push(s, EV_TEXT, src, id); }
 
-u8 poker_rules(void)
+u8 poker_rules(void) BANKED
 {
 	u8 r = 0;
 	if (joker_has(JK_FOUR_FINGERS)) r |= PR_FOUR_FINGERS;
@@ -35,7 +35,7 @@ u8 poker_rules(void)
 	return r;
 }
 
-bool card_is_face(Card c)
+bool card_is_face(Card c) BANKED
 {
 	u8 r = C_RANK(c);
 	return (r >= RANK_J && r <= RANK_K) || joker_has(JK_PAREIDOLIA);
@@ -47,10 +47,10 @@ static bool suit_is(Card c, u8 s)
 	return C_SUIT(c) == s;
 }
 
-bool bossActive(u8 b) { return g.blind == BLIND_BOSS && g.boss == b && !g.bossOff; }
+bool bossActive(u8 b) BANKED { return g.blind == BLIND_BOSS && g.boss == b && !g.bossOff; }
 
 // Boss debuffs on playing cards (Blind:debuff_card)
-bool card_is_debuffed(u8 slot)
+bool card_is_debuffed(u8 slot) BANKED
 {
 	if (g.blind != BLIND_BOSS || g.bossOff) return FALSE;
 	Card c = g.deck[slot];
@@ -67,8 +67,8 @@ bool card_is_debuffed(u8 slot)
 	return FALSE;
 }
 
-u32 hand_chips(u8 t) { return (u32)g_Hands[t].baseChips + (u32)g_Hands[t].lvlChips * (g.handLevel[t] - 1); }
-u16 hand_mult(u8 t)  { return (u16)(g_Hands[t].baseMult + g_Hands[t].lvlMult * (g.handLevel[t] - 1)); }
+u32 hand_chips(u8 t) BANKED { return (u32)g_Hands[t].baseChips + (u32)g_Hands[t].lvlChips * (g.handLevel[t] - 1); }
+u16 hand_mult(u8 t) BANKED { return (u16)(g_Hands[t].baseMult + g_Hands[t].lvlMult * (g.handLevel[t] - 1)); }
 
 #define CONTAINS(h) ((ct >> (h)) & 1)
 
@@ -256,7 +256,7 @@ static void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* 
 // ---------------------------------------------------------------------------
 // round_play: removes the highlighted cards from the hand and scores them
 // ---------------------------------------------------------------------------
-void round_play(u16 sel, ScoreOut* o)
+void round_play(u16 sel, ScoreOut* o) BANKED
 {
 	SC s; s.o = o; s.chips = 0; s.mult = 0;
 	o->n = 0; o->debuffed = 0; o->total = 0;

@@ -1,5 +1,5 @@
 // Small, cheap RNG for the Z80: 16-bit xorshift (period 65535). Deterministic for a given seed.
-#include "game.h"
+#include "bgame.h"
 
 static u16 s_state = 0xACE1;
 
