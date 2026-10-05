@@ -147,6 +147,7 @@ static void shop_widgets(void)
 	for (u8 i = 0; i < 2; i++) ui_add(W_PACK + i, PACK_X(i), PACK_Y, 24, 44);
 	ui_add(W_NEXT, 170, 60, 80, 18);
 	ui_add(W_REROLL, 170, 84, 80, 18);
+	ui.defFocus = g.shopType[0] ? W_SHOPCARD : W_NEXT;
 	if (ui.itemKind) { ui_add(W_SELL, 0, 0, 38, 12); if (ui.itemKind == 2) ui_add(W_USE, 0, 0, 30, 12); }
 	ui.focus = 0xFF;
 }
@@ -253,7 +254,8 @@ void scr_pack(void) BANKED
 	hud_mini();
 	for (u8 i = 0; i < g_packN; i++) ui_add(W_PACKCARD + i, pack_x(i), 60, 24, 32);
 	ui_add(W_SKIP, AREA_X + 56, 120, 80, 18);
-	ui.focus = 0;
+	ui.defFocus = W_PACKCARD;
+	ui.focus = ui_find(W_PACKCARD);
 	draw_pack();
 }
 

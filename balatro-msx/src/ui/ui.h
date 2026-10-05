@@ -7,6 +7,7 @@
 #include "bgame.h"
 #include "platform/pvideo.h"
 #include "platform/ctrl.h"
+#include "platform/audio.h"
 
 //-----------------------------------------------------------------------------
 // layout
@@ -51,6 +52,7 @@ typedef struct
 	Widget w[WMAX];
 	u8  nw;
 	u8  focus;            // widget index or 0xFF
+	u8  defFocus;         // widget id focused by the first keyboard/joystick direction press
 	u16 sel;              // selected hand positions
 	u8  itemKind;         // 0 none, 1 joker, 2 consumable (selected for sell/use)
 	u8  itemIdx;
@@ -104,6 +106,7 @@ void info_blind(void) BANKED;
 void draw_joker_row(bool shop) BANKED;
 u8   joker_item_at(u8 id) BANKED;
 void snd(u8 id) BANKED;
+void snd_event(u8 kind, u8 n) BANKED;
 
 // screens
 void scr_title(void) BANKED;

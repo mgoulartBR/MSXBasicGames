@@ -644,3 +644,6 @@
 // - PROFILE_OPENMSX_S ............ Profiler features for openMSX using Salutte script (tools/script/openMSX/profiler_salutte.tcl)
 #define PROFILE_TOOL				PROFILE_DISABLE
 #define PROFILE_LEVEL				10
+// PSG: write the registers directly (no RAM buffer) - the sequencer in platform/audio.c owns the chip
+#undef PSG_ACCESS
+#define PSG_ACCESS					PSG_DIRECT

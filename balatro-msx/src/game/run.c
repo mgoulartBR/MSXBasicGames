@@ -149,7 +149,7 @@ void blind_start(void) BANKED
 	for (u8 i = 0; i < g.nJk; i++) g.jk[i].flags &= (u8)~JF_DEBUFF;
 	// the hand the Ox punishes: most played so far (ties: the more valuable hand wins like the original list order)
 	{
-		u16 best = 0; g.mostPlayed = 0xFF;
+		u16 best = 0; g.mostPlayed = HAND_HIGH_CARD;     // the original defaults to High Card when nothing was played yet
 		for (u8 t = 0; t < HAND_COUNT; t++)
 			if (g.handPlays[t] > best || (g.handPlays[t] == best && best > 0)) { best = g.handPlays[t]; g.mostPlayed = t; }
 	}

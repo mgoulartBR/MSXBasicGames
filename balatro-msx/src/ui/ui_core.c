@@ -12,7 +12,7 @@ static const char* const k_suit[4] = { "Hearts", "Clubs", "Diamonds", "Spades" }
 //-----------------------------------------------------------------------------
 // widgets
 //-----------------------------------------------------------------------------
-void ui_clear_widgets(void) BANKED { ui.nw = 0; ui.focus = 0xFF; }
+void ui_clear_widgets(void) BANKED { ui.nw = 0; ui.focus = 0xFF; ui.defFocus = 0xFF; }
 
 void ui_add(u8 id, u8 x, u8 y, u8 w, u8 h) BANKED
 {
@@ -62,7 +62,7 @@ bool ui_pointer_focus(void) BANKED
 void ui_nav(u8 dir) BANKED
 {
 	if (!ui.nw) return;
-	if (ui.focus == 0xFF) { ui_set_focus(0); return; }
+	if (ui.focus == 0xFF) { u8 d = ui_find(ui.defFocus); ui_set_focus(d == 0xFF ? 0 : d); return; }
 	Widget* c = &ui.w[ui.focus];
 	i16 cx = c->x + c->w / 2, cy = c->y + c->h / 2;
 	u8 best = 0xFF; i16 bs = 32000;
@@ -87,7 +87,7 @@ void ui_nav(u8 dir) BANKED
 	if (best != 0xFF) ui_set_focus(best);
 }
 
-void ui_msg(const char* m) BANKED { ui.msg = m; ui.msgTimer = FR(100); ui.dirty |= D_INFO; }
+void ui_msg(const char* m) BANKED { ui.msg = m; ui.msgTimer = FR(100); ui.dirty |= D_INFO; Snd_Play(SFX_ERROR); }
 
 //-----------------------------------------------------------------------------
 // buttons
@@ -217,6 +217,15 @@ static void info_clear(void)
 	Vid_Panel(AREA_X + 1, INFO_Y, 190, 35, COL_INK, COL_SLATE);
 }
 
+// "Cost $n" / "Sell $n" right aligned in the info panel
+static void info_price(const char* label, u8 v)
+{
+	u8 w = Vid_NumW(v);
+	Vid_Num(250 - w, INFO_Y + 3, v, TC_GOLD);
+	Vid_Text(250 - w - 6, INFO_Y + 3, "$", TC_GOLD);
+	Vid_Text(250 - w - 6 - Vid_TextW(label) - 3, INFO_Y + 3, label, TC_SLATE);
+}
+
 static void info_card(Card c)
 {
 	char b[24]; u8 n = 0;
@@ -235,8 +244,8 @@ static void info_card(Card c)
 static void info_jokerdef(const JokerDef* d, i8 sell, u8 price)
 {
 	Vid_Text(AREA_X + 6, INFO_Y + 3, d->name, TC_GOLD);
-	if (sell >= 0) { Vid_Text(AREA_X + 150, INFO_Y + 3, "Sell $", TC_SLATE); Vid_Num(AREA_X + 150 + 32, INFO_Y + 3, sell, TC_GOLD); }
-	else if (price) { Vid_Text(AREA_X + 160, INFO_Y + 3, "Cost $", TC_SLATE); Vid_Num(AREA_X + 160 + 32, INFO_Y + 3, price, TC_GOLD); }
+	if (sell >= 0) info_price("Sell", (u8)sell);
+	else if (price) info_price("Cost", price);
 	Vid_Wrap(AREA_X + 6, INFO_Y + 14, d->desc, 180, TC_WHITE, 2);
 }
 
@@ -261,7 +270,7 @@ static void info_cons(u8 c, u8 price)
 		Vid_Text(AREA_X + 6, INFO_Y + 3, t->name, TC_BLUE);
 		Vid_Wrap(AREA_X + 6, INFO_Y + 14, t->desc, 180, TC_WHITE, 2);
 	}
-	if (price) { Vid_Text(AREA_X + 160, INFO_Y + 3, "Cost $", TC_SLATE); Vid_Num(AREA_X + 192, INFO_Y + 3, price, TC_GOLD); }
+	if (price) info_price("Cost", price);
 }
 
 static void info_text(const char* a, const char* b)
@@ -308,7 +317,7 @@ void info_show(u8 id) BANKED
 			{
 				u8 i = id - W_SHOPCARD;
 				if (g.shopType[i] == 1) info_jokerdef(&g_Jokers[g.shopId[i]], -1, g_Jokers[g.shopId[i]].cost);
-				else if (g.shopType[i] == 2) { info_planet(g.shopId[i], FALSE); Vid_Text(AREA_X + 160, INFO_Y + 3, "Cost $3", TC_GOLD); }
+				else if (g.shopType[i] == 2) { info_planet(g.shopId[i], FALSE); info_price("Cost", 3); }
 				else if (g.shopType[i] == 3) info_cons(CONS_TAROT(g.shopId[i]), 3);
 				else info_text("Sold out", 0);
 			}
@@ -325,7 +334,7 @@ void info_show(u8 id) BANKED
 					p = nm[(k - 1) / 3]; while (*p) b[n++] = *p++;
 					b[n] = 0;
 					Vid_Text(AREA_X + 6, INFO_Y + 3, b, TC_BLUE);
-					Vid_Text(AREA_X + 160, INFO_Y + 3, "Cost $", TC_SLATE); Vid_Num(AREA_X + 192, INFO_Y + 3, pack_cost(k), TC_GOLD);
+					info_price("Cost", pack_cost(k));
 					Vid_Wrap(AREA_X + 6, INFO_Y + 14, ds[(k - 1) / 3], 180, TC_WHITE, 2);
 				}
 				else info_text("Sold out", 0);
@@ -398,4 +407,17 @@ u8 joker_item_at(u8 id) BANKED
 	return 0;
 }
 
-void snd(u8 id) BANKED { (void)id; }
+void snd(u8 id) BANKED { Snd_Play(id); }
+
+// scoring event sounds: chips/mult blips climb in pitch with the event number, like the original
+void snd_event(u8 kind, u8 n) BANKED
+{
+	switch (kind)
+	{
+		case EV_CARD: case EV_CHIPS: Snd_PlayPitch(SFX_CHIPS, n); break;
+		case EV_MULT: Snd_PlayPitch(SFX_MULT, n); break;
+		case EV_XMULT: Snd_PlayPitch(SFX_XMULT, n); break;
+		case EV_MONEY: Snd_Play(SFX_COIN); break;
+		case EV_DEBUFF: Snd_Play(SFX_ERROR); break;
+	}
+}

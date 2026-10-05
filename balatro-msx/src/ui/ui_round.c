@@ -1,7 +1,6 @@
 // The round screen: hand, jokers, play/discard, scoring animation.
 #include "ui.h"
 
-enum { SND_NONE };
 
 static u8 hstep, hx0;
 static u8 pop_x, pop_y, pop_w;       // last popup rectangle (0 = none)
@@ -39,6 +38,7 @@ static void rebuild_widgets(void)
 	ui_add(W_SORT_RANK, 158, BTN_Y, 44, BTN_H);
 	ui_add(W_SORT_SUIT, 204, BTN_Y, 44, BTN_H);
 	ui_add(W_INFO, 2, 172, 58, 13);
+	ui.defFocus = W_HAND;
 	if (ui.itemKind)
 	{
 		ui_add(W_SELL, 0, 0, 38, 12);
@@ -174,7 +174,7 @@ static void play_event(const Ev* e)
 	}
 	hud_hand(ui.so.type, e->chips, e->mult);
 	hud_update();
-	snd(e->kind);
+	snd_event(e->kind, ui.evi);
 }
 
 //-----------------------------------------------------------------------------
@@ -216,9 +216,9 @@ static void end_of_round(void)
 		ui.phase = PH_BANNER; ui.timer = FR(70);
 		Vid_Panel(AREA_X + 40, 90, 112, 30, COL_INK, COL_GOLD);
 		Vid_TextC(AREA_X + 96, 98, g.blind == BLIND_BOSS ? "Boss defeated!" : "Blind defeated!", TC_GOLD);
-		snd(20);
+		snd(SFX_WIN);
 	}
-	else if (g.state == ROUND_LOST) { ui_goto(SC_OVER); }
+	else if (g.state == ROUND_LOST) { snd(SFX_LOSE); ui_goto(SC_OVER); }
 }
 
 static void start_play(void)

@@ -39,6 +39,7 @@ static u16 read_all(void)
 	if (IS_KEY_PRESSED(Keyboard_Read(4), KEY_N)) k |= IN_NEXT;
 	if (IS_KEY_PRESSED(Keyboard_Read(3), KEY_I)) k |= IN_INFO;
 	if (IS_KEY_PRESSED(Keyboard_Read(5), KEY_U)) k |= IN_USE;
+	if (IS_KEY_PRESSED(Keyboard_Read(4), KEY_M)) k |= IN_MUTE;
 	for (u8 p = 0; p < 2; p++)                                // joystick ports A and B (the mouse port is skipped)
 	{
 		if (s_mousePort == (p ? INPUT_PORT2 : INPUT_PORT1)) continue;

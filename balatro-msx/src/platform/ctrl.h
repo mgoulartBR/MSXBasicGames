@@ -13,6 +13,7 @@ enum
 	IN_INFO = 1 << 9,     // I  (run info)
 	IN_NEXT = 1 << 10,    // N  (next / skip)
 	IN_USE = 1 << 11,     // U  (use consumable / sell)
+	IN_MUTE = 1 << 12,    // M  (music on/off)
 };
 
 typedef struct

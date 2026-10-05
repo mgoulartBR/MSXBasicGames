@@ -4,6 +4,7 @@
 source "$(dirname "$0")/env.sh"
 cd "$PROJ_DIR" || exit 1
 SUFFIX=""
+if [ "$1" = "selftest" ]; then export BAL_SELFTEST=1; SUFFIX="-selftest"; shift; rm -rf out; fi   # Z80 self-test ROM
 if [ "$1" = "debug" ]; then export BAL_DEBUG=1; SUFFIX="-debug"; shift; rm -rf out; fi   # debug keys (1-5), separate ROM name
 if [ "$1" = "clean" ] || [ "$1" = "rebuild" ]; then rm -rf out emul; [ "$1" = "clean" ] && exit 0; fi
 $PY tools/gen_assets.py || exit 1

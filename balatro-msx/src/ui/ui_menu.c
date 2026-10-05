@@ -40,8 +40,22 @@ void ui_goto(u8 sc) BANKED
 
 #ifdef DEBUG_KEYS
 // Debug build only (scripts/build.sh debug): 1 win round, 2 random joker, 3 +$50, 4 planet+tarot, 5 lose round
+// RAM beacon read by the openMSX test scripts (tests/tcl/asserts.tcl) through `peek`
+volatile u8 g_beacon[20];
+static void bset(u8 i, u8 v) { g_beacon[i] = v; }   // one store per call: SDCC 4.6.0 mis-compiles chained stores of u32 fields
+static void beacon(void)
+{
+	u32 sc = g.score;
+	bset(0, ui.screen); bset(1, ui.phase); bset(2, g.ante); bset(3, g.blind);
+	bset(4, (u8)(g.money & 0xFF)); bset(5, (u8)((u16)g.money >> 8));
+	bset(6, g.handsLeft); bset(7, g.discardsLeft); bset(8, g.nHand); bset(9, g.nJk); bset(10, g.state);
+	bset(11, (u8)(sc & 0xFF)); sc >>= 8; bset(12, (u8)(sc & 0xFF)); sc >>= 8; bset(13, (u8)(sc & 0xFF)); sc >>= 8; bset(14, (u8)sc);
+	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss);
+}
+
 static void debug_keys(void)
 {
+	beacon();
 	static u8 held;
 	u8 now = (u8)~Keyboard_Read(0), down = (u8)(now & ~held);
 	held = now;
