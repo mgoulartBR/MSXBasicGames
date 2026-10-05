@@ -7,7 +7,7 @@
 #define GFX_ATLAS_Y0 256
 #define GFX_LOGO_SEG 12
 #define GFX_LOGO_W 152
-#define GFX_LOGO_H 98
+#define GFX_LOGO_H 60
 #define GFX_TAG_SEG 13
 #define GFX_TAG_Y 212
 #define GFX_CELL_W 24

@@ -268,31 +268,84 @@ for i, (k, _) in enumerate(C.TAGS):
 render(tag_img, 4).save(os.path.join(PREVIEW, 'tags.png'))
 
 # ------------------------------------------------------------------ logo ----
-logo_im = load('balatro.png')
-lw, lh = 152, 98
-logo = pal.quantize(premult_resize(logo_im, (lw, lh)))
+# The wordmark is redrawn natively for 16 colours instead of down-scaling the original art (which turned muddy): hand-drawn letters
+# at 3x with a bounce, a 1 px ink outline, a slate drop shadow and a gold lower half, then the four suits between two gold rules.
+import pixfont
+lw, lh = 152, 60
+logo = np.zeros((lh, lw), dtype=np.uint8)
+def letter_mask(ch, k=3):
+    top, rows = pixfont.GLYPHS[ch]
+    w = max(len(r) for r in rows)
+    m = np.zeros((7 * k, w * k), dtype=bool)
+    for j, r in enumerate(rows):
+        for i, c in enumerate(r):
+            if c == '#': m[(top + j) * k:(top + j + 1) * k, i * k:(i + 1) * k] = True
+    return m
+def paint(dst, mask, x, y, col):
+    h, w = mask.shape
+    for j in range(h):
+        for i in range(w):
+            if mask[j, i] and 0 <= y + j < dst.shape[0] and 0 <= x + i < dst.shape[1]: dst[y + j, x + i] = col
+def dilate(mask):
+    out = np.pad(mask, 1)
+    big = np.zeros_like(out)
+    for dj in (-1, 0, 1):
+        for di in (-1, 0, 1): big |= np.roll(np.roll(out, dj, 0), di, 1)
+    return big
+word, bounce = 'BALATRO', [0, -2, 1, -1, 2, -2, 1]
+masks = [letter_mask(c) for c in word]
+pitch = 18
+x0 = (lw - (len(word) * pitch - 3)) // 2
+for i, m in enumerate(masks):
+    x, y = x0 + i * pitch, 13 + bounce[i]
+    paint(logo, m, x + 2, y + 3, 3)                       # drop shadow (slate)
+for i, m in enumerate(masks):
+    x, y = x0 + i * pitch, 13 + bounce[i]
+    paint(logo, dilate(m), x - 1, y - 1, 1)               # outline (ink)
+for i, m in enumerate(masks):
+    x, y = x0 + i * pitch, 13 + bounce[i]
+    paint(logo, m, x, y, 2)                               # cream face
+    low = m.copy(); low[:13, :] = False
+    paint(logo, low, x, y, 6)                             # gold lower part
+logo[48, 6:42] = 6; logo[48, 110:146] = 6                  # gold rules
+suits = [('H', 4), ('C', 8), ('D', 7), ('S', 2)]
+for n, (su, col) in enumerate(suits):
+    sx = 44 + n * 18
+    for j, row in enumerate(SUIT5[su]):
+        for i, c in enumerate(row):
+            if c == '#': logo[44 + j * 2:46 + j * 2, sx + i * 2:sx + i * 2 + 2] = col
+# A hand-made / AI-redrawn logo can replace the procedural one: put a PNG (any size, white or transparent background) at
+# assets/logo_src.png. It is trimmed, box-downscaled to fit 152x60, snapped to the 16-colour palette without dithering.
+_src = os.path.join(ROOT, 'assets', 'logo_src.png')
+if os.path.exists(_src):
+    im = Image.open(_src).convert('RGBA')
+    px = np.asarray(im).astype(int)
+    bg = (px[..., 3] < 20) | ((px[..., :3].min(2) > 238) & (px[..., :3].max(2) - px[..., :3].min(2) < 14))
+    ys, xs = np.where(~bg)
+    im = im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    a = np.asarray(im).astype(np.float32)
+    keep = ~((a[..., 3] < 20) | ((a[..., :3].min(2) > 238) & (a[..., :3].max(2) - a[..., :3].min(2) < 14)))
+    a[..., 3] = np.where(keep, 255, 0)
+    im = Image.fromarray(a.astype(np.uint8), 'RGBA')
+    sc = min((lw - 4) / im.width, (lh - 2) / im.height)
+    sz = (max(2, int(round(im.width * sc)) // 2 * 2), max(2, int(round(im.height * sc))))
+    q = pal.quantize(premult_resize(im, sz), alpha_cut=110)
+    logo = np.zeros((lh, lw), dtype=np.uint8)
+    ox, oy = (lw - sz[0]) // 2 // 2 * 2, (lh - sz[1]) // 2
+    logo[oy:oy + sz[1], ox:ox + sz[0]] = q
+    print('logo: using assets/logo_src.png ->', sz)
 render(logo, 4).save(os.path.join(PREVIEW, 'logo.png'))
 
 # ------------------------------------------------------------------ font ----
 # m6x11plus glyphs -> proportional strips pre-rendered in several colours inside the VRAM atlas,
 # so text is drawn with the VDP (one LMMM per character) instead of streaming pixels from the CPU.
-font = ImageFont.truetype(os.path.join(L.ORIG, 'resources', 'fonts', 'm6x11plus.ttf'), 11)
-GLYPH_TOP, GLYPH_ROWS = 3, 9
+import pixfont
+GLYPH_TOP, GLYPH_ROWS = 0, 9
 FONT_COLORS = [2, 1, 6, 4, 5, 8, 3]          # palette index: cream, ink, gold, red, blue, green, slate
 glyphs = []
 for code in range(32, 127):
-    ch = chr(code)
-    im = Image.new('L', (12, 14), 0)
-    dr = ImageDraw.Draw(im); dr.fontmode = '1'          # 1-bit rasterisation: exact pixel font, no anti-alias mush
-    dr.text((0, 0), ch, font=font, fill=255)
-    a = np.asarray(im) > 127
-    if ch == ',':                                             # blank in this font at 11 px: reuse the tail of ';'
-        im2 = Image.new('L', (12, 14), 0); d2 = ImageDraw.Draw(im2); d2.fontmode = '1'; d2.text((0, 0), ';', font=font, fill=255)
-        a = np.asarray(im2) > 127; a[:8] = False
-    cols = np.where(a.any(0))[0]
-    width = int(cols.max()) + 2 if len(cols) else 3          # ink + 1px spacing
-    if ch == ' ': width = 3
-    glyphs.append((width, a[GLYPH_TOP:GLYPH_TOP + GLYPH_ROWS, :width].copy()))
+    w, grid = pixfont.bitmap(chr(code), GLYPH_ROWS)
+    glyphs.append((w, np.array(grid, dtype=bool)))
 # lay glyphs on strip lines of <= 256 px
 pos = []; x = 0; line = 0
 for w, _ in glyphs:

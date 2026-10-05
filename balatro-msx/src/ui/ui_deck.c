@@ -6,16 +6,25 @@
 //-----------------------------------------------------------------------------
 #define DECK_ROW_Y(r) ((u8)(22 + (r) * 70))
 
+// focus ring only: four fast fills instead of repainting the whole row (hovering with the mouse used to repaint all the text
+// and made the music stutter)
+static void deck_ring(u8 r)
+{
+	u8 y = DECK_ROW_Y(r), col = ui_focus_id() == W_DECK + r ? COL_GOLD : COL_SLATE;
+	Vid_Fill(16, y, 224, 1, col); Vid_Fill(16, y + 63, 224, 1, col);
+	Vid_Fill(16, y, 2, 64, col); Vid_Fill(238, y, 2, 64, col);
+}
+
 static void draw_deck_row(u8 r)
 {
-	bool foc = ui_focus_id() == W_DECK + r;
 	u8 y = DECK_ROW_Y(r), sel = r ? g_stakeSel : g_deckSel, cnt = r ? STAKE_COUNT : DECK_COUNT;
-	Vid_Panel(16, y, 224, 64, COL_INK, foc ? COL_GOLD : COL_SLATE);
+	Vid_Panel(16, y, 224, 64, COL_INK, COL_SLATE);
 	Vid_Text(24, y + 4, r ? "Stake" : "Deck", TC_SLATE);
 	Vid_Num(210 - Vid_NumW(sel + 1), y + 4, sel + 1, TC_SLATE); Vid_Text(214, y + 4, "/", TC_SLATE); Vid_Num(221, y + 4, cnt, TC_SLATE);
 	Vid_Text(24, y + 15, "<", TC_WHITE); Vid_Text(226, y + 15, ">", TC_WHITE);
 	Vid_TextC(128, y + 15, r ? g_StakeName[sel] : g_DeckName[sel], TC_GOLD);
 	Vid_Wrap(24, y + 30, r ? g_StakeDesc[sel] : g_DeckDesc[sel], 208, TC_WHITE, 3);
+	deck_ring(r);
 }
 
 void scr_deck(void) BANKED
@@ -36,8 +45,8 @@ void deck_focus(u8 o, u8 n) BANKED
 	for (u8 k = 0; k < 2; k++)
 	{
 		u8 id = k ? n : o;
-		if (id == W_DECK) draw_deck_row(0);
-		else if (id == W_STAKE) draw_deck_row(1);
+		if (id == W_DECK) deck_ring(0);
+		else if (id == W_STAKE) deck_ring(1);
 		else if (id == W_START) ui_button(W_START, T_START, COL_GREEN, TRUE);
 	}
 }

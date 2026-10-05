@@ -163,7 +163,7 @@ void ui_update(void) BANKED
 void scr_title(void) BANKED
 {
 	Vid_Clear(COL_FELT);
-	Vid_Logo(52, 14);
+	Vid_Logo(52, 34);
 	// a fanned hand as decoration
 	static const u8 deco[5] = { 12, 25, 38, 51, 11 };   // A of hearts, clubs, diamonds, spades + K of hearts (atlas card indexes)
 	for (u8 i = 0; i < 5; i++) Vid_Card(CELL_CARD + deco[i], 66 + i * 26, 124 - (i == 2 ? 6 : 0));
