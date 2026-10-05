@@ -167,7 +167,13 @@ void Vid_TagIcon(u8 tag, u8 x, u8 y)
 
 void Vid_BlindIcon(u8 row, u8 x, u8 y)
 {
-	VDP_CommandLMMM(240, GFX_ATLAS_Y0 + (u16)row * 16, x, y, 16, 16, VDP_OP_TIMP);
+	if (row < BLIND_COL_N)
+		VDP_CommandLMMM(240, GFX_ATLAS_Y0 + (u16)row * 16, x, y, 16, 16, VDP_OP_TIMP);
+	else
+	{
+		u8 j = row - BLIND_COL_N, c = BLIND_EXTRA_CELL + (j >> 1);
+		VDP_CommandLMMM((u16)(c % GFX_CELLS_PER_ROW) * GFX_CELL_W, GFX_ATLAS_Y0 + (u16)(c / GFX_CELLS_PER_ROW) * GFX_CELL_H + (u16)(j & 1) * 16, x, y, 16, 16, VDP_OP_TIMP);
+	}
 }
 
 static void glyph(u8 x, u8 y, u8 ch, u8 tc)

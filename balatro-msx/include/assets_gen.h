@@ -25,6 +25,8 @@
 #define FONT_STRIP_H 18
 #define FONT_COLOR_COUNT 7
 #define BLIND_ICON_COUNT 30
+#define BLIND_COL_N 24
+#define BLIND_EXTRA_CELL 114
 #define GFX_JOKER_BYTES 360
 #define COL_ICE 10
 #define COL_PURPLE 15

@@ -240,12 +240,18 @@ assert n <= 120, n
 # blind chips: 16x16 icons in the right-hand column (x 240..255)
 BLIND_ORDER = ['bl_small', 'bl_big'] + [k for k, b in sorted(blinds.items(), key=lambda kv: kv[1]['order']) if b['boss']]
 blind_row = {}
+BLIND_COL_N = 24                          # icons stacked in column x=240 (rows 0..383; the font strips start at row 384)
 for i, k in enumerate(BLIND_ORDER):
     px, py = blinds[k]['pos']
     ic = premult_resize(bc.crop((0, py * 34, 34, py * 34 + 34)), (16, 16))
-    atlas[i * 16:(i + 1) * 16, 240:256] = pal.quantize(ic)
+    if i < BLIND_COL_N:
+        atlas[i * 16:(i + 1) * 16, 240:256] = pal.quantize(ic)
+    else:                                     # the rest go into the free cells after the last card cell (two 16 px icons per cell)
+        j = i - BLIND_COL_N; cell = layout['end'] + j // 2
+        assert cell < 120 and cell // CELLS_PER_ROW == layout['end'] // CELLS_PER_ROW
+        cx, cy = (cell % CELLS_PER_ROW) * OUT_W, (cell // CELLS_PER_ROW) * OUT_H + (j & 1) * 16
+        atlas[cy:cy + 16, cx:cx + 16] = pal.quantize(ic)
     blind_row[k] = i
-assert len(BLIND_ORDER) * 16 <= ATLAS_LINES
 
 # --------------------------------------------------------------- previews ----
 _jsheet = np.zeros((((len(joker_cells) + 14) // 15) * OUT_H, 15 * OUT_W), dtype=np.uint8)
@@ -446,7 +452,7 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
     for k in ('card', 'back', 'blank', 'planet', 'tarot', 'spectral', 'voucher'):
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))
     f.write('#define FONT_ROWS %d\n#define FONT_Y0 %d\n#define FONT_STRIP_H %d\n#define FONT_COLOR_COUNT %d\n' % (GLYPH_ROWS, FONT_Y0, FONT_STRIP_H, len(FONT_COLORS)))
-    f.write('#define BLIND_ICON_COUNT %d\n' % len(BLIND_ORDER))
+    f.write('#define BLIND_ICON_COUNT %d\n#define BLIND_COL_N %d\n#define BLIND_EXTRA_CELL %d\n' % (len(BLIND_ORDER), BLIND_COL_N, layout['end']))
     f.write('#define GFX_JOKER_BYTES %d\n' % JOKER_BYTES)
     for nm, rgb in (('ICE', (170, 215, 250)), ('PURPLE', (150, 90, 210)), ('STEEL', (110, 130, 145)), ('STONE', (130, 130, 130))):
         f.write('#define COL_%s %d\n' % (nm, int(pal.nearest(np.array(rgb, dtype=np.float32)))))
