@@ -102,6 +102,26 @@ void run_score_cases(void)
 	{ fresh(); joker_add(JK_JOKER); g.jk[0].ed = ED_POLY; Card c[] = { CARD(C,3), CARD(H,3) }; EXPECT("joker edition: Polychrome (20)x(2+4)x1.5", score_of(c, 2), 180); }
 	{ fresh(); blind_start(); g.nHand = 1; g.hand[0] = 0; g.deck[0] = C_SETSEAL(CARD(H,4), SEAL_BLUE); g.loc[0] = LOC_HAND; g.lastHandType = HAND_PAIR; g.nHand = 1;
 	  g.cons[0] = g.cons[1] = 0; round_end_effects(); EXPECT("seal: Blue Seal held creates the Planet of the last hand", g.cons[0], CONS_PLANET(HAND_PAIR)); }
+	{ fresh(); blind_start(); u8 d0 = g.nHand; g.cons[0] = CONS_SPECTRAL(SP_FAMILIAR); u8 face = 0;
+	  EXPECT("spectral: Familiar uses no selection", cons_use(0, 0), 1);
+	  for (u8 i = 0; i < g.nHand; i++) face += (C_ENH(g.deck[g.hand[i]]) != 0);
+	  EXPECT("spectral: Familiar: hand +2 net, enhanced face cards added", g.nHand == d0 + 2 && face >= 3, 1); }
+	{ fresh(); blind_start(); g.cons[0] = CONS_SPECTRAL(SP_TALISMAN); u8 sl = g.hand[2];
+	  EXPECT("spectral: Talisman needs one card", cons_use(0, 0), 0);
+	  EXPECT("spectral: Talisman gives a Gold Seal", cons_use(0, 4) && C_SEAL(g.deck[sl]) == SEAL_GOLD, 1); }
+	{ fresh(); blind_start(); g.cons[0] = CONS_SPECTRAL(SP_SIGIL); cons_use(0, 0); u8 su = C_SUIT(g.deck[g.hand[0]]), same = 1;
+	  for (u8 i = 0; i < g.nHand; i++) if (C_SUIT(g.deck[g.hand[i]]) != su) same = 0;
+	  EXPECT("spectral: Sigil makes the whole hand one suit", same, 1); }
+	{ fresh(); blind_start(); g.cons[0] = CONS_SPECTRAL(SP_IMMOLATE); u8 d0 = g.nHand; i16 m0 = g.money; cons_use(0, 0);
+	  EXPECT("spectral: Immolate destroys 5 cards, pays $20", g.nHand == d0 - 5 && g.money == m0 + 20, 1); }
+	{ fresh(); g.cons[0] = CONS_SPECTRAL(SP_BLACK_HOLE); cons_use(0, 0); EXPECT("spectral: Black Hole levels every hand", g.handLevel[HAND_PAIR] == 2 && g.handLevel[HAND_FLUSH_FIVE] == 2, 1); }
+	{ fresh(); joker_add(JK_JOKER); joker_add(JK_GREEDY_JOKER); joker_add(JK_JOLLY); g.cons[0] = CONS_SPECTRAL(SP_ANKH);
+	  EXPECT("spectral: Ankh keeps one Joker and copies it", cons_use(0, 0) && g.nJk == 2 && g.jk[0].id == g.jk[1].id, 1); }
+	{ fresh(); joker_add(JK_JOKER); joker_add(JK_JOLLY); g.cons[0] = CONS_SPECTRAL(SP_HEX);
+	  EXPECT("spectral: Hex makes one Polychrome Joker, destroys the rest", cons_use(0, 0) && g.nJk == 1 && g.jk[0].ed == ED_POLY, 1); }
+	{ fresh(); g.money = 40; g.cons[0] = CONS_SPECTRAL(SP_WRAITH); EXPECT("spectral: Wraith creates a Joker and zeroes money", cons_use(0, 0) && g.nJk == 1 && g.money == 0, 1); }
+	{ fresh(); g.nDeck = 52; pack_open_free(PACK_KIND(4, 0)); EXPECT("pack: Spectral pack offers 2 cards", g_packN, 2);
+	  EXPECT("pack: choosing a Spectral card puts it in a consumable slot", pack_choose(0) && g.cons[0] >= 0x40, 1); }
 	{ fresh(); g.blind = BLIND_BOSS; g.boss = BS_HOUSE; blind_start(); u8 fd = 0;
 	  for (u8 i = 0; i < g.nHand; i++) fd += (g.dflag[g.hand[i]] & DF_FD) != 0;
 	  EXPECT("boss: House draws the first hand face down", fd == g.nHand && fd > 0, 1);

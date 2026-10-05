@@ -5,7 +5,7 @@ u8 g_packN, g_packPick, g_packKind;
 u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
 Card g_packCard[PACK_CARD_MAX];                 // Standard pack: the playing cards on offer
 
-enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT, ST_CARD };
+enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT, ST_CARD, ST_SPECTRAL };
 
 i16 debt_limit(void) BANKED { return joker_has(JK_CREDIT_CARD) ? -20 : 0; }
 
@@ -14,11 +14,11 @@ static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } r
 //-----------------------------------------------------------------------------
 // random generators
 //-----------------------------------------------------------------------------
-static i8 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8])
+static i8 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
 {
 	u8 roll = rnd8();
-	u8 rarity = roll > 242 ? 3 : (roll > 178 ? 2 : 1);
-	for (u8 pass = 0; pass < 2; pass++)
+	u8 rarity = forced ? forced : (roll > 242 ? 3 : (roll > 178 ? 2 : 1));
+	for (u8 pass = 0; pass < (forced ? 1 : 2); pass++)
 	{
 		u8 cand[JOKER_COUNT], n = 0;
 		for (u8 i = 0; i < JOKER_COUNT; i++)
@@ -31,6 +31,7 @@ static i8 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8])
 	}
 	return -1;
 }
+static i8 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8]) { return random_joker_r(avoidMask, 0); }
 
 static u8 random_planet(void)
 {
@@ -75,6 +76,15 @@ void planet_use(u8 hand) BANKED
 bool cons_needs_cards(u8 c, u8* minc, u8* maxc) BANKED
 {
 	*minc = 0; *maxc = 0;
+	if (CONS_IS_SPECTRAL(c))
+	{
+		switch (c - 0x40)
+		{
+			case SP_TALISMAN: case SP_AURA: case SP_DEJA_VU: case SP_TRANCE: case SP_MEDIUM: case SP_CRYPTID: *minc = 1; *maxc = 1; return TRUE;
+			case SP_FAMILIAR: case SP_GRIM: case SP_INCANTATION: case SP_SIGIL: case SP_OUIJA: case SP_IMMOLATE: return TRUE;   // act on the hand: needs one
+		}
+		return FALSE;
+	}
 	if (!CONS_IS_TAROT(c)) return FALSE;
 	switch (c - 0x20)
 	{
@@ -94,6 +104,82 @@ static void hand_remove(u8 idx)
 	g.nHand--;
 }
 
+static void hand_remove(u8 idx);
+static void destroy_random_in_hand(void)
+{
+	if (!g.nHand) return;
+	u8 i = rndn(g.nHand);
+	g.loc[g.hand[i]] = LOC_GONE; hand_remove(i);
+}
+static void add_to_hand(Card c)
+{
+	if (g.nDeck >= DECK_MAX || g.nHand >= HAND_MAX) return;
+	u8 slot = g.nDeck++;
+	g.deck[slot] = c; g.dflag[slot] = 0; g.loc[slot] = LOC_HAND; g.hand[g.nHand++] = slot;
+}
+static Card enhanced(u8 rank) { return C_SETENH(CARD(rndn(4), rank), 1 + rndn(ENH_COUNT - 1)); }
+
+// Spectral cards (Soul and Ectoplasm are not in this port: no legendary Jokers / no Negative edition)
+static bool spectral_use(u8 slot, u8 t, u16 sel)
+{
+	u8 first = 0xFF;
+	for (u8 i = 0; i < g.nHand; i++) if (sel & (1u << i)) { first = i; break; }
+	switch (t)
+	{
+		case SP_WRAITH:
+		{
+			if (g.nJk >= joker_slots()) return FALSE;
+			u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
+			i8 j = random_joker_r(none, 3);
+			if (j < 0) return FALSE;
+			g.cons[slot] = 0; joker_add((u8)j); g.money = 0;
+			return TRUE;
+		}
+		case SP_ANKH: case SP_HEX:
+		{
+			if (!g.nJk) return FALSE;
+			g.cons[slot] = 0;
+			JokerInst keep = g.jk[rndn(g.nJk)];
+			g.nJk = 0;
+			g.jk[g.nJk++] = keep;
+			if (t == SP_ANKH) g.jk[g.nJk++] = keep; else g.jk[0].ed = ED_POLY;
+			joker_recalc_modifiers();
+			return TRUE;
+		}
+		case SP_BLACK_HOLE:
+			g.cons[slot] = 0;
+			for (u8 h = 0; h < HAND_COUNT; h++) g.handLevel[h]++;
+			return TRUE;
+	}
+	if (!g.nHand) return FALSE;                  // every other Spectral works on the hand
+	g.cons[slot] = 0;
+	switch (t)
+	{
+		case SP_FAMILIAR: destroy_random_in_hand(); for (u8 k = 0; k < 3; k++) add_to_hand(enhanced(RANK_J + rndn(3))); break;
+		case SP_GRIM: destroy_random_in_hand(); for (u8 k = 0; k < 2; k++) add_to_hand(enhanced(RANK_A)); break;
+		case SP_INCANTATION: destroy_random_in_hand(); for (u8 k = 0; k < 4; k++) add_to_hand(enhanced(rndn(9))); break;
+		case SP_TALISMAN: case SP_DEJA_VU: case SP_TRANCE: case SP_MEDIUM:
+		{
+			Card* d = &g.deck[g.hand[first]];
+			*d = C_SETSEAL(*d, t == SP_TALISMAN ? SEAL_GOLD : t == SP_DEJA_VU ? SEAL_RED : t == SP_TRANCE ? SEAL_BLUE : SEAL_PURPLE);
+			break;
+		}
+		case SP_AURA: { Card* d = &g.deck[g.hand[first]]; *d = C_SETED(*d, 1 + rndn(3)); break; }
+		case SP_SIGIL: { u8 su = rndn(4); for (u8 i = 0; i < g.nHand; i++) g.deck[g.hand[i]] = C_SETSUIT(g.deck[g.hand[i]], su); break; }
+		case SP_OUIJA:
+		{
+			u8 r = rndn(13);
+			for (u8 i = 0; i < g.nHand; i++) g.deck[g.hand[i]] = C_SETRANK(g.deck[g.hand[i]], r);
+			if (g.handSizeBase > 1) g.handSizeBase--;
+			break;
+		}
+		case SP_IMMOLATE: for (u8 k = 0; k < 5; k++) destroy_random_in_hand(); g.money += 20; break;
+		case SP_CRYPTID: { Card c = g.deck[g.hand[first]]; add_to_hand(c); add_to_hand(c); break; }
+	}
+	hand_sort(g.sortMode);
+	return TRUE;
+}
+
 // use the consumable in slot (planets need no cards); sel = highlighted hand positions
 bool cons_use(u8 slot, u16 sel) BANKED
 {
@@ -111,6 +197,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 		g.lastCons = c;
 		return TRUE;
 	}
+	if (CONS_IS_SPECTRAL(c)) return spectral_use(slot, c - 0x40, sel);
 	u8 t = c - 0x20;
 	if (t == TR_JUDGEMENT && g.nJk >= joker_slots()) return FALSE;
 	if (t == TR_FOOL && (g.lastCons == 0 || g.lastCons == c)) return FALSE;
@@ -259,7 +346,7 @@ void shop_generate(void) BANKED
 	shop_roll_cards();
 	for (u8 i = 0; i < 2; i++)
 	{
-		u8 t = rndn(4), sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
+		u8 r = rndn(100), t = r < 28 ? 0 : r < 56 ? 1 : r < 84 ? 3 : r < 92 ? 2 : 4, sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
 		g.packType[i] = PACK_KIND(t, sz);
 	}
 	g.shopOpen = 1;
@@ -327,7 +414,7 @@ static void pack_fill(u8 kind)
 {
 	u8 type = (u8)((kind - 1) / 3), sz = (u8)((kind - 1) % 3);
 	g_packKind = kind;
-	g_packN = (type == 2) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);   // Standard (type 3) like Arcana: 3 / 5 cards
+	g_packN = (type == 2 || type == 4) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);   // Standard (type 3) like Arcana: 3 / 5 cards
 	g_packPick = (sz == 2) ? 2 : 1;
 	u8 avoid[(JOKER_COUNT + 7) / 8];
 	for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0;
@@ -341,6 +428,11 @@ static void pack_fill(u8 kind)
 			if (rndn(100) < 8) c = C_SETED(c, 1 + rndn(3));
 			if (rndn(5) == 0) c = C_SETSEAL(c, 1 + rndn(SEAL_COUNT - 1));
 			g_packType[i] = ST_CARD; g_packCard[i] = c;
+		}
+		else if (type == 4)
+		{
+			u8 sp; do { sp = rndn(SPECTRAL_COUNT); } while (usedTarot & (1UL << sp));
+			usedTarot |= (1UL << sp); g_packType[i] = ST_SPECTRAL; g_packId[i] = sp;
 		}
 		else if (type == 0)
 		{
@@ -369,6 +461,7 @@ bool pack_choose(u8 i) BANKED
 	{
 		case ST_PLANET: planet_use(g_packId[i]); g.lastCons = CONS_PLANET(g_packId[i]); break;
 		case ST_TAROT:  if (!cons_add(CONS_TAROT(g_packId[i]))) return FALSE; break;
+		case ST_SPECTRAL: if (!cons_add(CONS_SPECTRAL(g_packId[i]))) return FALSE; break;
 		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; break;
 		case ST_CARD:
 			if (g.nDeck >= DECK_MAX) return FALSE;

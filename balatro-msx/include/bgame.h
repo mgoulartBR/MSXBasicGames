@@ -116,12 +116,14 @@ typedef struct
 enum { TX_AGAIN, TX_UPGRADE, TX_RESET, TX_LEVELUP, TX_DEBUFFED, TX_EATEN, TX_EXTINCT, TX_SAFE, TX_SAVED, TX_COUNT };
 
 //-----------------------------------------------------------------------------
-// Consumables: 0 = empty, 1..12 = planet (hand type + 1), 0x20 + n = tarot n
+// Consumables: 0 = empty, 1..12 = planet (hand type + 1), 0x20 + n = tarot n, 0x40 + n = spectral n
 //-----------------------------------------------------------------------------
 #define CONS_PLANET(h) ((u8)((h) + 1))
 #define CONS_TAROT(t)  ((u8)(0x20 + (t)))
 #define CONS_IS_PLANET(c) ((c) >= 1 && (c) <= HAND_COUNT)
-#define CONS_IS_TAROT(c)  ((c) >= 0x20)
+#define CONS_IS_TAROT(c)  ((c) >= 0x20 && (c) < 0x40)
+#define CONS_SPECTRAL(t)  ((u8)(0x40 + (t)))
+#define CONS_IS_SPECTRAL(c) ((c) >= 0x40)
 
 //-----------------------------------------------------------------------------
 // Game state
@@ -276,7 +278,7 @@ i16  debt_limit(void) BANKED;
 #define PACK_NORMAL 0
 #define PACK_JUMBO  1
 #define PACK_MEGA   2
-// pack kinds: 1..12 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon, 3 standard ; (kind-1)%3: size
+// pack kinds: 1..15 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon, 3 standard, 4 spectral ; (kind-1)%3: size
 #define PACK_KIND(t, sz) ((u8)(1 + (t) * 3 + (sz)))
 u8   pack_cost(u8 kind) BANKED;
 

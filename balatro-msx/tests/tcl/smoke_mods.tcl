@@ -5,7 +5,9 @@ set b 7.0
 key [expr {$b + 1.5}] space
 key [expr {$b + 3.5}] space
 key [expr {$b + 5.0}] 9
-snap [expr {$b + 5.6}] 70_mods_hand
+key [expr {$b + 5.2}] 0
+key [expr {$b + 5.5}] 0
+snap [expr {$b + 5.9}] 70_mods_hand
 key [expr {$b + 6.0}] right
 key [expr {$b + 6.4}] right
 snap [expr {$b + 6.9}] 71_mods_info

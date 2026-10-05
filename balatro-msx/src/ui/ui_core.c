@@ -291,7 +291,7 @@ static void info_cons(u8 c, u8 price)
 	if (CONS_IS_PLANET(c)) { info_planet(c - 1, TRUE); }
 	else
 	{
-		const TarotDef* t = &g_Tarots[c - 0x20];
+		const TarotDef* t = CONS_IS_SPECTRAL(c) ? &g_Spectrals[c - 0x40] : &g_Tarots[c - 0x20];
 		Vid_Text(AREA_X + 6, INFO_Y + 3, t->name, TC_BLUE);
 		Vid_WrapDesc(t->desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
 	}
@@ -360,8 +360,8 @@ void info_show(u8 id) BANKED
 				u8 k = g.packType[id - W_PACK];
 				if (k)
 				{
-					static const char* const nm[4] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack" };
-					static const char* const ds[4] = { "Choose from random Tarot cards.", "Choose from random Planet cards.", "Choose from random Jokers.", "Choose playing cards to add to your deck." };
+					static const char* const nm[5] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack", "Spectral Pack" };
+					static const char* const ds[5] = { "Choose from random Tarot cards.", "Choose from random Planet cards.", "Choose from random Jokers.", "Choose playing cards to add to your deck.", "Choose from random Spectral cards." };
 					static const char* const sz[3] = { "", "Jumbo ", "Mega " };
 					char b[28]; u8 n = 0; const char* p = sz[(k - 1) % 3];
 					while (*p) b[n++] = *p++;
@@ -380,6 +380,7 @@ void info_show(u8 id) BANKED
 				else if (g_packType[i] == 2) info_planet(g_packId[i], FALSE);
 				else if (g_packType[i] == 3) info_cons(CONS_TAROT(g_packId[i]), 0);
 				else if (g_packType[i] == 4) info_card(g_packCard[i]);
+				else if (g_packType[i] == 5) info_cons(CONS_SPECTRAL(g_packId[i]), 0);
 			}
 	}
 }
@@ -399,7 +400,7 @@ void draw_jslot(u8 id) BANKED
 	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
 	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); }
-	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : CELL_TAROT + g.cons[idx] - 0x20, x, y);
+	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : (CONS_IS_SPECTRAL(g.cons[idx]) ? CELL_SPECTRAL + g.cons[idx] - 0x40 : CELL_TAROT + g.cons[idx] - 0x20), x, y);
 	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
 	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border
 }

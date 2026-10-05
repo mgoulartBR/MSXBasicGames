@@ -82,7 +82,7 @@ void upd_cashout(void) BANKED
 #define VOUCH_X    176
 #define VOUCH_Y    110
 
-static const char* const k_packTag[4] = { "ARC", "CEL", "BUF", "STD" };
+static const char* const k_packTag[5] = { "ARC", "CEL", "BUF", "STD", "SPC" };
 
 static void shop_card(u8 i, u8 x, u8 y)
 {
@@ -121,7 +121,7 @@ static void shop_item(u8 id)
 		u8 i = id - W_PACK, x = PACK_X(i), k = g.packType[i];
 		if (k)
 		{
-			static const u8 col[4] = { COL_RED, COL_BLUE, COL_ORANGE, COL_GREEN };
+			static const u8 col[5] = { COL_RED, COL_BLUE, COL_ORANGE, COL_GREEN, COL_PURPLE };
 			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], foc ? COL_GOLD : COL_INK);
 			Vid_TextC(x + 12, PACK_Y + 6, k_packTag[(k - 1) / 3], TC_WHITE);
 			Vid_TextC(x + 12, PACK_Y + 18, (k - 1) % 3 == 0 ? "" : ((k - 1) % 3 == 1 ? "JMB" : "MEGA"), TC_INK);
@@ -273,7 +273,7 @@ static void pack_item(u8 i)
 		return;
 	}
 	if (g_packType[i] == 1) Vid_Joker(g_packId[i], x, 60);
-	else Vid_Card(g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i], x, 60);
+	else Vid_Card(g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : (g_packType[i] == 5 ? CELL_SPECTRAL + g_packId[i] : CELL_TAROT + g_packId[i]), x, 60);
 	if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
 }
 
@@ -291,7 +291,7 @@ static void draw_pack(void)
 {
 	Vid_Fill(AREA_X, 0, AREA_W, 174, COL_FELT);
 	{
-		static const char* const nm[4] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack" };
+		static const char* const nm[5] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack", "Spectral Pack" };
 		Vid_TextC(AREA_X + 96, 14, nm[(g_packKind - 1) / 3], TC_GOLD);
 		char b[16] = "Choose "; b[7] = '0' + g_packPick; b[8] = 0;
 		Vid_TextC(AREA_X + 96, 28, b, TC_WHITE);

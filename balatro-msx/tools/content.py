@@ -31,6 +31,26 @@ TAROTS = [
  "wheel_of_fortune","strength","hanged_man","death","temperance","devil","tower","star","moon","sun","judgement","world",
 ]
 
+SPECTRALS = ["familiar","grim","incantation","talisman","aura","wraith","sigil","ouija","immolate","ankh","deja_vu","hex","trance","medium","cryptid","black_hole"]
+SPECTRAL_DESC = {
+ "familiar": "Destroys 1 random card in hand, adds 3 random enhanced face cards",
+ "grim": "Destroys 1 random card in hand, adds 2 random enhanced Aces",
+ "incantation": "Destroys 1 random card in hand, adds 4 random enhanced numbered cards",
+ "talisman": "Adds a Gold Seal to 1 selected card",
+ "aura": "Adds Foil, Holographic or Polychrome to 1 selected card",
+ "wraith": "Creates a random Rare Joker, sets your money to $0",
+ "sigil": "Converts all cards in hand to a single random suit",
+ "ouija": "Converts all cards in hand to a single random rank, -1 hand size",
+ "immolate": "Destroys 5 random cards in hand, gives $20",
+ "ankh": "Creates a copy of a random Joker, destroys the others",
+ "deja_vu": "Adds a Red Seal to 1 selected card",
+ "hex": "Adds Polychrome to a random Joker, destroys the others",
+ "trance": "Adds a Blue Seal to 1 selected card",
+ "medium": "Adds a Purple Seal to 1 selected card",
+ "cryptid": "Creates 2 copies of 1 selected card",
+ "black_hole": "Upgrades every poker hand by 1 level",
+}
+
 # normal bosses (x,y row in BlindChips.png) - filled by gen_data from game.lua
 
 # Short effect texts shown on the MSX UI (own wording; effects verified against original/card.lua).

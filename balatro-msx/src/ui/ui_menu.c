@@ -86,6 +86,7 @@ static void debug_keys(void)
 	if ((down & 0x02) && ui.screen == SC_ROUND && ui.phase == PH_INPUT) { g.score = g.target; g.state = ROUND_WON; ui.phase = PH_BANNER; ui.timer = 2; }
 	if (down & 0x04) joker_add(rndn(JOKER_COUNT));
 	if (down & 0x08) g.money += 50;
+	if (down & 0x01) cons_add(CONS_SPECTRAL(rndn(SPECTRAL_COUNT)));       // 0 = random Spectral card
 	if (down & 0x10) { cons_add(CONS_PLANET(rndn(HAND_COUNT))); cons_add(CONS_TAROT(rndn(TAROT_COUNT))); }
 	if ((down & 0x20) && ui.screen == SC_ROUND) { g.state = ROUND_LOST; ui_goto(SC_OVER); }
 	{                                                           // 8 = jump to the Ante 8 boss blind (endless-mode test)
@@ -102,7 +103,7 @@ static void debug_keys(void)
 		}
 		if ((d1 & 0x01) && ui.screen == SC_BLIND) { g.ante = 8; g.blind = BLIND_BOSS; g.boss = BS_FINAL_VESSEL; ui_goto(SC_BLIND); }
 	}
-	if (down & 0x1E) ui.dirty |= D_ALL;
+	if (down & 0x1F) ui.dirty |= D_ALL | D_JOKERS;
 	// 6 = teleport the pointer to the centre of the next widget (exercises hover/hit-testing), 7 = left click there,
 	// 8 = right click.  The real MSX mouse protocol is tested separately with xdotool (tests/mouse_test.sh).
 	{

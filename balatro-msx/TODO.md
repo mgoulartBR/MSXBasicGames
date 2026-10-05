@@ -7,7 +7,8 @@
 - [DONE] All 28 bosses (face-down bosses reveal on play; Amber Acorn shuffles but does not flip jokers).
 - [DONE] Card enhancements (8), editions (Foil/Holo/Polychrome; Negative not implemented), seals (Gold/Red/Blue/Purple), 22 tarots, Standard packs, Wheel of Fortune (jokers' editions).
 - [DONE] Joker art streaming from ROM: VRAM is no longer the limit (room for 18 Spectral cells and ~60 more jokers' art; the new jokers' rules are still TODO).
-- [TODO] Spectral cards/packs, Negative edition, Black Hole/other missing planets, other decks/stakes; save.
+- [DONE] 16 Spectral cards and Spectral packs (The Soul and Ectoplasm are left out: no legendary Jokers / no Negative edition).
+- [TODO] Negative edition (needs a 6th Joker slot in the UI), Black Hole/other missing planets, other decks/stakes; save.
 - [PARTIAL] Jokers: 88 of 150; balance only checked by bot simulation.
 ## Graphics
 - [PARTIAL] 16-colour conversion; some joker art cropped to 20×28.

@@ -79,11 +79,12 @@ def joker_art(k):
     return fit_art(cell(jk, *centers['j_' + k]['pos']))
 joker_src = [joker_art(k) for k in C.JOKERS]
 planet_src = [premult_resize(cell(tr, *centers['c_' + k]['pos']), (OUT_W, OUT_H)) for k, _ in C.PLANETS]
+spectral_src = [premult_resize(cell(tr, *centers['c_' + k]['pos']), (OUT_W, OUT_H)) for k in C.SPECTRALS]
 tarot_src = [premult_resize(cell(tr, *centers['c_' + k]['pos']), (OUT_W, OUT_H)) for k in C.TAROTS]
 
 # learned colours: weighted k-means over the art; the anchors stay fixed
 W3 = np.array([2, 4, 3], dtype=np.float32)
-samples = gather(joker_src + planet_src + tarot_src)
+samples = gather(joker_src + planet_src + tarot_src + spectral_src)
 rs = np.random.RandomState(7)
 samples = samples[rs.permutation(len(samples))[:30000]]
 anchors = np.array([to8(hex3(a)) for a in ANCHORS], dtype=np.float32)
@@ -219,6 +220,8 @@ for im in joker_src:
     joker_cells.append(c)
 layout['tarot'] = n
 for im in tarot_src: put_cell(n, pal.quantize(im)); n += 1
+layout['spectral'] = n
+for im in spectral_src: put_cell(n, pal.quantize(im)); n += 1
 layout['voucher'] = n
 vc_img = load('Vouchers.png')
 for k, _ in C.VOUCHERS:
@@ -349,7 +352,7 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
     f.write('#define GFX_LOGO_SEG %d\n#define GFX_LOGO_W %d\n#define GFX_LOGO_H %d\n' % (LOGO_SEG, lw, lh))
     f.write('#define GFX_TAG_SEG %d\n#define GFX_TAG_Y 212\n' % TAG_SEG)
     f.write('#define GFX_CELL_W %d\n#define GFX_CELL_H %d\n#define GFX_CELLS_PER_ROW %d\n' % (OUT_W, OUT_H, CELLS_PER_ROW))
-    for k in ('card', 'back', 'blank', 'planet', 'tarot', 'voucher'):
+    for k in ('card', 'back', 'blank', 'planet', 'tarot', 'spectral', 'voucher'):
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))
     f.write('#define FONT_ROWS %d\n#define FONT_Y0 %d\n#define FONT_STRIP_H %d\n#define FONT_COLOR_COUNT %d\n' % (GLYPH_ROWS, FONT_Y0, FONT_STRIP_H, len(FONT_COLORS)))
     f.write('#define BLIND_ICON_COUNT %d\n' % len(BLIND_ORDER))
