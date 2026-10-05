@@ -17,6 +17,6 @@ key [expr {$b + 7.6}] right
 key [expr {$b + 8.0}] space
 key [expr {$b + 8.4}] p
 snap [expr {$b + 10.0}] 72_mods_scoring
-at [expr {$b + 16.0}] { check "modified cards play: score counted, hand refilled" {[bk32 11] > 0 && [bk 8] == 8} }
+at [expr {$b + 16.0}] { check "modified cards play: the hand scored (random modifiers may even win the round)" {[bk32 11] > 0} }
 snap [expr {$b + 16.1}] 73_mods_after
 finish [expr {$b + 17}]

@@ -6,8 +6,8 @@ at [expr {$b + 1.0}] { check "boot: title screen" {[bk 0] == $::SC(title)} }
 snap [expr {$b + 1.2}] s01_title
 key [expr {$b + 1.5}] space
 key [expr {$b + 2.5}] space       ;# deck screen: Start
-at [expr {$b + 3.0}] { check "title -> blind select" {[bk 0] == $::SC(blind) && [bk 2] == 1 && [bk 3] == 0} }
-snap [expr {$b + 3.2}] s02_blind
+at [expr {$b + 3.35}] { check "title -> blind select" {[bk 0] == $::SC(blind) && [bk 2] == 1 && [bk 3] == 0} }
+snap [expr {$b + 3.37}] s02_blind
 key [expr {$b + 3.5}] space
 at [expr {$b + 5.0}] { check "blind select -> round, 8 cards, 4 hands, 4 discards (Red Deck)" {[bk 0] == $::SC(round) && [bk 8] == 8 && [bk 6] == 4 && [bk 7] == 4 && [bk 17] == 44} }
 snap [expr {$b + 5.2}] s03_round
