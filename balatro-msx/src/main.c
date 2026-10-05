@@ -7,7 +7,16 @@
 
 #ifdef SELFTEST
 extern void run_all_cases(void) __banked;
-extern volatile u8 g_selftest[24];
+// Z80 self-test result block. Lives in fixed code (not in a banked segment): test_report is called from several mapper segments.
+volatile u8 g_selftest[24];       // [0]=done [1]=total [2]=failures [3..]=bitmask of failing case numbers (case n -> bit n)
+volatile u16 g_selgot[160];       // got value of every case
+void test_report(const char* name, u32 got, u32 want)
+{
+	(void)name;
+	u8 n = g_selftest[1]++;
+	g_selgot[n] = (u16)got;
+	if (got != want) { g_selftest[2]++; g_selftest[3 + (n >> 3)] |= (u8)(1 << (n & 7)); }
+}
 extern void selftest_clear(void) __banked;
 #endif
 

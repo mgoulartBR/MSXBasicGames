@@ -3,6 +3,7 @@ source [file join [file dirname [info script]] lib.tcl]
 set b 7.0
 snap [expr {$b + 1.0}] 01_title
 key [expr {$b + 1.5}] space
+key [expr {$b + 2.5}] space       ;# deck screen: Start
 snap [expr {$b + 3.0}] 02_blind
 key [expr {$b + 3.5}] space
 snap [expr {$b + 5.0}] 03_round

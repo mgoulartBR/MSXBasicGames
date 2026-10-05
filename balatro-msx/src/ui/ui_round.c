@@ -300,6 +300,7 @@ static void use_item(void)
 
 static void sell_item(void)
 {
+	if (ui.itemKind == 1 && (g.jk[ui.itemIdx].flags & JF_ETERNAL)) { ui_msg(M_ETERNAL); return; }
 	if (ui.itemKind == 1) { joker_sell(ui.itemIdx); }
 	else if (ui.itemKind == 2) cons_sell(ui.itemIdx);
 	snd(4);

@@ -32,12 +32,12 @@ bash scripts/test.sh           # host unit/sim tests + Z80 self-test + openMSX s
 Full run structure: title, blind select (Small/Big/Boss, **Skip + 16 tags**), rounds (8 cards, 5 played, hands/
 discards, poker evaluation of all 12 hand types incl. Five of a Kind/Flush House/Flush Five, planet levels),
 cash-out with interest, shop (jokers, planets, tarots, **9 vouchers**, Booster packs: Arcana/Celestial/Buffoon/Standard/Spectral),
-16 Spectral cards,
+17 Spectral cards (incl. The Soul), 11 decks and 8 stakes (New Run screen; Eternal / Perishable / Rental Jokers),
 card enhancements, editions and seals (22 tarots),
-**88 jokers**, all 28 boss blinds, 8 antes with win/game over, optional endless mode to Ante 12, animated scoring, music + SFX.
+**149 jokers**, all 28 boss blinds, 8 antes with win/game over, optional endless mode to Ante 12, animated scoring, music + SFX.
 
 ## Not implemented / simplified (see TODO.md)
-The Soul and Ectoplasm (Spectral), Negative edition, other decks/stakes,
-endless mode, saving, controller rumble etc. Visuals are down-converted to 16 colours at 1:1 pixel scale.
+Ectoplasm (Spectral), Negative edition, the Black / Magic / Nebula / Anaglyph decks, Diet Cola,
+endless mode beyond Ante 12, saving, controller rumble etc. Visuals are down-converted to 16 colours at 1:1 pixel scale.
 
 Docs: `docs/PORTABILITY_ASSESSMENT.md`, `docs/PORTING.md`, `docs/TOOLCHAIN.md`, `TODO.md`, `LICENSES.md`.

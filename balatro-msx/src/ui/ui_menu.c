@@ -17,6 +17,7 @@ void ui_init(void) BANKED
 #endif
 	ui.hz = Vid_Hz();
 	ui.focus = 0xFF;
+	g_deckSel = 0; g_stakeSel = 0;                                     // RAM is not cleared at boot
 	ui_goto(SC_TITLE);
 }
 
@@ -28,6 +29,7 @@ void scr_focus(u8 o, u8 n) BANKED
 		case SC_SHOP:  shop_focus(o, n); break;
 		case SC_PACK:  pack_focus(o, n); break;
 		case SC_BLIND: blind_focus(o, n); break;
+		case SC_DECK:  deck_focus(o, n); break;
 	}
 }
 
@@ -54,6 +56,7 @@ void ui_goto(u8 sc) BANKED
 		case SC_INFO:    scr_info(); break;
 		case SC_OVER:    scr_over(); break;
 		case SC_WIN:     scr_win(); break;
+		case SC_DECK:    scr_deck(); break;
 	}
 	Vid_Display(TRUE);
 #ifdef DEBUG_KEYS
@@ -64,7 +67,7 @@ void ui_goto(u8 sc) BANKED
 #ifdef DEBUG_KEYS
 // Debug build only (scripts/build.sh debug): 1 win round, 2 random joker, 3 +$50, 4 planet+tarot, 5 lose round
 // RAM beacon read by the openMSX test scripts (tests/tcl/asserts.tcl) through `peek`
-volatile u8 g_beacon[24];
+volatile u8 g_beacon[28];
 volatile u8 g_perf2[12];      // worst duration (frames) of each screen constructor
 static void bset(u8 i, u8 v) { g_beacon[i] = v; }   // one store per call: SDCC 4.6.0 mis-compiles chained stores of u32 fields
 static void beacon(void)
@@ -74,7 +77,7 @@ static void beacon(void)
 	bset(4, (u8)(g.money & 0xFF)); bset(5, (u8)((u16)g.money >> 8));
 	bset(6, g.handsLeft); bset(7, g.discardsLeft); bset(8, g.nHand); bset(9, g.nJk); bset(10, g.state);
 	bset(11, (u8)(sc & 0xFF)); sc >>= 8; bset(12, (u8)(sc & 0xFF)); sc >>= 8; bset(13, (u8)(sc & 0xFF)); sc >>= 8; bset(14, (u8)sc);
-	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss); bset(20, g.nTags); bset(21, g.skips); bset(22, g.tagSmall); bset(23, g.tagBig);
+	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss); bset(20, g.nTags); bset(21, g.skips); bset(22, g.tagSmall); bset(23, g.tagBig); bset(24, g.deckId); bset(25, g.stake); bset(26, g_deckSel); bset(27, g_stakeSel);
 }
 
 static void debug_keys(void)
@@ -138,6 +141,7 @@ void ui_update(void) BANKED
 		case SC_INFO:    upd_info(); break;
 		case SC_OVER:
 		case SC_WIN:     upd_over(); break;
+		case SC_DECK:    upd_deck(); break;
 	}
 	Vid_Cursor(in.mx, in.my, in.mouse);
 }
@@ -166,14 +170,7 @@ void upd_title(void) BANKED
 		Vid_Fill(40, 154, 176, 11, COL_FELT);
 		if (on) Vid_TextC(128, 155, in.mouse ? "Click or press SPACE" : "Press SPACE", TC_WHITE);
 	}
-	if (in.pressed & (IN_OK | IN_PLAY))
-	{
-		rng_seed((u16)(ui.frame * 31 + ui.timer * 7 + in.mx + in.my * 3));
-		run_new();
-		ui.shownHand = 0xFF;
-		ui.packReturn = SC_SHOP;
-		ui_goto(SC_BLIND);
-	}
+	if (in.pressed & (IN_OK | IN_PLAY)) ui_goto(SC_DECK);
 }
 
 //-----------------------------------------------------------------------------

@@ -3,7 +3,8 @@
 
 u8 g_packN, g_packPick, g_packKind;
 u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
-Card g_packCard[PACK_CARD_MAX];                 // Standard pack: the playing cards on offer
+Card g_packCard[PACK_CARD_MAX];
+u8 g_packFlag[PACK_CARD_MAX];                  // sticker flags of the Jokers in a Buffoon pack                 // Standard pack: the playing cards on offer
 
 enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT, ST_CARD, ST_SPECTRAL };
 
@@ -32,6 +33,15 @@ static i16 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
 	return -1;
 }
 static i16 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8]) { return random_joker_r(avoidMask, 0); }
+
+u8 shop_joker_stickers(void) BANKED
+{
+	u8 f = 0;
+	if (g.stake >= 3 && rndn(10) < 3) f |= JF_ETERNAL;                     // Black Stake
+	else if (g.stake >= 6 && rndn(10) < 3) f |= JF_PERISH;                  // Orange Stake
+	if (g.stake >= 7 && rndn(10) < 3) f |= JF_RENTAL;                       // Gold Stake
+	return f;
+}
 
 bool joker_random_add(u8 rarity) BANKED
 {
@@ -144,10 +154,13 @@ static bool spectral_use(u8 slot, u8 t, u16 sel)
 		{
 			if (!g.nJk) return FALSE;
 			g.cons[slot] = 0;
-			JokerInst keep = g.jk[rndn(g.nJk)];
+			JokerInst keep = g.jk[rndn(g.nJk)], eternal[JOKER_MAX]; u8 ne = 0;
+			for (u8 i = 0; i < g.nJk; i++) if ((g.jk[i].flags & JF_ETERNAL) && ne < JOKER_MAX) eternal[ne++] = g.jk[i];      // eternal Jokers survive
 			g.nJk = 0;
 			g.jk[g.nJk++] = keep;
-			if (t == SP_ANKH) g.jk[g.nJk++] = keep; else g.jk[0].ed = ED_POLY;
+			if (t == SP_HEX) g.jk[0].ed = ED_POLY;
+			for (u8 i = 0; i < ne && g.nJk < joker_slots(); i++) if (eternal[i].id != keep.id || eternal[i].flags != keep.flags) g.jk[g.nJk++] = eternal[i];
+			if (t == SP_ANKH && g.nJk < joker_slots()) { g.jk[g.nJk] = keep; g.jk[g.nJk].flags &= (u8)~JF_ETERNAL; g.nJk++; }
 			joker_recalc_modifiers();
 			return TRUE;
 		}
@@ -298,15 +311,17 @@ static void roll_slot(u8 i, u8* avoid)
 {
 	// card rates of the original: joker 20 : tarot 4 : planet 4 (x2.4 with the merchant vouchers); weights x10
 	u16 wt = (g.vouchers & VBIT(VC_TAROT_MERCHANT)) ? 96 : 40, wp = (g.vouchers & VBIT(VC_PLANET_MERCHANT)) ? 96 : 40;
-	u16 r = (u16)(rnd16() % (200 + wt + wp));
-	g.shopType[i] = 0;
+	u16 ws = g.deckId == DK_GHOST ? 20 : 0;                          // Ghost Deck: Spectral cards appear in the shop
+	u16 r = (u16)(rnd16() % (200 + wt + wp + ws));
+	g.shopType[i] = 0; g.shopFlag[i] = 0;
 	if (r < 200)
 	{
 		i16 j = random_joker(avoid);
-		if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; avoid[j >> 3] |= (u8)(1 << (j & 7)); }
+		if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; g.shopFlag[i] = shop_joker_stickers(); avoid[j >> 3] |= (u8)(1 << (j & 7)); }
 	}
 	else if (r < 200 + wt) { g.shopType[i] = ST_TAROT; g.shopId[i] = random_tarot(); }
-	else { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+	else if (r < 200 + wt + wp) { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+	else { g.shopType[i] = ST_SPECTRAL; g.shopId[i] = rndn(SP_SOUL); }
 	if (!g.shopType[i]) { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
 }
 
@@ -369,9 +384,9 @@ u8 shop_cost(u8 i) BANKED
 	if (g.freeMask & (1 << i)) return 0;
 	switch (g.shopType[i])
 	{
-		case ST_JOKER: return discounted(g_Jokers[g.shopId[i]].cost);
+		case ST_JOKER: return (g.shopFlag[i] & JF_RENTAL) ? 1 : discounted(g_Jokers[g.shopId[i]].cost);       // Rental Jokers cost $1
 		case ST_PLANET: return joker_has(JK_ASTRONOMER) ? 0 : discounted(3);
-		case ST_TAROT: return discounted(3);
+		case ST_TAROT: case ST_SPECTRAL: return discounted(3);
 	}
 	return 0;
 }
@@ -385,7 +400,8 @@ bool shop_buy(u8 i) BANKED
 	if (!t) return FALSE;
 	u8 cost = shop_cost(i);
 	if (g.money - cost < debt_limit()) return FALSE;
-	if (t == ST_JOKER) { if (!joker_add(g.shopId[i])) return FALSE; }
+	if (t == ST_JOKER) { if (!joker_add(g.shopId[i])) return FALSE; g.jk[g.nJk - 1].flags |= g.shopFlag[i]; }
+	else if (t == ST_SPECTRAL) { if (!cons_add(CONS_SPECTRAL(g.shopId[i]))) return FALSE; }
 	else if (t == ST_PLANET) { if (!cons_add(CONS_PLANET(g.shopId[i]))) return FALSE; }
 	else { if (!cons_add(CONS_TAROT(g.shopId[i]))) return FALSE; }
 	g.money -= cost;
@@ -466,7 +482,7 @@ static void pack_fill(u8 kind)
 			i16 j = random_joker(avoid);
 			if (j < 0) { g_packType[i] = 0; continue; }
 			avoid[j >> 3] |= (u8)(1 << (j & 7));
-			g_packType[i] = ST_JOKER; g_packId[i] = (u8)j;
+			g_packType[i] = ST_JOKER; g_packId[i] = (u8)j; g_packFlag[i] = shop_joker_stickers();
 		}
 	}
 }
@@ -479,7 +495,7 @@ bool pack_choose(u8 i) BANKED
 		case ST_PLANET: planet_use(g_packId[i]); g.lastCons = CONS_PLANET(g_packId[i]); break;
 		case ST_TAROT:  if (!cons_add(CONS_TAROT(g_packId[i]))) return FALSE; break;
 		case ST_SPECTRAL: if (!cons_add(CONS_SPECTRAL(g_packId[i]))) return FALSE; break;
-		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; break;
+		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; g.jk[g.nJk - 1].flags |= g_packFlag[i]; break;
 		case ST_CARD:
 			if (!deck_add(g_packCard[i], FALSE)) return FALSE;
 			break;

@@ -83,9 +83,14 @@ typedef struct
 	u8  sell;        // sell value bonus (Egg)
 	u8  ed;          // ED_* edition (Foil / Holographic / Polychrome)
 	u8  aux;         // second per-joker value (target suit / rank, counters)
+	u8  age;         // rounds owned (perishable)
 	
 } JokerInst;
 #define JF_DEBUFF 1
+#define JF_ETERNAL 2                 // Black Stake: cannot be sold or destroyed
+#define JF_PERISH  4                 // Orange Stake: debuffed after 5 rounds
+#define JF_RENTAL  8                 // Gold Stake: costs $3 every round
+#define JF_PERISHED 16               // the perishable timer ran out
 
 //-----------------------------------------------------------------------------
 // Scoring events (score.c) - computed in one go, replayed by the UI
@@ -114,7 +119,7 @@ typedef struct
 } ScoreOut;
 
 // Text ids for EV_TEXT popups
-enum { TX_AGAIN, TX_UPGRADE, TX_RESET, TX_LEVELUP, TX_DEBUFFED, TX_EATEN, TX_EXTINCT, TX_SAFE, TX_SAVED, TX_COUNT };
+enum { TX_AGAIN, TX_UPGRADE, TX_RESET, TX_LEVELUP, TX_DEBUFFED, TX_EATEN, TX_EXTINCT, TX_SAFE, TX_SAVED, TX_BALANCED, TX_COUNT };
 
 //-----------------------------------------------------------------------------
 // Consumables: 0 = empty, 1..12 = planet (hand type + 1), 0x20 + n = tarot n, 0x40 + n = spectral n
@@ -125,6 +130,13 @@ enum { TX_AGAIN, TX_UPGRADE, TX_RESET, TX_LEVELUP, TX_DEBUFFED, TX_EATEN, TX_EXT
 #define CONS_IS_TAROT(c)  ((c) >= 0x20 && (c) < 0x40)
 #define CONS_SPECTRAL(t)  ((u8)(0x40 + (t)))
 #define CONS_IS_SPECTRAL(c) ((c) >= 0x40)
+
+//-----------------------------------------------------------------------------
+// Decks and stakes (chosen on the deck screen; Black, Magic, Nebula and Anaglyph decks are not in this port)
+//-----------------------------------------------------------------------------
+enum { DK_RED, DK_BLUE, DK_YELLOW, DK_GREEN, DK_GHOST, DK_ABANDONED, DK_CHECKERED, DK_ZODIAC, DK_PAINTED, DK_PLASMA, DK_ERRATIC, DECK_COUNT };
+#define STAKE_COUNT 8              // White, Red, Green, Black, Blue, Purple, Orange, Gold (each includes the ones before)
+extern u8 g_deckSel, g_stakeSel;
 
 //-----------------------------------------------------------------------------
 // Game state
@@ -192,6 +204,8 @@ typedef struct
 	u8   bossOff;                    // boss disabled
 	u8   endless;                    // continued past the Ante 8 win
 	u8   lastHandType;               // HAND_* of the last hand played this run (Blue Seal), 0xFF = none
+	u8   deckId, stake;              // DK_* / stake level 0..7 chosen for this run
+	u8   shopFlag[SHOP_CARD_MAX];    // sticker flags (JF_*) of the Jokers on offer
 	u8   tarotsUsed;                 // Tarot cards used this run (Fortune Teller)
 	u8   shopFlags;                  // SF_* per shop visit
 	// ---- shop ----
@@ -260,6 +274,8 @@ void joker_remove(u8 idx) BANKED;
 u8   joker_sell_value(u8 idx) BANKED;
 u8   joker_count(u8 id) BANKED;
 u8   joker_slots(void) BANKED;
+u32  mul_sat(u32 a, u8 m) BANKED;
+u8   shop_joker_stickers(void) BANKED;
 void joker_recalc_modifiers(void) BANKED;            // hand size / hands / discards bonuses
 bool joker_has(u8 id) BANKED;
 
@@ -272,6 +288,7 @@ bool pack_open(u8 slot) BANKED;
 extern u8 g_packN, g_packPick, g_packKind;
 extern u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
 extern Card g_packCard[PACK_CARD_MAX];
+extern u8 g_packFlag[PACK_CARD_MAX];
 bool pack_choose(u8 i) BANKED;
 bool voucher_buy(void) BANKED;
 u8   voucher_price(void) BANKED;

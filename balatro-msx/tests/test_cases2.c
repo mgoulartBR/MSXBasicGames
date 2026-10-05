@@ -76,7 +76,7 @@ void run_joker_cases_b(void) BANKED
 	{ fresh(); joker_add(JK_FLASH); g.money = 50; shop_generate(); shop_reroll(); EXPECT("joker: Flash Card +2 Mult per reroll", g.jk[0].v, 2); }
 	{ fresh(); joker_add(JK_CHAOS); g.money = 50; shop_generate(); i16 m0 = g.money; shop_reroll(); u8 free1 = g.money == m0; shop_reroll(); EXPECT("joker: Chaos the Clown first reroll is free", free1 && g.money < m0, 1); }
 	{ fresh(); joker_add(JK_LUCHADOR); g.blind = BLIND_BOSS; g.boss = BS_CLUB; blind_start(); joker_sell(0); EXPECT("joker: Luchador disables the Boss Blind when sold", g.bossOff, 1); }
-	{ fresh(); joker_add(JK_CHICOT); g.blind = BLIND_BOSS; g.boss = BS_WATER; blind_start(); EXPECT("joker: Chicot disables the Boss Blind", g.bossOff == 1 && g.discardsLeft == START_DISCARDS, 1); }
+	{ fresh(); joker_add(JK_CHICOT); g.blind = BLIND_BOSS; g.boss = BS_WATER; blind_start(); EXPECT("joker: Chicot disables the Boss Blind", g.bossOff == 1 && g.discardsLeft == START_DISCARDS + 1, 1); }
 	{ fresh(); joker_add(JK_INVISIBLE); joker_add(JK_JOKER); g.jk[0].v = 2; joker_sell(0); EXPECT("joker: Invisible Joker duplicates a Joker when sold after 2 rounds", g.nJk, 2); }
 	{ fresh(); joker_add(JK_HOLOGRAM); deck_add(CARD(H,3), FALSE); deck_add(CARD(H,4), FALSE); EXPECT("joker: Hologram X0.25 per card added", g.jk[0].v, 150); }
 	{ fresh(); joker_add(JK_GLASS); card_destroyed(C_SETENH(CARD(H,3), ENH_GLASS)); EXPECT("joker: Glass Joker gains X0.75 per shattered Glass Card", g.jk[0].v, 175); }

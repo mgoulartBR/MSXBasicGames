@@ -266,9 +266,11 @@ static void info_card(Card c)
 	}
 }
 
-static void info_jokerdef(const JokerDef* d, i8 sell, u8 price, const JokerInst* j)
+static void info_jokerdef(const JokerDef* d, i8 sell, u8 price, const JokerInst* j, u8 fl)
 {
 	Vid_Text(AREA_X + 6, INFO_Y + 3, d->name, TC_GOLD);
+	if (fl & (JF_ETERNAL | JF_PERISH | JF_RENTAL))              // stickers
+		Vid_Text(AREA_X + 6 + Vid_TextW(d->name) + 6, INFO_Y + 3, (fl & JF_ETERNAL) ? "Eternal" : ((fl & JF_PERISHED) ? "Perished" : ((fl & JF_PERISH) ? "Perishable" : "Rental")), TC_RED);
 	if (j && (j->id == JK_ANCIENT || j->id == JK_CASTLE || j->id == JK_IDOL || j->id == JK_MAIL))      // this round's target
 	{
 		static const char rs[13] = { '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A' };
@@ -334,7 +336,7 @@ void info_show(u8 id) BANKED
 		u8 i = id - W_HAND;
 		if (i < g.nHand) { if (g.dflag[g.hand[i]] & DF_FD) info_text("Face down card", 0); else info_card(g.deck[g.hand[i]]); }
 	}
-	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0, &g.jk[i]); else info_text("Empty Joker slot", 0); }
+	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0, &g.jk[i], g.jk[i].flags); else info_text("Empty Joker slot", 0); }
 	else if (id < W_PLAY) { u8 i = id - W_CONS; if (g.cons[i]) info_cons(g.cons[i], 0); else info_text("Empty consumable slot", 0); }
 	else switch (id)
 	{
@@ -351,9 +353,10 @@ void info_show(u8 id) BANKED
 			if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 			{
 				u8 i = id - W_SHOPCARD;
-				if (g.shopType[i] == 1) info_jokerdef(&g_Jokers[g.shopId[i]], -1, g_Jokers[g.shopId[i]].cost, 0);
+				if (g.shopType[i] == 1) info_jokerdef(&g_Jokers[g.shopId[i]], -1, shop_cost(i), 0, g.shopFlag[i]);
 				else if (g.shopType[i] == 2) { info_planet(g.shopId[i], FALSE); info_price("Cost", 3); }
 				else if (g.shopType[i] == 3) info_cons(CONS_TAROT(g.shopId[i]), 3);
+				else if (g.shopType[i] == 5) info_cons(CONS_SPECTRAL(g.shopId[i]), 3);
 				else info_text("Sold out", 0);
 			}
 			else if (id == W_VOUCHER)
@@ -386,7 +389,7 @@ void info_show(u8 id) BANKED
 			else if (id >= W_PACKCARD && id < W_PACKCARD + PACK_CARD_MAX)
 			{
 				u8 i = id - W_PACKCARD;
-				if (g_packType[i] == 1) info_jokerdef(&g_Jokers[g_packId[i]], -1, 0, 0);
+				if (g_packType[i] == 1) info_jokerdef(&g_Jokers[g_packId[i]], -1, 0, 0, g_packFlag[i]);
 				else if (g_packType[i] == 2) info_planet(g_packId[i], FALSE);
 				else if (g_packType[i] == 3) info_cons(CONS_TAROT(g_packId[i]), 0);
 				else if (g_packType[i] == 4) info_card(g_packCard[i]);
@@ -409,7 +412,7 @@ void draw_jslot(u8 id) BANKED
 	if (present && ui.itemKind == (isJoker ? 1 : 2) && ui.itemIdx == idx) y = JOKER_Y + 3;     // selected: lowered
 	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
-	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); }
+	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); Vid_Stickers(g.jk[idx].flags, x, y); }
 	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : (CONS_IS_SPECTRAL(g.cons[idx]) ? CELL_SPECTRAL + g.cons[idx] - 0x40 : CELL_TAROT + g.cons[idx] - 0x20), x, y);
 	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
 	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border

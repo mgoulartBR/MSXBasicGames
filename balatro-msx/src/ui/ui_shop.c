@@ -13,7 +13,9 @@ static void cash_row(u8 idx)
 	switch (r->kind)
 	{
 		case 0: Vid_Text(52, y + 1, !r->who ? "Saved by Mr. Bones" : (g.blind == BLIND_SMALL ? "Small Blind" : (g.blind == BLIND_BIG ? "Big Blind" : g_Bosses[g.boss].name)), TC_WHITE); break;
-		case 1: Vid_Num(52, y + 1, r->who, TC_BLUE); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Hands left ($1 each)", TC_SLATE); break;
+		case 1: Vid_Num(52, y + 1, r->who, TC_BLUE); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, g.deckId == DK_GREEN ? "Hands left ($2 each)" : "Hands left ($1 each)", TC_SLATE); break;
+		case 7: Vid_Num(52, y + 1, r->who, TC_RED); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Discards left ($1 each)", TC_SLATE); break;
+		case 6: Vid_Num(52, y + 1, r->who, TC_RED); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Rental Jokers ($3 each)", TC_RED); break;
 		case 2: Vid_Text(52, y + 1, g_Jokers[g.jk[r->who].id].name, TC_GOLD); break;
 		case 4: Vid_Text(52, y + 1, "Investment Tag", TC_GOLD); break;
 		case 5: Vid_Num(52, y + 1, r->who, TC_GOLD); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Gold Cards held ($3 each)", TC_GOLD); break;
@@ -87,8 +89,8 @@ static const char* const k_packTag[5] = { "ARC", "CEL", "BUF", "STD", "SPC" };
 static void shop_card(u8 i, u8 x, u8 y)
 {
 	u8 t = g.shopType[i], id = g.shopId[i];
-	if (t == 1) Vid_Joker(id, x, y);
-	else Vid_Card(t == 2 ? CELL_PLANET + id : CELL_TAROT + id, x, y);
+	if (t == 1) { Vid_Joker(id, x, y); Vid_Stickers(g.shopFlag[i], x, y); }
+	else Vid_Card(t == 2 ? CELL_PLANET + id : (t == 5 ? CELL_SPECTRAL + id : CELL_TAROT + id), x, y);
 }
 
 static void draw_price(u8 x, u8 y, u8 price)
@@ -229,6 +231,7 @@ static void shop_activate(u8 id)
 		case W_NEXT: shop_leave(); next_blind(); ui_goto(SC_BLIND); break;
 		case W_INFO: ui_goto(SC_INFO); break;
 		case W_SELL:
+			if (ui.itemKind == 1 && (g.jk[ui.itemIdx].flags & JF_ETERNAL)) { ui_msg(M_ETERNAL); break; }
 			if (ui.itemKind == 1) joker_sell(ui.itemIdx); else cons_sell(ui.itemIdx);
 			snd(4); ui.itemKind = 0; shop_widgets(); draw_shop();
 			break;
@@ -272,7 +275,7 @@ static void pack_item(u8 i)
 		if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
 		return;
 	}
-	if (g_packType[i] == 1) Vid_Joker(g_packId[i], x, 60);
+	if (g_packType[i] == 1) { Vid_Joker(g_packId[i], x, 60); Vid_Stickers(g_packFlag[i], x, 60); }
 	else Vid_Card(g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : (g_packType[i] == 5 ? CELL_SPECTRAL + g_packId[i] : CELL_TAROT + g_packId[i]), x, 60);
 	if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
 }

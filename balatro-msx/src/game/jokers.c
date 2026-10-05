@@ -2,7 +2,9 @@
 // Effects that fire while scoring live in score.c; round-end effects in run.c.
 #include "bgame.h"
 
-u8 joker_slots(void) BANKED { return JOKER_MAX; }
+u8 joker_slots(void) BANKED { return (u8)(JOKER_MAX - (g.deckId == DK_PAINTED)); }      // Painted Deck: -1 Joker slot
+
+u32 mul_sat(u32 a, u8 m) BANKED { return a > 0xFFFFFFFFUL / m ? 0xFFFFFFFFUL : a * m; }
 
 bool joker_has(u8 id) BANKED
 {
@@ -68,7 +70,7 @@ bool joker_add(u8 id) BANKED
 {
 	if (g.nJk >= joker_slots()) return FALSE;
 	JokerInst* j = &g.jk[g.nJk++];
-	j->id = id; j->flags = 0; j->v = 0; j->sell = 0; j->ed = ED_NONE; j->aux = 0;
+	j->id = id; j->flags = 0; j->v = 0; j->sell = 0; j->ed = ED_NONE; j->aux = 0; j->age = 0;
 	switch (id)
 	{
 		case JK_ICE_CREAM:     j->v = 100; break;

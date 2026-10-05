@@ -258,6 +258,13 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 				}
 		}
 
+	if (g.deckId == DK_PLASMA)                                      // Plasma Deck: chips and Mult are balanced
+	{
+		u32 avg = (s.chips + s.mult / 100) / 2;
+		s.chips = avg; s.mult = avg * 100;
+		text(&s, SRC_NONE, TX_BALANCED);
+	}
+
 	// result: chips x mult (split to stay in 32 bits)
 	u32 m = s.mult / 100, f = s.mult % 100;
 	o->total = s.chips * m + s.chips * f / 100;

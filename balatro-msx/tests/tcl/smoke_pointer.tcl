@@ -2,6 +2,7 @@
 source [file join [file dirname [info script]] lib.tcl]
 set b 7.0
 key [expr {$b + 1.5}] space
+key [expr {$b + 2.5}] space       ;# deck screen: Start
 key [expr {$b + 3.5}] space
 snap [expr {$b + 5.0}] 30_ptr_round
 # walk the pointer over the widgets: first those after W_INFO (hand cards follow)

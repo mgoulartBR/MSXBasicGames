@@ -42,9 +42,10 @@ enum
 	W_BLIND = 39, W_BACK,                                        // 39, 40
 	W_PACKCARD = 41,     // 41..45
 	W_SKIPBLIND = 46, W_VOUCHER = 47,
+	W_DECK = 48, W_STAKE = 49, W_START = 50,                      // deck screen
 };
 
-enum { SC_TITLE, SC_BLIND, SC_ROUND, SC_CASHOUT, SC_SHOP, SC_PACK, SC_INFO, SC_OVER, SC_WIN };
+enum { SC_TITLE, SC_BLIND, SC_ROUND, SC_CASHOUT, SC_SHOP, SC_PACK, SC_INFO, SC_OVER, SC_WIN, SC_DECK };
 enum { PH_INPUT, PH_SCORING, PH_TALLY, PH_BANNER };
 
 typedef struct
@@ -124,6 +125,9 @@ void snd(u8 id) BANKED;
 void snd_event(u8 kind, u8 n) BANKED;
 
 // screens
+void scr_deck(void) BANKED;
+void upd_deck(void) BANKED;
+void deck_focus(u8 o, u8 n) BANKED;
 void scr_title(void) BANKED;
 void scr_blind(void) BANKED;
 void scr_round(void) BANKED;
@@ -146,7 +150,8 @@ void upd_over(void) BANKED;
 #define FR(n)   ((u8)(((u16)(n) * ui.hz) / 60))
 
 // shared strings (ui_text.c, always-mapped SEG20)
-extern const char T_PLAY[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[], T_SKIPBLIND[];
-extern const char M_NEEDCARDS[], M_CANTUSE[], M_NOMONEY[], M_NOROOM[], M_SOLDOUT[], M_NOJOKER[], M_NOCONS[];
+extern const char T_PLAY[], T_START[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[], T_SKIPBLIND[];
+extern const char M_NEEDCARDS[], M_CANTUSE[], M_NOMONEY[], M_NOROOM[], M_SOLDOUT[], M_NOJOKER[], M_NOCONS[], M_ETERNAL[];
 
 extern const char* const g_EnhText[], * const g_EdName[], * const g_SealName[], * const g_SealShort[];
+extern const char* const g_DeckName[], * const g_DeckDesc[], * const g_StakeName[], * const g_StakeDesc[];

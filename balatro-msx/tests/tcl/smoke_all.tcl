@@ -5,10 +5,11 @@ set b 7.0
 at [expr {$b + 1.0}] { check "boot: title screen" {[bk 0] == $::SC(title)} }
 snap [expr {$b + 1.2}] s01_title
 key [expr {$b + 1.5}] space
+key [expr {$b + 2.5}] space       ;# deck screen: Start
 at [expr {$b + 3.0}] { check "title -> blind select" {[bk 0] == $::SC(blind) && [bk 2] == 1 && [bk 3] == 0} }
 snap [expr {$b + 3.2}] s02_blind
 key [expr {$b + 3.5}] space
-at [expr {$b + 5.0}] { check "blind select -> round, 8 cards, 4 hands, 3 discards" {[bk 0] == $::SC(round) && [bk 8] == 8 && [bk 6] == 4 && [bk 7] == 3 && [bk 17] == 44} }
+at [expr {$b + 5.0}] { check "blind select -> round, 8 cards, 4 hands, 4 discards (Red Deck)" {[bk 0] == $::SC(round) && [bk 8] == 8 && [bk 6] == 4 && [bk 7] == 4 && [bk 17] == 44} }
 snap [expr {$b + 5.2}] s03_round
 # discard two cards: move to the first card, select two, press D
 key [expr {$b + 5.5}] right
@@ -17,7 +18,7 @@ key [expr {$b + 6.3}] right
 key [expr {$b + 6.7}] space
 at [expr {$b + 7.0}] { check "two cards selected" {[bk 16] == 3} }
 key [expr {$b + 7.2}] d
-at [expr {$b + 8.0}] { check "discard: 2 discards left, hand refilled to 8, deck 42" {[bk 7] == 2 && [bk 8] == 8 && [bk 17] == 42} }
+at [expr {$b + 8.0}] { check "discard: 3 discards left, hand refilled to 8, deck 42" {[bk 7] == 3 && [bk 8] == 8 && [bk 17] == 42} }
 snap [expr {$b + 8.1}] s04_discarded
 # play five cards
 key [expr {$b + 8.4}] space
@@ -52,6 +53,7 @@ key [expr {$b + 36.0}] space
 at [expr {$b + 37.5}] { check "game over -> title" {[bk 0] == $::SC(title)} }
 # endless mode: jump to the Ante 8 boss, win it, continue to Ante 9
 key [expr {$b + 38.5}] space
+key [expr {$b + 39.4}] space
 key [expr {$b + 40.2}] 8
 key [expr {$b + 41.0}] space
 at [expr {$b + 43.0}] { check "ante 8 boss round started" {[bk 0] == $::SC(round) && [bk 2] == 8 && [bk 3] == 2} }

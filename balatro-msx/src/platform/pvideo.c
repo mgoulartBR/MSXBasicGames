@@ -120,6 +120,21 @@ void Vid_Joker(u8 id, u8 x, u8 y)
 	Vid_Fill(x, y + GFX_CELL_H - 1, GFX_CELL_W, 1, COL_SLATE);
 }
 
+void Vid_Stickers(u8 fl, u8 x, u8 y)
+{
+	static const char* const lt[3] = { "E", "P", "R" };
+	static const u8 tc[3] = { TC_GOLD, TC_RED, TC_BLUE };
+	static const u8 bit[3] = { JF_ETERNAL, JF_PERISH, JF_RENTAL };
+	u8 n = 0; x &= 0xFE;
+	for (u8 k = 0; k < 3; k++)
+		if (fl & bit[k])
+		{
+			Vid_Fill(x + 2 + n * 8, y + 21, 8, 10, COL_INK);
+			Vid_Text(x + 3 + n * 8, y + 22, lt[k], tc[k]);
+			n++;
+		}
+}
+
 void Vid_EdStripe(u8 ed, u8 x, u8 y)
 {
 	x &= 0xFE;

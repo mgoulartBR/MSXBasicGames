@@ -40,7 +40,7 @@ void joker_blind_select(void) BANKED
 		switch (j->id)
 		{
 			case JK_CEREMONIAL:
-				if (i + 1 < g.nJk) { j->v += (i16)(2 * joker_sell_value(i + 1)); joker_remove(i + 1); }
+				if (i + 1 < g.nJk && !(g.jk[i + 1].flags & JF_ETERNAL)) { j->v += (i16)(2 * joker_sell_value(i + 1)); joker_remove(i + 1); }
 				break;
 			case JK_MARBLE: deck_add(C_SETENH(CARD(rndn(4), rndn(13)), ENH_STONE), FALSE); break;
 			case JK_MADNESS:
@@ -51,8 +51,7 @@ void joker_blind_select(void) BANKED
 					{
 						u8 r = rndn(g.nJk - 1);
 						if (r >= i) r++;
-						joker_remove(r);
-						if (r < i) i--;
+						if (!(g.jk[r].flags & JF_ETERNAL)) { joker_remove(r); if (r < i) i--; }
 					}
 				}
 				break;

@@ -3,12 +3,20 @@
 #include "bgame.h"
 
 Game g;
+u8 g_deckSel, g_stakeSel;                  // chosen on the deck screen, applied by run_new()
 
 void deck_new(void) BANKED
 {
 	u8 n = 0;
 	for (u8 s = 0; s < 4; s++)
-		for (u8 r = 0; r < 13; r++) { g.deck[n] = CARD(s, r); g.dflag[n] = 0; n++; }
+		for (u8 r = 0; r < 13; r++)
+		{
+			if (g.deckId == DK_ABANDONED && r >= RANK_J && r <= RANK_K) continue;            // no face cards
+			u8 suit = s;
+			if (g.deckId == DK_CHECKERED) suit = (s < 2) ? SUIT_H : SUIT_S;                  // 26 Spades + 26 Hearts
+			g.deck[n] = (g.deckId == DK_ERRATIC) ? CARD(rndn(4), rndn(13)) : CARD(suit, r);
+			g.dflag[n] = 0; n++;
+		}
 	g.nDeck = n;
 }
 
@@ -40,6 +48,18 @@ void run_new(void) BANKED
 	g.handsBase = START_HANDS; g.discardsBase = START_DISCARDS; g.handSizeBase = START_HAND_SIZE;
 	g.interestSteps = INTEREST_CAP / 5;
 	g.rerollBase = START_REROLL;
+	g.deckId = g_deckSel; g.stake = g_stakeSel;
+	switch (g.deckId)
+	{
+		case DK_RED:     g.discardsBase++; break;
+		case DK_BLUE:    g.handsBase++; break;
+		case DK_YELLOW:  g.money += 10; break;
+		case DK_GREEN:   g.interestSteps = 0; break;                       // no interest: pays per hand / discard left instead
+		case DK_ZODIAC:  g.vouchers |= VBIT(VC_TAROT_MERCHANT) | VBIT(VC_PLANET_MERCHANT) | VBIT(VC_OVERSTOCK); break;
+		case DK_PAINTED: g.handSizeBase += 2; break;
+		case DK_GHOST:   g.cons[0] = CONS_SPECTRAL(SP_HEX); break;
+	}
+	if (g.stake >= 4 && g.discardsBase > 0) g.discardsBase--;               // Blue Stake
 	g.forced = 0xFF; g.mouthHand = 0xFF; g.mostPlayed = 0xFF; g.lastHandType = 0xFF;
 	deck_new();
 	g.boss = bosses_for_ante(1);
@@ -52,15 +72,16 @@ void run_new(void) BANKED
 //-----------------------------------------------------------------------------
 u32 blind_target(void) BANKED
 {
-	u32 a = g_AnteAmount[(g.ante > END_ANTE ? END_ANTE : g.ante) - 1];
+	u32 a = g_AnteAmount[g.stake >= 5 ? 2 : (g.stake >= 2 ? 1 : 0)][(g.ante > END_ANTE ? END_ANTE : g.ante) - 1];   // Green / Purple Stake scale faster
+	if (g.deckId == DK_PLASMA) a = mul_sat(a, 2);
 	if (g.blind == BLIND_SMALL) return a;
-	if (g.blind == BLIND_BIG) return a * 3 / 2;
-	return a * g_Bosses[g.boss].mult2 / 2;
+	if (g.blind == BLIND_BIG) return a / 2 * 3;
+	return (a & 1) ? mul_sat(a, g_Bosses[g.boss].mult2) / 2 : mul_sat(a / 2, g_Bosses[g.boss].mult2);
 }
 
 u8 blind_reward(void) BANKED
 {
-	if (g.blind == BLIND_SMALL) return 3;
+	if (g.blind == BLIND_SMALL) return g.stake >= 1 ? 0 : 3;       // Red Stake: no reward for the Small Blind
 	if (g.blind == BLIND_BIG) return 4;
 	return g_Bosses[g.boss].reward;
 }
@@ -161,7 +182,7 @@ void blind_start(void) BANKED
 		}
 	for (u8 i = 0; i < HAND_COUNT; i++) g.playedCnt[i] = 0;
 	g.eyeMask = 0; g.mouthHand = 0xFF; g.crimsonPrep = FALSE;
-	for (u8 i = 0; i < g.nJk; i++) g.jk[i].flags &= (u8)~JF_DEBUFF;
+	for (u8 i = 0; i < g.nJk; i++) { g.jk[i].flags &= (u8)~JF_DEBUFF; if (g.jk[i].flags & JF_PERISHED) g.jk[i].flags |= JF_DEBUFF; }
 	// the hand the Ox punishes: most played so far (ties: the more valuable hand wins like the original list order)
 	{
 		u16 best = 0; g.mostPlayed = HAND_HIGH_CARD;     // the original defaults to High Card when nothing was played yet
@@ -192,7 +213,8 @@ static void remove_flagged_jokers(void)
 {
 	for (u8 i = 0; i < g.nJk; )
 	{
-		if (g.jk[i].flags & 0x80) joker_remove(i); else i++;
+		if ((g.jk[i].flags & 0x80) && !(g.jk[i].flags & JF_ETERNAL)) joker_remove(i);
+		else { g.jk[i].flags &= (u8)~0x80; i++; }
 	}
 }
 
@@ -213,7 +235,7 @@ void round_resolve_play(void) BANKED
 	if (bossActive(BS_FINAL_HEART) && g.nJk)                   // debuff one random Joker each hand
 	{
 		u8 r = rndn(g.nJk);
-		for (u8 i = 0; i < g.nJk; i++) g.jk[i].flags &= (u8)~JF_DEBUFF;
+		for (u8 i = 0; i < g.nJk; i++) { g.jk[i].flags &= (u8)~JF_DEBUFF; if (g.jk[i].flags & JF_PERISHED) g.jk[i].flags |= JF_DEBUFF; }
 		g.jk[r].flags |= JF_DEBUFF;
 	}
 	round_check_end();
@@ -304,6 +326,8 @@ void round_end_effects(void) BANKED
 			}
 		}
 	}
+	for (u8 i = 0; i < g.nJk; i++)
+		if ((g.jk[i].flags & JF_PERISH) && ++g.jk[i].age >= 5) g.jk[i].flags |= JF_PERISHED;      // Orange Stake
 	joker_round_end2();
 	remove_flagged_jokers();
 	joker_recalc_modifiers();
@@ -314,7 +338,8 @@ u8 cashout_build(Cash* rows, i16* total) BANKED
 	u8 n = 0; i16 sum = 0;
 	rows[n].kind = 0; rows[n].who = (g.score >= g.target) ? 1 : 0;           // who=0: saved by Mr. Bones, no reward
 	rows[n].amount = rows[n].who ? blind_reward() : 0; sum += rows[n].amount; n++;
-	if (g.handsLeft > 0) { rows[n].kind = 1; rows[n].amount = g.handsLeft; rows[n].who = g.handsLeft; sum += rows[n].amount; n++; }
+	if (g.handsLeft > 0) { rows[n].kind = 1; rows[n].amount = (i16)(g.handsLeft * (g.deckId == DK_GREEN ? 2 : 1)); rows[n].who = g.handsLeft; sum += rows[n].amount; n++; }
+	if (g.deckId == DK_GREEN && g.discardsLeft > 0) { rows[n].kind = 7; rows[n].amount = g.discardsLeft; rows[n].who = g.discardsLeft; sum += rows[n].amount; n++; }
 	for (u8 i = 0; i < g.nJk && n < CASH_MAX - 1; i++)
 	{
 		i16 a = 0; JokerInst* j = &g.jk[i];
@@ -345,7 +370,12 @@ u8 cashout_build(Cash* rows, i16* total) BANKED
 		i16 inv = tags_eval_bonus();
 		if (inv) { rows[n].kind = 4; rows[n].amount = inv; rows[n].who = 0; sum += inv; n++; }
 	}
-	if (g.money >= 5)
+	{
+		u8 rent = 0;                                                       // Gold Stake: Rental Jokers cost $3 each round
+		for (u8 i = 0; i < g.nJk; i++) rent += (g.jk[i].flags & JF_RENTAL) != 0;
+		if (rent) { rows[n].kind = 6; rows[n].amount = (i16)(-3 * rent); rows[n].who = rent; sum += rows[n].amount; n++; }
+	}
+	if (g.money >= 5 && g.interestSteps)
 	{
 		u8 steps = (u8)(g.money / 5);
 		if (steps > g.interestSteps) steps = g.interestSteps;

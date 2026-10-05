@@ -27,6 +27,6 @@ extern const HandDef  g_Hands[HAND_COUNT];
 extern const BossDef  g_Bosses[BOSS_COUNT];
 extern const TagDef   g_Tags[TAG_COUNT];
 extern const VoucherDef g_Vouchers[VOUCHER_COUNT];
-extern const u32 g_AnteAmount[ANTE_COUNT];
+extern const u32 g_AnteAmount[3][ANTE_COUNT];
 extern const u8 g_BlindIcon[2];   // small, big icon rows
 #define JOKER_RARITY_COUNT 3
