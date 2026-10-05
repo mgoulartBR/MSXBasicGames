@@ -4,6 +4,7 @@
 //   page 0  y 232..255 sprite tables (BIOS defaults)
 #include "msxgl.h"
 #include "pvideo.h"
+#include "audio.h"
 #include "assets_gen.h"
 #include "data_gen.h"   // SEG_DESC
 #include "bgame.h"       // Card layout (enhancement / edition / seal bits)
@@ -36,7 +37,20 @@ static void build_cursor(void)
 	VDP_LoadSpritePattern(out, 4, 4);
 }
 
-void Vid_Sync(void) { Halt(); }
+#define JIFFY (*(volatile u16*)0xFC9E)
+static u16 s_jf;
+void Vid_Sync(void) { Halt(); s_jf = JIFFY; }
+// Long repaints (text) call this per glyph: every vertical blank that passed meanwhile still advances music and sound effects,
+// so a heavy frame no longer stretches the tempo (the main loop only updates the PSG once per frame).
+static void pace(void)
+{
+	u16 j = JIFFY;
+	u8 n = (u8)(j - s_jf);
+	if (!n) return;
+	s_jf = j;
+	if (n > 3) n = 3;
+	while (n--) Snd_Update();
+}
 u8 Vid_Hz(void) { return VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60; }
 
 void Vid_Init(void)
@@ -197,6 +211,7 @@ void Vid_TextN(u8 x, u8 y, const char* s, u8 n, u8 tc)
 	for (; *s && n; s++, n--)
 	{
 		u8 c = (u8)*s;
+		pace();
 		glyph(x, y, c, tc);
 		x += g_FontW[(c < 32 || c > 126) ? 31 : c - 32];
 	}

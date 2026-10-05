@@ -241,6 +241,7 @@ static void toggle_card(u8 i)
 	snd(1);
 	preview_hand();
 	mark_id((u8)(W_HAND + i));
+	ui.hnc = 0;                                            // the card moves up/down: the band must be cleared
 	ui.dirty |= D_BUTTONS;
 }
 
