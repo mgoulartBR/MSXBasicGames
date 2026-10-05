@@ -68,7 +68,7 @@ bool joker_add(u8 id) BANKED
 {
 	if (g.nJk >= joker_slots()) return FALSE;
 	JokerInst* j = &g.jk[g.nJk++];
-	j->id = id; j->flags = 0; j->v = 0; j->sell = 0;
+	j->id = id; j->flags = 0; j->v = 0; j->sell = 0; j->ed = ED_NONE;
 	switch (id)
 	{
 		case JK_ICE_CREAM:     j->v = 100; break;

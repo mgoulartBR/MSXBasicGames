@@ -18,6 +18,8 @@ void Vid_Fill(u8 x, u8 y, u8 w, u8 h, u8 col);
 void Vid_Frame(u8 x, u8 y, u8 w, u8 h, u8 col);              // 1px outline
 void Vid_Panel(u8 x, u8 y, u8 w, u8 h, u8 fill, u8 border);  // rounded panel
 void Vid_Card(u8 cell, u8 x, u8 y);                           // 24x32 atlas cell
+void Vid_PlayCard(u16 card, bool faceDown, u8 x, u8 y);       // a playing card with its enhancement / edition / seal marks
+void Vid_EdStripe(u8 ed, u8 x, u8 y);                         // edition stripe on a card (jokers too)
 void Vid_BlindIcon(u8 row, u8 x, u8 y);                       // 16x16
 void Vid_TagIcon(u8 tag, u8 x, u8 y);                         // 16x16 (icons live below the visible screen, page 0 line 212+)
 void Vid_Text(u8 x, u8 y, const char* s, u8 tc);

@@ -6,6 +6,7 @@
 #include "pvideo.h"
 #include "assets_gen.h"
 #include "data_gen.h"   // SEG_DESC
+#include "bgame.h"       // Card layout (enhancement / edition / seal bits)
 
 extern const u8 g_FontW[95], g_FontX[95], g_FontL[95];
 static const u8 s_palette[] = GFX_PALETTE_INIT;
@@ -106,6 +107,31 @@ void Vid_Card(u8 cell, u8 x, u8 y)        // HMMM (x even): ~2.3x faster than th
 	u16 sx = (u16)(cell % GFX_CELLS_PER_ROW) * GFX_CELL_W;
 	u16 sy = GFX_ATLAS_Y0 + (u16)(cell / GFX_CELLS_PER_ROW) * GFX_CELL_H;
 	VDP_CommandHMMM(sx, sy, x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
+}
+
+void Vid_EdStripe(u8 ed, u8 x, u8 y)
+{
+	x &= 0xFE;
+	if (ed == ED_FOIL) Vid_Fill(x + 2, y + 1, 20, 2, COL_ICE);
+	else if (ed == ED_HOLO) Vid_Fill(x + 2, y + 1, 20, 2, COL_RED);
+	else if (ed == ED_POLY)
+	{
+		static const u8 rb[4] = { COL_RED, COL_GOLD, COL_GREEN, COL_BLUE };
+		for (u8 i = 0; i < 4; i++) Vid_Fill(x + 2 + i * 5, y + 1, 5 + (i == 3), 2, rb[i]);
+	}
+}
+
+void Vid_PlayCard(u16 c, bool faceDown, u8 x, u8 y)
+{
+	static const u8 enhCol[ENH_COUNT] = { 0, COL_BLUE, COL_RED, COL_PURPLE, COL_ICE, COL_STEEL, COL_STONE, COL_GOLD, COL_GREEN };
+	static const u8 sealCol[SEAL_COUNT] = { 0, COL_GOLD, COL_RED, COL_BLUE, COL_PURPLE };
+	if (faceDown) { Vid_Card(CELL_BACK, x, y); return; }
+	u8 enh = C_ENH(c), seal = C_SEAL(c);
+	if (enh == ENH_STONE) { Vid_Card(CELL_BLANK, x, y); Vid_Fill((x & 0xFE) + 2, y + 2, 20, 28, COL_STONE); }
+	else Vid_Card(C_CELL(c), x, y);
+	if (enh) Vid_Frame(x & 0xFE, y, 24, 32, enhCol[enh]);
+	Vid_EdStripe(C_ED(c), x, y);
+	if (seal) { Vid_Fill((x & 0xFE) + 2, y + 24, 4, 5, COL_INK); Vid_Fill((x & 0xFE) + 3, y + 25, 2, 3, sealCol[seal]); }
 }
 
 void Vid_TagIcon(u8 tag, u8 x, u8 y)

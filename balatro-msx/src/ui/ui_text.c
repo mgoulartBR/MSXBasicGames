@@ -24,3 +24,10 @@ const char M_NOJOKER[]   = "No room for another Joker";
 const char M_NOCONS[]    = "No room for another consumable";
 
 const char* const g_TextMsg[TX_COUNT] = { "Again!", "Upgrade!", "Reset", "Level Up!", "Debuffed", "Eaten!", "Extinct!", "Safe!", "Saved!" };
+
+// card modifiers: name + effect (info panel), edition and seal names
+const char* const g_EnhText[ENH_COUNT] = { "", "Bonus Card: +30 chips", "Mult Card: +4 mult", "Wild Card: counts as any suit", "Glass Card: x2 mult, may shatter",
+	"Steel Card: x1.5 mult while held", "Stone Card: +50 chips, no rank or suit", "Gold Card: $3 if held at round end", "Lucky Card: 1 in 5 +20 mult, 1 in 15 $20" };
+const char* const g_EdName[4]   = { "", "Foil +50 chips", "Holographic +10 mult", "Polychrome x1.5 mult" };
+const char* const g_SealName[SEAL_COUNT] = { "", "Gold Seal: $3 when played", "Red Seal: scores twice", "Blue Seal: Planet if held", "Purple Seal: Tarot if discarded" };
+const char* const g_SealShort[SEAL_COUNT] = { "", "Gold Seal", "Red Seal", "Blue Seal", "Purple Seal" };

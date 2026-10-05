@@ -3,8 +3,9 @@
 
 u8 g_packN, g_packPick, g_packKind;
 u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
+Card g_packCard[PACK_CARD_MAX];                 // Standard pack: the playing cards on offer
 
-enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT };
+enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT, ST_CARD };
 
 i16 debt_limit(void) BANKED { return joker_has(JK_CREDIT_CARD) ? -20 : 0; }
 
@@ -81,6 +82,8 @@ bool cons_needs_cards(u8 c, u8* minc, u8* maxc) BANKED
 		case TR_HANGED_MAN: *minc = 1; *maxc = 2; return TRUE;
 		case TR_DEATH:      *minc = 2; *maxc = 2; return TRUE;
 		case TR_STAR: case TR_MOON: case TR_SUN: case TR_WORLD: *minc = 1; *maxc = 3; return TRUE;
+		case TR_MAGICIAN: case TR_EMPRESS: case TR_HEIROPHANT: *minc = 1; *maxc = 2; return TRUE;
+		case TR_LOVERS: case TR_CHARIOT: case TR_JUSTICE: case TR_DEVIL: case TR_TOWER: *minc = 1; *maxc = 1; return TRUE;
 	}
 	return FALSE;
 }
@@ -137,7 +140,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 				if (sel & (1u << i))
 				{
 					Card* d = &g.deck[g.hand[i]];
-					*d = CARD(C_SUIT(*d), (C_RANK(*d) + 1) % 13);
+					*d = C_SETRANK(*d, (C_RANK(*d) + 1) % 13);
 				}
 			break;
 		case TR_HANGED_MAN:
@@ -151,11 +154,31 @@ bool cons_use(u8 slot, u16 sel) BANKED
 			g.deck[g.hand[a]] = g.deck[g.hand[b]];            // the left card becomes a copy of the right one
 			break;
 		}
+		case TR_MAGICIAN: case TR_EMPRESS: case TR_HEIROPHANT: case TR_LOVERS: case TR_CHARIOT: case TR_JUSTICE: case TR_DEVIL: case TR_TOWER:
+		{
+			u8 e = (t == TR_MAGICIAN) ? ENH_LUCKY : (t == TR_EMPRESS) ? ENH_MULT : (t == TR_HEIROPHANT) ? ENH_BONUS :
+			       (t == TR_LOVERS) ? ENH_WILD : (t == TR_CHARIOT) ? ENH_STEEL : (t == TR_JUSTICE) ? ENH_GLASS :
+			       (t == TR_DEVIL) ? ENH_GOLD : ENH_STONE;
+			for (u8 i = 0; i < g.nHand; i++)
+				if (sel & (1u << i)) { Card* d = &g.deck[g.hand[i]]; *d = C_SETENH(*d, e); }
+			break;
+		}
+		case TR_WHEEL_OF_FORTUNE:
+		{
+			u8 cand[JOKER_MAX], n = 0;
+			for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].ed == ED_NONE) cand[n++] = i;
+			if (n && rnd_odds(4))
+			{
+				u8 r = rndn(100);
+				g.jk[cand[rndn(n)]].ed = (r < 50) ? ED_FOIL : (r < 85) ? ED_HOLO : ED_POLY;
+			}
+			break;
+		}
 		case TR_STAR: case TR_MOON: case TR_SUN: case TR_WORLD:
 		{
 			u8 suit = (t == TR_STAR) ? SUIT_D : (t == TR_MOON) ? SUIT_C : (t == TR_SUN) ? SUIT_H : SUIT_S;
 			for (u8 i = 0; i < g.nHand; i++)
-				if (sel & (1u << i)) { Card* d = &g.deck[g.hand[i]]; *d = CARD(suit, C_RANK(*d)); }
+				if (sel & (1u << i)) { Card* d = &g.deck[g.hand[i]]; *d = C_SETSUIT(*d, suit); }
 			break;
 		}
 	}
@@ -236,7 +259,7 @@ void shop_generate(void) BANKED
 	shop_roll_cards();
 	for (u8 i = 0; i < 2; i++)
 	{
-		u8 t = rndn(3), sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
+		u8 t = rndn(4), sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
 		g.packType[i] = PACK_KIND(t, sz);
 	}
 	g.shopOpen = 1;
@@ -282,7 +305,7 @@ bool shop_reroll(void) BANKED
 }
 
 //-----------------------------------------------------------------------------
-// booster packs: Arcana (tarots), Celestial (planets), Buffoon (jokers)
+// booster packs: Arcana (tarots), Celestial (planets), Buffoon (jokers), Standard (playing cards)
 //-----------------------------------------------------------------------------
 static void pack_fill(u8 kind);
 
@@ -304,17 +327,25 @@ static void pack_fill(u8 kind)
 {
 	u8 type = (u8)((kind - 1) / 3), sz = (u8)((kind - 1) % 3);
 	g_packKind = kind;
-	g_packN = (type == 2) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);
+	g_packN = (type == 2) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);   // Standard (type 3) like Arcana: 3 / 5 cards
 	g_packPick = (sz == 2) ? 2 : 1;
 	u8 avoid[(JOKER_COUNT + 7) / 8];
 	for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0;
-	u16 usedPlanet = 0, usedTarot = 0;
+	u16 usedPlanet = 0; u32 usedTarot = 0;
 	for (u8 i = 0; i < g_packN; i++)
 	{
-		if (type == 0)
+		if (type == 3)
 		{
-			u8 t; do { t = random_tarot(); } while (usedTarot & (1u << t));
-			usedTarot |= (u16)(1u << t); g_packType[i] = ST_TAROT; g_packId[i] = t;
+			Card c = CARD(rndn(4), rndn(13));                          // random playing card, often modified
+			if (rndn(10) < 4) c = C_SETENH(c, 1 + rndn(ENH_COUNT - 1));
+			if (rndn(100) < 8) c = C_SETED(c, 1 + rndn(3));
+			if (rndn(5) == 0) c = C_SETSEAL(c, 1 + rndn(SEAL_COUNT - 1));
+			g_packType[i] = ST_CARD; g_packCard[i] = c;
+		}
+		else if (type == 0)
+		{
+			u8 t; do { t = random_tarot(); } while (usedTarot & (1UL << t));
+			usedTarot |= (1UL << t); g_packType[i] = ST_TAROT; g_packId[i] = t;
 		}
 		else if (type == 1)
 		{
@@ -339,6 +370,10 @@ bool pack_choose(u8 i) BANKED
 		case ST_PLANET: planet_use(g_packId[i]); g.lastCons = CONS_PLANET(g_packId[i]); break;
 		case ST_TAROT:  if (!cons_add(CONS_TAROT(g_packId[i]))) return FALSE; break;
 		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; break;
+		case ST_CARD:
+			if (g.nDeck >= DECK_MAX) return FALSE;
+			g.deck[g.nDeck] = g_packCard[i]; g.dflag[g.nDeck] = 0; g.loc[g.nDeck] = LOC_PILE; g.nDeck++;
+			break;
 	}
 	g_packType[i] = 0;
 	g_packPick--;

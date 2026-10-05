@@ -14,7 +14,7 @@ static u8 find_flush(const Card* c, u8 n, u8 rules, u8 need)
 	{
 		u8 sc = suit_class(order[k], rules), m = 0, cnt = 0;
 		for (u8 i = 0; i < n; i++)
-			if (suit_class(C_SUIT(c[i]), rules) == sc) { m |= (u8)(1 << i); cnt++; }
+			if (C_ENH(c[i]) == ENH_WILD || suit_class(C_SUIT(c[i]), rules) == sc) { m |= (u8)(1 << i); cnt++; }
 		if (cnt >= need) return m;
 	}
 	return 0;

@@ -40,7 +40,7 @@ void run_new(void) BANKED
 	g.handsBase = START_HANDS; g.discardsBase = START_DISCARDS; g.handSizeBase = START_HAND_SIZE;
 	g.interestSteps = INTEREST_CAP / 5;
 	g.rerollBase = START_REROLL;
-	g.forced = 0xFF; g.mouthHand = 0xFF; g.mostPlayed = 0xFF;
+	g.forced = 0xFF; g.mouthHand = 0xFF; g.mostPlayed = 0xFF; g.lastHandType = 0xFF;
 	deck_new();
 	g.boss = bosses_for_ante(1);
 	tags_new_ante();
@@ -196,7 +196,12 @@ static void remove_flagged_jokers(void)
 
 void round_resolve_play(void) BANKED
 {
-	for (u8 i = 0; i < g.nPlayed; i++) { g.loc[g.played[i]] = LOC_DISCARD; g.dflag[g.played[i]] |= DF_PILLAR; }
+	for (u8 i = 0; i < g.nPlayed; i++)
+	{
+		u8 sl = g.played[i];
+		g.loc[sl] = (g.dflag[sl] & DF_BREAK) ? LOC_GONE : LOC_DISCARD;       // glass that shattered leaves the deck
+		g.dflag[sl] = (u8)((g.dflag[sl] & ~DF_BREAK) | DF_PILLAR);
+	}
 	g.nPlayed = 0;
 	g.score += g.lastTotal;
 	g.lastTotal = 0;
@@ -239,6 +244,7 @@ bool round_discard(u16 sel) BANKED
 		{
 			g.loc[slot] = LOC_DISCARD;
 			if (card_is_face(g.deck[slot])) faces++;
+			if (C_SEAL(g.deck[slot]) == SEAL_PURPLE) cons_add(CONS_TAROT(rndn(TAROT_COUNT)));       // Purple Seal
 			for (u8 k = 0; k < g.nJk; k++)               // context.discard, once per card
 				if (g.jk[k].id == JK_RAMEN && !(g.jk[k].flags & JF_DEBUFF))
 				{
@@ -269,6 +275,8 @@ bool round_discard(u16 sel) BANKED
 void round_end_effects(void) BANKED
 {
 	g.unusedDiscards += g.discardsLeft;
+	for (u8 i = 0; i < g.nHand; i++)                                  // Blue Seal: the Planet of the last hand played
+		if (C_SEAL(g.deck[g.hand[i]]) == SEAL_BLUE && g.lastHandType < HAND_COUNT) cons_add(CONS_PLANET(g.lastHandType));
 	g.tempHand = 0;
 	for (u8 i = 0; i < g.nJk; i++)
 	{
@@ -320,6 +328,11 @@ u8 cashout_build(Cash* rows, i16* total) BANKED
 			case JK_DELAYED_GRAT: if (g.discardsUsed == 0 && g.discardsLeft > 0) a = (i16)(2 * g.discardsLeft); break;
 		}
 		if (a > 0) { rows[n].kind = 2; rows[n].amount = a; rows[n].who = i; sum += a; n++; }
+	}
+	{
+		u8 gold = 0;                                                         // Gold Cards still in hand
+		for (u8 i = 0; i < g.nHand; i++) if (C_ENH(g.deck[g.hand[i]]) == ENH_GOLD) gold++;
+		if (gold && n < CASH_MAX - 1) { rows[n].kind = 5; rows[n].amount = (i16)(3 * gold); rows[n].who = gold; sum += rows[n].amount; n++; }
 	}
 	{
 		i16 inv = tags_eval_bonus();

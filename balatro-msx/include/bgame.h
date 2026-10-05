@@ -5,9 +5,13 @@
 #include "assets_gen.h"
 
 //-----------------------------------------------------------------------------
-// Cards: bits 0-3 = rank (0=2 ... 8=10, 9=J, 10=Q, 11=K, 12=A), bits 4-5 = suit (H,C,D,S)
+// Cards: bits 0-3 = rank (0=2 ... 8=10, 9=J, 10=Q, 11=K, 12=A), bits 4-5 = suit (H,C,D,S),
+// bits 6-9 = enhancement, 10-11 = edition, 12-14 = seal (a Card value carries its modifiers, so copies keep them)
 //-----------------------------------------------------------------------------
-typedef u8 Card;
+typedef u16 Card;
+enum { ENH_NONE, ENH_BONUS, ENH_MULT, ENH_WILD, ENH_GLASS, ENH_STEEL, ENH_STONE, ENH_GOLD, ENH_LUCKY, ENH_COUNT };
+enum { ED_NONE, ED_FOIL, ED_HOLO, ED_POLY };
+enum { SEAL_NONE, SEAL_GOLD, SEAL_RED, SEAL_BLUE, SEAL_PURPLE, SEAL_COUNT };
 #define SUIT_H 0
 #define SUIT_C 1
 #define SUIT_D 2
@@ -18,6 +22,15 @@ typedef u8 Card;
 #define RANK_K 11
 #define RANK_A 12
 #define CARD(s, r)    ((Card)(((s) << 4) | (r)))
+#define C_ENH(c)      (((c) >> 6) & 15)
+#define C_ED(c)       (((c) >> 10) & 3)
+#define C_SEAL(c)     (((c) >> 12) & 7)
+#define C_BASE(c)     ((Card)((c) & 0x3F))                // rank + suit only
+#define C_SETENH(c,e) ((Card)(((c) & ~(15u << 6)) | ((u16)(e) << 6)))
+#define C_SETED(c,e)  ((Card)(((c) & ~(3u << 10)) | ((u16)(e) << 10)))
+#define C_SETSEAL(c,e)((Card)(((c) & ~(7u << 12)) | ((u16)(e) << 12)))
+#define C_SETRANK(c,r)((Card)(((c) & ~15u) | (r)))
+#define C_SETSUIT(c,t)((Card)(((c) & ~(3u << 4)) | ((u16)(t) << 4)))
 #define C_RANK(c)     ((c) & 15)
 #define C_SUIT(c)     (((c) >> 4) & 3)
 #define C_ID(c)       (C_RANK(c) + 2)                     // 2..14, like the original get_id()
@@ -27,12 +40,12 @@ typedef u8 Card;
 //-----------------------------------------------------------------------------
 // Limits / tunables
 //-----------------------------------------------------------------------------
-#define DECK_MAX         52
+#define DECK_MAX         64
 #define HAND_MAX         16
 #define PLAY_MAX         5
 #define JOKER_MAX        5
 #define CONS_MAX         2
-#define EVENT_MAX        72
+#define EVENT_MAX        110
 #define SHOP_CARD_MAX    5
 #define TAG_MAX          6
 #define PACK_CARD_MAX    5
@@ -68,6 +81,8 @@ typedef struct
 	u8  flags;       // JF_*
 	i16 v;           // per-joker counter (chips, mult, x100 mult, hand type...)
 	u8  sell;        // sell value bonus (Egg)
+	u8  ed;          // ED_* edition (Foil / Holographic / Polychrome)
+	
 } JokerInst;
 #define JF_DEBUFF 1
 
@@ -172,6 +187,7 @@ typedef struct
 	u8   mouthHand, mostPlayed;      // boss helpers (0xFF = none)
 	u8   bossOff;                    // boss disabled
 	u8   endless;                    // continued past the Ante 8 win
+	u8   lastHandType;               // HAND_* of the last hand played this run (Blue Seal), 0xFF = none
 	// ---- shop ----
 	u8   shopType[SHOP_CARD_MAX];    // 0 empty, 1 joker, 2 planet, 3 tarot
 	u8   shopId[SHOP_CARD_MAX];
@@ -184,6 +200,7 @@ typedef struct
 } Game;
 enum { LOC_PILE, LOC_HAND, LOC_PLAY, LOC_DISCARD, LOC_GONE };
 #define VBIT(v) ((u16)(1u << (v)))
+#define DF_BREAK  4                  // glass card that shattered this hand
 #define DF_FD     2                  // drawn face down (House/Wheel/Fish/Mark)
 #define DF_PILLAR 1                  // played this ante (The Pillar)
 extern Game g;
@@ -247,6 +264,7 @@ u8   shop_cost(u8 i) BANKED;
 bool pack_open(u8 slot) BANKED;
 extern u8 g_packN, g_packPick, g_packKind;
 extern u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
+extern Card g_packCard[PACK_CARD_MAX];
 bool pack_choose(u8 i) BANKED;
 bool voucher_buy(void) BANKED;
 u8   voucher_price(void) BANKED;
@@ -258,7 +276,7 @@ i16  debt_limit(void) BANKED;
 #define PACK_NORMAL 0
 #define PACK_JUMBO  1
 #define PACK_MEGA   2
-// pack kinds: 1..9 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon ; (kind-1)%3: size
+// pack kinds: 1..12 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon, 3 standard ; (kind-1)%3: size
 #define PACK_KIND(t, sz) ((u8)(1 + (t) * 3 + (sz)))
 u8   pack_cost(u8 kind) BANKED;
 

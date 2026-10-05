@@ -16,6 +16,7 @@ static void cash_row(u8 idx)
 		case 1: Vid_Num(52, y + 1, r->who, TC_BLUE); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Hands left ($1 each)", TC_SLATE); break;
 		case 2: Vid_Text(52, y + 1, g_Jokers[g.jk[r->who].id].name, TC_GOLD); break;
 		case 4: Vid_Text(52, y + 1, "Investment Tag", TC_GOLD); break;
+		case 5: Vid_Num(52, y + 1, r->who, TC_GOLD); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Gold Cards held ($3 each)", TC_GOLD); break;
 		default: Vid_Text(52, y + 1, "Interest ($1 per $5)", TC_SLATE); break;
 	}
 	(void)lab;
@@ -81,7 +82,7 @@ void upd_cashout(void) BANKED
 #define VOUCH_X    176
 #define VOUCH_Y    110
 
-static const char* const k_packTag[3] = { "ARC", "CEL", "BUF" };
+static const char* const k_packTag[4] = { "ARC", "CEL", "BUF", "STD" };
 
 static u8 shop_cell(u8 i)
 {
@@ -121,7 +122,7 @@ static void shop_item(u8 id)
 		u8 i = id - W_PACK, x = PACK_X(i), k = g.packType[i];
 		if (k)
 		{
-			static const u8 col[3] = { COL_RED, COL_BLUE, COL_ORANGE };
+			static const u8 col[4] = { COL_RED, COL_BLUE, COL_ORANGE, COL_GREEN };
 			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], foc ? COL_GOLD : COL_INK);
 			Vid_TextC(x + 12, PACK_Y + 6, k_packTag[(k - 1) / 3], TC_WHITE);
 			Vid_TextC(x + 12, PACK_Y + 18, (k - 1) % 3 == 0 ? "" : ((k - 1) % 3 == 1 ? "JMB" : "MEGA"), TC_INK);
@@ -266,6 +267,12 @@ static void pack_item(u8 i)
 	u8 x = pack_x(i);
 	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == W_PACKCARD + i;
 	if (!g_packType[i]) { Vid_Fill(x, 60, 24, 32, COL_FELT); Vid_Frame(x, 60, 24, 32, COL_SLATE); return; }
+	if (g_packType[i] == 4)
+	{
+		Vid_PlayCard(g_packCard[i], FALSE, x, 60);
+		if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
+		return;
+	}
 	u8 cell = g_packType[i] == 1 ? g_Jokers[g_packId[i]].cell : (g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i]);
 	Vid_Card(cell, x, 60);
 	if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
@@ -285,7 +292,7 @@ static void draw_pack(void)
 {
 	Vid_Fill(AREA_X, 0, AREA_W, 174, COL_FELT);
 	{
-		static const char* const nm[3] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack" };
+		static const char* const nm[4] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack" };
 		Vid_TextC(AREA_X + 96, 14, nm[(g_packKind - 1) / 3], TC_GOLD);
 		char b[16] = "Choose "; b[7] = '0' + g_packPick; b[8] = 0;
 		Vid_TextC(AREA_X + 96, 28, b, TC_WHITE);
@@ -329,7 +336,7 @@ void upd_pack(void) BANKED
 			if (g_packPick == 0) { ui_goto(ui.packReturn); return; }
 			draw_pack();
 		}
-		else ui_msg(g_packType[act - W_PACKCARD] == 1 ? M_NOJOKER : M_NOCONS);
+		else ui_msg(g_packType[act - W_PACKCARD] == 1 ? M_NOJOKER : (g_packType[act - W_PACKCARD] == 4 ? M_CANTUSE : M_NOCONS));
 	}
 	else if (act == W_SKIP) { ui_goto(ui.packReturn); return; }
 	if (ui.msgTimer && --ui.msgTimer == 0) { ui.msg = 0; ui.dirty |= D_INFO; }

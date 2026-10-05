@@ -210,16 +210,13 @@ layout['card'] = n
 for c in cards: put_cell(n, c); n += 1
 layout['back'] = n; put_cell(n, back); n += 1
 layout['blank'] = n; put_cell(n, blank); n += 1
-n = 60
 layout['planet'] = n
 for im in planet_src: put_cell(n, pal.quantize(im)); n += 1
-n = 80
 layout['joker'] = n
 for im in joker_src:
     c = card_base(); q = pal.quantize(im)
     c[1:31, 1:23] = q
     put_cell(n, c); n += 1
-n = max(n, 160)
 layout['tarot'] = n
 for im in tarot_src: put_cell(n, pal.quantize(im)); n += 1
 layout['voucher'] = n
@@ -347,6 +344,8 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))
     f.write('#define FONT_ROWS %d\n#define FONT_Y0 %d\n#define FONT_STRIP_H %d\n#define FONT_COLOR_COUNT %d\n' % (GLYPH_ROWS, FONT_Y0, FONT_STRIP_H, len(FONT_COLORS)))
     f.write('#define BLIND_ICON_COUNT %d\n' % len(BLIND_ORDER))
+    for nm, rgb in (('ICE', (170, 215, 250)), ('PURPLE', (150, 90, 210)), ('STEEL', (110, 130, 145)), ('STONE', (130, 130, 130))):
+        f.write('#define COL_%s %d\n' % (nm, int(pal.nearest(np.array(rgb, dtype=np.float32)))))
     f.write('// blind icon rows (16px each) in atlas column x=240: ' + ', '.join('%s=%d' % (k, v) for k, v in blind_row.items()) + '\n')
 json.dump(dict(blind_order=BLIND_ORDER), open(os.path.join(ROOT, 'build', 'blind_order.json'), 'w'))
 print("atlas: %d cells used, %d bytes in %d segments; logo seg %d; font %d glyphs" % (layout['end'], len(blob), nseg, LOGO_SEG, len(glyphs)))

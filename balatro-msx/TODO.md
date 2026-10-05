@@ -5,7 +5,8 @@
 ## Gameplay
 - [DONE] Endless mode after the Ante 8 win, up to Ante 12 (chips are u32: Ante 13+ would overflow).
 - [DONE] All 28 bosses (face-down bosses reveal on play; Amber Acorn shuffles but does not flip jokers).
-- [TODO] Enchantments, editions, seals; Standard/Spectral packs; spectral cards; other decks/stakes; save.
+- [DONE] Card enhancements (8), editions (Foil/Holo/Polychrome; Negative not implemented), seals (Gold/Red/Blue/Purple), 22 tarots, Standard packs, Wheel of Fortune (jokers' editions).
+- [TODO] Spectral cards/packs (the VRAM atlas has no room left for their art), Negative edition, Black Hole/other missing planets, other decks/stakes; save.
 - [PARTIAL] Jokers: 88 of 150; balance only checked by bot simulation.
 ## Graphics
 - [PARTIAL] 16-colour conversion; some joker art cropped to 20×28.

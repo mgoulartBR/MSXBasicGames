@@ -257,6 +257,13 @@ static void info_card(Card c)
 	Vid_Text(AREA_X + 6, INFO_Y + 14, "+", TC_BLUE);
 	Vid_Num(AREA_X + 12, INFO_Y + 14, C_NOMINAL(c), TC_BLUE);
 	Vid_Text(AREA_X + 12 + Vid_NumW(C_NOMINAL(c)) + 3, INFO_Y + 14, "chips when scored", TC_SLATE);
+	if (C_ENH(c)) Vid_Text(AREA_X + 6, INFO_Y + 25, g_EnhText[C_ENH(c)], TC_GOLD);
+	if (C_ED(c)) Vid_Text(250 - Vid_TextW(g_EdName[C_ED(c)]), INFO_Y + 3, g_EdName[C_ED(c)], TC_BLUE);
+	if (C_SEAL(c))
+	{
+		if (!C_ENH(c)) Vid_Text(AREA_X + 6, INFO_Y + 25, g_SealName[C_SEAL(c)], TC_RED);
+		else Vid_Text(250 - Vid_TextW(g_SealShort[C_SEAL(c)]), INFO_Y + 14, g_SealShort[C_SEAL(c)], TC_RED);
+	}
 }
 
 static void info_jokerdef(const JokerDef* d, i8 sell, u8 price)
@@ -353,8 +360,8 @@ void info_show(u8 id) BANKED
 				u8 k = g.packType[id - W_PACK];
 				if (k)
 				{
-					static const char* const nm[3] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack" };
-					static const char* const ds[3] = { "Choose from random Tarot cards.", "Choose from random Planet cards.", "Choose from random Jokers." };
+					static const char* const nm[4] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack" };
+					static const char* const ds[4] = { "Choose from random Tarot cards.", "Choose from random Planet cards.", "Choose from random Jokers.", "Choose playing cards to add to your deck." };
 					static const char* const sz[3] = { "", "Jumbo ", "Mega " };
 					char b[28]; u8 n = 0; const char* p = sz[(k - 1) % 3];
 					while (*p) b[n++] = *p++;
@@ -372,6 +379,7 @@ void info_show(u8 id) BANKED
 				if (g_packType[i] == 1) info_jokerdef(&g_Jokers[g_packId[i]], -1, 0);
 				else if (g_packType[i] == 2) info_planet(g_packId[i], FALSE);
 				else if (g_packType[i] == 3) info_cons(CONS_TAROT(g_packId[i]), 0);
+				else if (g_packType[i] == 4) info_card(g_packCard[i]);
 			}
 	}
 }
@@ -390,7 +398,7 @@ void draw_jslot(u8 id) BANKED
 	if (present && ui.itemKind == (isJoker ? 1 : 2) && ui.itemIdx == idx) y = JOKER_Y + 3;     // selected: lowered
 	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
-	if (isJoker) Vid_Card(g_Jokers[g.jk[idx].id].cell, x, y);
+	if (isJoker) { Vid_Card(g_Jokers[g.jk[idx].id].cell, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); }
 	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : CELL_TAROT + g.cons[idx] - 0x20, x, y);
 	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
 	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border

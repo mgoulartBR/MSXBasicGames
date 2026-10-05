@@ -75,6 +75,33 @@ void run_score_cases(void)
 	  g.ante = 9; EXPECT("blind: endless ante 9 small target", blind_target() > 50000, 1); }
 	{ fresh(); blind_start(); g.score = g.target; g.money = 23; Cash rows[CASH_MAX]; i16 t; cashout_build(rows, &t);
 	  EXPECT("cashout: $3 blind + 4 hands + $4 interest (23/5)", t, 3 + 4 + 4); }
+	{ fresh(); Card c[] = { C_SETENH(CARD(H,RANK_A), ENH_BONUS), CARD(S,RANK_A) }; EXPECT("card: Bonus +30 chips (10+11+11+30)x2", score_of(c, 2), 124); }
+	{ fresh(); Card c[] = { C_SETENH(CARD(H,RANK_A), ENH_MULT), CARD(S,RANK_A) }; EXPECT("card: Mult +4 (32)x6", score_of(c, 2), 192); }
+	{ fresh(); Card c[] = { C_SETENH(CARD(H,RANK_A), ENH_GLASS), CARD(S,RANK_A) }; EXPECT("card: Glass x2 (32)x4", score_of(c, 2), 128); }
+	{ fresh(); Card c[] = { C_SETENH(CARD(H,RANK_A), ENH_STONE) }; EXPECT("card: Stone alone: (5+0+50)x1", score_of(c, 1), 55); }
+	{ fresh(); Card c[] = { C_SETENH(CARD(H,RANK_A), ENH_STONE), CARD(S,RANK_A), CARD(D,RANK_A) }; EXPECT("card: Stone scores beside a pair (10+11+11+50)x2", score_of(c, 3), 164); }
+	{ fresh(); Card c[] = { C_SETED(CARD(H,RANK_A), ED_FOIL), CARD(S,RANK_A) }; EXPECT("card: Foil +50 chips (82)x2", score_of(c, 2), 164); }
+	{ fresh(); Card c[] = { C_SETED(CARD(H,RANK_A), ED_HOLO), CARD(S,RANK_A) }; EXPECT("card: Holo +10 mult (32)x12", score_of(c, 2), 384); }
+	{ fresh(); Card c[] = { C_SETED(CARD(H,RANK_A), ED_POLY), CARD(S,RANK_A) }; EXPECT("card: Polychrome x1.5 (32)x3", score_of(c, 2), 96); }
+	{ fresh(); Card c[] = { C_SETSEAL(CARD(H,RANK_A), SEAL_RED), CARD(S,RANK_A) }; EXPECT("card: Red Seal retriggers (10+11+11+11)x2", score_of(c, 2), 86); }
+	{ fresh(); g.money = 0; Card c[] = { C_SETSEAL(CARD(H,RANK_A), SEAL_GOLD), CARD(S,RANK_A) }; score_of(c, 2); EXPECT("card: Gold Seal pays $3", g.money, 3); }
+	{ Card h[] = { CARD(H,2), CARD(H,4), CARD(H,6), CARD(H,8), C_SETENH(CARD(S,10), ENH_WILD) }; chk_hand("poker: Wild card completes a flush", h, 5, 0, HAND_FLUSH, 0x1F); }
+	{ fresh(); Card c[] = { CARD(H,RANK_A), CARD(S,RANK_A) }; load_hand(c, 2); g.deck[g.hand[0]] = CARD(H,RANK_A); g.nHand = 1;
+	  g.deck[5] = C_SETENH(CARD(D,3), ENH_STEEL); g.hand[g.nHand++] = 5; g.loc[5] = LOC_HAND; ScoreOut o; round_play(1, &o);
+	  EXPECT("card: Steel held x1.5 on high card (5+11)x1.5", o.total, 24); }
+	{ fresh(); blind_start(); g.cons[0] = CONS_TAROT(TR_MAGICIAN); u8 slot0 = g.hand[0], slot1 = g.hand[1];
+	  EXPECT("tarot: Magician applies Lucky to 2 cards", cons_use(0, 3) && C_ENH(g.deck[slot0]) == ENH_LUCKY && C_ENH(g.deck[slot1]) == ENH_LUCKY, 1);
+	  g.cons[0] = CONS_TAROT(TR_TOWER); EXPECT("tarot: Tower needs exactly 1 card", cons_use(0, 3), 0); }
+	{ fresh(); blind_start(); g.cons[0] = CONS_TAROT(TR_STRENGTH); u8 sl = g.hand[0]; g.deck[sl] = C_SETENH(CARD(H,3), ENH_GOLD);
+	  cons_use(0, 1); EXPECT("tarot: Strength keeps the enhancement", C_ENH(g.deck[sl]) == ENH_GOLD && C_RANK(g.deck[sl]) == 4, 1); }
+	{ fresh(); g.nDeck = 52; pack_open_free(PACK_KIND(3, 0)); u8 n0 = g.nDeck;
+	  EXPECT("pack: Standard pack adds the chosen card to the deck", pack_choose(0) && g.nDeck == n0 + 1, 1); }
+	{ fresh(); blind_start(); g.score = g.target; for (u8 i = 0; i < 2; i++) g.deck[g.hand[i]] = C_SETENH(g.deck[g.hand[i]], ENH_GOLD);
+	  Cash rows[CASH_MAX]; i16 t; u8 n = cashout_build(rows, &t); u8 found = 0; for (u8 i = 0; i < n; i++) if (rows[i].kind == 5) found = (u8)rows[i].amount;
+	  EXPECT("cashout: Gold Cards held pay $3 each", found, 6); }
+	{ fresh(); joker_add(JK_JOKER); g.jk[0].ed = ED_POLY; Card c[] = { CARD(C,3), CARD(H,3) }; EXPECT("joker edition: Polychrome (20)x(2+4)x1.5", score_of(c, 2), 180); }
+	{ fresh(); blind_start(); g.nHand = 1; g.hand[0] = 0; g.deck[0] = C_SETSEAL(CARD(H,4), SEAL_BLUE); g.loc[0] = LOC_HAND; g.lastHandType = HAND_PAIR; g.nHand = 1;
+	  g.cons[0] = g.cons[1] = 0; round_end_effects(); EXPECT("seal: Blue Seal held creates the Planet of the last hand", g.cons[0], CONS_PLANET(HAND_PAIR)); }
 	{ fresh(); g.blind = BLIND_BOSS; g.boss = BS_HOUSE; blind_start(); u8 fd = 0;
 	  for (u8 i = 0; i < g.nHand; i++) fd += (g.dflag[g.hand[i]] & DF_FD) != 0;
 	  EXPECT("boss: House draws the first hand face down", fd == g.nHand && fd > 0, 1);

@@ -27,8 +27,8 @@ PLANETS = [
 ]
 
 TAROTS = [
- "fool","high_priestess","emperor","hermit","strength","hanged_man","death","temperance",
- "star","moon","sun","world","judgement",
+ "fool","magician","high_priestess","empress","emperor","heirophant","lovers","chariot","justice","hermit",
+ "wheel_of_fortune","strength","hanged_man","death","temperance","devil","tower","star","moon","sun","judgement","world",
 ]
 
 # normal bosses (x,y row in BlindChips.png) - filled by gen_data from game.lua
@@ -131,6 +131,15 @@ TAROT_DESC = {
  "sun": "Converts up to 3 selected cards to Hearts",
  "world": "Converts up to 3 selected cards to Spades",
  "judgement": "Creates a random Joker",
+ "magician": "Enhances up to 2 selected cards to Lucky Cards",
+ "empress": "Enhances up to 2 selected cards to Mult Cards",
+ "heirophant": "Enhances up to 2 selected cards to Bonus Cards",
+ "lovers": "Enhances 1 selected card to a Wild Card",
+ "chariot": "Enhances 1 selected card to a Steel Card",
+ "justice": "Enhances 1 selected card to a Glass Card",
+ "devil": "Enhances 1 selected card to a Gold Card",
+ "tower": "Enhances 1 selected card to a Stone Card",
+ "wheel_of_fortune": "1 in 4 chance to add an edition to a random Joker",
 }
 
 # bosses implemented in this port (key -> description). Order of the C enum follows this list.

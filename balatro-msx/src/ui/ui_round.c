@@ -85,13 +85,13 @@ static void draw_hand_range(u8 lo, u8 hi)
 		u8 slot = g.hand[i];
 		u8 y = (ui.sel & (1u << i)) ? HAND_Y - HAND_RAISE : HAND_Y;
 		if (fi == W_HAND + i) { foc = i; continue; }
-		Vid_Card((g.dflag[slot] & DF_FD) ? CELL_BACK : C_CELL(g.deck[slot]), hand_x(i), y);
+		Vid_PlayCard(g.deck[slot], (g.dflag[slot] & DF_FD) != 0, hand_x(i), y);
 		if (card_is_debuffed(slot)) Vid_Frame(hand_x(i), y, 24, 32, COL_RED);
 	}
 	if (foc != 0xFF)
 	{
 		u8 y = (ui.sel & (1u << foc)) ? HAND_Y - HAND_RAISE : HAND_Y;
-		Vid_Card((g.dflag[g.hand[foc]] & DF_FD) ? CELL_BACK : C_CELL(g.deck[g.hand[foc]]), hand_x(foc), y);
+		Vid_PlayCard(g.deck[g.hand[foc]], (g.dflag[g.hand[foc]] & DF_FD) != 0, hand_x(foc), y);
 		Vid_Frame(hand_x(foc), y, 24, 32, card_is_debuffed(g.hand[foc]) ? COL_RED : COL_GOLD);
 	}
 }
@@ -121,7 +121,7 @@ static void draw_played(u8 hil)
 	{
 		bool scoring = (ui.so.mask >> i) & 1;
 		u8 y = scoring ? PLAY_Y - 4 : PLAY_Y + 4;
-		Vid_Card(C_CELL(g.deck[g.played[i]]), played_x(i), y);
+		Vid_PlayCard(g.deck[g.played[i]], FALSE, played_x(i), y);
 		if (hil == i) Vid_Frame(played_x(i) - 1, y - 1, 26, 34, COL_GOLD);
 	}
 }

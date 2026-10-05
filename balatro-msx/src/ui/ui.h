@@ -148,3 +148,5 @@ void upd_over(void) BANKED;
 // shared strings (ui_text.c, always-mapped SEG20)
 extern const char T_PLAY[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[], T_SKIPBLIND[];
 extern const char M_NEEDCARDS[], M_CANTUSE[], M_NOMONEY[], M_NOROOM[], M_SOLDOUT[], M_NOJOKER[], M_NOCONS[];
+
+extern const char* const g_EnhText[], * const g_EdName[], * const g_SealName[], * const g_SealShort[];
