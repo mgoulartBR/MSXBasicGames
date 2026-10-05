@@ -109,29 +109,7 @@ void run_score_cases(void)
 	  EXPECT("boss: Amber Acorn keeps the joker set", g.nJk == 3 ? sum : 0, JK_JOKER + JK_GREEDY_JOKER + JK_JOLLY); }
 }
 
+void run_deck_cases(void) BANKED;
 void run_joker_cases_a(void) BANKED;
 void run_joker_cases_b(void) BANKED;
-void run_deck_cases(void)
-{
-	fresh_with(DK_RED, 0); EXPECT("deck: Red +1 discard", g.discardsBase, START_DISCARDS + 1);
-	fresh_with(DK_BLUE, 0); EXPECT("deck: Blue +1 hand", g.handsBase, START_HANDS + 1);
-	fresh_with(DK_YELLOW, 0); EXPECT("deck: Yellow +$10", g.money, START_MONEY + 10);
-	fresh_with(DK_ABANDONED, 0); { u8 f = 0; for (u8 i = 0; i < g.nDeck; i++) f += C_RANK(g.deck[i]) >= RANK_J && C_RANK(g.deck[i]) <= RANK_K; EXPECT("deck: Abandoned has 40 cards and no faces", g.nDeck == 40 && f == 0, 1); }
-	fresh_with(DK_CHECKERED, 0); { u8 h = 0, sp = 0; for (u8 i = 0; i < g.nDeck; i++) { h += C_SUIT(g.deck[i]) == SUIT_H; sp += C_SUIT(g.deck[i]) == SUIT_S; } EXPECT("deck: Checkered is 26 hearts + 26 spades", h == 26 && sp == 26, 1); }
-	fresh_with(DK_ZODIAC, 0); EXPECT("deck: Zodiac starts with 3 vouchers", (g.vouchers & VBIT(VC_TAROT_MERCHANT)) && (g.vouchers & VBIT(VC_PLANET_MERCHANT)) && (g.vouchers & VBIT(VC_OVERSTOCK)), 1);
-	fresh_with(DK_PAINTED, 0); EXPECT("deck: Painted +2 hand size, 4 Joker slots", g.handSizeBase == START_HAND_SIZE + 2 && joker_slots() == JOKER_MAX - 1, 1);
-	fresh_with(DK_GHOST, 0); EXPECT("deck: Ghost starts with Hex", g.cons[0], CONS_SPECTRAL(SP_HEX));
-	fresh_with(DK_ERRATIC, 0); { u8 diff = 0; for (u8 i = 0; i < g.nDeck; i++) diff += g.deck[i] != CARD(i / 13, i % 13); EXPECT("deck: Erratic is shuffled", diff > 10, 1); }
-	fresh_with(DK_PLASMA, 0); { Card c[] = { CARD(C,RANK_K) }; EXPECT("deck: Plasma doubles the Blind", blind_target(), 600); EXPECT("deck: Plasma balances (5+10, 1) -> 8x8", score_of(c, 1), 64); }
-	fresh_with(DK_GREEN, 0); blind_start(); g.score = g.target; g.money = 20; { Cash rows[CASH_MAX]; i16 t; cashout_build(rows, &t); EXPECT("deck: Green pays $2 per hand + $1 per discard, no interest", t, 3 + 8 + 3); }
-	fresh_with(DK_RED, 1); EXPECT("stake: Red gives no Small Blind reward", blind_reward(), 0);
-	fresh_with(DK_RED, 2); EXPECT("stake: Green scales Ante 2", g.ante = 2, 2); EXPECT("stake: Green Ante 2 small blind is 900", blind_target(), 900);
-	fresh_with(DK_RED, 4); EXPECT("stake: Blue has one discard less", g.discardsBase, START_DISCARDS);
-	fresh_with(DK_RED, 5); g.ante = 2; EXPECT("stake: Purple Ante 2 small blind is 1000", blind_target(), 1000);
-	fresh_with(DK_RED, 3); { u8 e = 0; for (u8 i = 0; i < 60; i++) { rng_seed((u16)(i + 5)); e += (shop_joker_stickers() & JF_ETERNAL) != 0; } EXPECT("stake: Black makes some shop Jokers Eternal", e > 5 && e < 40, 1); }
-	fresh_with(DK_RED, 7); joker_add(JK_JOKER); g.jk[0].flags |= JF_RENTAL; { Cash rows[CASH_MAX]; i16 t; blind_start(); g.score = g.target; u8 n = cashout_build(rows, &t); u8 r = 0; for (u8 i = 0; i < n; i++) if (rows[i].kind == 6) r = (u8)(-rows[i].amount); EXPECT("stake: Gold Rental costs $3 per Joker", r, 3); }
-	fresh_with(DK_RED, 6); joker_add(JK_JOKER); g.jk[0].flags |= JF_PERISH; for (u8 i = 0; i < 5; i++) round_end_effects(); EXPECT("stake: Orange Perishable Jokers expire after 5 rounds", (g.jk[0].flags & JF_PERISHED) != 0, 1);
-	fresh_with(DK_RED, 3); joker_add(JK_GROS_MICHEL); g.jk[0].flags |= JF_ETERNAL | 0x80; round_end_effects(); EXPECT("stake: Eternal Jokers survive destruction", g.nJk, 1);
-}
-
 void run_all_cases(void) BANKED { run_poker_cases(); run_score_cases(); run_joker_cases_a(); run_joker_cases_b(); run_deck_cases(); }
