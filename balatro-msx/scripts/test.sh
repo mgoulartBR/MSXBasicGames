@@ -9,7 +9,7 @@ mkdir -p build screenshots
 step "host tests (shared cases + random-run simulation, ASan/UBSan)"
 $PY tools/gen_music.py >/dev/null; $PY tools/gen_data.py >/dev/null && $PY tools/gen_assets.py >/dev/null
 CF="-Wall -Wextra -O1 -g -fsanitize=address,undefined -I include -I src"
-gcc $CF -o build/host_cases tests/host_main.c tests/test_cases.c src/game/*.c src/seg/seg_s20_b3.c || FAIL=1
+gcc $CF -o build/host_cases tests/host_main.c tests/test_cases.c tests/test_cases2.c src/game/*.c src/seg/seg_s20_b3.c || FAIL=1
 gcc $CF -o build/host_sim tests/host_sim.c src/game/*.c src/seg/seg_s20_b3.c || FAIL=1
 ./build/host_cases | tail -2 || FAIL=1
 ./build/host_sim 300 | tail -4 || FAIL=1
