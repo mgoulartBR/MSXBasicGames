@@ -124,7 +124,8 @@ static void shop_item(u8 id)
 		if (k)
 		{
 			static const u8 col[5] = { COL_RED, COL_BLUE, COL_ORANGE, COL_GREEN, COL_PURPLE };
-			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], foc ? COL_GOLD : COL_INK);
+			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], COL_INK);
+			if (foc) Vid_Frame(x, PACK_Y, 24, 32, COL_GOLD);
 			Vid_TextC(x + 12, PACK_Y + 6, k_packTag[(k - 1) / 3], TC_WHITE);
 			Vid_TextC(x + 12, PACK_Y + 18, (k - 1) % 3 == 0 ? "" : ((k - 1) % 3 == 1 ? "JMB" : "MEGA"), TC_INK);
 			draw_price(x, PACK_Y + 34, pack_price(i));
@@ -153,7 +154,30 @@ static void shop_item(u8 id)
 	}
 }
 
-void shop_focus(u8 o, u8 n) BANKED { shop_item(o); shop_item(n); }
+// Focus change: repaint only the item graphic or the 1-2 px ring. Prices and labels are never erased and rewritten.
+static void shop_focus_item(u8 id)
+{
+	if (id == 0xFF) return;
+	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == id;
+	if (id >= W_JOKER && id < W_PLAY) { draw_jslot(id); return; }
+	if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
+	{
+		u8 i = id - W_SHOPCARD, x = SHOP_X(i);
+		if (g.shopType[i]) { shop_card(i, x, SHOP_Y); if (foc) Vid_Frame(x, SHOP_Y, 24, 32, COL_GOLD); }
+	}
+	else if (id >= W_PACK && id < W_PACK + 2)
+	{
+		u8 i = id - W_PACK;
+		if (g.packType[i]) Vid_Frame(PACK_X(i), PACK_Y, 24, 32, foc ? COL_GOLD : COL_INK);
+	}
+	else if (id == W_VOUCHER)
+	{
+		if (g.voucher) { Vid_Card(g_Vouchers[g.voucher - 1].cell, VOUCH_X, VOUCH_Y); if (foc) Vid_Frame(VOUCH_X, VOUCH_Y, 24, 32, COL_GOLD); }
+	}
+	else ui_button_ring(id);
+}
+
+void shop_focus(u8 o, u8 n) BANKED { shop_focus_item(o); shop_focus_item(n); }
 
 static void draw_shop(void)
 {
@@ -286,7 +310,7 @@ void pack_focus(u8 o, u8 n) BANKED
 	{
 		u8 id = k ? n : o;
 		if (id >= W_PACKCARD && id < W_PACKCARD + PACK_CARD_MAX) pack_item(id - W_PACKCARD);
-		else if (id == W_SKIP) ui_button(W_SKIP, T_SKIP, COL_RED, TRUE);
+		else if (id == W_SKIP) ui_button_ring(W_SKIP);
 	}
 }
 

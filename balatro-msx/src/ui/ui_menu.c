@@ -109,11 +109,11 @@ static void debug_keys(void)
 				Card* d = &g.deck[g.hand[i]];
 				*d = C_SETENH(*d, rndn(ENH_COUNT)); *d = C_SETED(*d, rndn(2) ? rndn(4) : 0); *d = C_SETSEAL(*d, rndn(2) ? rndn(SEAL_COUNT) : 0);
 			}
-			ui.dirty |= D_ALL;
+			ui.hnc = 0; ui.dirty |= D_ALL;
 		}
 		if ((d1 & 0x01) && ui.screen == SC_BLIND) { g.ante = 8; g.blind = BLIND_BOSS; g.boss = BS_FINAL_VESSEL; ui_goto(SC_BLIND); }
 	}
-	if (down & 0x1F) ui.dirty |= D_ALL | D_JOKERS;
+	if (down & 0x1F) { ui.hnc = 0; ui.dirty |= D_ALL | D_JOKERS; }
 	// 6 = teleport the pointer to the centre of the next widget (exercises hover/hit-testing), 7 = left click there,
 	// 8 = right click.  The real MSX mouse protocol is tested separately with xdotool (tests/mouse_test.sh).
 	{
@@ -193,8 +193,7 @@ void title_focus(u8 o, u8 n) BANKED
 	for (u8 k = 0; k < 2; k++)
 	{
 		u8 id = k ? n : o;
-		if (id == W_CONTINUE) ui_button(W_CONTINUE, T_CONTINUE, COL_GREEN, TRUE);
-		else if (id == W_NEWRUN) ui_button(W_NEWRUN, T_NEWRUN, COL_ORANGE, TRUE);
+		if (id == W_CONTINUE || id == W_NEWRUN) ui_button_ring(id);
 	}
 }
 
@@ -315,8 +314,8 @@ void scr_blind(void) BANKED
 void blind_focus(u8 o, u8 n) BANKED
 {
 	(void)o; (void)n;
-	ui_button(W_BLIND, T_SELECT, COL_GREEN, TRUE);
-	if (ui_find(W_SKIPBLIND) != 0xFF) ui_button(W_SKIPBLIND, T_SKIPBLIND, COL_ORANGE, TRUE);
+	ui_button_ring(W_BLIND);
+	ui_button_ring(W_SKIPBLIND);
 }
 
 void upd_blind(void) BANKED

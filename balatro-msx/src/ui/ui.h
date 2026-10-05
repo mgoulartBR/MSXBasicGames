@@ -76,6 +76,7 @@ typedef struct
 	u8  msgTimer;
 	const char* msg;
 	u8  dirty;            // D_* redraw flags
+	u8  hnc;              // the pending hand repaint comes from focus changes only: repaint cards in place, no felt clear (no flicker)
 	u8  hlo, hhi;         // hand cards to repaint (range) when D_HAND is set
 	u8  jmask, bmask;     // joker/consumable slots and buttons to repaint individually
 	u8  infoDelay;        // frames to wait before repainting the info panel (avoids repainting while the pointer sweeps)
@@ -111,8 +112,9 @@ void blind_focus(u8 o, u8 n) BANKED;
 void ui_nav(u8 dir) BANKED;
 void ui_goto(u8 screen) BANKED;
 void ui_msg(const char* m) BANKED;
-void ui_button(u8 id, const char* label, u8 col, bool enabled) BANKED;
-void ui_focus_ring(u8 id) BANKED;
+void ui_button(u8 id, const char* label, u8 col, bool enabled);
+void ui_button_ring(u8 id);      // focus changed: only the 1-2 px ring is repainted (the label is never erased)
+void ui_focus_ring(u8 id);
 void hud_draw(void) BANKED;              // static layout + all fields
 void hud_update(void) BANKED;            // refresh fields that changed
 void hud_mini(void) BANKED;

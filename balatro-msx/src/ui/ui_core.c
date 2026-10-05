@@ -38,7 +38,7 @@ void ui_set_focus(u8 idx) BANKED
 	ui.focus = idx;
 	scr_focus(o, ui_focus_id());
 	ui.dirty |= D_INFO;
-	ui.infoDelay = 2;
+	ui.infoDelay = in.mouse ? 8 : 2;                  // the info text is the expensive repaint: wait until the pointer rests
 }
 
 // repaint the info panel once the focus has settled for a couple of frames
@@ -105,24 +105,6 @@ void ui_msg(const char* m) BANKED { ui.msg = m; ui.msgTimer = FR(100); ui.dirty 
 //-----------------------------------------------------------------------------
 // buttons
 //-----------------------------------------------------------------------------
-void ui_focus_ring(u8 id) BANKED
-{
-	u8 i = ui_find(id);
-	if (i == 0xFF) return;
-	Widget* k = &ui.w[i];
-	Vid_Frame(k->x - 1, k->y - 1, k->w + 2, k->h + 2, COL_GOLD);
-}
-
-void ui_button(u8 id, const char* label, u8 col, bool enabled) BANKED
-{
-	u8 i = ui_find(id);
-	if (i == 0xFF) return;
-	Widget* k = &ui.w[i];
-	Vid_Panel(k->x, k->y, k->w, k->h, enabled ? col : COL_SLATE, COL_INK);
-	Vid_TextC(k->x + k->w / 2, k->y + (k->h - 9) / 2, label, enabled ? TC_WHITE : TC_INK);
-	if (i == ui.focus) Vid_Frame(k->x + 1, k->y + 1, k->w - 2, k->h - 2, COL_GOLD);     // inset ring: no leftovers when focus moves
-}
-
 //-----------------------------------------------------------------------------
 // HUD (left panel)
 //-----------------------------------------------------------------------------
@@ -410,7 +392,7 @@ void draw_jslot(u8 id) BANKED
 	u8 x = jslot_x(id), y = JOKER_Y;
 	bool present = isJoker ? idx < g.nJk : g.cons[idx] != 0;
 	if (present && ui.itemKind == (isJoker ? 1 : 2) && ui.itemIdx == idx) y = JOKER_Y + 3;     // selected: lowered
-	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
+	Vid_Fill(x, y == JOKER_Y ? JOKER_Y + 32 : JOKER_Y, 24, 3, COL_FELT);     // only the 3 rows the card does not cover (no flicker)
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
 	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); Vid_Stickers(g.jk[idx].flags, x, y); }
 	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : (CONS_IS_SPECTRAL(g.cons[idx]) ? CELL_SPECTRAL + g.cons[idx] - 0x40 : CELL_TAROT + g.cons[idx] - 0x20), x, y);

@@ -3,7 +3,7 @@
 // Machine: MSX2 baseline (V9938, 128 KB VRAM). Mapper: ASCII-8.
 
 ProjName    = "balatro";
-ProjModules = [ "src/main", "src/platform/pvideo", "src/platform/ctrl", "src/platform/audio", "src/platform/save", "src/gen/font_gen", "src/gen/music_gen",
+ProjModules = [ "src/main", "src/platform/pvideo", "src/platform/ctrl", "src/platform/audio", "src/platform/save", "src/ui/ui_btn", "src/gen/font_gen", "src/gen/music_gen",
                 "src/game/rng", "src/game/poker" ];
 ProjSegments = "src/seg/seg";
 

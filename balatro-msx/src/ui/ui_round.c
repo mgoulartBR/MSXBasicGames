@@ -31,7 +31,7 @@ static void mark_id(u8 id)
 	if (id < W_JOKER)
 	{
 		u8 lo = id ? (u8)(id - 1) : 0, hi = (u8)(id + 1);
-		if (!(ui.dirty & D_HAND)) { ui.hlo = lo; ui.hhi = hi; }
+		if (!(ui.dirty & D_HAND)) { ui.hlo = lo; ui.hhi = hi; ui.hnc = 1; }
 		else { if (lo < ui.hlo) ui.hlo = lo; if (hi > ui.hhi) ui.hhi = hi; }
 		ui.dirty |= D_HAND;
 	}
@@ -69,7 +69,7 @@ static void rebuild_widgets(void)
 //-----------------------------------------------------------------------------
 // Repaint hand cards lo..hi (callers include the overlapping neighbours): clear their band, draw left to right, the
 // focused card last so it pops in front of its neighbour. Ring drawn inside the card border (no leftovers outside).
-static void draw_hand_range(u8 lo, u8 hi)
+static void draw_hand_range(u8 lo, u8 hi, bool clear)
 {
 	u8 n = g.nHand;
 	if (!n) { Vid_Fill(AREA_X, HAND_Y - HAND_RAISE - 4, AREA_W, 32 + HAND_RAISE + 8, COL_FELT); return; }
@@ -78,7 +78,7 @@ static void draw_hand_range(u8 lo, u8 hi)
 	u8 xs, xe;
 	if (lo == 0 && hi == n - 1) { xs = AREA_X; xe = 0; }                  // everything: clear the full width
 	else { xs = (u8)((hand_x(lo) - 2) & ~1u); xe = (u8)(hand_x(hi) + 26); }
-	Vid_Fill(xs, HAND_Y - HAND_RAISE - 4, xe ? (u8)((xe - xs + 1) & ~1u) : AREA_W, 32 + HAND_RAISE + 8, COL_FELT);
+	if (clear) Vid_Fill(xs, HAND_Y - HAND_RAISE - 4, xe ? (u8)((xe - xs + 1) & ~1u) : AREA_W, 32 + HAND_RAISE + 8, COL_FELT);
 	u8 fi = ui_focus_id(), foc = 0xFF;
 	for (u8 i = lo; i <= hi; i++)
 	{
@@ -130,7 +130,7 @@ static void draw_all(void)
 {
 	Vid_Fill(AREA_X, 52, AREA_W, 122, COL_FELT);
 	draw_joker_row(FALSE);
-	draw_hand_range(0, 255);
+	draw_hand_range(0, 255, TRUE);
 	draw_buttons();
 	info_show(ui_focus_id());
 	hud_update();
@@ -220,7 +220,7 @@ static void after_hand_change(void)
 	rebuild_widgets();
 	ui.focus = 0xFF;
 	ui.hlo = 0; ui.hhi = 255;
-	ui.dirty |= D_HAND | D_BUTTONS | D_INFO;
+	ui.hnc = 0; ui.dirty |= D_HAND | D_BUTTONS | D_INFO;
 	preview_hand();
 }
 
@@ -265,7 +265,7 @@ static void start_play(void)
 	rebuild_widgets();
 	ui.phase = PH_SCORING; ui.evi = 0; ui.timer = FR(6);
 	pop_w = 0;
-	draw_hand_range(0, 255);
+	draw_hand_range(0, 255, TRUE);
 	draw_buttons();
 	draw_played(0xFF);
 	hud_hand(ui.so.type, 0, 0);
@@ -308,7 +308,7 @@ static void sell_item(void)
 	rebuild_widgets();
 	ui.focus = 0xFF;
 	ui.hlo = 0; ui.hhi = 255;
-	ui.dirty |= D_HAND | D_BUTTONS | D_INFO | D_JOKERS;
+	ui.hnc = 0; ui.dirty |= D_HAND | D_BUTTONS | D_INFO | D_JOKERS;
 }
 
 static void activate(u8 id)
@@ -376,7 +376,7 @@ void upd_round(void) BANKED
 			if (p & IN_BACK)
 			{
 				if (ui.itemKind) { ui.itemKind = 0; rebuild_widgets(); ui.dirty |= D_JOKERS; }
-				else if (ui.sel && g.forced == 0xFF) { ui.sel = 0; preview_hand(); ui.hlo = 0; ui.hhi = 255; ui.dirty |= D_HAND | D_BUTTONS; }
+				else if (ui.sel && g.forced == 0xFF) { ui.sel = 0; preview_hand(); ui.hlo = 0; ui.hhi = 255; ui.hnc = 0; ui.dirty |= D_HAND | D_BUTTONS; }
 			}
 			break;
 		}
@@ -444,9 +444,9 @@ void upd_round(void) BANKED
 		u8 d = ui.dirty; ui.dirty = (u8)(d & D_INFO);
 		if (d & D_JOKERS) { draw_joker_row(FALSE); ui.jmask = 0; }
 		else if (ui.jmask) { for (u8 b = 0; b < 7; b++) if (ui.jmask & (1 << b)) draw_jslot(b < 5 ? W_JOKER + b : W_CONS + b - 5); ui.jmask = 0; }
-		if (d & D_HAND) { draw_hand_range(ui.hlo, ui.hhi); ui.hlo = 0xFF; ui.hhi = 0; }
+		if (d & D_HAND) { draw_hand_range(ui.hlo, ui.hhi, !ui.hnc); ui.hlo = 0xFF; ui.hhi = 0; ui.hnc = 0; }
 		if (d & D_BUTTONS) { draw_buttons(); ui.bmask = 0; }
-		else if (ui.bmask) { for (u8 b = 0; b < 5; b++) if (ui.bmask & (1 << b)) draw_button(W_PLAY + b); ui.bmask = 0; }
+		else if (ui.bmask) { for (u8 b = 0; b < 5; b++) if (ui.bmask & (1 << b)) ui_button_ring(W_PLAY + b); ui.bmask = 0; }
 		if (ui.msgTimer && --ui.msgTimer == 0) ui.dirty |= D_INFO;
 		ui_info_tick();
 		hud_update();
