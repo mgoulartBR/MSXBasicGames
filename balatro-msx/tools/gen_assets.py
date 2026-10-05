@@ -51,13 +51,32 @@ def gather(imgs):
     px = []
     for im in imgs:
         a = np.asarray(im.convert('RGBA'), dtype=np.float32).reshape(-1, 4)
-        px.append(a[a[:, 3] > 200][:, :3])
+        k = (a[:, 3] > 200) & (a[:, :3].min(1) < 215)            # ignore cream/white backgrounds
+        px.append(a[k][:, :3])
     return np.concatenate(px)
 
 jk = load('Jokers.png'); tr = load('Tarots.png'); dk = load('8BitDeck.png'); en = load('Enhancers.png'); bc = load('BlindChips.png')
+from PIL import ImageEnhance, ImageFilter
+JW, JH = 22, 30                              # interior of a 24x32 card cell (1 px border)
+def fit_art(c, w=JW, h=JH, inner=(13, 8, 58, 87)):
+    """Sprite cell -> w x h art. The cell is a full card (white, with JOKER side text): crop the interior,
+    trim to the non-white bounding box, scale to fit, boost contrast/saturation, sharpen."""
+    white = Image.new('RGBA', c.size, (255, 255, 255, 255)); white.alpha_composite(c)
+    c = white.crop(inner)
+    px = np.asarray(c.convert('RGB')).astype(int)
+    ys, xs = np.where(px.min(2) < 225)
+    c = c.crop((max(xs.min() - 1, 0), max(ys.min() - 1, 0), min(xs.max() + 2, c.width), min(ys.max() + 2, c.height)))
+    sc = min(w / c.width, h / c.height)
+    nw, nh = max(1, round(c.width * sc)), max(1, round(c.height * sc))
+    r = c.convert('RGB').resize((nw, nh), Image.BOX if sc < 0.5 else Image.LANCZOS)
+    r = ImageEnhance.Color(r).enhance(1.3); r = ImageEnhance.Contrast(r).enhance(1.2)
+    r = r.filter(ImageFilter.UnsharpMask(radius=0.7, percent=70, threshold=2))
+    ra = np.asarray(r).copy(); ra[(ra.min(2) > 238) | ((ra.min(2) > 195) & (ra.max(2) - ra.min(2) < 30))] = (245, 241, 234); r = Image.fromarray(ra)
+    out = Image.new('RGBA', (w, h), (245, 241, 234, 255))
+    out.paste(r.convert('RGBA'), ((w - nw) // 2, (h - nh) // 2))
+    return out
 def joker_art(k):
-    c = cell(jk, *centers['j_' + k]['pos'])
-    return premult_resize(c.crop((9, 7, 62, 88)), (20, 28))
+    return fit_art(cell(jk, *centers['j_' + k]['pos']))
 joker_src = [joker_art(k) for k in C.JOKERS]
 planet_src = [premult_resize(cell(tr, *centers['c_' + k]['pos']), (OUT_W, OUT_H)) for k, _ in C.PLANETS]
 tarot_src = [premult_resize(cell(tr, *centers['c_' + k]['pos']), (OUT_W, OUT_H)) for k in C.TAROTS]
@@ -109,6 +128,7 @@ SUIT9 = {  # 9x9 marks for aces
  'D': ["....#....", "...###...", "..#####..", ".#######.", "#########", ".#######.", "..#####..", "...###...", "....#...."],
  'S': ["....#....", "...###...", "..#####..", ".#######.", "#########", "#########", ".##.#.##.", "....#....", "...###..."],
 }
+BACKDROP = 3                       # slate: joker/voucher backdrop (art pops better than on cream)
 SUITS = 'HCDS'                     # sheet rows: hearts, clubs, diamonds, spades
 SUIT_COL = {'H': 4, 'C': 8, 'D': 7, 'S': 1}
 RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
@@ -125,40 +145,49 @@ def card_base():
     # corners stay opaque (the card is blitted with HMMM, which has no transparency)
     return a
 
-PIPS = {  # pip positions on a 3-column grid (cx: 0=left,1=mid,2=right), rows 0..4 (top..bottom)
- '2': [(1, 0), (1, 4)], '3': [(1, 0), (1, 2), (1, 4)], '4': [(0, 0), (2, 0), (0, 4), (2, 4)],
- '5': [(0, 0), (2, 0), (1, 2), (0, 4), (2, 4)], '6': [(0, 0), (2, 0), (0, 2), (2, 2), (0, 4), (2, 4)],
- '7': [(0, 0), (2, 0), (1, 1), (0, 2), (2, 2), (0, 4), (2, 4)],
- '8': [(0, 0), (2, 0), (1, 1), (0, 2), (2, 2), (1, 3), (0, 4), (2, 4)],
- '9': [(0, 0), (2, 0), (0, 1), (2, 1), (1, 2), (0, 3), (2, 3), (0, 4), (2, 4)],
- '10': [(0, 0), (2, 0), (1, 0.5), (0, 1.5), (2, 1.5), (0, 2.5), (2, 2.5), (1, 3.5), (0, 4), (2, 4)],
+# 5x5 pips: columns x = 8 / 13 / 18 never overlap; five y-slots
+PX = {0: 7, 1: 12, 2: 17}
+SY = [3, 9, 14, 20, 25]
+def _p(spec): return [(c, SY[k] if isinstance(k, int) else int((SY[int(k)] + SY[int(k) + 1]) / 2)) for c, k in spec]
+PIPS = {
+ '2': _p([(1, 0), (1, 4)]), '3': _p([(1, 0), (1, 2), (1, 4)]),
+ '4': _p([(0, 0), (2, 0), (0, 4), (2, 4)]), '5': _p([(0, 0), (2, 0), (1, 2), (0, 4), (2, 4)]),
+ '6': _p([(0, 0), (2, 0), (0, 2), (2, 2), (0, 4), (2, 4)]),
+ '7': _p([(0, 0), (2, 0), (1, 1), (0, 2), (2, 2), (0, 4), (2, 4)]),
+ '8': _p([(0, 0), (2, 0), (1, 1), (0, 2), (2, 2), (1, 3), (0, 4), (2, 4)]),
+ '9': _p([(0, 0), (2, 0), (0, 1), (2, 1), (1, 2), (0, 3), (2, 3), (0, 4), (2, 4)]),
+ '10': _p([(0, 0), (2, 0), (1, .5), (0, 1), (2, 1), (0, 3), (2, 3), (1, 3.5), (0, 4), (2, 4)]),
 }
+BIG = {  # 5x7 face-card letters
+ 'J': ["..###", "...#.", "...#.", "...#.", "#..#.", "#..#.", ".##.."],
+ 'Q': [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"],
+ 'K': ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
+}
+G3['1'] = ['#', '#', '#', '#', '#']          # slim '1' so "10" fits the index column
+
+def rect(a, x0, y0, x1, y1, col):
+    a[y0:y1 + 1, x0] = col; a[y0:y1 + 1, x1] = col; a[y0, x0:x1 + 1] = col; a[y1, x0:x1 + 1] = col
 
 def make_card(si, ri):
     s, r = SUITS[si], RANKS[ri]
     col = SUIT_COL[s]
     a = card_base()
-    # corner index: rank (3x5) + small suit (5x5 -> drawn 5 wide) under it
-    x = 2
+    x = 2                                         # corner index: rank over small suit
     for ch in r:
-        blit(a, x, 3, G3[ch], col); x += 4
-    blit(a, 1, 10, SUIT5[s], col)
+        blit(a, x, 3, G3[ch], col); x += len(G3[ch][0]) + 1
+    blit(a, 2, 10, SUIT5[s], col)
     if r == 'A':
-        blit(a, 10, 12, SUIT9[s], col)
+        blit(a, 11, 11, SUIT9[s], col)
     elif r in 'JQK':
-        # figure from the original art, scaled to 12x20 in the centre
-        f = cell(dk, 9 + 'JQK'.index(r), si).crop((10, 6, 61, 89))
-        f = premult_resize(f, (12, 20))
-        q = pal.quantize(f)
-        for j in range(20):
-            for i in range(12):
-                if q[j, i]:
-                    a[6 + j, 10 + i] = q[j, i]
+        rect(a, 7, 3, 21, 28, 3)                  # framed big letter + suit marks
+        blit(a, 9, 5, SUIT5[s], col); blit(a, 16, 22, SUIT5[s], col)
+        for j, rr in enumerate(BIG[r]):           # letter drawn 2x wide x 1.. : 5x7 at (13,11) scaled 1x
+            pass
+        blit(a, 12, 11, BIG[r], col)
+        blit(a, 11, 11, BIG[r], col)               # double-strike -> bold letter
     else:
-        for (cx, cy) in PIPS[r]:
-            px = 11 + (cx - 1) * 5 - 0
-            py = 5 + int(round(cy * 5.5))
-            blit(a, px - 1 + (1 if cx == 1 else 0) * 0, py, SUIT5[s], col)
+        for (cx, py) in PIPS[r]:
+            blit(a, PX[cx], py, SUIT5[s], col)
     return a
 
 cards = [make_card(si, ri) for si in range(4) for ri in range(13)]
@@ -187,8 +216,8 @@ for im in planet_src: put_cell(n, pal.quantize(im)); n += 1
 n = 80
 layout['joker'] = n
 for im in joker_src:
-    c = card_base(); q = pal.quantize(im, alpha_cut=100)
-    sub = c[2:30, 2:22]; sub[q != 0] = q[q != 0]
+    c = card_base(); q = pal.quantize(im)
+    c[1:31, 1:23] = q
     put_cell(n, c); n += 1
 n = max(n, 160)
 layout['tarot'] = n
@@ -197,9 +226,9 @@ layout['voucher'] = n
 vc_img = load('Vouchers.png')
 for k, _ in C.VOUCHERS:
     px, py = centers['v_' + k]['pos']
-    im = premult_resize(cell(vc_img, px, py).crop((6, 6, 65, 89)), (20, 28))
-    c = card_base(); q = pal.quantize(im, alpha_cut=100)
-    sub = c[2:30, 2:22]; sub[q != 0] = q[q != 0]
+    im = fit_art(cell(vc_img, px, py))
+    c = card_base(); q = pal.quantize(im)
+    c[1:31, 1:23] = q
     put_cell(n, c); n += 1
 layout['end'] = n
 assert n <= 230, n
