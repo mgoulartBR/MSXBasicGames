@@ -21,7 +21,7 @@ AppCompany = "MG";
 AppID = "BL";
 
 Optim = "Speed";
-CompileOpt = "-Iinclude -Isrc";
+CompileOpt = "-Iinclude -Isrc" + (process.env.BAL_DEBUG ? " -DDEBUG_KEYS" : "");
 Verbose = false;
 
 // Emulator: openMSX with C-BIOS MSX2 (headless-friendly); mouse in port A for testing

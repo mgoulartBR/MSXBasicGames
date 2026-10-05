@@ -81,5 +81,6 @@ for k in bosses:
 src.append('};')
 src.append('const u16 g_AnteAmount[ANTE_COUNT] = { %s };' % ', '.join(str(a) for a in ante_amounts))
 src.append('const u8 g_BlindIcon[2] = { %d, %d };' % (order.index('bl_small'), order.index('bl_big')))
+src.append('#include "ui/ui_text.c"')
 open(os.path.join(OUT_SEG, 'seg_s%d_b3.c' % TEXT_SEG), 'w').write('\n'.join(src) + '\n')
 print("data: %d jokers, %d tarots, %d bosses, hands %s" % (len(C.JOKERS), len(C.TAROTS), len(bosses), [h[0][:4] for h in hands]))

@@ -35,6 +35,7 @@ static void build_cursor(void)
 }
 
 void Vid_Sync(void) { Halt(); }
+u8 Vid_Hz(void) { return VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60; }
 
 void Vid_Init(void)
 {

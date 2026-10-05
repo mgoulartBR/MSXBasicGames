@@ -12,7 +12,8 @@ enum { TC_WHITE, TC_INK, TC_GOLD, TC_RED, TC_BLUE, TC_GREEN, TC_SLATE };
 #define SEG_TEXT 20                 // mapper segment holding the text/data tables (default bank-3 mapping)
 
 void Vid_Init(void);
-void Vid_Sync(void);                // wait for the next frame
+void Vid_Sync(void);
+u8   Vid_Hz(void);                  // 50 or 60                // wait for the next frame
 void Vid_Fill(u8 x, u8 y, u8 w, u8 h, u8 col);
 void Vid_Frame(u8 x, u8 y, u8 w, u8 h, u8 col);              // 1px outline
 void Vid_Panel(u8 x, u8 y, u8 w, u8 h, u8 fill, u8 border);  // rounded panel

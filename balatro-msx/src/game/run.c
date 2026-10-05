@@ -3,7 +3,6 @@
 #include "bgame.h"
 
 Game g;
-const char* const g_TextMsg[TX_COUNT] = { "Again!", "Upgrade!", "Reset", "Level Up!", "Debuffed", "Eaten!", "Extinct!", "Safe!", "Saved!" };
 
 void deck_new(void) BANKED
 {

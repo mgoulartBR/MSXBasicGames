@@ -1,0 +1,25 @@
+// UI strings that are shared between mapper code segments. Code segments share bank 2, so a pointer to a literal
+// stored in one segment is NOT readable from another. These live in the bank-3 data segment (SEG20), which is
+// always mapped, and are referenced through ui.h.
+#include "gtypes.h"
+#include "bgame.h"
+
+const char T_PLAY[]    = "Play";
+const char T_DISCARD[] = "Discard";
+const char T_RANK[]    = "Rank";
+const char T_SUIT[]    = "Suit";
+const char T_RUNINFO[] = "Run Info";
+const char T_SELECT[]  = "Select";
+const char T_BACK[]    = "Back";
+const char T_NEXT[]    = "Next Round";
+const char T_USE[]     = "Use";
+const char T_SKIP[]    = "Skip";
+const char M_NEEDCARDS[] = "Select the cards to use it on first";
+const char M_CANTUSE[]   = "Can't use that right now";
+const char M_NOMONEY[]   = "Not enough money";
+const char M_NOROOM[]    = "No room for it";
+const char M_SOLDOUT[]   = "Sold out";
+const char M_NOJOKER[]   = "No room for another Joker";
+const char M_NOCONS[]    = "No room for another consumable";
+
+const char* const g_TextMsg[TX_COUNT] = { "Again!", "Upgrade!", "Reset", "Level Up!", "Debuffed", "Eaten!", "Extinct!", "Safe!", "Saved!" };
