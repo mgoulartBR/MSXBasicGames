@@ -12,3 +12,5 @@ void test_report(const char* name, u32 got, u32 want)
 	if (got != want) { g_selftest[2]++; g_selftest[3 + (n >> 3)] |= (u8)(1 << (n & 7)); }
 }
 #endif
+
+typedef char seg31_unused_t;   /* keeps the translation unit non-empty in release builds */

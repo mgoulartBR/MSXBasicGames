@@ -34,8 +34,21 @@ u8 ui_focus_id(void) BANKED { return ui.focus == 0xFF ? 0xFF : ui.w[ui.focus].id
 void ui_set_focus(u8 idx) BANKED
 {
 	if (idx == ui.focus) return;
+	u8 o = ui_focus_id();
 	ui.focus = idx;
-	ui.dirty |= D_HAND | D_JOKERS | D_BUTTONS | D_INFO | D_PLAY;
+	scr_focus(o, ui_focus_id());
+	ui.dirty |= D_INFO;
+	ui.infoDelay = 2;
+}
+
+// repaint the info panel once the focus has settled for a couple of frames
+void ui_info_tick(void) BANKED
+{
+	if (!(ui.dirty & D_INFO)) return;
+	if (ui.infoDelay) { ui.infoDelay--; return; }
+	ui.dirty &= (u8)~D_INFO;
+	if (ui.msgTimer == 0) ui.msg = 0;
+	info_show(ui_focus_id());
 }
 
 // topmost widget under the pointer (later widgets are drawn on top)
@@ -107,7 +120,7 @@ void ui_button(u8 id, const char* label, u8 col, bool enabled) BANKED
 	Widget* k = &ui.w[i];
 	Vid_Panel(k->x, k->y, k->w, k->h, enabled ? col : COL_SLATE, COL_INK);
 	Vid_TextC(k->x + k->w / 2, k->y + (k->h - 9) / 2, label, enabled ? TC_WHITE : TC_INK);
-	if (i == ui.focus) ui_focus_ring(id);
+	if (i == ui.focus) Vid_Frame(k->x + 1, k->y + 1, k->w - 2, k->h - 2, COL_GOLD);     // inset ring: no leftovers when focus moves
 }
 
 //-----------------------------------------------------------------------------
@@ -148,8 +161,8 @@ static void hud_fields(bool all)
 void hud_hand(u8 type, u16 chips, u16 mult) BANKED
 {
 	Vid_Fill(4, 68, 54, 9, COL_SLATE);
-	Vid_Fill(5, 78, 25, 11, COL_BLUE);
-	Vid_Fill(36, 78, 21, 11, COL_RED);
+	Vid_Fill(4, 78, 26, 11, COL_BLUE);
+	Vid_Fill(36, 78, 22, 11, COL_RED);
 	if (type != 0xFF)
 	{
 		Vid_Text(6, 68, g_Hands[type].name, TC_WHITE);
@@ -163,7 +176,7 @@ void hud_hand(u8 type, u16 chips, u16 mult) BANKED
 void hud_draw(void) BANKED
 {
 	Vid_Fill(0, 0, 62, 212, COL_INK);
-	Vid_Fill(62, 0, 1, 212, COL_SLATE);
+	Vid_Fill(62, 0, 2, 212, COL_SLATE);
 	// blind
 	Vid_Panel(2, 2, 58, 36, COL_SLATE, COL_INK);
 	u8 bi = g.blind == BLIND_SMALL ? g_BlindIcon[0] : (g.blind == BLIND_BIG ? g_BlindIcon[1] : g_Bosses[g.boss].icon);
@@ -199,12 +212,17 @@ void hud_update(void) BANKED { hud_fields(FALSE); }
 void hud_mini(void) BANKED
 {
 	Vid_Fill(0, 0, 62, 212, COL_INK);
-	Vid_Fill(62, 0, 1, 212, COL_SLATE);
+	Vid_Fill(62, 0, 2, 212, COL_SLATE);
 	Vid_Panel(2, 4, 58, 16, COL_SLATE, COL_INK);
 	Vid_Text(6, 8, "$", TC_GOLD); Vid_NumR(57, 8, g.money, g.money < 0 ? TC_RED : TC_GOLD);
 	Vid_Panel(2, 24, 58, 26, COL_SLATE, COL_INK);
 	Vid_Text(6, 26, "Ante", TC_WHITE); Vid_NumR(41, 26, g.ante > MAX_ANTE ? MAX_ANTE : g.ante, TC_GOLD); Vid_Text(42, 26, "/8", TC_SLATE);
 	Vid_Text(6, 37, g.blind == BLIND_SMALL ? "Small" : (g.blind == BLIND_BIG ? "Big" : "Boss"), TC_WHITE);
+	if (g.nTags)
+	{
+		Vid_Text(6, 56, "Tags", TC_SLATE);
+		for (u8 i = 0; i < g.nTags; i++) Vid_TagIcon(g.tags[i], (u8)(4 + (i % 3) * 19), (u8)(67 + (i / 3) * 18));
+	}
 	ui_ensure(W_INFO, 2, 172, 58, 13);
 	ui_button(W_INFO, T_RUNINFO, COL_ORANGE, TRUE);
 }
@@ -214,7 +232,7 @@ void hud_mini(void) BANKED
 //-----------------------------------------------------------------------------
 static void info_clear(void)
 {
-	Vid_Panel(AREA_X + 1, INFO_Y, 190, 35, COL_INK, COL_SLATE);
+	Vid_Panel(AREA_X + 2, INFO_Y, 188, 35, COL_INK, COL_SLATE);
 }
 
 // "Cost $n" / "Sell $n" right aligned in the info panel
@@ -246,7 +264,7 @@ static void info_jokerdef(const JokerDef* d, i8 sell, u8 price)
 	Vid_Text(AREA_X + 6, INFO_Y + 3, d->name, TC_GOLD);
 	if (sell >= 0) info_price("Sell", (u8)sell);
 	else if (price) info_price("Cost", price);
-	Vid_Wrap(AREA_X + 6, INFO_Y + 14, d->desc, 180, TC_WHITE, 2);
+	Vid_WrapDesc(d->desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
 }
 
 static void info_planet(u8 h, bool owned)
@@ -268,7 +286,7 @@ static void info_cons(u8 c, u8 price)
 	{
 		const TarotDef* t = &g_Tarots[c - 0x20];
 		Vid_Text(AREA_X + 6, INFO_Y + 3, t->name, TC_BLUE);
-		Vid_Wrap(AREA_X + 6, INFO_Y + 14, t->desc, 180, TC_WHITE, 2);
+		Vid_WrapDesc(t->desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
 	}
 	if (price) info_price("Cost", price);
 }
@@ -284,7 +302,7 @@ void info_blind(void) BANKED
 	if (g.blind == BLIND_BOSS)
 	{
 		Vid_Text(AREA_X + 6, INFO_Y + 3, g_Bosses[g.boss].name, TC_RED);
-		Vid_Wrap(AREA_X + 6, INFO_Y + 14, g_Bosses[g.boss].desc, 180, TC_WHITE, 2);
+		Vid_WrapDesc(g_Bosses[g.boss].desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
 	}
 	else info_text(g.blind == BLIND_SMALL ? "Small Blind" : "Big Blind", "Reach the target score before you run out of hands.");
 }
@@ -321,6 +339,15 @@ void info_show(u8 id) BANKED
 				else if (g.shopType[i] == 3) info_cons(CONS_TAROT(g.shopId[i]), 3);
 				else info_text("Sold out", 0);
 			}
+			else if (id == W_VOUCHER)
+			{
+				if (g.voucher)
+				{
+					Vid_Text(AREA_X + 6, INFO_Y + 3, g_Vouchers[g.voucher - 1].name, TC_GOLD);
+					info_price("Cost", voucher_price());
+					Vid_WrapDesc(g_Vouchers[g.voucher - 1].desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
+				}
+			}
 			else if (id >= W_PACK && id < W_PACK + 2)
 			{
 				u8 k = g.packType[id - W_PACK];
@@ -334,7 +361,7 @@ void info_show(u8 id) BANKED
 					p = nm[(k - 1) / 3]; while (*p) b[n++] = *p++;
 					b[n] = 0;
 					Vid_Text(AREA_X + 6, INFO_Y + 3, b, TC_BLUE);
-					info_price("Cost", pack_cost(k));
+					info_price("Cost", pack_price(id - W_PACK));
 					Vid_Wrap(AREA_X + 6, INFO_Y + 14, ds[(k - 1) / 3], 180, TC_WHITE, 2);
 				}
 				else info_text("Sold out", 0);
@@ -352,40 +379,31 @@ void info_show(u8 id) BANKED
 //-----------------------------------------------------------------------------
 // joker + consumable row (also used by the shop)
 //-----------------------------------------------------------------------------
+static u8 jslot_x(u8 id) { return id < W_CONS ? JOKER_X(id - W_JOKER) : CONS_X(id - W_CONS); }
+
+void draw_jslot(u8 id) BANKED
+{
+	bool isJoker = id < W_CONS;
+	u8 idx = isJoker ? id - W_JOKER : id - W_CONS;
+	u8 x = jslot_x(id), y = JOKER_Y;
+	bool present = isJoker ? idx < g.nJk : g.cons[idx] != 0;
+	if (present && ui.itemKind == (isJoker ? 1 : 2) && ui.itemIdx == idx) y = JOKER_Y + 3;     // selected: lowered
+	Vid_Fill(x, JOKER_Y, 24, 3, COL_FELT);
+	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
+	if (isJoker) Vid_Card(g_Jokers[g.jk[idx].id].cell, x, y);
+	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : CELL_TAROT + g.cons[idx] - 0x20, x, y);
+	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
+	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border
+}
+
 void draw_joker_row(bool shop) BANKED
 {
-	Vid_Fill(AREA_X + 1, 0, 191, 38, COL_FELT);
-	for (u8 i = 0; i < JOKER_MAX; i++)
-	{
-		u8 x = JOKER_X(i), y = JOKER_Y;
-		if (i < g.nJk)
-		{
-			bool sel = ui.itemKind == 1 && ui.itemIdx == i;
-			if (sel) y = JOKER_Y + 3;
-			Vid_Card(g_Jokers[g.jk[i].id].cell, x, y);
-			if (g.jk[i].flags & JF_DEBUFF) Vid_Frame(x, y, 24, 32, COL_RED);
-		}
-		else Vid_Frame(x, y, 24, 32, COL_SLATE);
-	}
-	for (u8 i = 0; i < CONS_MAX; i++)
-	{
-		u8 x = CONS_X(i), y = JOKER_Y;
-		if (g.cons[i])
-		{
-			if (ui.itemKind == 2 && ui.itemIdx == i) y = JOKER_Y + 3;
-			Vid_Card(CONS_IS_PLANET(g.cons[i]) ? CELL_PLANET + g.cons[i] - 1 : CELL_TAROT + g.cons[i] - 0x20, x, y);
-		}
-		else Vid_Frame(x, y, 24, 32, COL_SLATE);
-	}
+	Vid_Fill(AREA_X, 0, AREA_W, 52, COL_FELT);
+	for (u8 i = 0; i < JOKER_MAX; i++) draw_jslot(W_JOKER + i);
+	for (u8 i = 0; i < CONS_MAX; i++) draw_jslot(W_CONS + i);
 	{ char s[6] = "0/5"; s[0] = '0' + g.nJk; Vid_Text(JOKER_X(0), 36, s, TC_SLATE); }
 	{ char s[6] = "0/2"; s[0] = '0' + (g.cons[0] != 0) + (g.cons[1] != 0); Vid_Text(CONS_X(0), 36, s, TC_SLATE); }
 	(void)shop;
-	// focus ring + action buttons
-	for (u8 i = 0; i < JOKER_MAX + CONS_MAX; i++)
-	{
-		u8 id = i < JOKER_MAX ? W_JOKER + i : W_CONS + (i - JOKER_MAX);
-		if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) ui_focus_ring(id);
-	}
 	if (ui.itemKind)
 	{
 		u8 x = ui.itemKind == 1 ? JOKER_X(ui.itemIdx) : CONS_X(ui.itemIdx);

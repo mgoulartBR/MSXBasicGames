@@ -16,5 +16,5 @@ proc key {t name} {
         p {press $t 4 5}  d {press $t 3 1}  s {press $t 5 0}  i {press $t 3 6}  n {press $t 4 3}
     }
 }
-proc snap {t name} { at $t "screenshot $::env(SHOT_OUT)/$name.png" }
+proc snap {t name} { at $t "screenshot -raw -doublesize $::env(SHOT_OUT)/$name.png" }
 proc finish {t} { at $t "exit" }

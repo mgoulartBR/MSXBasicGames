@@ -13,6 +13,7 @@
 // layout
 //-----------------------------------------------------------------------------
 #define AREA_X        64
+#define AREA_W        192
 #define JOKER_Y       2
 #define PLAY_Y        54
 #define HAND_Y        120
@@ -40,6 +41,7 @@ enum
 	W_REROLL = 35, W_NEXT, W_OK, W_SKIP,                         // 35..38
 	W_BLIND = 39, W_BACK,                                        // 39, 40
 	W_PACKCARD = 41,     // 41..45
+	W_SKIPBLIND = 46, W_VOUCHER = 47,
 };
 
 enum { SC_TITLE, SC_BLIND, SC_ROUND, SC_CASHOUT, SC_SHOP, SC_PACK, SC_INFO, SC_OVER, SC_WIN };
@@ -68,9 +70,13 @@ typedef struct
 	Cash cash[CASH_MAX];
 	u8  nCash, cashShown;
 	i16 cashTotal;
+	u8  packReturn;       // screen to go back to when a pack is closed
 	u8  msgTimer;
 	const char* msg;
 	u8  dirty;            // D_* redraw flags
+	u8  hlo, hhi;         // hand cards to repaint (range) when D_HAND is set
+	u8  jmask, bmask;     // joker/consumable slots and buttons to repaint individually
+	u8  infoDelay;        // frames to wait before repainting the info panel (avoids repainting while the pointer sweeps)
 } UI;
 #define D_HAND    1
 #define D_JOKERS  2
@@ -78,7 +84,8 @@ typedef struct
 #define D_INFO    8
 #define D_HUD     16
 #define D_PLAY    32
-#define D_ALL     63
+#define D_ALL     (D_HAND | D_BUTTONS | D_INFO | D_HUD | D_PLAY)   /* not the joker row: redrawn only when it changes */
+#define D_EVERYTHING 63
 extern UI ui;
 
 // core (ui_core.c)
@@ -92,6 +99,13 @@ u8   ui_hit(u8 x, u8 y) BANKED;
 u8   ui_focus_id(void) BANKED;
 bool ui_pointer_focus(void) BANKED;   // true when the focus changed
 void ui_set_focus(u8 idx) BANKED;
+void ui_info_tick(void) BANKED;
+void draw_jslot(u8 id) BANKED;          // one joker / consumable slot (W_JOKER+i, W_CONS+i) with its focus ring
+void scr_focus(u8 oldId, u8 newId) BANKED;   // repaint what a focus change touches (per screen)
+void rnd_focus(u8 o, u8 n) BANKED;
+void shop_focus(u8 o, u8 n) BANKED;
+void pack_focus(u8 o, u8 n) BANKED;
+void blind_focus(u8 o, u8 n) BANKED;
 void ui_nav(u8 dir) BANKED;
 void ui_goto(u8 screen) BANKED;
 void ui_msg(const char* m) BANKED;
@@ -99,7 +113,8 @@ void ui_button(u8 id, const char* label, u8 col, bool enabled) BANKED;
 void ui_focus_ring(u8 id) BANKED;
 void hud_draw(void) BANKED;              // static layout + all fields
 void hud_update(void) BANKED;            // refresh fields that changed
-void hud_mini(void) BANKED;              // money / ante panel for non-round screens
+void hud_mini(void) BANKED;
+void draw_tag(u8 tag, u8 x, u8 y) BANKED;   // 16x16 tag icon (tag = TG_* )              // money / ante panel for non-round screens
 void hud_hand(u8 type, u16 chips, u16 mult) BANKED;   // type 0xFF = blank
 void info_show(u8 id) BANKED;            // description of widget `id` in the info panel
 void info_blind(void) BANKED;
@@ -131,5 +146,5 @@ void upd_over(void) BANKED;
 #define FR(n)   ((u8)(((u16)(n) * ui.hz) / 60))
 
 // shared strings (ui_text.c, always-mapped SEG20)
-extern const char T_PLAY[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[];
+extern const char T_PLAY[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[], T_SKIPBLIND[];
 extern const char M_NEEDCARDS[], M_CANTUSE[], M_NOMONEY[], M_NOROOM[], M_SOLDOUT[], M_NOJOKER[], M_NOCONS[];

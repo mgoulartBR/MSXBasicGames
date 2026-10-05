@@ -14,3 +14,5 @@ set ::B(nhand) 8; set ::B(njk) 9; set ::B(state) 10; set ::B(score) 11; set ::B(
 # screens
 set ::SC(title) 0; set ::SC(blind) 1; set ::SC(round) 2; set ::SC(cashout) 3; set ::SC(shop) 4; set ::SC(pack) 5; set ::SC(info) 6; set ::SC(over) 7; set ::SC(win) 8
 proc at_check {t script} { at $t $script }
+
+set ::B(ntags) 20; set ::B(skips) 21

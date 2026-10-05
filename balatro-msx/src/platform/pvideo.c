@@ -5,6 +5,7 @@
 #include "msxgl.h"
 #include "pvideo.h"
 #include "assets_gen.h"
+#include "data_gen.h"   // SEG_DESC
 
 extern const u8 g_FontW[95], g_FontX[95], g_FontL[95];
 static const u8 s_palette[] = GFX_PALETTE_INIT;
@@ -56,6 +57,8 @@ void Vid_Init(void)
 		VDP_WriteVRAM((const u8*)0xA000, (u16)(dst & 0xFFFF), (u8)(dst >> 16), n);
 		dst += n; left -= n;
 	}
+	SET_BANK_SEGMENT(3, GFX_TAG_SEG);                      // tag icons -> page 0, lines 212..227 (hidden)
+	VDP_WriteVRAM((const u8*)0xA000, (u16)(GFX_TAG_Y * 128U), 0, 2048);
 	SET_BANK_SEGMENT(3, SEG_TEXT);
 	VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
 	VDP_EnableSprite(TRUE);
@@ -66,12 +69,24 @@ void Vid_Init(void)
 }
 
 void Vid_Clear(u8 col) { VDP_CommandHMMV(0, 0, 256, 212, col | (col << 4)); }
+void Vid_Display(bool on) { VDP_EnableDisplay(on); }
 
+// The V9938 fills ~340 KB/s with the byte-wide HMMV but only ~85 KB/s with the pixel-wide LMMV, so every layout
+// constant is kept 2-pixel aligned (even x and width) to use HMMV. Odd cases still work (slow path, counted in debug).
+#ifdef DEBUG_KEYS
+volatile u16 g_slowFill;
+#endif
 void Vid_Fill(u8 x, u8 y, u8 w, u8 h, u8 col)
 {
 	if (!w || !h) return;
 	if (((x | w) & 1) == 0) VDP_CommandHMMV(x, y, w, h, col | (col << 4));
-	else VDP_CommandLMMV(x, y, w, h, col, VDP_OP_IMP);
+	else
+	{
+		VDP_CommandLMMV(x, y, w, h, col, VDP_OP_IMP);
+#ifdef DEBUG_KEYS
+		if ((u16)w * h > 40) g_slowFill++;
+#endif
+	}
 }
 
 void Vid_Frame(u8 x, u8 y, u8 w, u8 h, u8 col)
@@ -80,18 +95,22 @@ void Vid_Frame(u8 x, u8 y, u8 w, u8 h, u8 col)
 	Vid_Fill(x, y, 1, h, col); Vid_Fill(x + w - 1, y, 1, h, col);
 }
 
-void Vid_Panel(u8 x, u8 y, u8 w, u8 h, u8 fill, u8 border)
+void Vid_Panel(u8 x, u8 y, u8 w, u8 h, u8 fill, u8 border)     // x, w even: two HMMV fills (2 px side borders, 1 px top/bottom)
 {
-	Vid_Fill(x + 1, y, w - 2, h, border);        // rounded corners: border fill minus the corner pixels
-	Vid_Fill(x, y + 1, w, h - 2, border);
-	Vid_Fill(x + 1, y + 1, w - 2, h - 2, fill);
+	Vid_Fill(x, y, w, h, border);
+	Vid_Fill(x + 2, y + 1, w - 4, h - 2, fill);
 }
 
-void Vid_Card(u8 cell, u8 x, u8 y)
+void Vid_Card(u8 cell, u8 x, u8 y)        // HMMM (x even): ~2.3x faster than the transparent LMMM copy. Card cells have opaque corners.
 {
 	u16 sx = (u16)(cell % GFX_CELLS_PER_ROW) * GFX_CELL_W;
 	u16 sy = GFX_ATLAS_Y0 + (u16)(cell / GFX_CELLS_PER_ROW) * GFX_CELL_H;
-	VDP_CommandLMMM(sx, sy, x, y, GFX_CELL_W, GFX_CELL_H, VDP_OP_TIMP);
+	VDP_CommandHMMM(sx, sy, x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
+}
+
+void Vid_TagIcon(u8 tag, u8 x, u8 y)
+{
+	VDP_CommandLMMM((u16)tag * 16, GFX_TAG_Y, x, y, 16, 16, VDP_OP_TIMP);
 }
 
 void Vid_BlindIcon(u8 row, u8 x, u8 y)
@@ -157,6 +176,15 @@ u8 Vid_Wrap(u8 x, u8 y, const char* s, u8 maxw, u8 tc, u8 maxLines)
 		s = e;
 	}
 	return (u8)(line + 1);
+}
+
+extern const char* const g_Desc[];
+u8 Vid_WrapDesc(u8 desc, u8 x, u8 y, u8 maxw, u8 tc, u8 maxLines)
+{
+	SET_BANK_SEGMENT(3, SEG_DESC);
+	u8 n = Vid_Wrap(x, y, g_Desc[desc], maxw, tc, maxLines);
+	SET_BANK_SEGMENT(3, SEG_TEXT);
+	return n;
 }
 
 void Vid_Logo(u8 x, u8 y)

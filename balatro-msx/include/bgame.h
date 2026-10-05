@@ -33,7 +33,8 @@ typedef u8 Card;
 #define JOKER_MAX        5
 #define CONS_MAX         2
 #define EVENT_MAX        72
-#define SHOP_CARD_MAX    3
+#define SHOP_CARD_MAX    5
+#define TAG_MAX          6
 #define PACK_CARD_MAX    5
 #define START_MONEY      4
 #define START_HANDS      4
@@ -129,7 +130,16 @@ typedef struct
 	u16  planetsUsed;                // bitmask of unique planets used (Satellite)
 	u8   lastCons;                   // last tarot/planet used (The Fool)
 	u8   rerollCost, rerollBase;
-	u8   skipTag;                    // pending tag effects
+	// ---- skip tags ----
+	u8   tagSmall, tagBig;           // TG_*+1 offered for skipping the Small / Big blind of this ante (0 none)
+	u8   tags[TAG_MAX];              // held tags (TG_*), consumed when they trigger
+	u8   nTags;
+	u8   skips;                      // blinds skipped this run
+	u16  unusedDiscards;             // discards left over at the end of rounds, whole run (Garbage Tag)
+	u16  handsPlayedRun;             // hands played this run (Handy Tag)
+	i8   tempHand;                   // temporary hand size bonus for the current round (Juggle Tag)
+	u8   freeMask;                   // shop slots that cost $0 this visit (Coupon/Uncommon/Rare tags)
+	u8   freePacks;                  // packs that cost $0 (Coupon Tag)
 	// ---- jokers / consumables ----
 	JokerInst jk[JOKER_MAX];
 	u8   nJk;
@@ -165,11 +175,13 @@ typedef struct
 	u8   shopId[SHOP_CARD_MAX];
 	u8   shopN;
 	u8   packType[2];                // 0 none else pack kind
-	u8   voucher;                    // 0 none else voucher id
+	u8   voucher;                    // 0 none else VC_*+1: the voucher offered this Ante
+	u16  vouchers;                   // redeemed vouchers (bit per VC_*)
 	u8   shopOpen;
 	u8   flags;
 } Game;
 enum { LOC_PILE, LOC_HAND, LOC_PLAY, LOC_DISCARD, LOC_GONE };
+#define VBIT(v) ((u16)(1u << (v)))
 #define DF_PILLAR 1                  // played this ante (The Pillar)
 extern Game g;
 
@@ -233,6 +245,9 @@ bool pack_open(u8 slot) BANKED;
 extern u8 g_packN, g_packPick, g_packKind;
 extern u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
 bool pack_choose(u8 i) BANKED;
+bool voucher_buy(void) BANKED;
+u8   voucher_price(void) BANKED;
+void voucher_new_ante(void) BANKED;
 void joker_sell(u8 idx) BANKED;
 void cons_sell(u8 slot) BANKED;
 u8   cons_sell_value(u8 c) BANKED;
@@ -243,6 +258,17 @@ i16  debt_limit(void) BANKED;
 // pack kinds: 1..9 = (kind-1)/3: 0 arcana, 1 celestial, 2 buffoon ; (kind-1)%3: size
 #define PACK_KIND(t, sz) ((u8)(1 + (t) * 3 + (sz)))
 u8   pack_cost(u8 kind) BANKED;
+
+// skip tags (tags.c)
+void tags_new_ante(void) BANKED;
+bool blind_can_skip(void) BANKED;
+void blind_skip(void) BANKED;                 // skip the current Small/Big blind and gain its tag
+u8   tags_choice_effects(void) BANKED;        // tags that fire when the next Blind choice appears; returns a free pack kind or 0
+i16  tags_eval_bonus(void) BANKED;            // Investment Tag after a Boss (consumes it)
+void tags_shop_start(void) BANKED;            // Coupon / Uncommon / Rare / D6 effects when the shop opens
+void tags_round_start(void) BANKED;           // Juggle Tag
+bool pack_open_free(u8 kind) BANKED;          // open a pack without paying (tags)
+u8   pack_price(u8 slot) BANKED;
 
 // misc
 void deck_new(void) BANKED;

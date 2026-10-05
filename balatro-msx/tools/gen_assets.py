@@ -122,8 +122,7 @@ def blit(a, x, y, rows, col, w=None):
 def card_base():
     a = np.full((OUT_H, OUT_W), 2, dtype=np.uint8)      # cream
     a[0, :] = a[-1, :] = 3; a[:, 0] = a[:, -1] = 3       # slate outline
-    for (x, y) in ((0, 0), (OUT_W - 1, 0), (0, OUT_H - 1), (OUT_W - 1, OUT_H - 1)):
-        a[y, x] = 0                                       # rounded corners (transparent)
+    # corners stay opaque (the card is blitted with HMMM, which has no transparency)
     return a
 
 PIPS = {  # pip positions on a 3-column grid (cx: 0=left,1=mid,2=right), rows 0..4 (top..bottom)
@@ -194,6 +193,14 @@ for im in joker_src:
 n = max(n, 160)
 layout['tarot'] = n
 for im in tarot_src: put_cell(n, pal.quantize(im)); n += 1
+layout['voucher'] = n
+vc_img = load('Vouchers.png')
+for k, _ in C.VOUCHERS:
+    px, py = centers['v_' + k]['pos']
+    im = premult_resize(cell(vc_img, px, py).crop((6, 6, 65, 89)), (20, 28))
+    c = card_base(); q = pal.quantize(im, alpha_cut=100)
+    sub = c[2:30, 2:22]; sub[q != 0] = q[q != 0]
+    put_cell(n, c); n += 1
 layout['end'] = n
 assert n <= 230, n
 
@@ -213,6 +220,15 @@ def render(idx, scale=3):
     im = Image.fromarray(rgb[idx], 'RGB')
     return im.resize((im.width * scale, im.height * scale), Image.NEAREST)
 render(atlas[:, :]).save(os.path.join(PREVIEW, 'atlas.png'))
+
+# ------------------------------------------------------------------ tags -----
+tg = load('tags.png')
+tag_img = np.zeros((16, 256), dtype=np.uint8)
+for i, (k, _) in enumerate(C.TAGS):
+    tx, ty = centers['tag_' + k]['pos']
+    ic = premult_resize(tg.crop((tx * 34, ty * 34, tx * 34 + 34, ty * 34 + 34)), (16, 16))
+    tag_img[:, i * 16:(i + 1) * 16] = pal.quantize(ic)
+render(tag_img, 4).save(os.path.join(PREVIEW, 'tags.png'))
 
 # ------------------------------------------------------------------ logo ----
 logo_im = load('balatro.png')
@@ -274,6 +290,8 @@ LOGO_SEG = FIRST_SEG + nseg
 logo_bytes = pack4(logo)
 assert len(logo_bytes) <= SEG
 write_seg(LOGO_SEG, logo_bytes)
+TAG_SEG = LOGO_SEG + 1
+write_seg(TAG_SEG, pack4(tag_img))
 # remove stale seg files
 for fn in os.listdir(OUT_SEG):
     if fn.startswith('seg_s') and fn.endswith('_b3.asm') and os.path.join(OUT_SEG, fn) not in seg_files:
@@ -290,8 +308,9 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
     f.write('#define GFX_PALETTE_INIT { %s }\n' % ', '.join('0x%02X, 0x%02X' % (((r << 4) | b), g) for r, g, b in PAL))
     f.write('#define GFX_ATLAS_FIRST_SEG %d\n#define GFX_ATLAS_SEGS %d\n#define GFX_ATLAS_LINES %d\n#define GFX_ATLAS_Y0 %d\n' % (FIRST_SEG, nseg, ATLAS_LINES, ATLAS_Y0))
     f.write('#define GFX_LOGO_SEG %d\n#define GFX_LOGO_W %d\n#define GFX_LOGO_H %d\n' % (LOGO_SEG, lw, lh))
+    f.write('#define GFX_TAG_SEG %d\n#define GFX_TAG_Y 212\n' % TAG_SEG)
     f.write('#define GFX_CELL_W %d\n#define GFX_CELL_H %d\n#define GFX_CELLS_PER_ROW %d\n' % (OUT_W, OUT_H, CELLS_PER_ROW))
-    for k in ('card', 'back', 'blank', 'planet', 'joker', 'tarot'):
+    for k in ('card', 'back', 'blank', 'planet', 'joker', 'tarot', 'voucher'):
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))
     f.write('#define FONT_ROWS %d\n#define FONT_Y0 %d\n#define FONT_STRIP_H %d\n#define FONT_COLOR_COUNT %d\n' % (GLYPH_ROWS, FONT_Y0, FONT_STRIP_H, len(FONT_COLORS)))
     f.write('#define BLIND_ICON_COUNT %d\n' % len(BLIND_ORDER))

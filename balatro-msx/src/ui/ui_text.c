@@ -14,6 +14,7 @@ const char T_BACK[]    = "Back";
 const char T_NEXT[]    = "Next Round";
 const char T_USE[]     = "Use";
 const char T_SKIP[]    = "Skip";
+const char T_SKIPBLIND[] = "Skip Blind";
 const char M_NEEDCARDS[] = "Select the cards to use it on first";
 const char M_CANTUSE[]   = "Can't use that right now";
 const char M_NOMONEY[]   = "Not enough money";

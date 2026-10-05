@@ -80,6 +80,15 @@ int main(int argc, char** argv)
 		int dead = 0;
 		while (!run_won() && !dead)
 		{
+			// skip tags: sometimes skip the Small / Big blind (exercises every tag effect)
+			if (blind_can_skip() && (rnd8() & 3) == 0)
+			{
+				blind_skip();
+				u8 pk = tags_choice_effects();
+				if (pk && pack_open_free(pk)) { for (u8 k = 0; k < g_packN && g_packPick; k++) if (g_packType[k]) pack_choose(k); }
+				continue;
+			}
+			{ u8 pk = tags_choice_effects(); if (pk && pack_open_free(pk)) { for (u8 k = 0; k < g_packN && g_packPick; k++) if (g_packType[k]) pack_choose(k); } }
 			blind_start();
 			if (g.blind == BLIND_BOSS) bossSeen[g.boss]++;
 			check_state();
@@ -108,6 +117,8 @@ int main(int argc, char** argv)
 			g.money += total;
 			if (g.blind == BLIND_BOSS && g.ante == MAX_ANTE) { g.ante++; break; }
 			shop_generate();
+			if (g.voucher && g.money >= 14) voucher_buy();
+			if (g.money > 3 && (rnd8() & 7) == 0) shop_reroll();
 			for (u8 i = 0; i < g.shopN; i++) if (g.shopType[i] == 1) shop_buy(i);
 			for (u8 i = 0; i < g.shopN; i++) if (g.shopType[i]) shop_buy(i);
 			for (u8 i = 0; i < 2; i++) if (g.money >= 8 && g.packType[i] && pack_open(i)) { for (u8 k = 0; k < g_packN; k++) if (g_packType[k]) { if (pack_choose(k) && g_packPick == 0) break; } }
@@ -119,6 +130,7 @@ int main(int argc, char** argv)
 		anteHist[g.ante > 11 ? 11 : g.ante]++;
 	}
 	printf("sim: %d runs, %ld rounds played, %ld wins\n", runs, rounds, wins);
+	long vs = 0; (void)vs;
 	printf("final ante histogram: "); for (int a = 1; a <= 9; a++) printf("%d:%ld ", a, anteHist[a]); printf("\n");
 	int uncovered = 0; for (int b = 0; b < BOSS_COUNT; b++) if (!bossSeen[b]) { printf("boss never met: %s\n", g_Bosses[b].name); uncovered++; }
 	int jk = 0; for (int j = 0; j < JOKER_COUNT; j++) if (jokerSeen[j]) jk++;

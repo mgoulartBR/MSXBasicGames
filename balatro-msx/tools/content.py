@@ -159,3 +159,36 @@ BOSSES = {
  "bl_final_vessel": "Very large blind",
  "bl_final_bell": "Forces 1 card to always be selected",
 }
+
+# skip tags carried over (key -> (position in tags.png, description)); order = icon order in VRAM and TG_* enum
+TAGS = [
+ ("uncommon",   "Next shop has a free Uncommon Joker"),
+ ("rare",       "Next shop has a free Rare Joker"),
+ ("investment", "Gain $25 after defeating the next Boss Blind"),
+ ("boss",       "Rerolls the Boss Blind of this Ante"),
+ ("charm",      "Free Mega Arcana Pack now"),
+ ("meteor",     "Free Mega Celestial Pack now"),
+ ("buffoon",    "Free Mega Buffoon Pack now"),
+ ("handy",      "Gain $1 per hand played this run"),
+ ("garbage",    "Gain $1 per unused discard this run"),
+ ("coupon",     "Initial cards and Packs of the next shop are free"),
+ ("juggle",     "+3 hand size on the next round"),
+ ("d_six",      "Rerolls start at $0 in the next shop"),
+ ("top_up",     "Create up to 2 common Jokers"),
+ ("skip",       "Gain $5 per Blind skipped this run"),
+ ("orbital",    "Upgrade a random poker hand by 3 levels"),
+ ("economy",    "Doubles your money (max +$40)"),
+]
+
+# tier-1 vouchers carried over (key, description). One is offered per Ante; each costs $10.
+VOUCHERS = [
+ ("overstock_norm",   "+1 card slot in the shop"),
+ ("clearance_sale",   "All cards and Packs in the shop are 25% off"),
+ ("reroll_surplus",   "Rerolls cost $2 less"),
+ ("grabber",          "Permanently gain +1 hand per round"),
+ ("wasteful",         "Permanently gain +1 discard each round"),
+ ("seed_money",       "Raise the interest cap to $50"),
+ ("paint_brush",      "+1 hand size"),
+ ("tarot_merchant",   "Tarot cards appear more frequently in the shop"),
+ ("planet_merchant",  "Planet cards appear more frequently in the shop"),
+]

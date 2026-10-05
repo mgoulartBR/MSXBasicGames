@@ -8,6 +8,8 @@
 #define GFX_LOGO_SEG 16
 #define GFX_LOGO_W 152
 #define GFX_LOGO_H 98
+#define GFX_TAG_SEG 17
+#define GFX_TAG_Y 212
 #define GFX_CELL_W 24
 #define GFX_CELL_H 32
 #define GFX_CELLS_PER_ROW 10
@@ -17,6 +19,7 @@
 #define CELL_PLANET 60
 #define CELL_JOKER 80
 #define CELL_TAROT 168
+#define CELL_VOUCHER 181
 #define FONT_ROWS 9
 #define FONT_Y0 864
 #define FONT_STRIP_H 18

@@ -11,19 +11,38 @@ static const char* const k_state[3] = { "Defeated", "Select", "Upcoming" };   /*
 //-----------------------------------------------------------------------------
 void ui_init(void) BANKED
 {
+	{ u8* p = (u8*)&ui; for (u16 i = 0; i < sizeof(UI); i++) p[i] = 0; }      // RAM is not cleared at boot
+#ifdef DEBUG_KEYS
+	{ extern volatile u8 g_perf2[12]; extern volatile u16 g_slowFill; for (u8 i = 0; i < 12; i++) g_perf2[i] = 0; g_slowFill = 0; }
+#endif
 	ui.hz = Vid_Hz();
 	ui.focus = 0xFF;
 	ui_goto(SC_TITLE);
 }
 
+void scr_focus(u8 o, u8 n) BANKED
+{
+	switch (ui.screen)
+	{
+		case SC_ROUND: rnd_focus(o, n); break;
+		case SC_SHOP:  shop_focus(o, n); break;
+		case SC_PACK:  pack_focus(o, n); break;
+		case SC_BLIND: blind_focus(o, n); break;
+	}
+}
+
 void ui_goto(u8 sc) BANKED
 {
+	Vid_Display(FALSE);                 // draw the new screen blanked: faster and no half-painted frames
 	ui.prevScreen = ui.screen;
 	ui.screen = sc;
 	ui.msgTimer = 0; ui.msg = 0; ui.dirty = 0;
 	ui.itemKind = 0;
 	ui.focus = 0xFF;
 	ui_clear_widgets();
+#ifdef DEBUG_KEYS
+	u16 t0 = *(volatile u16*)0xFC9E;
+#endif
 	switch (sc)
 	{
 		case SC_TITLE:   scr_title(); break;
@@ -36,12 +55,17 @@ void ui_goto(u8 sc) BANKED
 		case SC_OVER:    scr_over(); break;
 		case SC_WIN:     scr_win(); break;
 	}
+	Vid_Display(TRUE);
+#ifdef DEBUG_KEYS
+	{ extern volatile u8 g_perf2[12]; u8 d = (u8)(*(volatile u16*)0xFC9E - t0); if (d > g_perf2[sc]) g_perf2[sc] = d; }
+#endif
 }
 
 #ifdef DEBUG_KEYS
 // Debug build only (scripts/build.sh debug): 1 win round, 2 random joker, 3 +$50, 4 planet+tarot, 5 lose round
 // RAM beacon read by the openMSX test scripts (tests/tcl/asserts.tcl) through `peek`
-volatile u8 g_beacon[20];
+volatile u8 g_beacon[24];
+volatile u8 g_perf2[12];      // worst duration (frames) of each screen constructor
 static void bset(u8 i, u8 v) { g_beacon[i] = v; }   // one store per call: SDCC 4.6.0 mis-compiles chained stores of u32 fields
 static void beacon(void)
 {
@@ -50,7 +74,7 @@ static void beacon(void)
 	bset(4, (u8)(g.money & 0xFF)); bset(5, (u8)((u16)g.money >> 8));
 	bset(6, g.handsLeft); bset(7, g.discardsLeft); bset(8, g.nHand); bset(9, g.nJk); bset(10, g.state);
 	bset(11, (u8)(sc & 0xFF)); sc >>= 8; bset(12, (u8)(sc & 0xFF)); sc >>= 8; bset(13, (u8)(sc & 0xFF)); sc >>= 8; bset(14, (u8)sc);
-	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss);
+	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss); bset(20, g.nTags); bset(21, g.skips); bset(22, g.tagSmall); bset(23, g.tagBig);
 }
 
 static void debug_keys(void)
@@ -131,6 +155,7 @@ void upd_title(void) BANKED
 		rng_seed((u16)(ui.frame * 31 + ui.timer * 7 + in.mx + in.my * 3));
 		run_new();
 		ui.shownHand = 0xFF;
+		ui.packReturn = SC_SHOP;
 		ui_goto(SC_BLIND);
 	}
 }
@@ -138,52 +163,104 @@ void upd_title(void) BANKED
 //-----------------------------------------------------------------------------
 // blind selection
 //-----------------------------------------------------------------------------
+void draw_tag(u8 tag, u8 x, u8 y) BANKED { Vid_TagIcon(tag, x, y); }
+
+static void blind_info(void)
+{
+	Vid_Panel(AREA_X + 2, INFO_Y, 188, 35, COL_INK, COL_SLATE);
+	u8 f = ui_focus_id();
+	if (f == W_SKIPBLIND)
+	{
+		u8 t = (g.blind == BLIND_SMALL ? g.tagSmall : g.tagBig) - 1;
+		Vid_Text(AREA_X + 6, INFO_Y + 3, g_Tags[t].name, TC_GOLD);
+		Vid_Text(AREA_X + 6 + Vid_TextW(g_Tags[t].name) + 4, INFO_Y + 3, "Tag", TC_SLATE);
+		Vid_WrapDesc(g_Tags[t].desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
+	}
+	else if (g.blind == BLIND_BOSS)
+	{
+		Vid_Text(AREA_X + 6, INFO_Y + 3, g_Bosses[g.boss].name, TC_RED);
+		Vid_WrapDesc(g_Bosses[g.boss].desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
+	}
+	else
+	{
+		Vid_Text(AREA_X + 6, INFO_Y + 3, g.blind == BLIND_SMALL ? "Small Blind" : "Big Blind", TC_WHITE);
+		Vid_Wrap(AREA_X + 6, INFO_Y + 14, "Select it to play, or skip it to get its Tag.", 180, TC_SLATE, 2);
+	}
+}
+
 void scr_blind(void) BANKED
 {
 	Vid_Clear(COL_FELT);
+	ui_clear_widgets();
 	hud_mini();
 	// the three blinds of this ante
 	for (u8 b = 0; b < 3; b++)
 	{
 		u8 x = AREA_X + 2 + b * 64, st = b < g.blind ? 0 : (b == g.blind ? 1 : 2);
 		u8 col = st == 0 ? COL_SLATE : (st == 1 ? COL_BLUE : COL_SLATE);
-		Vid_Panel(x, 8, 60, 160, COL_INK, st == 1 ? COL_GOLD : COL_SLATE);
+		Vid_Panel(x, 8, 60, 162, COL_INK, st == 1 ? COL_GOLD : COL_SLATE);
 		Vid_Fill(x + 2, 10, 56, 13, col);
 		const char* nm = b == 0 ? "Small Blind" : (b == 1 ? "Big Blind" : g_Bosses[g.boss].name);
 		Vid_TextC(x + 30, 12, nm, TC_WHITE);
 		u8 bi = b == 0 ? g_BlindIcon[0] : (b == 1 ? g_BlindIcon[1] : g_Bosses[g.boss].icon);
-		Vid_BlindIcon(bi, x + 22, 28);
-		Vid_TextC(x + 30, 50, "Goal", TC_SLATE);
+		Vid_BlindIcon(bi, x + 22, 26);
+		Vid_TextC(x + 30, 45, "Goal", TC_SLATE);
 		u8 sv = g.blind; g.blind = b;
 		u32 tgt = blind_target(); u8 rw = blind_reward();
 		g.blind = sv;
 		char d[9]; u8 n = 0; while (n < rw && n < 8) d[n++] = '$'; d[n] = 0;
-		Vid_NumR(x + 30 + Vid_NumW((i32)tgt) / 2, 61, (i32)tgt, TC_RED);
-		Vid_TextC(x + 30, 75, "Reward", TC_SLATE);
-		Vid_TextC(x + 30, 85, d, TC_GOLD);
-		if (b == 2) Vid_Wrap(x + 4, 100, g_Bosses[g.boss].desc, 52, TC_WHITE, 5);
-		if (st == 1) { ui_add(W_BLIND, x + 6, 148, 48, 14); ui_button(W_BLIND, T_SELECT, COL_GREEN, TRUE); }
-		else Vid_TextC(x + 30, 151, k_state[st], st == 0 ? TC_GREEN : TC_SLATE);
+		Vid_NumR(x + 30 + Vid_NumW((i32)tgt) / 2, 55, (i32)tgt, TC_RED);
+		Vid_TextC(x + 30, 67, "Reward", TC_SLATE);
+		Vid_TextC(x + 30, 77, d, TC_GOLD);
+		if (b == 2) Vid_WrapDesc(g_Bosses[g.boss].desc, x + 4, 94, 52, TC_WHITE, 6);
+		else
+		{
+			u8 tag = b == 0 ? g.tagSmall : g.tagBig;
+			if (st != 0 && tag)
+			{
+				Vid_TextC(x + 30, 92, "Skip Tag", TC_SLATE);
+				Vid_TagIcon(tag - 1, x + 22, 103);
+				Vid_TextC(x + 30, 122, g_Tags[tag - 1].name, TC_GOLD);
+			}
+		}
+		if (st == 1)
+		{
+			ui_add(W_BLIND, x + 6, 134, 48, 14);
+			ui_button(W_BLIND, T_SELECT, COL_GREEN, TRUE);
+			if (blind_can_skip()) { ui_add(W_SKIPBLIND, x + 6, 151, 48, 14); ui_button(W_SKIPBLIND, T_SKIPBLIND, COL_ORANGE, TRUE); }
+		}
+		else Vid_TextC(x + 30, 153, k_state[st], st == 0 ? TC_GREEN : TC_SLATE);
 	}
-	Vid_Text(AREA_X + 6, 176, "Choose your next Blind", TC_SLATE);
-	ui_set_focus(ui_find(W_BLIND));
+	ui.defFocus = W_BLIND;
+	ui.focus = ui_find(W_BLIND);
+	blind_info();
+	// tags that fire when the next Blind choice appears (Charm/Meteor/Buffoon: a free pack, Boss: new boss)
+	{
+		u8 pk = tags_choice_effects();
+		if (pk) { pack_open_free(pk); ui.packReturn = SC_BLIND; ui_goto(SC_PACK); return; }
+	}
+}
+
+void blind_focus(u8 o, u8 n) BANKED
+{
+	(void)o; (void)n;
+	ui_button(W_BLIND, T_SELECT, COL_GREEN, TRUE);
+	if (ui_find(W_SKIPBLIND) != 0xFF) ui_button(W_SKIPBLIND, T_SKIPBLIND, COL_ORANGE, TRUE);
 }
 
 void upd_blind(void) BANKED
 {
 	ui_pointer_focus();
-	if (in.pressed & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT)) ui_nav(IN_DOWN);
-	if (ui.dirty) { ui_button(W_BLIND, T_SELECT, COL_GREEN, TRUE); ui.dirty = 0; }
-	bool go = FALSE;
-	if (in.click) { u8 h = ui_hit(in.mx, in.my); go = h != 0xFF && ui.w[h].id == W_BLIND; }
-	else if (in.pressed & IN_OK) go = TRUE;
-	if (in.pressed & IN_INFO) { ui_goto(SC_INFO); return; }
-	if (in.click) { u8 h = ui_hit(in.mx, in.my); if (h != 0xFF && ui.w[h].id == W_INFO) { ui_goto(SC_INFO); return; } }
-	if (go)
-	{
-		blind_start();
-		ui_goto(SC_ROUND);
-	}
+	u16 p = in.pressed;
+	if (p & (IN_UP | IN_DOWN)) ui_nav((p & IN_UP) ? IN_UP : IN_DOWN);
+	if ((ui.dirty & D_INFO) && !ui.infoDelay) { ui.dirty = 0; blind_info(); } else if (ui.dirty & D_INFO) ui.infoDelay--;
+	u8 act = 0xFF;
+	if (in.click) { u8 h = ui_hit(in.mx, in.my); if (h != 0xFF) act = ui.w[h].id; }
+	else if ((p & IN_OK) && ui.focus != 0xFF) act = ui.w[ui.focus].id;
+	if (p & IN_INFO) act = W_INFO;
+	if (act == W_INFO) { ui_goto(SC_INFO); return; }
+	if (act == W_BLIND) { blind_start(); ui_goto(SC_ROUND); }
+	else if (act == W_SKIPBLIND) { Snd_Play(SFX_BUY); blind_skip(); ui_goto(SC_BLIND); }
 }
 
 //-----------------------------------------------------------------------------

@@ -12,9 +12,10 @@ static void cash_row(u8 idx)
 	Vid_Fill(48, y, 160, 11, COL_INK);
 	switch (r->kind)
 	{
-		case 0: Vid_Text(52, y + 1, g.blind == BLIND_SMALL ? "Small Blind" : (g.blind == BLIND_BIG ? "Big Blind" : g_Bosses[g.boss].name), TC_WHITE); break;
+		case 0: Vid_Text(52, y + 1, !r->who ? "Saved by Mr. Bones" : (g.blind == BLIND_SMALL ? "Small Blind" : (g.blind == BLIND_BIG ? "Big Blind" : g_Bosses[g.boss].name)), TC_WHITE); break;
 		case 1: Vid_Num(52, y + 1, r->who, TC_BLUE); Vid_Text(52 + Vid_NumW(r->who) + 4, y + 1, "Hands left ($1 each)", TC_SLATE); break;
 		case 2: Vid_Text(52, y + 1, g_Jokers[g.jk[r->who].id].name, TC_GOLD); break;
+		case 4: Vid_Text(52, y + 1, "Investment Tag", TC_GOLD); break;
 		default: Vid_Text(52, y + 1, "Interest ($1 per $5)", TC_SLATE); break;
 	}
 	(void)lab;
@@ -73,10 +74,12 @@ void upd_cashout(void) BANKED
 //-----------------------------------------------------------------------------
 // shop
 //-----------------------------------------------------------------------------
-#define SHOP_X(i)  (74 + (i) * 36)
-#define SHOP_Y     56
-#define PACK_X(i)  (74 + (i) * 36)
-#define PACK_Y     118
+#define SHOP_X(i)  (70 + (i) * 30)
+#define SHOP_Y     52
+#define PACK_X(i)  (70 + (i) * 30)
+#define PACK_Y     110
+#define VOUCH_X    176
+#define VOUCH_Y    110
 
 static const char* const k_packTag[3] = { "ARC", "CEL", "BUF" };
 
@@ -91,47 +94,76 @@ static u8 shop_cell(u8 i)
 static void draw_price(u8 x, u8 y, u8 price)
 {
 	Vid_Fill(x - 2, y, 28, 10, COL_FELT);
+	if (!price) { Vid_Text(x + 2, y + 1, "Free", TC_GREEN); return; }
 	Vid_Text(x + 3, y + 1, "$", TC_GOLD);
 	Vid_Num(x + 9, y + 1, price, g.money < price ? TC_RED : TC_GOLD);
 }
 
-static void draw_shop(void)
+static void shop_item(u8 id)
 {
-	Vid_Fill(AREA_X + 1, 0, 191, 174, COL_FELT);
-	draw_joker_row(TRUE);
-	Vid_Text(AREA_X + 8, 45, "Shop", TC_GOLD);
-	for (u8 i = 0; i < g.shopN; i++)
+	if (id == 0xFF) return;
+	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == id;
+	if (id >= W_JOKER && id < W_PLAY) { draw_jslot(id); return; }
+	if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 	{
-		u8 x = SHOP_X(i);
+		u8 i = id - W_SHOPCARD, x = SHOP_X(i);
 		if (g.shopType[i])
 		{
 			Vid_Card(shop_cell(i), x, SHOP_Y);
+			if (foc) Vid_Frame(x, SHOP_Y, 24, 32, COL_GOLD);
 			draw_price(x, SHOP_Y + 34, shop_cost(i));
 		}
-		else Vid_Frame(x, SHOP_Y, 24, 32, COL_SLATE);
-		if (ui_find(W_SHOPCARD + i) == ui.focus && ui.focus != 0xFF) Vid_Frame(x - 1, SHOP_Y - 1, 26, 34, COL_GOLD);
+		else { Vid_Fill(x, SHOP_Y, 24, 44, COL_FELT); Vid_Frame(x, SHOP_Y, 24, 32, COL_SLATE); }
+		return;
 	}
-	Vid_Text(AREA_X + 8, 104, "Booster Packs", TC_SLATE);
-	for (u8 i = 0; i < 2; i++)
+	if (id >= W_PACK && id < W_PACK + 2)
 	{
-		u8 x = PACK_X(i), k = g.packType[i];
+		u8 i = id - W_PACK, x = PACK_X(i), k = g.packType[i];
 		if (k)
 		{
 			static const u8 col[3] = { COL_RED, COL_BLUE, COL_ORANGE };
-			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], COL_INK);
+			Vid_Panel(x, PACK_Y, 24, 32, col[(k - 1) / 3], foc ? COL_GOLD : COL_INK);
 			Vid_TextC(x + 12, PACK_Y + 6, k_packTag[(k - 1) / 3], TC_WHITE);
-			Vid_TextC(x + 12, PACK_Y + 18, (k - 1) % 3 == 0 ? "" : ((k - 1) % 3 == 1 ? "JUMBO" : "MEGA"), TC_INK);
-			draw_price(x, PACK_Y + 34, pack_cost(k));
+			Vid_TextC(x + 12, PACK_Y + 18, (k - 1) % 3 == 0 ? "" : ((k - 1) % 3 == 1 ? "JMB" : "MEGA"), TC_INK);
+			draw_price(x, PACK_Y + 34, pack_price(i));
 		}
-		else Vid_Frame(x, PACK_Y, 24, 32, COL_SLATE);
-		if (ui_find(W_PACK + i) == ui.focus && ui.focus != 0xFF) Vid_Frame(x - 1, PACK_Y - 1, 26, 34, COL_GOLD);
+		else { Vid_Fill(x, PACK_Y, 24, 44, COL_FELT); Vid_Frame(x, PACK_Y, 24, 32, COL_SLATE); }
+		return;
 	}
-	// buttons
+	switch (id)
 	{
-		char b[12] = "Reroll $"; u8 n = 8; if (g.rerollCost >= 10) b[n++] = '0' + g.rerollCost / 10; b[n++] = '0' + g.rerollCost % 10; b[n] = 0;
-		ui_button(W_NEXT, T_NEXT, COL_GREEN, TRUE);
-		ui_button(W_REROLL, b, COL_RED, TRUE);
+		case W_VOUCHER:
+			if (g.voucher)
+			{
+				Vid_Card(g_Vouchers[g.voucher - 1].cell, VOUCH_X, VOUCH_Y);
+				if (foc) Vid_Frame(VOUCH_X, VOUCH_Y, 24, 32, COL_GOLD);
+				draw_price(VOUCH_X, VOUCH_Y + 34, voucher_price());
+			}
+			else { Vid_Fill(VOUCH_X, VOUCH_Y, 24, 44, COL_FELT); Vid_Frame(VOUCH_X, VOUCH_Y, 24, 32, COL_SLATE); }
+			break;
+		case W_NEXT: ui_button(W_NEXT, T_NEXT, COL_GREEN, TRUE); break;
+		case W_REROLL:
+		{
+			char b[12] = "Reroll $"; u8 n = 8; if (g.rerollCost >= 10) b[n++] = '0' + g.rerollCost / 10; b[n++] = '0' + g.rerollCost % 10; b[n] = 0;
+			ui_button(W_REROLL, b, COL_RED, TRUE);
+			break;
+		}
 	}
+}
+
+void shop_focus(u8 o, u8 n) BANKED { shop_item(o); shop_item(n); }
+
+static void draw_shop(void)
+{
+	Vid_Fill(AREA_X, 0, AREA_W, 174, COL_FELT);
+	draw_joker_row(TRUE);
+	Vid_Text(AREA_X + 6, 43, "Shop", TC_GOLD);
+	for (u8 i = 0; i < g.shopN; i++) shop_item(W_SHOPCARD + i);
+	Vid_Text(AREA_X + 6, 98, "Booster Packs", TC_SLATE);
+	for (u8 i = 0; i < 2; i++) shop_item(W_PACK + i);
+	Vid_Text(VOUCH_X - 4, 98, "Voucher", TC_SLATE);
+	shop_item(W_VOUCHER);
+	shop_item(W_NEXT); shop_item(W_REROLL);
 	hud_mini();
 	info_show(ui_focus_id());
 	ui.dirty = 0;
@@ -145,10 +177,11 @@ static void shop_widgets(void)
 	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i]) ui_add(W_CONS + i, CONS_X(i), JOKER_Y, 24, 32);
 	for (u8 i = 0; i < g.shopN; i++) ui_add(W_SHOPCARD + i, SHOP_X(i), SHOP_Y, 24, 44);
 	for (u8 i = 0; i < 2; i++) ui_add(W_PACK + i, PACK_X(i), PACK_Y, 24, 44);
-	ui_add(W_NEXT, 170, 60, 80, 18);
-	ui_add(W_REROLL, 170, 84, 80, 18);
-	ui.defFocus = g.shopType[0] ? W_SHOPCARD : W_NEXT;
+	if (g.voucher) ui_add(W_VOUCHER, VOUCH_X, VOUCH_Y, 24, 44);
+	ui_add(W_NEXT, 66, 158, 88, BTN_H);
+	ui_add(W_REROLL, 158, 158, 88, BTN_H);
 	if (ui.itemKind) { ui_add(W_SELL, 0, 0, 38, 12); if (ui.itemKind == 2) ui_add(W_USE, 0, 0, 30, 12); }
+	ui.defFocus = g.shopType[0] ? W_SHOPCARD : W_NEXT;
 	ui.focus = 0xFF;
 }
 
@@ -173,18 +206,22 @@ static void shop_activate(u8 id)
 	{
 		u8 i = id - W_SHOPCARD;
 		if (!g.shopType[i]) return;
-		if (shop_buy(i)) { snd(7); shop_widgets(); ui.focus = ui_find(id); draw_shop(); hud_mini(); }
+		if (shop_buy(i)) { snd(7); shop_widgets(); ui.focus = ui_find(id); draw_shop(); }
 		else ui_msg(g.money - shop_cost(i) < debt_limit() ? M_NOMONEY : M_NOROOM);
 		return;
 	}
 	if (id >= W_PACK && id < W_PACK + 2)
 	{
-		if (pack_open(id - W_PACK)) { snd(7); ui_goto(SC_PACK); }
+		if (pack_open(id - W_PACK)) { snd(7); ui.packReturn = SC_SHOP; ui_goto(SC_PACK); }
 		else ui_msg(g.packType[id - W_PACK] ? M_NOMONEY : M_SOLDOUT);
 		return;
 	}
 	switch (id)
 	{
+		case W_VOUCHER:
+			if (voucher_buy()) { snd(9); shop_widgets(); draw_shop(); }
+			else ui_msg(M_NOMONEY);
+			break;
 		case W_REROLL:
 			if (shop_reroll()) { snd(8); shop_widgets(); draw_shop(); }
 			else ui_msg(M_NOMONEY);
@@ -216,31 +253,44 @@ void upd_shop(void) BANKED
 	if (p & IN_INFO) ui_goto(SC_INFO);
 	if (p & IN_BACK && ui.itemKind) { ui.itemKind = 0; shop_widgets(); draw_shop(); }
 	if (ui.msgTimer && --ui.msgTimer == 0) { ui.msg = 0; ui.dirty |= D_INFO; }
-	if (ui.dirty) draw_shop();
+	ui_info_tick();
 }
 
 //-----------------------------------------------------------------------------
 // booster pack
 //-----------------------------------------------------------------------------
-static u8 pack_x(u8 i) { return (u8)(AREA_X + 98 - (g_packN * 34 - 10) / 2 + i * 34); }
+static u8 pack_x(u8 i) { return (u8)((AREA_X + 98 - (g_packN * 34 - 10) / 2 + i * 34) & ~1u); }
+
+static void pack_item(u8 i)
+{
+	u8 x = pack_x(i);
+	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == W_PACKCARD + i;
+	if (!g_packType[i]) { Vid_Fill(x, 60, 24, 32, COL_FELT); Vid_Frame(x, 60, 24, 32, COL_SLATE); return; }
+	u8 cell = g_packType[i] == 1 ? g_Jokers[g_packId[i]].cell : (g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i]);
+	Vid_Card(cell, x, 60);
+	if (foc) Vid_Frame(x, 60, 24, 32, COL_GOLD);
+}
+
+void pack_focus(u8 o, u8 n) BANKED
+{
+	for (u8 k = 0; k < 2; k++)
+	{
+		u8 id = k ? n : o;
+		if (id >= W_PACKCARD && id < W_PACKCARD + PACK_CARD_MAX) pack_item(id - W_PACKCARD);
+		else if (id == W_SKIP) ui_button(W_SKIP, T_SKIP, COL_RED, TRUE);
+	}
+}
 
 static void draw_pack(void)
 {
-	Vid_Fill(AREA_X + 1, 0, 191, 174, COL_FELT);
+	Vid_Fill(AREA_X, 0, AREA_W, 174, COL_FELT);
 	{
 		static const char* const nm[3] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack" };
 		Vid_TextC(AREA_X + 96, 14, nm[(g_packKind - 1) / 3], TC_GOLD);
 		char b[16] = "Choose "; b[7] = '0' + g_packPick; b[8] = 0;
 		Vid_TextC(AREA_X + 96, 28, b, TC_WHITE);
 	}
-	for (u8 i = 0; i < g_packN; i++)
-	{
-		u8 x = pack_x(i);
-		if (!g_packType[i]) { Vid_Frame(x, 60, 24, 32, COL_SLATE); continue; }
-		u8 cell = g_packType[i] == 1 ? g_Jokers[g_packId[i]].cell : (g_packType[i] == 2 ? CELL_PLANET + g_packId[i] : CELL_TAROT + g_packId[i]);
-		Vid_Card(cell, x, 60);
-		if (ui_find(W_PACKCARD + i) == ui.focus && ui.focus != 0xFF) Vid_Frame(x - 1, 59, 26, 34, COL_GOLD);
-	}
+	for (u8 i = 0; i < g_packN; i++) pack_item(i);
 	ui_button(W_SKIP, T_SKIP, COL_RED, TRUE);
 	hud_mini();
 	info_show(ui_focus_id());
@@ -276,12 +326,12 @@ void upd_pack(void) BANKED
 		if (pack_choose(act - W_PACKCARD))
 		{
 			snd(9);
-			if (g_packPick == 0) { ui_goto(SC_SHOP); return; }
+			if (g_packPick == 0) { ui_goto(ui.packReturn); return; }
 			draw_pack();
 		}
 		else ui_msg(g_packType[act - W_PACKCARD] == 1 ? M_NOJOKER : M_NOCONS);
 	}
-	else if (act == W_SKIP) { ui_goto(SC_SHOP); return; }
+	else if (act == W_SKIP) { ui_goto(ui.packReturn); return; }
 	if (ui.msgTimer && --ui.msgTimer == 0) { ui.msg = 0; ui.dirty |= D_INFO; }
-	if (ui.dirty) draw_pack();
+	ui_info_tick();
 }

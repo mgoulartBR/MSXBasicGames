@@ -43,6 +43,8 @@ void run_new(void) BANKED
 	g.forced = 0xFF; g.mouthHand = 0xFF; g.mostPlayed = 0xFF;
 	deck_new();
 	g.boss = bosses_for_ante(1);
+	tags_new_ante();
+	voucher_new_ante();
 }
 
 //-----------------------------------------------------------------------------
@@ -65,7 +67,7 @@ u8 blind_reward(void) BANKED
 
 u8 hand_size(void) BANKED
 {
-	i8 n = (i8)(g.handSizeBase + g.handSizeMod);
+	i8 n = (i8)(g.handSizeBase + g.handSizeMod + g.tempHand);
 	if (bossActive(BS_MANACLE)) n -= 1;
 	if (n < 1) n = 1;
 	if (n > HAND_MAX) n = HAND_MAX;
@@ -132,6 +134,7 @@ void blind_start(void) BANKED
 	i8 jh, jd;
 	joker_round_bonus(&jh, &jd);
 	joker_recalc_modifiers();
+	tags_round_start();
 	g.bossOff = 0;
 	g.target = blind_target();
 	g.score = 0;
@@ -254,6 +257,8 @@ bool round_discard(u16 sel) BANKED
 //-----------------------------------------------------------------------------
 void round_end_effects(void) BANKED
 {
+	g.unusedDiscards += g.discardsLeft;
+	g.tempHand = 0;
 	for (u8 i = 0; i < g.nJk; i++)
 	{
 		JokerInst* j = &g.jk[i];
@@ -281,7 +286,8 @@ void round_end_effects(void) BANKED
 u8 cashout_build(Cash* rows, i16* total) BANKED
 {
 	u8 n = 0; i16 sum = 0;
-	rows[n].kind = 0; rows[n].amount = blind_reward(); rows[n].who = 0; sum += rows[n].amount; n++;
+	rows[n].kind = 0; rows[n].who = (g.score >= g.target) ? 1 : 0;           // who=0: saved by Mr. Bones, no reward
+	rows[n].amount = rows[n].who ? blind_reward() : 0; sum += rows[n].amount; n++;
 	if (g.handsLeft > 0) { rows[n].kind = 1; rows[n].amount = g.handsLeft; rows[n].who = g.handsLeft; sum += rows[n].amount; n++; }
 	for (u8 i = 0; i < g.nJk && n < CASH_MAX - 1; i++)
 	{
@@ -304,6 +310,10 @@ u8 cashout_build(Cash* rows, i16* total) BANKED
 		}
 		if (a > 0) { rows[n].kind = 2; rows[n].amount = a; rows[n].who = i; sum += a; n++; }
 	}
+	{
+		i16 inv = tags_eval_bonus();
+		if (inv) { rows[n].kind = 4; rows[n].amount = inv; rows[n].who = 0; sum += inv; n++; }
+	}
 	if (g.money >= 5)
 	{
 		u8 steps = (u8)(g.money / 5);
@@ -321,7 +331,7 @@ void next_blind(void) BANKED
 	{
 		g.ante++; g.blind = BLIND_SMALL;
 		for (u8 s = 0; s < g.nDeck; s++) g.dflag[s] &= (u8)~DF_PILLAR;
-		if (g.ante <= MAX_ANTE) g.boss = bosses_for_ante(g.ante);
+		if (g.ante <= MAX_ANTE) { g.boss = bosses_for_ante(g.ante); tags_new_ante(); voucher_new_ante(); }
 	}
 	else g.blind++;
 }

@@ -167,50 +167,95 @@ bool cons_use(u8 slot, u16 sel) BANKED
 //-----------------------------------------------------------------------------
 // shop
 //-----------------------------------------------------------------------------
+static u8 discounted(u8 base)
+{
+	if (!(g.vouchers & VBIT(VC_CLEARANCE_SALE))) return base;
+	u16 v = ((u16)(2 * base + 1) * 3) / 8;                 // floor((cost + 0.5) * 75%), as Card:set_cost
+	return v < 1 ? 1 : (u8)v;
+}
+
+static void roll_slot(u8 i, u8* avoid)
+{
+	// card rates of the original: joker 20 : tarot 4 : planet 4 (x2.4 with the merchant vouchers); weights x10
+	u16 wt = (g.vouchers & VBIT(VC_TAROT_MERCHANT)) ? 96 : 40, wp = (g.vouchers & VBIT(VC_PLANET_MERCHANT)) ? 96 : 40;
+	u16 r = (u16)(rnd16() % (200 + wt + wp));
+	g.shopType[i] = 0;
+	if (r < 200)
+	{
+		i8 j = random_joker(avoid);
+		if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; avoid[j >> 3] |= (u8)(1 << (j & 7)); }
+	}
+	else if (r < 200 + wt) { g.shopType[i] = ST_TAROT; g.shopId[i] = random_tarot(); }
+	else { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+	if (!g.shopType[i]) { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+}
+
 static void shop_roll_cards(void)
 {
 	u8 avoid[(JOKER_COUNT + 7) / 8];
 	for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0;
-	g.shopN = 2;
-	for (u8 i = 0; i < g.shopN; i++)
+	g.shopN = (g.vouchers & VBIT(VC_OVERSTOCK)) ? 3 : 2;
+	for (u8 i = 0; i < g.shopN; i++) roll_slot(i, avoid);
+}
+
+void voucher_new_ante(void) BANKED
+{
+	u8 ok[VOUCHER_COUNT], n = 0;
+	for (u8 v = 0; v < VOUCHER_COUNT; v++) if (!(g.vouchers & VBIT(v))) ok[n++] = v;
+	g.voucher = n ? (u8)(1 + ok[rndn(n)]) : 0;
+}
+
+u8 voucher_price(void) BANKED { return discounted(10); }
+
+bool voucher_buy(void) BANKED
+{
+	if (!g.voucher) return FALSE;
+	u8 cost = voucher_price(), v = (u8)(g.voucher - 1);
+	if (g.money - cost < debt_limit()) return FALSE;
+	g.money -= cost;
+	g.vouchers |= VBIT(v);
+	g.voucher = 0;
+	switch (v)
 	{
-		u8 r = rndn(28);                                    // joker 20 : tarot 4 : planet 4 (card rates of the original)
-		g.shopType[i] = 0;
-		if (r < 20)
-		{
-			i8 j = random_joker(avoid);
-			if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; avoid[j >> 3] |= (u8)(1 << (j & 7)); }
-		}
-		else if (r < 24) { g.shopType[i] = ST_TAROT; g.shopId[i] = random_tarot(); }
-		else { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
-		if (!g.shopType[i]) { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+		case VC_OVERSTOCK:
+			if (g.shopN < SHOP_CARD_MAX) { u8 avoid[(JOKER_COUNT + 7) / 8]; for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0; roll_slot(g.shopN, avoid); g.shopN++; }
+			break;
+		case VC_REROLL_SURPLUS: g.rerollBase = g.rerollBase > 2 ? (u8)(g.rerollBase - 2) : 0; g.rerollCost = g.rerollCost > 2 ? (u8)(g.rerollCost - 2) : 0; break;
+		case VC_GRABBER: g.handsBase++; break;
+		case VC_WASTEFUL: g.discardsBase++; break;
+		case VC_SEED_MONEY: g.interestSteps = 50 / 5; break;
+		case VC_PAINT_BRUSH: g.handSizeBase++; break;
 	}
+	return TRUE;
 }
 
 void shop_generate(void) BANKED
 {
 	g.rerollCost = g.rerollBase;
+	g.freeMask = 0; g.freePacks = 0;
 	shop_roll_cards();
 	for (u8 i = 0; i < 2; i++)
 	{
 		u8 t = rndn(3), sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
 		g.packType[i] = PACK_KIND(t, sz);
 	}
-	g.voucher = 0;
 	g.shopOpen = 1;
+	tags_shop_start();
 }
 
 u8 shop_cost(u8 i) BANKED
 {
+	if (g.freeMask & (1 << i)) return 0;
 	switch (g.shopType[i])
 	{
-		case ST_JOKER: return g_Jokers[g.shopId[i]].cost;
-		case ST_PLANET: case ST_TAROT: return 3;
+		case ST_JOKER: return discounted(g_Jokers[g.shopId[i]].cost);
+		case ST_PLANET: case ST_TAROT: return discounted(3);
 	}
 	return 0;
 }
 
-u8 pack_cost(u8 kind) BANKED { u8 sz = (u8)((kind - 1) % 3); return (u8)(4 + 2 * sz); }
+u8 pack_cost(u8 kind) BANKED { u8 sz = (u8)((kind - 1) % 3); return discounted((u8)(4 + 2 * sz)); }
+u8 pack_price(u8 slot) BANKED { return (g.freePacks & (1 << slot)) ? 0 : pack_cost(g.packType[slot]); }
 
 bool shop_buy(u8 i) BANKED
 {
@@ -231,6 +276,7 @@ bool shop_reroll(void) BANKED
 	if (g.money - g.rerollCost < debt_limit()) return FALSE;
 	g.money -= g.rerollCost;
 	g.rerollCost++;
+	g.freeMask = 0;                      // rerolled cards are not part of the Coupon deal
 	shop_roll_cards();
 	return TRUE;
 }
@@ -238,14 +284,24 @@ bool shop_reroll(void) BANKED
 //-----------------------------------------------------------------------------
 // booster packs: Arcana (tarots), Celestial (planets), Buffoon (jokers)
 //-----------------------------------------------------------------------------
+static void pack_fill(u8 kind);
+
 bool pack_open(u8 slot) BANKED
 {
 	u8 kind = g.packType[slot];
 	if (!kind) return FALSE;
-	u8 cost = pack_cost(kind);
+	u8 cost = pack_price(slot);
 	if (g.money - cost < debt_limit()) return FALSE;
 	g.money -= cost;
 	g.packType[slot] = 0;
+	pack_fill(kind);
+	return TRUE;
+}
+
+bool pack_open_free(u8 kind) BANKED { pack_fill(kind); return TRUE; }
+
+static void pack_fill(u8 kind)
+{
 	u8 type = (u8)((kind - 1) / 3), sz = (u8)((kind - 1) % 3);
 	g_packKind = kind;
 	g_packN = (type == 2) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);
@@ -273,7 +329,6 @@ bool pack_open(u8 slot) BANKED
 			g_packType[i] = ST_JOKER; g_packId[i] = (u8)j;
 		}
 	}
-	return TRUE;
 }
 
 bool pack_choose(u8 i) BANKED

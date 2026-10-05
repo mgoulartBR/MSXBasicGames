@@ -22,7 +22,8 @@ bash scripts/build.sh selftest >/dev/null || FAIL=1
 ST=$(grep "_g_selftest" out/balatro.map | head -1 | awk '{print "0x"$1}')
 bash scripts/build.sh debug >/dev/null || FAIL=1
 BEACON=$(grep "_g_beacon" out/balatro.map | head -1 | awk '{print "0x"$1}')
-export ST BEACON
+PERF=$(grep "_g_perf" out/balatro.map | head -1 | awk '{print "0x"$1}')
+export ST BEACON PERF
 step "Z80 self-test in openMSX"
 bash scripts/screenshot.sh tests/tcl/selftest.tcl "dist/$ROM_NAME-msx-$VERSION-selftest.rom" >/dev/null 2>&1
 step "openMSX smoke test (C-BIOS MSX2, mouse in port A)"

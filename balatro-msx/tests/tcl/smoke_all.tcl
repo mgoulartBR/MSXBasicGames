@@ -50,4 +50,10 @@ at [expr {$b + 34.0}] { check "lose -> game over screen" {[bk 0] == $::SC(over)}
 snap [expr {$b + 34.1}] s08_over
 key [expr {$b + 36.0}] space
 at [expr {$b + 37.5}] { check "game over -> title" {[bk 0] == $::SC(title)} }
+at [expr {$b + 37.8}] {
+    set v {}
+    for {set i 0} {$i < 11} {incr i} { lappend v [peek [expr {$::env(PERF) + $i}]] }
+    puts $::RES "INFO frames per main-loop iteration, worst case per screen (1 = real time): title=[lindex $v 0] blind=[lindex $v 1] round=[lindex $v 2] cashout=[lindex $v 3] shop=[lindex $v 4] pack=[lindex $v 5] info=[lindex $v 6] over=[lindex $v 7]; iterations over budget: [lindex $v 10]"
+    flush $::RES
+}
 finish [expr {$b + 38}]

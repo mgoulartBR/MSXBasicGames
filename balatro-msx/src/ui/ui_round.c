@@ -14,13 +14,31 @@ static void hand_geom(void)
 	if (n <= 1) { hstep = 0; hx0 = AREA_X + 2 + 82; return; }
 	u16 st = (188 - 24) / (n - 1);
 	if (st > 26) st = 26;
-	hstep = (u8)st;
-	hx0 = (u8)(AREA_X + 2 + (188 - (24 + hstep * (n - 1))) / 2);
+	hstep = (u8)(st & ~1u);
+	hx0 = (u8)((AREA_X + 2 + (188 - (24 + hstep * (n - 1))) / 2) & ~1u);
 }
 static u8 hand_x(u8 i) { return (u8)(hx0 + i * hstep); }
 static u8 played_x(u8 i) { u8 n = g.nPlayed; return (u8)(AREA_X + 98 - (n * 28 - 4) / 2 + i * 28); }
 
 static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } return n; }
+
+//-----------------------------------------------------------------------------
+// focus changes: repaint only what they touch
+//-----------------------------------------------------------------------------
+static void mark_id(u8 id)
+{
+	if (id == 0xFF) return;
+	if (id < W_JOKER)
+	{
+		u8 lo = id ? (u8)(id - 1) : 0, hi = (u8)(id + 1);
+		if (!(ui.dirty & D_HAND)) { ui.hlo = lo; ui.hhi = hi; }
+		else { if (lo < ui.hlo) ui.hlo = lo; if (hi > ui.hhi) ui.hhi = hi; }
+		ui.dirty |= D_HAND;
+	}
+	else if (id < W_PLAY) ui.jmask |= (u8)(1 << (id < W_CONS ? id - W_JOKER : 5 + id - W_CONS));
+	else if (id <= W_INFO) ui.bmask |= (u8)(1 << (id - W_PLAY));
+}
+void rnd_focus(u8 o, u8 n) BANKED { mark_id(o); mark_id(n); }
 
 //-----------------------------------------------------------------------------
 // widgets
@@ -49,41 +67,56 @@ static void rebuild_widgets(void)
 //-----------------------------------------------------------------------------
 // drawing
 //-----------------------------------------------------------------------------
-static void draw_hand(void)
+// Repaint hand cards lo..hi (callers include the overlapping neighbours): clear their band, draw left to right, the
+// focused card last so it pops in front of its neighbour. Ring drawn inside the card border (no leftovers outside).
+static void draw_hand_range(u8 lo, u8 hi)
 {
-	Vid_Fill(AREA_X + 1, HAND_Y - HAND_RAISE - 4, 191, 32 + HAND_RAISE + 8, COL_FELT);
+	u8 n = g.nHand;
+	if (!n) { Vid_Fill(AREA_X, HAND_Y - HAND_RAISE - 4, AREA_W, 32 + HAND_RAISE + 8, COL_FELT); return; }
+	if (hi >= n) hi = n - 1;
+	if (lo > hi) lo = hi;
+	u8 xs, xe;
+	if (lo == 0 && hi == n - 1) { xs = AREA_X; xe = 0; }                  // everything: clear the full width
+	else { xs = (u8)((hand_x(lo) - 2) & ~1u); xe = (u8)(hand_x(hi) + 26); }
+	Vid_Fill(xs, HAND_Y - HAND_RAISE - 4, xe ? (u8)((xe - xs + 1) & ~1u) : AREA_W, 32 + HAND_RAISE + 8, COL_FELT);
 	u8 fi = ui_focus_id(), foc = 0xFF;
-	for (u8 i = 0; i < g.nHand; i++)
+	for (u8 i = lo; i <= hi; i++)
 	{
 		u8 slot = g.hand[i];
 		u8 y = (ui.sel & (1u << i)) ? HAND_Y - HAND_RAISE : HAND_Y;
-		if (fi == W_HAND + i) { foc = i; continue; }          // focused card is drawn last (on top)
+		if (fi == W_HAND + i) { foc = i; continue; }
 		Vid_Card(C_CELL(g.deck[slot]), hand_x(i), y);
-		if (card_is_debuffed(slot)) { Vid_Frame(hand_x(i), y, 24, 32, COL_RED); }
+		if (card_is_debuffed(slot)) Vid_Frame(hand_x(i), y, 24, 32, COL_RED);
 	}
 	if (foc != 0xFF)
 	{
 		u8 y = (ui.sel & (1u << foc)) ? HAND_Y - HAND_RAISE : HAND_Y;
-		y -= 2;
 		Vid_Card(C_CELL(g.deck[g.hand[foc]]), hand_x(foc), y);
-		Vid_Frame(hand_x(foc) - 1, y - 1, 26, 34, COL_GOLD);
+		Vid_Frame(hand_x(foc), y, 24, 32, card_is_debuffed(g.hand[foc]) ? COL_RED : COL_GOLD);
+	}
+}
+
+static void draw_button(u8 id)
+{
+	bool in_ = ui.phase == PH_INPUT;
+	switch (id)
+	{
+		case W_PLAY:      ui_button(W_PLAY, T_PLAY, COL_BLUE, in_ && round_can_play(ui.sel)); break;
+		case W_DISCARD:   ui_button(W_DISCARD, T_DISCARD, COL_RED, in_ && g.discardsLeft > 0 && ui.sel != 0); break;
+		case W_SORT_RANK: ui_button(W_SORT_RANK, T_RANK, COL_ORANGE, TRUE); break;
+		case W_SORT_SUIT: ui_button(W_SORT_SUIT, T_SUIT, COL_ORANGE, TRUE); break;
+		case W_INFO:      ui_button(W_INFO, T_RUNINFO, COL_ORANGE, TRUE); break;
 	}
 }
 
 static void draw_buttons(void)
 {
-	Vid_Fill(AREA_X + 1, BTN_Y - 3, 191, BTN_H + 6, COL_FELT);
-	bool canPlay = ui.phase == PH_INPUT && round_can_play(ui.sel);
-	bool canDisc = ui.phase == PH_INPUT && g.discardsLeft > 0 && ui.sel != 0;
-	ui_button(W_PLAY, T_PLAY, COL_BLUE, canPlay);
-	ui_button(W_DISCARD, T_DISCARD, COL_RED, canDisc);
-	ui_button(W_SORT_RANK, T_RANK, COL_ORANGE, TRUE);
-	ui_button(W_SORT_SUIT, T_SUIT, COL_ORANGE, TRUE);
+	for (u8 id = W_PLAY; id <= W_SORT_SUIT; id++) draw_button(id);
 }
 
 static void draw_played(u8 hil)
 {
-	Vid_Fill(AREA_X + 1, PLAY_Y - 6, 191, 32 + 10, COL_FELT);
+	Vid_Fill(AREA_X, PLAY_Y - 6, AREA_W, 32 + 10, COL_FELT);
 	for (u8 i = 0; i < g.nPlayed; i++)
 	{
 		bool scoring = (ui.so.mask >> i) & 1;
@@ -95,9 +128,9 @@ static void draw_played(u8 hil)
 
 static void draw_all(void)
 {
-	Vid_Fill(AREA_X + 1, 0, 191, 174, COL_FELT);
+	Vid_Fill(AREA_X, 52, AREA_W, 122, COL_FELT);
 	draw_joker_row(FALSE);
-	draw_hand();
+	draw_hand_range(0, 255);
 	draw_buttons();
 	info_show(ui_focus_id());
 	hud_update();
@@ -120,9 +153,9 @@ static void clear_popup(void)
 static void popup(u8 cx, u8 y, const char* s, u8 tc)
 {
 	clear_popup();
-	u8 w = Vid_TextW(s) + 6;
-	u8 x = cx > w / 2 + AREA_X ? cx - w / 2 : AREA_X + 1;
-	if (x + w > 254) x = 254 - w;
+	u8 w = (u8)((Vid_TextW(s) + 7) & ~1u);
+	u8 x = (u8)((cx > w / 2 + AREA_X ? cx - w / 2 : AREA_X + 2) & ~1u);
+	if (x + w > 254) x = (u8)((254 - w) & ~1u);
 	Vid_Panel(x, y, w, 11, COL_INK, COL_SLATE);
 	Vid_Text(x + 3, y + 1, s, tc);
 	pop_x = x; pop_y = y; pop_w = w;
@@ -186,7 +219,8 @@ static void after_hand_change(void)
 	if (g.forced != 0xFF) for (u8 i = 0; i < g.nHand; i++) if (g.hand[i] == g.forced) ui.sel |= (u16)(1u << i);
 	rebuild_widgets();
 	ui.focus = 0xFF;
-	ui.dirty |= D_ALL;
+	ui.hlo = 0; ui.hhi = 255;
+	ui.dirty |= D_HAND | D_BUTTONS | D_INFO;
 	preview_hand();
 }
 
@@ -206,7 +240,8 @@ static void toggle_card(u8 i)
 	}
 	snd(1);
 	preview_hand();
-	ui.dirty |= D_HAND | D_BUTTONS;
+	mark_id((u8)(W_HAND + i));
+	ui.dirty |= D_BUTTONS;
 }
 
 static void end_of_round(void)
@@ -214,8 +249,8 @@ static void end_of_round(void)
 	if (g.state == ROUND_WON)
 	{
 		ui.phase = PH_BANNER; ui.timer = FR(70);
-		Vid_Panel(AREA_X + 40, 90, 112, 30, COL_INK, COL_GOLD);
-		Vid_TextC(AREA_X + 96, 98, g.blind == BLIND_BOSS ? "Boss defeated!" : "Blind defeated!", TC_GOLD);
+		Vid_Panel(AREA_X + 40, 64, 112, 30, COL_INK, COL_GOLD);
+		Vid_TextC(AREA_X + 96, 74, g.blind == BLIND_BOSS ? "Boss defeated!" : "Blind defeated!", TC_GOLD);
 		snd(SFX_WIN);
 	}
 	else if (g.state == ROUND_LOST) { snd(SFX_LOSE); ui_goto(SC_OVER); }
@@ -230,13 +265,11 @@ static void start_play(void)
 	rebuild_widgets();
 	ui.phase = PH_SCORING; ui.evi = 0; ui.timer = FR(6);
 	pop_w = 0;
-	ui.dirty = D_HAND | D_BUTTONS | D_JOKERS;
-	Vid_Fill(AREA_X + 1, 38, 191, 76, COL_FELT);
-	draw_joker_row(FALSE);
-	draw_hand();
+	draw_hand_range(0, 255);
 	draw_buttons();
 	draw_played(0xFF);
 	hud_hand(ui.so.type, 0, 0);
+	ui.dirty = 0; ui.jmask = 0; ui.bmask = 0;
 }
 
 static void do_discard(void)
@@ -262,6 +295,7 @@ static void use_item(void)
 	snd(3);
 	ui.itemKind = 0;
 	after_hand_change();
+	ui.dirty |= D_JOKERS;
 }
 
 static void sell_item(void)
@@ -272,7 +306,8 @@ static void sell_item(void)
 	ui.itemKind = 0;
 	rebuild_widgets();
 	ui.focus = 0xFF;
-	ui.dirty |= D_ALL;
+	ui.hlo = 0; ui.hhi = 255;
+	ui.dirty |= D_HAND | D_BUTTONS | D_INFO | D_JOKERS;
 }
 
 static void activate(u8 id)
@@ -340,9 +375,8 @@ void upd_round(void) BANKED
 			if (p & IN_BACK)
 			{
 				if (ui.itemKind) { ui.itemKind = 0; rebuild_widgets(); ui.dirty |= D_JOKERS; }
-				else if (ui.sel && g.forced == 0xFF) { ui.sel = 0; preview_hand(); ui.dirty |= D_HAND | D_BUTTONS; }
+				else if (ui.sel && g.forced == 0xFF) { ui.sel = 0; preview_hand(); ui.hlo = 0; ui.hhi = 255; ui.dirty |= D_HAND | D_BUTTONS; }
 			}
-			if (ui.msgTimer && --ui.msgTimer == 0) ui.dirty |= D_INFO;
 			break;
 		}
 		case PH_SCORING:
@@ -374,19 +408,25 @@ void upd_round(void) BANKED
 			}
 			ui.shownScore = target;
 			hud_update();
-			round_resolve_play();
+			{
+				u8 nj = g.nJk, dbg = 0;
+				for (u8 i = 0; i < g.nJk; i++) dbg ^= (u8)(g.jk[i].flags << i);
+				round_resolve_play();
+				u8 dbg2 = 0;
+				for (u8 i = 0; i < g.nJk; i++) dbg2 ^= (u8)(g.jk[i].flags << i);
+				if (nj != g.nJk || dbg != dbg2) ui.dirty |= D_JOKERS;
+			}
 			ui.shownScore = (i32)g.score;
+			Vid_Fill(AREA_X, PLAY_Y - 6, AREA_W, 42, COL_FELT);
+			hud_hand(0xFF, 0, 0);
 			if (g.state == ROUND_PLAYING)
 			{
 				ui.phase = PH_INPUT;
-				Vid_Fill(AREA_X + 1, 38, 191, 76, COL_FELT);
-				hud_hand(0xFF, 0, 0);
-				draw_joker_row(FALSE);
 				after_hand_change();
-				draw_all();
-				hud_update();
+				ui.dirty |= D_INFO;
 			}
-			else { hud_update(); draw_all(); end_of_round(); }
+			else { ui.phase = PH_INPUT; after_hand_change(); end_of_round(); }
+			hud_update();
 			break;
 		}
 		case PH_BANNER:
@@ -398,13 +438,16 @@ void upd_round(void) BANKED
 			}
 			break;
 	}
-	if (ui.dirty && ui.phase == PH_INPUT)
+	if (ui.phase == PH_INPUT || ui.phase == PH_BANNER)
 	{
-		if (ui.dirty & D_JOKERS) draw_joker_row(FALSE);
-		if (ui.dirty & D_HAND) draw_hand();
-		if (ui.dirty & D_BUTTONS) draw_buttons();
-		if (ui.dirty & D_INFO) { if (ui.msgTimer == 0) ui.msg = 0; info_show(ui_focus_id()); }
-		ui.dirty = 0;
+		u8 d = ui.dirty; ui.dirty = (u8)(d & D_INFO);
+		if (d & D_JOKERS) { draw_joker_row(FALSE); ui.jmask = 0; }
+		else if (ui.jmask) { for (u8 b = 0; b < 7; b++) if (ui.jmask & (1 << b)) draw_jslot(b < 5 ? W_JOKER + b : W_CONS + b - 5); ui.jmask = 0; }
+		if (d & D_HAND) { draw_hand_range(ui.hlo, ui.hhi); ui.hlo = 0xFF; ui.hhi = 0; }
+		if (d & D_BUTTONS) { draw_buttons(); ui.bmask = 0; }
+		else if (ui.bmask) { for (u8 b = 0; b < 5; b++) if (ui.bmask & (1 << b)) draw_button(W_PLAY + b); ui.bmask = 0; }
+		if (ui.msgTimer && --ui.msgTimer == 0) ui.dirty |= D_INFO;
+		ui_info_tick();
 		hud_update();
 	}
 }

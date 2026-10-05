@@ -274,7 +274,7 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 	}
 	for (u8 i = 0; i < nh; i++) g.hand[i] = nhand[i];
 	g.nHand = nh; g.nPlayed = np;
-	g.handsLeft--; g.handsPlayed++;
+	g.handsLeft--; g.handsPlayed++; g.handsPlayedRun++;
 
 	HandEval he;
 	poker_eval(pc, np, poker_rules(), &he);

@@ -7,3 +7,7 @@ build/
 emul/
 *.log
 __pycache__/
+# Derived from proprietary Balatro art/text: generated locally by scripts/build.sh, never committed
+src/seg/seg_s*_b3.asm
+dist/
+screenshots/

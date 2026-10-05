@@ -72,7 +72,7 @@ void run_score_cases(void)
 	{ fresh(); g.blind = BLIND_SMALL; EXPECT("blind: ante 1 small target", blind_target(), 300);
 	  g.blind = BLIND_BIG; EXPECT("blind: ante 1 big target", blind_target(), 450);
 	  g.ante = 8; g.blind = BLIND_SMALL; EXPECT("blind: ante 8 small target", blind_target(), 50000); }
-	{ fresh(); blind_start(); g.money = 23; Cash rows[CASH_MAX]; i16 t; cashout_build(rows, &t);
+	{ fresh(); blind_start(); g.score = g.target; g.money = 23; Cash rows[CASH_MAX]; i16 t; cashout_build(rows, &t);
 	  EXPECT("cashout: $3 blind + 4 hands + $4 interest (23/5)", t, 3 + 4 + 4); }
 }
 
