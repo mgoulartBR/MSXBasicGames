@@ -65,7 +65,7 @@ void upd_cashout(void) BANKED
 	{
 		g.money += ui.cashTotal;
 		snd(6);
-		if (g.blind == BLIND_BOSS && g.ante >= MAX_ANTE) { ui_goto(SC_WIN); return; }
+		if (g.blind == BLIND_BOSS && g.ante >= (g.endless ? END_ANTE : MAX_ANTE)) { ui_goto(SC_WIN); return; }
 		shop_generate();
 		ui_goto(SC_SHOP);
 	}

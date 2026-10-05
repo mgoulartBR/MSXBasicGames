@@ -50,10 +50,25 @@ at [expr {$b + 34.0}] { check "lose -> game over screen" {[bk 0] == $::SC(over)}
 snap [expr {$b + 34.1}] s08_over
 key [expr {$b + 36.0}] space
 at [expr {$b + 37.5}] { check "game over -> title" {[bk 0] == $::SC(title)} }
-at [expr {$b + 37.8}] {
+# endless mode: jump to the Ante 8 boss, win it, continue to Ante 9
+key [expr {$b + 38.5}] space
+key [expr {$b + 40.2}] 8
+key [expr {$b + 41.0}] space
+at [expr {$b + 43.0}] { check "ante 8 boss round started" {[bk 0] == $::SC(round) && [bk 2] == 8 && [bk 3] == 2} }
+key [expr {$b + 43.2}] 1
+at [expr {$b + 46.0}] { check "ante 8 boss won -> cash out" {[bk 0] == $::SC(cashout)} }
+key [expr {$b + 46.5}] space
+at [expr {$b + 49.0}] { check "ante 8 cash out -> win screen" {[bk 0] == $::SC(win)} }
+snap [expr {$b + 49.1}] s09_win
+key [expr {$b + 49.5}] space
+at [expr {$b + 51.0}] { check "win -> endless shop at ante 8" {[bk 0] == $::SC(shop) && [bk 2] == 8} }
+key [expr {$b + 51.5}] n
+at [expr {$b + 53.0}] { check "endless: ante 9 small blind" {[bk 0] == $::SC(blind) && [bk 2] == 9 && [bk 3] == 0} }
+snap [expr {$b + 53.1}] s10_endless
+at [expr {$b + 53.5}] {
     set v {}
     for {set i 0} {$i < 11} {incr i} { lappend v [peek [expr {$::env(PERF) + $i}]] }
     puts $::RES "INFO frames per main-loop iteration, worst case per screen (1 = real time): title=[lindex $v 0] blind=[lindex $v 1] round=[lindex $v 2] cashout=[lindex $v 3] shop=[lindex $v 4] pack=[lindex $v 5] info=[lindex $v 6] over=[lindex $v 7]; iterations over budget: [lindex $v 10]"
     flush $::RES
 }
-finish [expr {$b + 38}]
+finish [expr {$b + 54}]

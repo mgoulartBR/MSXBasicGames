@@ -8,7 +8,7 @@ enum { BS_HOOK, BS_OX, BS_WALL, BS_ARM, BS_CLUB, BS_GOAD, BS_WINDOW, BS_HEAD, BS
 enum { HAND_HIGH_CARD, HAND_PAIR, HAND_TWO_PAIR, HAND_THREE, HAND_STRAIGHT, HAND_FLUSH, HAND_FULL_HOUSE, HAND_FOUR, HAND_STRAIGHT_FLUSH, HAND_FIVE, HAND_FLUSH_HOUSE, HAND_FLUSH_FIVE, HAND_COUNT };
 enum { TG_UNCOMMON, TG_RARE, TG_INVESTMENT, TG_BOSS, TG_CHARM, TG_METEOR, TG_BUFFOON, TG_HANDY, TG_GARBAGE, TG_COUPON, TG_JUGGLE, TG_D_SIX, TG_TOP_UP, TG_SKIP, TG_ORBITAL, TG_ECONOMY, TAG_COUNT };
 enum { VC_OVERSTOCK, VC_CLEARANCE_SALE, VC_REROLL_SURPLUS, VC_GRABBER, VC_WASTEFUL, VC_SEED_MONEY, VC_PAINT_BRUSH, VC_TAROT_MERCHANT, VC_PLANET_MERCHANT, VOUCHER_COUNT };
-#define ANTE_COUNT 8
+#define ANTE_COUNT 12
 #define SEG_DESC 21
 
 typedef struct { const char* name; u8 desc; u8 cost; u8 rarity; u8 cell; } JokerDef;       // desc = index into g_Desc (segment 21)
@@ -23,6 +23,6 @@ extern const HandDef  g_Hands[HAND_COUNT];
 extern const BossDef  g_Bosses[BOSS_COUNT];
 extern const TagDef   g_Tags[TAG_COUNT];
 extern const VoucherDef g_Vouchers[VOUCHER_COUNT];
-extern const u16 g_AnteAmount[ANTE_COUNT];
+extern const u32 g_AnteAmount[ANTE_COUNT];
 extern const u8 g_BlindIcon[2];   // small, big icon rows
 #define JOKER_RARITY_COUNT 3

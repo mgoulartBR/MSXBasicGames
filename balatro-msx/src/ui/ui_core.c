@@ -216,7 +216,7 @@ void hud_mini(void) BANKED
 	Vid_Panel(2, 4, 58, 16, COL_SLATE, COL_INK);
 	Vid_Text(6, 8, "$", TC_GOLD); Vid_NumR(57, 8, g.money, g.money < 0 ? TC_RED : TC_GOLD);
 	Vid_Panel(2, 24, 58, 26, COL_SLATE, COL_INK);
-	Vid_Text(6, 26, "Ante", TC_WHITE); Vid_NumR(41, 26, g.ante > MAX_ANTE ? MAX_ANTE : g.ante, TC_GOLD); Vid_Text(42, 26, "/8", TC_SLATE);
+	Vid_Text(6, 26, "Ante", TC_WHITE); Vid_NumR(g.endless ? 37 : 41, 26, g.ante, TC_GOLD); Vid_Text(g.endless ? 38 : 42, 26, g.endless ? "/12" : "/8", TC_SLATE);
 	Vid_Text(6, 37, g.blind == BLIND_SMALL ? "Small" : (g.blind == BLIND_BIG ? "Big" : "Boss"), TC_WHITE);
 	if (g.nTags)
 	{

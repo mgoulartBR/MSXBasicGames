@@ -43,6 +43,7 @@ typedef u8 Card;
 #define START_REROLL     5
 #define INTEREST_CAP     25            // dollars; interest = $1 per $5 up to this
 #define MAX_ANTE         8
+#define END_ANTE         12                  // endless mode stops here (u32 chips)
 
 //-----------------------------------------------------------------------------
 // Poker hand evaluation (poker.c)
@@ -170,6 +171,7 @@ typedef struct
 	i8   handSizeMod;                // current additional hand size (jokers/boss)
 	u8   mouthHand, mostPlayed;      // boss helpers (0xFF = none)
 	u8   bossOff;                    // boss disabled
+	u8   endless;                    // continued past the Ante 8 win
 	// ---- shop ----
 	u8   shopType[SHOP_CARD_MAX];    // 0 empty, 1 joker, 2 planet, 3 tarot
 	u8   shopId[SHOP_CARD_MAX];

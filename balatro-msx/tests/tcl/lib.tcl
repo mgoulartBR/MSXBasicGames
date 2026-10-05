@@ -13,7 +13,7 @@ proc key {t name} {
         space {press $t 8 0}  return {press $t 7 7}  esc {press $t 7 2}
         left  {press $t 8 4}  up {press $t 8 5}  down {press $t 8 6}  right {press $t 8 7}
         6 {press $t 0 6}  7 {press $t 0 7}  1 {press $t 0 1}  2 {press $t 0 2}  3 {press $t 0 3}  4 {press $t 0 4}  5 {press $t 0 5}
-        p {press $t 4 5}  d {press $t 3 1}  s {press $t 5 0}  i {press $t 3 6}  n {press $t 4 3}
+        8 {press $t 1 0}  p {press $t 4 5}  d {press $t 3 1}  s {press $t 5 0}  i {press $t 3 6}  n {press $t 4 3}
     }
 }
 proc snap {t name} { at $t "screenshot -raw -doublesize $::env(SHOT_OUT)/$name.png" }

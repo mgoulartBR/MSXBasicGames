@@ -181,6 +181,6 @@ const VoucherDef g_Vouchers[VOUCHER_COUNT] = {
 	{ "Tarot Merchant", 152, CELL_VOUCHER + 7 },
 	{ "Planet Merchant", 153, CELL_VOUCHER + 8 },
 };
-const u16 g_AnteAmount[ANTE_COUNT] = { 300, 800, 2000, 5000, 11000, 20000, 35000, 50000 };
+const u32 g_AnteAmount[ANTE_COUNT] = { 300UL, 800UL, 2000UL, 5000UL, 11000UL, 20000UL, 35000UL, 50000UL, 110000UL, 560000UL, 7200000UL, 300000000UL };
 const u8 g_BlindIcon[2] = { 0, 1 };
 #include "ui/ui_text.c"

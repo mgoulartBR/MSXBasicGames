@@ -52,7 +52,7 @@ void run_new(void) BANKED
 //-----------------------------------------------------------------------------
 u32 blind_target(void) BANKED
 {
-	u32 a = g_AnteAmount[g.ante - 1];
+	u32 a = g_AnteAmount[(g.ante > END_ANTE ? END_ANTE : g.ante) - 1];
 	if (g.blind == BLIND_SMALL) return a;
 	if (g.blind == BLIND_BIG) return a * 3 / 2;
 	return a * g_Bosses[g.boss].mult2 / 2;
@@ -342,7 +342,7 @@ void next_blind(void) BANKED
 	{
 		g.ante++; g.blind = BLIND_SMALL;
 		for (u8 s = 0; s < g.nDeck; s++) g.dflag[s] &= (u8)~DF_PILLAR;
-		if (g.ante <= MAX_ANTE) { g.boss = bosses_for_ante(g.ante); tags_new_ante(); voucher_new_ante(); }
+		if (g.ante <= END_ANTE) { g.boss = bosses_for_ante(g.ante); tags_new_ante(); voucher_new_ante(); }
 	}
 	else g.blind++;
 }

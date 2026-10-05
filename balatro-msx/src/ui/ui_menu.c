@@ -88,6 +88,11 @@ static void debug_keys(void)
 	if (down & 0x08) g.money += 50;
 	if (down & 0x10) { cons_add(CONS_PLANET(rndn(HAND_COUNT))); cons_add(CONS_TAROT(rndn(TAROT_COUNT))); }
 	if ((down & 0x20) && ui.screen == SC_ROUND) { g.state = ROUND_LOST; ui_goto(SC_OVER); }
+	{                                                           // 8 = jump to the Ante 8 boss blind (endless-mode test)
+		static u8 held1;
+		u8 n1 = (u8)~Keyboard_Read(1), d1 = (u8)(n1 & ~held1); held1 = n1;
+		if ((d1 & 0x01) && ui.screen == SC_BLIND) { g.ante = 8; g.blind = BLIND_BOSS; g.boss = BS_FINAL_VESSEL; ui_goto(SC_BLIND); }
+	}
 	if (down & 0x1E) ui.dirty |= D_ALL;
 	// 6 = teleport the pointer to the centre of the next widget (exercises hover/hit-testing), 7 = left click there,
 	// 8 = right click.  The real MSX mouse protocol is tested separately with xdotool (tests/mouse_test.sh).
@@ -316,7 +321,7 @@ void scr_win(void) BANKED
 {
 	Vid_Clear(COL_FELT);
 	Vid_TextC(128, 40, "YOU WIN!", TC_GOLD);
-	Vid_TextC(128, 64, "You beat the Ante 8 Boss Blind.", TC_WHITE);
+	Vid_TextC(128, 64, g.endless ? "You beat the Ante 12 Boss Blind." : "You beat the Ante 8 Boss Blind.", TC_WHITE);
 	Vid_Text(76, 100, "Money", TC_SLATE); Vid_Num(160, 100, g.money, TC_GOLD);
 	Vid_Text(76, 112, "Jokers", TC_SLATE); Vid_Num(160, 112, g.nJk, TC_WHITE);
 	for (u8 i = 0; i < g.nJk; i++) Vid_Card(g_Jokers[g.jk[i].id].cell, 62 + i * 28, 134);
@@ -329,7 +334,18 @@ void upd_over(void) BANKED
 	if ((ui.timer & 31) == 0 || ui.timer == 1)
 	{
 		Vid_Fill(40, 174, 176, 11, COL_FELT);
-		if (!(ui.timer & 32)) Vid_TextC(128, 175, "Press SPACE or click", TC_WHITE);
+		if (!(ui.timer & 32)) Vid_TextC(128, 175, ui.screen == SC_WIN && !g.endless ? "SPACE / click: endless to Ante 12" : "Press SPACE or click", TC_WHITE);
+	}
+	if (ui.screen == SC_WIN && !g.endless)
+	{
+		if ((ui.timer & 31) == 0 || ui.timer == 1)
+		{
+			Vid_Fill(40, 186, 176, 11, COL_FELT);
+			Vid_TextC(128, 187, "ESC / right click: title", TC_SLATE);
+		}
+		if (ui.timer > 20 && (in.pressed & IN_OK)) { g.endless = 1; shop_generate(); ui_goto(SC_SHOP); return; }
+		if (ui.timer > 20 && (in.pressed & IN_BACK)) ui_goto(SC_TITLE);
+		return;
 	}
 	if (ui.timer > 20 && (in.pressed & (IN_OK | IN_BACK))) ui_goto(SC_TITLE);
 }
