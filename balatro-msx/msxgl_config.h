@@ -109,7 +109,7 @@
 // - VDP_ISR_SAFE_NONE ............ No ISR protection (for program not using VDP interruption)
 // - VDP_ISR_SAFE_DEFAULT ......... Protect only VDP register pair writing (default behavior; ISR can read/write registers but VRAM ones)
 // - VDP_ISR_SAFE_ALL ............. Protect all VDP writing process
-#define VDP_ISR_SAFE_MODE			VDP_ISR_SAFE_DEFAULT
+#define VDP_ISR_SAFE_MODE			VDP_ISR_SAFE_ALL
 
 // Initial screen mode setting
 // - VDP_INIT_OFF ................. Force option to be disable

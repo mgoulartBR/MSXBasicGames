@@ -92,7 +92,7 @@ static void debug_keys(void)
 	{                                                           // 8 = jump to the Ante 8 boss blind (endless-mode test)
 		static u8 held1;
 		u8 n1 = (u8)~Keyboard_Read(1), d1 = (u8)(n1 & ~held1); held1 = n1;
-		if ((d1 & 0x04) && ui.screen == SC_ROUND) { static u8 hi; joker_add((u8)(JOKER_COUNT - 1 - hi++)); ui.dirty |= D_JOKERS; }   // - = the newest Jokers (art streamed from the last segments)
+		if ((d1 & 0x04) && ui.screen == SC_ROUND) { static u8 hi; static const u8 ids[5] = { 148, 147, 146, 145, 144 }; joker_add(ids[hi++ % 5]); ui.dirty |= D_JOKERS; }   // - = the newest Jokers (art streamed from the last segments)
 		if ((d1 & 0x02) && ui.screen == SC_ROUND)              // 9 = random enhancements / editions / seals on the hand
 		{
 			for (u8 i = 0; i < g.nHand; i++)

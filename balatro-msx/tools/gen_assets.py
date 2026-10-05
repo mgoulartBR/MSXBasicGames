@@ -248,11 +248,15 @@ for i, k in enumerate(BLIND_ORDER):
 assert len(BLIND_ORDER) * 16 <= ATLAS_LINES
 
 # --------------------------------------------------------------- previews ----
+_jsheet = np.zeros((((len(joker_cells) + 14) // 15) * OUT_H, 15 * OUT_W), dtype=np.uint8)
+for _i, _c in enumerate(joker_cells): _jsheet[(_i // 15) * OUT_H:(_i // 15 + 1) * OUT_H, (_i % 15) * OUT_W:(_i % 15 + 1) * OUT_W] = _c
+_jrender = _jsheet
 def render(idx, scale=3):
     rgb = np.array([to8(c) for c in PAL], dtype=np.uint8)
     im = Image.fromarray(rgb[idx], 'RGB')
     return im.resize((im.width * scale, im.height * scale), Image.NEAREST)
 render(atlas[:, :]).save(os.path.join(PREVIEW, 'atlas.png'))
+render(_jrender, 2).save(os.path.join(PREVIEW, 'jokers.png'))
 
 # ------------------------------------------------------------------ tags -----
 tg = load('tags.png')
