@@ -249,6 +249,9 @@ for code in range(32, 127):
     dr = ImageDraw.Draw(im); dr.fontmode = '1'          # 1-bit rasterisation: exact pixel font, no anti-alias mush
     dr.text((0, 0), ch, font=font, fill=255)
     a = np.asarray(im) > 127
+    if ch == ',':                                             # blank in this font at 11 px: reuse the tail of ';'
+        im2 = Image.new('L', (12, 14), 0); d2 = ImageDraw.Draw(im2); d2.fontmode = '1'; d2.text((0, 0), ';', font=font, fill=255)
+        a = np.asarray(im2) > 127; a[:8] = False
     cols = np.where(a.any(0))[0]
     width = int(cols.max()) + 2 if len(cols) else 3          # ink + 1px spacing
     if ch == ' ': width = 3
