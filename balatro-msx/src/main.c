@@ -7,7 +7,7 @@
 
 #ifdef SELFTEST
 extern void run_all_cases(void) __banked;
-extern volatile u8 g_selftest[10];
+extern volatile u8 g_selftest[24];
 extern void selftest_clear(void) __banked;
 #endif
 

@@ -109,12 +109,15 @@ void Vid_Card(u8 cell, u8 x, u8 y)        // HMMM (x even): ~2.3x faster than th
 	VDP_CommandHMMM(sx, sy, x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
 }
 
+extern const u8 g_JokerSeg[]; extern const u16 g_JokerOff[];
 void Vid_Joker(u8 id, u8 x, u8 y)
 {
-	static const u8 segs[] = GFX_JOKER_SEG_LIST;
-	SET_BANK_SEGMENT(3, segs[id / GFX_JOKER_PER_SEG]);
-	VDP_CommandHMMC((const u8*)0xA000 + (u16)(id % GFX_JOKER_PER_SEG) * (GFX_CELL_W * GFX_CELL_H / 2), x & 0xFE, y, GFX_CELL_W, GFX_CELL_H);
+	x &= 0xFE;
+	SET_BANK_SEGMENT(3, g_JokerSeg[id]);
+	VDP_CommandHMMC((const u8*)(0xA000 + g_JokerOff[id]), x, y + 1, GFX_CELL_W, GFX_CELL_H - 2);
 	SET_BANK_SEGMENT(3, SEG_TEXT);
+	Vid_Fill(x, y, GFX_CELL_W, 1, COL_SLATE);                   // the card's top and bottom border rows
+	Vid_Fill(x, y + GFX_CELL_H - 1, GFX_CELL_W, 1, COL_SLATE);
 }
 
 void Vid_EdStripe(u8 ed, u8 x, u8 y)
@@ -212,11 +215,11 @@ u8 Vid_Wrap(u8 x, u8 y, const char* s, u8 maxw, u8 tc, u8 maxLines)
 	return (u8)(line + 1);
 }
 
-extern const char* const g_Desc[];
+extern const char* const g_Desc[], * const g_Desc2[];
 u8 Vid_WrapDesc(u8 desc, u8 x, u8 y, u8 maxw, u8 tc, u8 maxLines)
 {
-	SET_BANK_SEGMENT(3, SEG_DESC);
-	u8 n = Vid_Wrap(x, y, g_Desc[desc], maxw, tc, maxLines);
+	SET_BANK_SEGMENT(3, desc < DESC_SPLIT ? SEG_DESC : SEG_DESC2);
+	u8 n = Vid_Wrap(x, y, desc < DESC_SPLIT ? g_Desc[desc] : g_Desc2[desc - DESC_SPLIT], maxw, tc, maxLines);
 	SET_BANK_SEGMENT(3, SEG_TEXT);
 	return n;
 }

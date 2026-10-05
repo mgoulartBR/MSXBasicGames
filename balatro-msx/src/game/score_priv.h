@@ -38,7 +38,12 @@ static bool suit_is(Card c, u8 s)
 
 #define CONTAINS(h) ((ct >> (h)) & 1)
 
+extern u8 g_blueSrc;                      // popup source while a Blueprint / Brainstorm copy is being evaluated (0xFF = none)
+extern u8 g_curSlot;                      // deck slot of the card being scored (Hiker)
+#define SRCJ(ji) (g_blueSrc != 0xFF ? g_blueSrc : SRC_JOKER(ji))
+
 void joker_on_card(SC* s, u8 ji, Card c, bool firstFace) BANKED;
 void joker_on_held(SC* s, u8 ji, u8 hi, u8 lowestIdx) BANKED;
 void joker_main(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 mask) BANKED;
-void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 mask) BANKED;
+void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, Card* pc, u8 mask) BANKED;
+void joker_after(SC* s, u8 ji) BANKED;

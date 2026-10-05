@@ -68,7 +68,7 @@ bool joker_add(u8 id) BANKED
 {
 	if (g.nJk >= joker_slots()) return FALSE;
 	JokerInst* j = &g.jk[g.nJk++];
-	j->id = id; j->flags = 0; j->v = 0; j->sell = 0; j->ed = ED_NONE;
+	j->id = id; j->flags = 0; j->v = 0; j->sell = 0; j->ed = ED_NONE; j->aux = 0;
 	switch (id)
 	{
 		case JK_ICE_CREAM:     j->v = 100; break;
@@ -78,6 +78,12 @@ bool joker_add(u8 id) BANKED
 		case JK_TURTLE_BEAN:   j->v = 5; break;
 		case JK_ROCKET:        j->v = 1; break;
 		case JK_TODO_LIST:     j->v = rndn(9); break;       // a non-secret hand type
+		case JK_HOLOGRAM: case JK_VAMPIRE: case JK_OBELISK: case JK_LUCKY_CAT: case JK_GLASS: case JK_CAINO: case JK_YORICK:
+		case JK_MADNESS: case JK_HIT_THE_ROAD: case JK_CAMPFIRE: j->v = 100; break;      // X1.00 to start
+		case JK_SELZER:        j->v = 10; break;
+		case JK_ANCIENT: case JK_CASTLE: j->aux = rndn(4); break;
+		case JK_IDOL:          j->aux = (u8)CARD(rndn(4), rndn(13)); break;
+		case JK_MAIL:          j->aux = rndn(13); break;
 	}
 	joker_recalc_modifiers();
 	return TRUE;

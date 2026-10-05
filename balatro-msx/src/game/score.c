@@ -1,6 +1,19 @@
 // Playing a hand: poker evaluation, boss rules and card/edition effects (the per-joker phases live in score_jk.c).
 #include "score_priv.h"
 
+// Blueprint / Brainstorm: index of the Joker whose ability the Joker at i uses (0xFF = no target)
+static u8 eff_index(u8 i)
+{
+	for (u8 guard = 0; guard < 8; guard++)
+	{
+		u8 id = g.jk[i].id;
+		if (id == JK_BLUEPRINT) { if (i + 1 >= g.nJk) return 0xFF; i++; }
+		else if (id == JK_BRAINSTORM) { if (i == 0) return 0xFF; i = 0; }
+		else return (g.jk[i].flags & JF_DEBUFF) ? 0xFF : i;
+	}
+	return 0xFF;
+}
+
 u8 poker_rules(void) BANKED
 {
 	u8 r = 0;
@@ -39,6 +52,36 @@ bool card_is_debuffed(u8 slot) BANKED
 
 u32 hand_chips(u8 t) BANKED { return (u32)g_Hands[t].baseChips + (u32)g_Hands[t].lvlChips * (g.handLevel[t] - 1); }
 u16 hand_mult(u8 t) BANKED { return (u16)(g_Hands[t].baseMult + g_Hands[t].lvlMult * (g.handLevel[t] - 1)); }
+
+// extra repetitions of a scoring card granted by Jokers (Hack, Hanging Chad, Sock and Buskin, Seltzer, Dusk; Blueprint copies them)
+static u8 joker_retriggers(u8 k, Card c, u8 firstScoring)
+{
+	u8 n = 0, id = C_ID(c);
+	bool face = card_is_face(c);
+	if (C_ENH(c) == ENH_STONE) id = 0;
+	for (u8 i = 0; i < g.nJk; i++)
+	{
+		u8 t = eff_index(i);
+		if (t == 0xFF) continue;
+		switch (g.jk[t].id)
+		{
+			case JK_HACK: if (id >= 2 && id <= 5) n++; break;
+			case JK_HANGING_CHAD: if (k == firstScoring) n += 2; break;
+			case JK_SOCK_AND_BUSKIN: if (face) n++; break;
+			case JK_SELZER: n++; break;
+			case JK_DUSK: if (g.handsLeft == 0) n++; break;
+		}
+	}
+	return n;
+}
+
+static void lucky_cat(void) { for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_LUCKY_CAT) g.jk[i].v += 25; }
+
+static void matador(SC* s)                                      // Boss Blind ability triggered
+{
+	for (u8 i = 0; i < g.nJk; i++)
+		if (eff_index(i) != 0xFF && g.jk[eff_index(i)].id == JK_MATADOR) add_money(s, SRC_JOKER(i), 8);
+}
 
 // ---------------------------------------------------------------------------
 // round_play: removes the highlighted cards from the hand and scores them
@@ -83,6 +126,7 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 	// Blind: press_play (The Hook, The Tooth)
 	if (bossActive(BS_HOOK))
 	{
+		matador(&s);
 		for (u8 k = 0; k < 2 && g.nHand > 0; k++)
 		{
 			u8 r = rndn(g.nHand);
@@ -98,12 +142,13 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 		if (g.boss == BS_PSYCHIC && np < 5) dbf = TRUE;
 		if (g.boss == BS_EYE) { if (g.eyeMask & (1u << type)) dbf = TRUE; else g.eyeMask |= (u16)(1u << type); }
 		if (g.boss == BS_MOUTH) { if (g.mouthHand != 0xFF && g.mouthHand != type) dbf = TRUE; else g.mouthHand = type; }
-		if (g.boss == BS_ARM && g.handLevel[type] > 1) { g.handLevel[type]--; dbf = FALSE; }
-		if (g.boss == BS_OX && type == g.mostPlayed) { g.money = 0; push(&s, EV_MONEY, SRC_NONE, 0); }
-		if (g.boss == BS_TOOTH) { g.money -= np; push(&s, EV_MONEY, SRC_NONE, (i16)-np); }
+		if (g.boss == BS_ARM && g.handLevel[type] > 1) { g.handLevel[type]--; dbf = FALSE; matador(&s); }
+		if (g.boss == BS_OX && type == g.mostPlayed) { g.money = 0; push(&s, EV_MONEY, SRC_NONE, 0); matador(&s); }
+		if (g.boss == BS_TOOTH) { g.money -= np; push(&s, EV_MONEY, SRC_NONE, (i16)-np); matador(&s); }
 	}
 	if (dbf)
 	{
+		matador(&s);
 		o->debuffed = 1;
 		s.chips = 0; s.mult = 0; push(&s, EV_DEBUFF, SRC_NONE, 0);
 		return;
@@ -124,17 +169,22 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 	u8 firstFace = 0xFF;
 	for (u8 k = 0; k < np; k++) if ((mask & (1 << k)) && card_is_face(pc[k])) { firstFace = k; break; }
 
+	u8 firstScoring = 0xFF;
+	for (u8 k = 0; k < np; k++) if (mask & (1 << k)) { firstScoring = k; break; }
+
 	// scored cards
 	for (u8 k = 0; k < np; k++)
 	{
 		if (!(mask & (1 << k))) continue;
 		if (card_is_debuffed(g.played[k])) { push(&s, EV_DEBUFF, SRC_PLAY(k), 0); continue; }
-		for (u8 rep = 0; rep < 1 + (C_SEAL(pc[k]) == SEAL_RED); rep++)       // Red Seal: the card scores twice
+		u8 reps = (u8)(1 + (C_SEAL(pc[k]) == SEAL_RED) + joker_retriggers(k, pc[k], firstScoring));
+		g_curSlot = g.played[k];
+		for (u8 rep = 0; rep < reps; rep++)       // Red Seal and retrigger Jokers: the card scores again
 		{
 			Card c = pc[k]; u8 enh = C_ENH(c), ed = C_ED(c), src = SRC_PLAY(k);
 			u8 nom = (enh == ENH_STONE) ? 0 : (u8)C_NOMINAL(c);
-			s.chips += nom;
-			push(&s, EV_CARD, src, nom);
+			s.chips += nom + g.dbonus[g.played[k]];
+			push(&s, EV_CARD, src, (i16)(nom + g.dbonus[g.played[k]]));
 			if (rep) text(&s, src, TX_AGAIN);
 			switch (enh)
 			{
@@ -143,8 +193,8 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 				case ENH_MULT:  add_mult(&s, src, 4); break;
 				case ENH_GLASS: x_mult(&s, src, 200); break;
 				case ENH_LUCKY:
-					if (rnd_odds(5)) add_mult(&s, src, 20);
-					if (rnd_odds(15)) add_money(&s, src, 20);
+					if (rnd_odds(5)) { add_mult(&s, src, 20); lucky_cat(); }
+					if (rnd_odds(15)) { add_money(&s, src, 20); lucky_cat(); }
 					break;
 			}
 			if (C_SEAL(c) == SEAL_GOLD) add_money(&s, src, 3);
@@ -152,7 +202,13 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 			else if (ed == ED_HOLO) add_mult(&s, src, 10);
 			else if (ed == ED_POLY) x_mult(&s, src, 150);
 			for (u8 i = 0; i < g.nJk; i++)
-				if (!(g.jk[i].flags & JF_DEBUFF)) joker_on_card(&s, i, c, k == firstFace);
+			{
+				u8 t = eff_index(i);
+				if (t == 0xFF) continue;
+				g_blueSrc = (t != i) ? SRC_JOKER(i) : 0xFF;
+				joker_on_card(&s, t, c, k == firstFace);
+			}
+			g_blueSrc = 0xFF;
 		}
 		if (C_ENH(pc[k]) == ENH_GLASS && rnd_odds(4)) g.dflag[g.played[k]] |= DF_BREAK;   // shatters after scoring
 	}
@@ -164,22 +220,42 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 		u8 id = C_ID(g.deck[g.hand[h]]);
 		if (lowId >= id) { lowId = id; lowest = h; }
 	}
+	u8 mimes = 0;
+	for (u8 i = 0; i < g.nJk; i++) { u8 t = eff_index(i); if (t != 0xFF && g.jk[t].id == JK_MIME) mimes++; }
 	for (u8 h = 0; h < g.nHand; h++)
-	{
-		if (C_ENH(g.deck[g.hand[h]]) == ENH_STEEL && !card_is_debuffed(g.hand[h])) x_mult(&s, SRC_HELD(h), 150);
-		for (u8 i = 0; i < g.nJk; i++)
-			if (!(g.jk[i].flags & JF_DEBUFF)) joker_on_held(&s, i, h, lowest);
-	}
+		for (u8 rep = 0; rep <= mimes; rep++)                       // Mime retriggers cards held in hand
+		{
+			if (C_ENH(g.deck[g.hand[h]]) == ENH_STEEL && !card_is_debuffed(g.hand[h])) x_mult(&s, SRC_HELD(h), 150);
+			for (u8 i = 0; i < g.nJk; i++)
+			{
+				u8 t = eff_index(i);
+				if (t == 0xFF) continue;
+				g_blueSrc = (t != i) ? SRC_JOKER(i) : 0xFF;
+				joker_on_held(&s, t, h, lowest);
+			}
+			g_blueSrc = 0xFF;
+		}
 
 	// jokers, left to right
 	for (u8 i = 0; i < g.nJk; i++)
 		if (!(g.jk[i].flags & JF_DEBUFF))
 		{
-			u8 ed = g.jk[i].ed;                                   // joker editions: Foil/Holo before the effect, Polychrome after
+			u8 ed = g.jk[i].ed, t = eff_index(i);                 // joker editions: Foil/Holo before the effect, Polychrome after
 			if (ed == ED_FOIL) add_chips(&s, SRC_JOKER(i), 50);
 			else if (ed == ED_HOLO) add_mult(&s, SRC_JOKER(i), 10);
-			joker_main(&s, i, ct, type, np, pc, mask);
+			if (t != 0xFF)
+			{
+				g_blueSrc = (t != i) ? SRC_JOKER(i) : 0xFF;
+				joker_main(&s, t, ct, type, np, pc, mask);
+				g_blueSrc = 0xFF;
+			}
 			if (ed == ED_POLY) x_mult(&s, SRC_JOKER(i), 150);
+			if (g_Jokers[g.jk[i].id].rarity == 2)                  // Baseball Card: each Uncommon Joker gives X1.5 more
+				for (u8 b = 0; b < g.nJk; b++)
+				{
+					u8 tb = eff_index(b);
+					if (b != i && tb != 0xFF && g.jk[tb].id == JK_BASEBALL) x_mult(&s, SRC_JOKER(b), 150);
+				}
 		}
 
 	// result: chips x mult (split to stay in 32 bits)
@@ -190,6 +266,7 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 	// after-scoring joker phase
 	for (u8 i = 0; i < g.nJk; i++)
 	{
+		if (!(g.jk[i].flags & JF_DEBUFF)) joker_after(&s, i);
 		if (g.jk[i].id == JK_ICE_CREAM)
 		{
 			g.jk[i].v -= 5;

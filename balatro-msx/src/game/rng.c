@@ -18,4 +18,10 @@ u8 rnd8(void) { return (u8)(rnd16() >> 8); }
 // uniform-ish 0..n-1 (n <= 255): multiply-shift, no division
 u8 rndn(u8 n) { return (u8)(((u16)rnd8() * n) >> 8); }
 
-bool rnd_odds(u8 n) { return rndn(n) == 0; }
+// Oops! All 6s doubles every listed probability (once per copy)
+bool rnd_odds(u8 n)
+{
+	u8 k = joker_count(JK_OOPS), m = 1;
+	while (k-- && m < 128) m <<= 1;
+	return rndn(n) < m;
+}

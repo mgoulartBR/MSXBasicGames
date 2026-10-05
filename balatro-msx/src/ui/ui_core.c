@@ -266,9 +266,19 @@ static void info_card(Card c)
 	}
 }
 
-static void info_jokerdef(const JokerDef* d, i8 sell, u8 price)
+static void info_jokerdef(const JokerDef* d, i8 sell, u8 price, const JokerInst* j)
 {
 	Vid_Text(AREA_X + 6, INFO_Y + 3, d->name, TC_GOLD);
+	if (j && (j->id == JK_ANCIENT || j->id == JK_CASTLE || j->id == JK_IDOL || j->id == JK_MAIL))      // this round's target
+	{
+		static const char rs[13] = { '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A' };
+		char tb[16]; u8 n = 0;
+		if (j->id == JK_MAIL) tb[n++] = rs[j->aux];
+		else if (j->id == JK_IDOL) { tb[n++] = rs[C_RANK(j->aux)]; tb[n++] = ' '; tb[n++] = 'o'; tb[n++] = 'f'; tb[n++] = ' '; }
+		if (j->id != JK_MAIL) { const char* p = k_suit[j->id == JK_IDOL ? C_SUIT(j->aux) : j->aux]; while (*p) tb[n++] = *p++; }
+		tb[n] = 0;
+		Vid_Text(AREA_X + 6 + Vid_TextW(d->name) + 6, INFO_Y + 3, tb, TC_BLUE);
+	}
 	if (sell >= 0) info_price("Sell", (u8)sell);
 	else if (price) info_price("Cost", price);
 	Vid_WrapDesc(d->desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
@@ -324,7 +334,7 @@ void info_show(u8 id) BANKED
 		u8 i = id - W_HAND;
 		if (i < g.nHand) { if (g.dflag[g.hand[i]] & DF_FD) info_text("Face down card", 0); else info_card(g.deck[g.hand[i]]); }
 	}
-	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0); else info_text("Empty Joker slot", 0); }
+	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0, &g.jk[i]); else info_text("Empty Joker slot", 0); }
 	else if (id < W_PLAY) { u8 i = id - W_CONS; if (g.cons[i]) info_cons(g.cons[i], 0); else info_text("Empty consumable slot", 0); }
 	else switch (id)
 	{
@@ -341,7 +351,7 @@ void info_show(u8 id) BANKED
 			if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 			{
 				u8 i = id - W_SHOPCARD;
-				if (g.shopType[i] == 1) info_jokerdef(&g_Jokers[g.shopId[i]], -1, g_Jokers[g.shopId[i]].cost);
+				if (g.shopType[i] == 1) info_jokerdef(&g_Jokers[g.shopId[i]], -1, g_Jokers[g.shopId[i]].cost, 0);
 				else if (g.shopType[i] == 2) { info_planet(g.shopId[i], FALSE); info_price("Cost", 3); }
 				else if (g.shopType[i] == 3) info_cons(CONS_TAROT(g.shopId[i]), 3);
 				else info_text("Sold out", 0);
@@ -376,7 +386,7 @@ void info_show(u8 id) BANKED
 			else if (id >= W_PACKCARD && id < W_PACKCARD + PACK_CARD_MAX)
 			{
 				u8 i = id - W_PACKCARD;
-				if (g_packType[i] == 1) info_jokerdef(&g_Jokers[g_packId[i]], -1, 0);
+				if (g_packType[i] == 1) info_jokerdef(&g_Jokers[g_packId[i]], -1, 0, 0);
 				else if (g_packType[i] == 2) info_planet(g_packId[i], FALSE);
 				else if (g_packType[i] == 3) info_cons(CONS_TAROT(g_packId[i]), 0);
 				else if (g_packType[i] == 4) info_card(g_packCard[i]);

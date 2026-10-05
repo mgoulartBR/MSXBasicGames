@@ -14,7 +14,7 @@ static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } r
 //-----------------------------------------------------------------------------
 // random generators
 //-----------------------------------------------------------------------------
-static i8 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
+static i16 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
 {
 	u8 roll = rnd8();
 	u8 rarity = forced ? forced : (roll > 242 ? 3 : (roll > 178 ? 2 : 1));
@@ -24,14 +24,22 @@ static i8 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
 		for (u8 i = 0; i < JOKER_COUNT; i++)
 		{
 			if (pass == 0 && g_Jokers[i].rarity != rarity) continue;
-			if (joker_has(i) || (avoidMask[i >> 3] & (1 << (i & 7)))) continue;
+			if ((joker_has(i) && !joker_has(JK_RING_MASTER)) || (avoidMask[i >> 3] & (1 << (i & 7)))) continue;
 			cand[n++] = i;
 		}
-		if (n) return (i8)cand[rndn(n)];
+		if (n) return (i16)cand[rndn(n)];
 	}
 	return -1;
 }
-static i8 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8]) { return random_joker_r(avoidMask, 0); }
+static i16 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8]) { return random_joker_r(avoidMask, 0); }
+
+bool joker_random_add(u8 rarity) BANKED
+{
+	if (g.nJk >= joker_slots()) return FALSE;
+	u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
+	i16 j = random_joker_r(none, rarity);
+	return j >= 0 && joker_add((u8)j);
+}
 
 static u8 random_planet(void)
 {
@@ -56,13 +64,15 @@ u8 cons_sell_value(u8 c) BANKED { (void)c; return 1; }
 
 void cons_sell(u8 slot) BANKED
 {
-	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); g.cons[slot] = 0; }
+	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); g.cons[slot] = 0; joker_sold(0); }
 }
 
 void joker_sell(u8 idx) BANKED
 {
+	JokerInst sold = g.jk[idx];
 	g.money += joker_sell_value(idx);
 	joker_remove(idx);
+	joker_sold(&sold);
 	if (g.blind == BLIND_BOSS && g.boss == BS_FINAL_LEAF) g.bossOff = 1;
 }
 
@@ -109,14 +119,9 @@ static void destroy_random_in_hand(void)
 {
 	if (!g.nHand) return;
 	u8 i = rndn(g.nHand);
-	g.loc[g.hand[i]] = LOC_GONE; hand_remove(i);
+	card_destroyed(g.deck[g.hand[i]]); g.loc[g.hand[i]] = LOC_GONE; hand_remove(i);
 }
-static void add_to_hand(Card c)
-{
-	if (g.nDeck >= DECK_MAX || g.nHand >= HAND_MAX) return;
-	u8 slot = g.nDeck++;
-	g.deck[slot] = c; g.dflag[slot] = 0; g.loc[slot] = LOC_HAND; g.hand[g.nHand++] = slot;
-}
+static void add_to_hand(Card c) { deck_add(c, TRUE); }
 static Card enhanced(u8 rank) { return C_SETENH(CARD(rndn(4), rank), 1 + rndn(ENH_COUNT - 1)); }
 
 // Spectral cards (Soul and Ectoplasm are not in this port: no legendary Jokers / no Negative edition)
@@ -130,7 +135,7 @@ static bool spectral_use(u8 slot, u8 t, u16 sel)
 		{
 			if (g.nJk >= joker_slots()) return FALSE;
 			u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
-			i8 j = random_joker_r(none, 3);
+			i16 j = random_joker_r(none, 3);
 			if (j < 0) return FALSE;
 			g.cons[slot] = 0; joker_add((u8)j); g.money = 0;
 			return TRUE;
@@ -146,6 +151,10 @@ static bool spectral_use(u8 slot, u8 t, u16 sel)
 			joker_recalc_modifiers();
 			return TRUE;
 		}
+		case SP_SOUL:
+			if (!joker_random_add(4)) return FALSE;
+			g.cons[slot] = 0;
+			return TRUE;
 		case SP_BLACK_HOLE:
 			g.cons[slot] = 0;
 			for (u8 h = 0; h < HAND_COUNT; h++) g.handLevel[h]++;
@@ -202,6 +211,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 	if (t == TR_JUDGEMENT && g.nJk >= joker_slots()) return FALSE;
 	if (t == TR_FOOL && (g.lastCons == 0 || g.lastCons == c)) return FALSE;
 	g.cons[slot] = 0;                         // the card is spent first: it frees its slot for the ones it creates
+	if (g.tarotsUsed < 255) g.tarotsUsed++;   // Fortune Teller counts every Tarot used
 	switch (t)
 	{
 		case TR_FOOL: cons_add(g.lastCons); break;
@@ -218,7 +228,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 		case TR_JUDGEMENT:
 		{
 			u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
-			i8 j = random_joker(none);
+			i16 j = random_joker(none);
 			if (j >= 0) joker_add((u8)j);
 			break;
 		}
@@ -232,7 +242,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 			break;
 		case TR_HANGED_MAN:
 			for (i8 i = (i8)g.nHand - 1; i >= 0; i--)
-				if (sel & (1u << i)) { g.loc[g.hand[i]] = LOC_GONE; hand_remove((u8)i); }
+				if (sel & (1u << i)) { card_destroyed(g.deck[g.hand[i]]); g.loc[g.hand[i]] = LOC_GONE; hand_remove((u8)i); }
 			break;
 		case TR_DEATH:
 		{
@@ -292,7 +302,7 @@ static void roll_slot(u8 i, u8* avoid)
 	g.shopType[i] = 0;
 	if (r < 200)
 	{
-		i8 j = random_joker(avoid);
+		i16 j = random_joker(avoid);
 		if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; avoid[j >> 3] |= (u8)(1 << (j & 7)); }
 	}
 	else if (r < 200 + wt) { g.shopType[i] = ST_TAROT; g.shopId[i] = random_tarot(); }
@@ -343,6 +353,7 @@ void shop_generate(void) BANKED
 {
 	g.rerollCost = g.rerollBase;
 	g.freeMask = 0; g.freePacks = 0;
+	g.shopFlags = joker_has(JK_CHAOS) ? SF_CHAOS : 0;                // Chaos the Clown: the first reroll is free
 	shop_roll_cards();
 	for (u8 i = 0; i < 2; i++)
 	{
@@ -359,12 +370,13 @@ u8 shop_cost(u8 i) BANKED
 	switch (g.shopType[i])
 	{
 		case ST_JOKER: return discounted(g_Jokers[g.shopId[i]].cost);
-		case ST_PLANET: case ST_TAROT: return discounted(3);
+		case ST_PLANET: return joker_has(JK_ASTRONOMER) ? 0 : discounted(3);
+		case ST_TAROT: return discounted(3);
 	}
 	return 0;
 }
 
-u8 pack_cost(u8 kind) BANKED { u8 sz = (u8)((kind - 1) % 3); return discounted((u8)(4 + 2 * sz)); }
+u8 pack_cost(u8 kind) BANKED { u8 sz = (u8)((kind - 1) % 3); if ((kind - 1) / 3 == 1 && joker_has(JK_ASTRONOMER)) return 0; return discounted((u8)(4 + 2 * sz)); }
 u8 pack_price(u8 slot) BANKED { return (g.freePacks & (1 << slot)) ? 0 : pack_cost(g.packType[slot]); }
 
 bool shop_buy(u8 i) BANKED
@@ -381,11 +393,15 @@ bool shop_buy(u8 i) BANKED
 	return TRUE;
 }
 
+u8 shop_reroll_cost(void) BANKED { return (g.shopFlags & SF_CHAOS) ? 0 : g.rerollCost; }
+
 bool shop_reroll(void) BANKED
 {
-	if (g.money - g.rerollCost < debt_limit()) return FALSE;
-	g.money -= g.rerollCost;
-	g.rerollCost++;
+	u8 cost = shop_reroll_cost();
+	if (g.money - cost < debt_limit()) return FALSE;
+	g.money -= cost;
+	if (g.shopFlags & SF_CHAOS) g.shopFlags &= (u8)~SF_CHAOS; else g.rerollCost++;
+	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_FLASH) g.jk[i].v += 2;
 	g.freeMask = 0;                      // rerolled cards are not part of the Coupon deal
 	shop_roll_cards();
 	return TRUE;
@@ -414,6 +430,7 @@ static void pack_fill(u8 kind)
 {
 	u8 type = (u8)((kind - 1) / 3), sz = (u8)((kind - 1) % 3);
 	g_packKind = kind;
+	pack_opened();
 	g_packN = (type == 2 || type == 4) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);   // Standard (type 3) like Arcana: 3 / 5 cards
 	g_packPick = (sz == 2) ? 2 : 1;
 	u8 avoid[(JOKER_COUNT + 7) / 8];
@@ -431,7 +448,7 @@ static void pack_fill(u8 kind)
 		}
 		else if (type == 4)
 		{
-			u8 sp; do { sp = rndn(SPECTRAL_COUNT); } while (usedTarot & (1UL << sp));
+			u8 sp; do { sp = rndn(SPECTRAL_COUNT); } while ((usedTarot & (1UL << sp)) || (sp == SP_SOUL && rndn(10)));
 			usedTarot |= (1UL << sp); g_packType[i] = ST_SPECTRAL; g_packId[i] = sp;
 		}
 		else if (type == 0)
@@ -446,7 +463,7 @@ static void pack_fill(u8 kind)
 		}
 		else
 		{
-			i8 j = random_joker(avoid);
+			i16 j = random_joker(avoid);
 			if (j < 0) { g_packType[i] = 0; continue; }
 			avoid[j >> 3] |= (u8)(1 << (j & 7));
 			g_packType[i] = ST_JOKER; g_packId[i] = (u8)j;
@@ -464,8 +481,7 @@ bool pack_choose(u8 i) BANKED
 		case ST_SPECTRAL: if (!cons_add(CONS_SPECTRAL(g_packId[i]))) return FALSE; break;
 		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; break;
 		case ST_CARD:
-			if (g.nDeck >= DECK_MAX) return FALSE;
-			g.deck[g.nDeck] = g_packCard[i]; g.dflag[g.nDeck] = 0; g.loc[g.nDeck] = LOC_PILE; g.nDeck++;
+			if (!deck_add(g_packCard[i], FALSE)) return FALSE;
 			break;
 	}
 	g_packType[i] = 0;

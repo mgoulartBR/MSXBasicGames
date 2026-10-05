@@ -138,10 +138,11 @@ static void shuffle_pile(void)
 void blind_start(void) BANKED
 {
 	i8 jh, jd;
-	joker_round_bonus(&jh, &jd);
-	joker_recalc_modifiers();
 	tags_round_start();
 	g.bossOff = 0;
+	joker_blind_select();                                           // Blind selected: Jokers that act now (and Chicot)
+	joker_round_bonus(&jh, &jd);
+	joker_recalc_modifiers();
 	g.target = blind_target();
 	g.score = 0;
 	g.handsLeft = (u8)(g.handsBase + jh);
@@ -149,8 +150,8 @@ void blind_start(void) BANKED
 	if (joker_has(JK_BURGLAR)) g.discardsLeft = 0;            // lose all discards
 	if (g.blind == BLIND_BOSS)
 	{
-		if (g.boss == BS_WATER) g.discardsLeft = 0;
-		if (g.boss == BS_NEEDLE) g.handsLeft = 1;
+		if (g.boss == BS_WATER && !g.bossOff) g.discardsLeft = 0;
+		if (g.boss == BS_NEEDLE && !g.bossOff) g.handsLeft = 1;
 	}
 	g.handsPlayed = 0; g.discardsUsed = 0;
 	if (bossActive(BS_FINAL_ACORN))                                // Amber Acorn: shuffle the Jokers
@@ -172,6 +173,7 @@ void blind_start(void) BANKED
 	shuffle_pile();
 	g.sortMode = 0;
 	draw_to_hand();
+	joker_hand_drawn();
 	g.state = ROUND_PLAYING;
 }
 
@@ -199,6 +201,7 @@ void round_resolve_play(void) BANKED
 	for (u8 i = 0; i < g.nPlayed; i++)
 	{
 		u8 sl = g.played[i];
+		if (g.dflag[sl] & DF_BREAK) card_destroyed(g.deck[sl]);
 		g.loc[sl] = (g.dflag[sl] & DF_BREAK) ? LOC_GONE : LOC_DISCARD;       // glass that shattered leaves the deck
 		g.dflag[sl] = (u8)((g.dflag[sl] & ~DF_BREAK) | DF_PILLAR);
 	}
@@ -236,13 +239,15 @@ bool round_discard(u16 sel) BANKED
 {
 	u8 n = popcnt(sel);
 	if (n < 1 || n > 5 || g.discardsLeft == 0) return FALSE;
-	u8 faces = 0, nh = 0, nhand[HAND_MAX];
+	u8 faces = 0, nh = 0, nhand[HAND_MAX], dslots[5], nd = 0;
 	for (u8 i = 0; i < g.nHand; i++)
 	{
 		u8 slot = g.hand[i];
 		if (sel & (1u << i))
 		{
 			g.loc[slot] = LOC_DISCARD;
+			if (nd < 5) dslots[nd++] = slot;
+			joker_on_discard(g.deck[slot]);
 			if (card_is_face(g.deck[slot])) faces++;
 			if (C_SEAL(g.deck[slot]) == SEAL_PURPLE) cons_add(CONS_TAROT(rndn(TAROT_COUNT)));       // Purple Seal
 			for (u8 k = 0; k < g.nJk; k++)               // context.discard, once per card
@@ -256,6 +261,7 @@ bool round_discard(u16 sel) BANKED
 	}
 	for (u8 i = 0; i < nh; i++) g.hand[i] = nhand[i];
 	g.nHand = nh;
+	joker_on_discard_hand(dslots, nd);
 	for (u8 k = 0; k < g.nJk; k++)
 	{
 		if (g.jk[k].flags & JF_DEBUFF) continue;
@@ -298,6 +304,7 @@ void round_end_effects(void) BANKED
 			}
 		}
 	}
+	joker_round_end2();
 	remove_flagged_jokers();
 	joker_recalc_modifiers();
 }

@@ -28,8 +28,11 @@ step "Z80 self-test in openMSX"
 bash scripts/screenshot.sh tests/tcl/selftest.tcl "dist/$ROM_NAME-msx-$VERSION-selftest.rom" >/dev/null 2>&1
 step "openMSX smoke test (C-BIOS MSX2, mouse in port A)"
 bash scripts/screenshot.sh tests/tcl/smoke_all.tcl "dist/$ROM_NAME-msx-$VERSION-debug.rom" >/dev/null 2>&1
+for extra in smoke_mods smoke_jokers; do
+  bash scripts/screenshot.sh tests/tcl/$extra.tcl "dist/$ROM_NAME-msx-$VERSION-debug.rom" >/dev/null 2>&1
+done
 cat "$RESULTS"
 grep -q FAIL "$RESULTS" && FAIL=1
-[ "$(grep -c PASS "$RESULTS")" -ge 13 ] || { echo "too few checks passed"; FAIL=1; }
+[ "$(grep -c PASS "$RESULTS")" -ge 15 ] || { echo "too few checks passed"; FAIL=1; }
 echo; [ $FAIL = 0 ] && echo "ALL TESTS PASSED" || echo "TESTS FAILED"
 exit $FAIL

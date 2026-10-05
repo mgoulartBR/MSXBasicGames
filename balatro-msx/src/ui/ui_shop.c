@@ -144,7 +144,7 @@ static void shop_item(u8 id)
 		case W_NEXT: ui_button(W_NEXT, T_NEXT, COL_GREEN, TRUE); break;
 		case W_REROLL:
 		{
-			char b[12] = "Reroll $"; u8 n = 8; if (g.rerollCost >= 10) b[n++] = '0' + g.rerollCost / 10; b[n++] = '0' + g.rerollCost % 10; b[n] = 0;
+			u8 rc = shop_reroll_cost(); char b[12] = "Reroll $"; u8 n = 8; if (rc >= 10) b[n++] = '0' + rc / 10; b[n++] = '0' + rc % 10; b[n] = 0;
 			ui_button(W_REROLL, b, COL_RED, TRUE);
 			break;
 		}
@@ -226,7 +226,7 @@ static void shop_activate(u8 id)
 			if (shop_reroll()) { snd(8); shop_widgets(); draw_shop(); }
 			else ui_msg(M_NOMONEY);
 			break;
-		case W_NEXT: next_blind(); ui_goto(SC_BLIND); break;
+		case W_NEXT: shop_leave(); next_blind(); ui_goto(SC_BLIND); break;
 		case W_INFO: ui_goto(SC_INFO); break;
 		case W_SELL:
 			if (ui.itemKind == 1) joker_sell(ui.itemIdx); else cons_sell(ui.itemIdx);
@@ -337,7 +337,7 @@ void upd_pack(void) BANKED
 		}
 		else ui_msg(g_packType[act - W_PACKCARD] == 1 ? M_NOJOKER : (g_packType[act - W_PACKCARD] == 4 ? M_CANTUSE : M_NOCONS));
 	}
-	else if (act == W_SKIP) { ui_goto(ui.packReturn); return; }
+	else if (act == W_SKIP) { if (g_packPick) pack_skipped(); ui_goto(ui.packReturn); return; }
 	if (ui.msgTimer && --ui.msgTimer == 0) { ui.msg = 0; ui.dirty |= D_INFO; }
 	ui_info_tick();
 }

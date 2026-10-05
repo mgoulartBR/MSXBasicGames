@@ -1,13 +1,15 @@
 // Per-joker scoring phases (context.individual / held / joker_main / before), ported from Card:calculate_joker.
 #include "score_priv.h"
 
+u8 g_blueSrc = 0xFF, g_curSlot;
+
 // ---------------------------------------------------------------------------
 // per scoring card effects of the jokers (context.individual, cardarea = play)
 // ---------------------------------------------------------------------------
 void joker_on_card(SC* s, u8 ji, Card c, bool firstFace) BANKED
 {
 	JokerInst* j = &g.jk[ji];
-	u8 src = SRC_JOKER(ji), id = C_ID(c);
+	u8 src = SRCJ(ji), id = C_ID(c);
 	if (C_ENH(c) == ENH_STONE) return;                           // stone cards have no rank or suit
 	switch (j->id)
 	{
@@ -28,7 +30,13 @@ void joker_on_card(SC* s, u8 ji, Card c, bool firstFace) BANKED
 		case JK_ARROWHEAD:       if (suit_is(c, SUIT_S)) add_chips(s, src, 50); break;
 		case JK_BLOODSTONE:      if (suit_is(c, SUIT_H) && rnd_odds(2)) x_mult(s, src, 150); break;
 		case JK_PHOTOGRAPH:      if (firstFace) x_mult(s, src, 200); break;
-		case JK_WEE:             if (id == 2) { j->v += 8; text(s, src, TX_UPGRADE); } break;
+		case JK_WEE:             if (id == 2 && g_blueSrc == 0xFF) { j->v += 8; text(s, src, TX_UPGRADE); } break;
+		case JK_ANCIENT:         if (suit_is(c, j->aux)) x_mult(s, src, 150); break;
+		case JK_IDOL:            if (C_BASE(c) == j->aux) x_mult(s, src, 200); break;
+		case JK_TRIBOULET:       if (C_RANK(c) == RANK_K || C_RANK(c) == RANK_Q) x_mult(s, src, 200); break;
+		case JK_TICKET:          if (C_ENH(c) == ENH_GOLD) add_money(s, src, 4); break;
+		case JK_8_BALL:          if (id == 8 && rnd_odds(4)) cons_add(CONS_TAROT(rndn(TAROT_COUNT))); break;
+		case JK_HIKER:           if (g_blueSrc == 0xFF && g.dbonus[g_curSlot] < 250) { g.dbonus[g_curSlot] += 5; text(s, src, TX_UPGRADE); } break;
 	}
 }
 
@@ -39,7 +47,7 @@ void joker_on_held(SC* s, u8 ji, u8 hi, u8 lowestIdx) BANKED
 {
 	JokerInst* j = &g.jk[ji];
 	Card c = g.deck[g.hand[hi]];
-	u8 src = SRC_JOKER(ji);
+	u8 src = SRCJ(ji);
 	if (card_is_debuffed(g.hand[hi])) return;
 	switch (j->id)
 	{
@@ -56,7 +64,7 @@ void joker_on_held(SC* s, u8 ji, u8 hi, u8 lowestIdx) BANKED
 void joker_main(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 mask) BANKED
 {
 	JokerInst* j = &g.jk[ji];
-	u8 src = SRC_JOKER(ji);
+	u8 src = SRCJ(ji);
 	switch (j->id)
 	{
 		case JK_JOKER:        add_mult(s, src, 4); break;
@@ -150,17 +158,56 @@ void joker_main(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 ma
 		case JK_ORDER:  if (CONTAINS(HAND_STRAIGHT)) x_mult(s, src, 300); break;
 		case JK_TRIBE:  if (CONTAINS(HAND_FLUSH)) x_mult(s, src, 200); break;
 		case JK_CONSTELLATION:
-		case JK_RAMEN:  if (j->v > 100) x_mult(s, src, j->v); break;
+		case JK_RAMEN:
+		case JK_HOLOGRAM: case JK_VAMPIRE: case JK_OBELISK: case JK_LUCKY_CAT: case JK_GLASS: case JK_CAINO: case JK_YORICK:
+		case JK_MADNESS: case JK_HIT_THE_ROAD: case JK_CAMPFIRE:
+			if (j->v > 100) x_mult(s, src, j->v);
+			break;
+		case JK_THROWBACK:    if (g.skips) x_mult(s, src, (i16)(100 + 25 * g.skips)); break;
+		case JK_LOYALTY_CARD: if (j->aux == 5) x_mult(s, src, 400); break;
+		case JK_RED_CARD: case JK_FLASH: case JK_TROUSERS: case JK_CEREMONIAL:
+			if (j->v > 0) add_mult(s, src, j->v);
+			break;
+		case JK_CASTLE:       if (j->v > 0) add_chips(s, src, j->v); break;
+		case JK_FORTUNE_TELLER: if (g.tarotsUsed) add_mult(s, src, g.tarotsUsed); break;
+		case JK_STEEL_JOKER: case JK_STONE: case JK_DRIVERS_LICENSE:
+		{
+			u8 steel = 0, stone = 0, enh = 0;
+			for (u8 k = 0; k < g.nDeck; k++)
+			{
+				if (g.loc[k] == LOC_GONE) continue;
+				u8 e = C_ENH(g.deck[k]);
+				steel += (e == ENH_STEEL); stone += (e == ENH_STONE); enh += (e != ENH_NONE);
+			}
+			if (j->id == JK_STEEL_JOKER && steel) x_mult(s, src, (i16)(100 + 20 * steel));
+			else if (j->id == JK_STONE && stone) add_chips(s, src, (i16)(25 * stone));
+			else if (j->id == JK_DRIVERS_LICENSE && enh >= 16) x_mult(s, src, 300);
+			break;
+		}
+		case JK_EROSION:
+		{
+			u8 n = 0;
+			for (u8 k = 0; k < g.nDeck; k++) if (g.loc[k] != LOC_GONE) n++;
+			if (n < 52) add_mult(s, src, (i16)(4 * (52 - n)));
+			break;
+		}
+		case JK_SUPERPOSITION:
+			if (CONTAINS(HAND_STRAIGHT))
+				for (u8 k = 0; k < nPlayed; k++)
+					if ((mask & (1 << k)) && C_RANK(pc[k]) == RANK_A && C_ENH(pc[k]) != ENH_STONE) { cons_add(CONS_TAROT(rndn(TAROT_COUNT))); break; }
+			break;
+		case JK_SEANCE:       if (CONTAINS(HAND_STRAIGHT_FLUSH)) cons_add(CONS_SPECTRAL(rndn(SP_SOUL))); break;
+		case JK_VAGABOND:     if (g.money <= 4) cons_add(CONS_TAROT(rndn(TAROT_COUNT))); break;
 	}
 }
 
 // ---------------------------------------------------------------------------
 // before-scoring joker phase (context.before): counters, level ups
 // ---------------------------------------------------------------------------
-void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 mask) BANKED
+void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, Card* pc, u8 mask) BANKED
 {
 	JokerInst* j = &g.jk[ji];
-	u8 src = SRC_JOKER(ji);
+	u8 src = SRCJ(ji);
 	switch (j->id)
 	{
 		case JK_SPACE:
@@ -180,6 +227,51 @@ void joker_before(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 
 			break;
 		}
 		case JK_GREEN_JOKER: j->v += 1; break;
+		case JK_TROUSERS: if (type == HAND_TWO_PAIR) { j->v += 2; text(s, src, TX_UPGRADE); } break;
+		case JK_OBELISK:
+		{
+			bool top = TRUE;
+			for (u8 h = 0; h < HAND_COUNT; h++) if (h != type && g.handPlays[h] >= g.handPlays[type]) top = FALSE;
+			if (top) { if (j->v > 100) text(s, src, TX_RESET); j->v = 100; } else j->v += 20;
+			break;
+		}
+		case JK_MIDAS_MASK:
+			for (u8 k = 0; k < nPlayed; k++)
+				if ((mask & (1 << k)) && card_is_face(pc[k]))
+				{
+					pc[k] = C_SETENH(pc[k], ENH_GOLD); g.deck[g.played[k]] = pc[k];
+				}
+			break;
+		case JK_VAMPIRE:
+			for (u8 k = 0; k < nPlayed; k++)
+				if ((mask & (1 << k)) && C_ENH(pc[k]) != ENH_NONE)
+				{
+					pc[k] = C_SETENH(pc[k], ENH_NONE); g.deck[g.played[k]] = pc[k]; j->v += 10; text(s, src, TX_UPGRADE);
+				}
+			break;
+		case JK_DNA:
+			if (g.handsPlayed == 1 && nPlayed == 1) { if (deck_add(pc[0], TRUE)) text(s, src, TX_UPGRADE); }
+			break;
+		case JK_SIXTH_SENSE:
+			if (g.handsPlayed == 1 && nPlayed == 1 && C_RANK(pc[0]) == 4 && C_ENH(pc[0]) != ENH_STONE)       // a 6
+			{
+				g.dflag[g.played[0]] |= DF_BREAK;                      // destroyed when the hand resolves
+				cons_add(CONS_SPECTRAL(rndn(SP_SOUL)));
+			}
+			break;
+	}
+}
+
+// after the hand has been scored (context.after)
+void joker_after(SC* s, u8 ji) BANKED
+{
+	JokerInst* j = &g.jk[ji];
+	switch (j->id)
+	{
+		case JK_LOYALTY_CARD: j->aux = (u8)((j->aux + 1) % 6); break;
+		case JK_SELZER:
+			if (j->v > 0 && --j->v == 0) { text(s, SRC_JOKER(ji), TX_EATEN); j->flags |= 0x80; }
+			break;
 	}
 }
 

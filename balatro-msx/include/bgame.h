@@ -82,6 +82,7 @@ typedef struct
 	i16 v;           // per-joker counter (chips, mult, x100 mult, hand type...)
 	u8  sell;        // sell value bonus (Egg)
 	u8  ed;          // ED_* edition (Foil / Holographic / Polychrome)
+	u8  aux;         // second per-joker value (target suit / rank, counters)
 	
 } JokerInst;
 #define JF_DEBUFF 1
@@ -165,6 +166,7 @@ typedef struct
 	// ---- deck ----
 	Card deck[DECK_MAX];
 	u8   dflag[DECK_MAX];            // DF_*
+	u8   dbonus[DECK_MAX];           // permanent bonus chips of a card (Hiker)
 	u8   nDeck;
 	// ---- round ----
 	u8   state;                      // ROUND_*
@@ -190,6 +192,8 @@ typedef struct
 	u8   bossOff;                    // boss disabled
 	u8   endless;                    // continued past the Ante 8 win
 	u8   lastHandType;               // HAND_* of the last hand played this run (Blue Seal), 0xFF = none
+	u8   tarotsUsed;                 // Tarot cards used this run (Fortune Teller)
+	u8   shopFlags;                  // SF_* per shop visit
 	// ---- shop ----
 	u8   shopType[SHOP_CARD_MAX];    // 0 empty, 1 joker, 2 planet, 3 tarot
 	u8   shopId[SHOP_CARD_MAX];
@@ -202,6 +206,7 @@ typedef struct
 } Game;
 enum { LOC_PILE, LOC_HAND, LOC_PLAY, LOC_DISCARD, LOC_GONE };
 #define VBIT(v) ((u16)(1u << (v)))
+#define SF_CHAOS  1                  // the free reroll of Chaos the Clown was used this shop
 #define DF_BREAK  4                  // glass card that shattered this hand
 #define DF_FD     2                  // drawn face down (House/Wheel/Fish/Mark)
 #define DF_PILLAR 1                  // played this ante (The Pillar)
@@ -292,6 +297,21 @@ void tags_shop_start(void) BANKED;            // Coupon / Uncommon / Rare / D6 e
 void tags_round_start(void) BANKED;           // Juggle Tag
 bool pack_open_free(u8 kind) BANKED;          // open a pack without paying (tags)
 u8   pack_price(u8 slot) BANKED;
+
+// joker hooks outside scoring (jokers2.c) and helpers
+bool deck_add(Card c, bool toHand) BANKED;           // adds a card to the deck (and the hand); feeds Hologram
+bool joker_random_add(u8 rarity) BANKED;             // creates a random Joker of a rarity (0 = rolled like the shop), if there is room
+void joker_blind_select(void) BANKED;                // Blind selected: Ceremonial Dagger, Marble, Madness, Riff-raff, Cartomancer, targets...
+void joker_on_discard(Card c) BANKED;                // once per discarded card
+void joker_on_discard_hand(const u8* slots, u8 n) BANKED;   // once per discard action, before the discard is counted
+void joker_sold(const JokerInst* sold) BANKED;       // after a Joker (or, with NULL, a consumable) was sold: Luchador, Invisible, Campfire
+void joker_round_end2(void) BANKED;                  // Gift Card, Invisible, Campfire reset...
+void card_destroyed(Card c) BANKED;                  // Glass Joker, Canio
+void pack_skipped(void) BANKED;                      // Red Card
+void shop_leave(void) BANKED;                        // Perkeo
+void pack_opened(void) BANKED;                       // Hallucination
+void joker_hand_drawn(void) BANKED;                  // Certificate
+u8   shop_reroll_cost(void) BANKED;                  // what the next reroll costs (Chaos the Clown makes the first free)
 
 // misc
 void deck_new(void) BANKED;
