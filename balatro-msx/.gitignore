@@ -1,0 +1,9 @@
+# Original (proprietary) Balatro source/assets: local reference only, never committed
+original/
+# Toolchain checkouts and build products
+toolchain/
+out/
+build/
+emul/
+*.log
+__pycache__/

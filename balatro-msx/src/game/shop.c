@@ -1,0 +1,291 @@
+// Shop, booster packs and consumables.
+#include "game.h"
+
+u8 g_packN, g_packPick, g_packKind;
+u8 g_packType[PACK_CARD_MAX], g_packId[PACK_CARD_MAX];
+
+enum { ST_NONE, ST_JOKER, ST_PLANET, ST_TAROT };
+
+i16 debt_limit(void) { return joker_has(JK_CREDIT_CARD) ? -20 : 0; }
+
+static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } return n; }
+
+//-----------------------------------------------------------------------------
+// random generators
+//-----------------------------------------------------------------------------
+static i8 random_joker(u8 avoidMask[(JOKER_COUNT + 7) / 8])
+{
+	u8 roll = rnd8();
+	u8 rarity = roll > 242 ? 3 : (roll > 178 ? 2 : 1);
+	for (u8 pass = 0; pass < 2; pass++)
+	{
+		u8 cand[JOKER_COUNT], n = 0;
+		for (u8 i = 0; i < JOKER_COUNT; i++)
+		{
+			if (pass == 0 && g_Jokers[i].rarity != rarity) continue;
+			if (joker_has(i) || (avoidMask[i >> 3] & (1 << (i & 7)))) continue;
+			cand[n++] = i;
+		}
+		if (n) return (i8)cand[rndn(n)];
+	}
+	return -1;
+}
+
+static u8 random_planet(void)
+{
+	u8 ok[HAND_COUNT], n = 0;
+	for (u8 h = 0; h < HAND_COUNT; h++)
+		if (h < HAND_FIVE || g.handPlays[h] > 0) ok[n++] = h;      // secret hands only once played
+	return ok[rndn(n)];
+}
+
+static u8 random_tarot(void) { return rndn(TAROT_COUNT); }
+
+//-----------------------------------------------------------------------------
+// consumables
+//-----------------------------------------------------------------------------
+bool cons_add(u8 c)
+{
+	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i] == 0) { g.cons[i] = c; return TRUE; }
+	return FALSE;
+}
+
+u8 cons_sell_value(u8 c) { (void)c; return 1; }
+
+void cons_sell(u8 slot)
+{
+	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); g.cons[slot] = 0; }
+}
+
+void joker_sell(u8 idx)
+{
+	g.money += joker_sell_value(idx);
+	joker_remove(idx);
+	if (g.blind == BLIND_BOSS && g.boss == BS_FINAL_LEAF) g.bossOff = 1;
+}
+
+void planet_use(u8 hand)
+{
+	g.handLevel[hand]++;
+	g.planetsUsed |= (u16)(1u << hand);
+	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_CONSTELLATION) g.jk[i].v += 10;
+}
+
+bool cons_needs_cards(u8 c, u8* minc, u8* maxc)
+{
+	*minc = 0; *maxc = 0;
+	if (!CONS_IS_TAROT(c)) return FALSE;
+	switch (c - 0x20)
+	{
+		case TR_STRENGTH:   *minc = 1; *maxc = 2; return TRUE;
+		case TR_HANGED_MAN: *minc = 1; *maxc = 2; return TRUE;
+		case TR_DEATH:      *minc = 2; *maxc = 2; return TRUE;
+		case TR_STAR: case TR_MOON: case TR_SUN: case TR_WORLD: *minc = 1; *maxc = 3; return TRUE;
+	}
+	return FALSE;
+}
+
+static void hand_remove(u8 idx)
+{
+	for (u8 i = idx; i + 1 < g.nHand; i++) g.hand[i] = g.hand[i + 1];
+	g.nHand--;
+}
+
+// use the consumable in slot (planets need no cards); sel = highlighted hand positions
+bool cons_use(u8 slot, u16 sel)
+{
+	u8 c = g.cons[slot];
+	if (!c) return FALSE;
+	u8 minc, maxc;
+	bool needs = cons_needs_cards(c, &minc, &maxc);
+	u8 n = popcnt16(sel);
+	if (needs && (n < minc || n > maxc || g.nHand == 0)) return FALSE;
+
+	if (CONS_IS_PLANET(c))
+	{
+		planet_use(c - 1);
+		g.cons[slot] = 0;
+		g.lastCons = c;
+		return TRUE;
+	}
+	u8 t = c - 0x20;
+	if (t == TR_JUDGEMENT && g.nJk >= joker_slots()) return FALSE;
+	if (t == TR_FOOL && (g.lastCons == 0 || g.lastCons == c)) return FALSE;
+	g.cons[slot] = 0;                         // the card is spent first: it frees its slot for the ones it creates
+	switch (t)
+	{
+		case TR_FOOL: cons_add(g.lastCons); break;
+		case TR_HIGH_PRIESTESS: for (u8 k = 0; k < 2; k++) cons_add(CONS_PLANET(random_planet())); break;
+		case TR_EMPEROR: for (u8 k = 0; k < 2; k++) cons_add(CONS_TAROT(random_tarot())); break;
+		case TR_HERMIT: if (g.money > 0) g.money += (g.money > 20 ? 20 : g.money); break;
+		case TR_TEMPERANCE:
+		{
+			i16 sum = 0;
+			for (u8 i = 0; i < g.nJk; i++) sum += joker_sell_value(i);
+			g.money += (sum > 50 ? 50 : sum);
+			break;
+		}
+		case TR_JUDGEMENT:
+		{
+			u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
+			i8 j = random_joker(none);
+			if (j >= 0) joker_add((u8)j);
+			break;
+		}
+		case TR_STRENGTH:
+			for (u8 i = 0; i < g.nHand; i++)
+				if (sel & (1u << i))
+				{
+					Card* d = &g.deck[g.hand[i]];
+					*d = CARD(C_SUIT(*d), (C_RANK(*d) + 1) % 13);
+				}
+			break;
+		case TR_HANGED_MAN:
+			for (i8 i = (i8)g.nHand - 1; i >= 0; i--)
+				if (sel & (1u << i)) { g.loc[g.hand[i]] = LOC_GONE; hand_remove((u8)i); }
+			break;
+		case TR_DEATH:
+		{
+			u8 a = 0xFF, b = 0xFF;
+			for (u8 i = 0; i < g.nHand; i++) if (sel & (1u << i)) { if (a == 0xFF) a = i; else b = i; }
+			g.deck[g.hand[a]] = g.deck[g.hand[b]];            // the left card becomes a copy of the right one
+			break;
+		}
+		case TR_STAR: case TR_MOON: case TR_SUN: case TR_WORLD:
+		{
+			u8 suit = (t == TR_STAR) ? SUIT_D : (t == TR_MOON) ? SUIT_C : (t == TR_SUN) ? SUIT_H : SUIT_S;
+			for (u8 i = 0; i < g.nHand; i++)
+				if (sel & (1u << i)) { Card* d = &g.deck[g.hand[i]]; *d = CARD(suit, C_RANK(*d)); }
+			break;
+		}
+	}
+	g.lastCons = (t == TR_FOOL) ? g.lastCons : c;
+	if (needs) hand_sort(g.sortMode);
+	return TRUE;
+}
+
+//-----------------------------------------------------------------------------
+// shop
+//-----------------------------------------------------------------------------
+static void shop_roll_cards(void)
+{
+	u8 avoid[(JOKER_COUNT + 7) / 8];
+	for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0;
+	g.shopN = 2;
+	for (u8 i = 0; i < g.shopN; i++)
+	{
+		u8 r = rndn(28);                                    // joker 20 : tarot 4 : planet 4 (card rates of the original)
+		g.shopType[i] = 0;
+		if (r < 20)
+		{
+			i8 j = random_joker(avoid);
+			if (j >= 0) { g.shopType[i] = ST_JOKER; g.shopId[i] = (u8)j; avoid[j >> 3] |= (u8)(1 << (j & 7)); }
+		}
+		else if (r < 24) { g.shopType[i] = ST_TAROT; g.shopId[i] = random_tarot(); }
+		else { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+		if (!g.shopType[i]) { g.shopType[i] = ST_PLANET; g.shopId[i] = random_planet(); }
+	}
+}
+
+void shop_generate(void)
+{
+	g.rerollCost = g.rerollBase;
+	shop_roll_cards();
+	for (u8 i = 0; i < 2; i++)
+	{
+		u8 t = rndn(3), sz = rndn(10) < 6 ? PACK_NORMAL : (rndn(3) ? PACK_JUMBO : PACK_MEGA);
+		g.packType[i] = PACK_KIND(t, sz);
+	}
+	g.voucher = 0;
+	g.shopOpen = 1;
+}
+
+u8 shop_cost(u8 i)
+{
+	switch (g.shopType[i])
+	{
+		case ST_JOKER: return g_Jokers[g.shopId[i]].cost;
+		case ST_PLANET: case ST_TAROT: return 3;
+	}
+	return 0;
+}
+
+u8 pack_cost(u8 kind) { u8 sz = (u8)((kind - 1) % 3); return (u8)(4 + 2 * sz); }
+
+bool shop_buy(u8 i)
+{
+	u8 t = g.shopType[i];
+	if (!t) return FALSE;
+	u8 cost = shop_cost(i);
+	if (g.money - cost < debt_limit()) return FALSE;
+	if (t == ST_JOKER) { if (!joker_add(g.shopId[i])) return FALSE; }
+	else if (t == ST_PLANET) { if (!cons_add(CONS_PLANET(g.shopId[i]))) return FALSE; }
+	else { if (!cons_add(CONS_TAROT(g.shopId[i]))) return FALSE; }
+	g.money -= cost;
+	g.shopType[i] = 0;
+	return TRUE;
+}
+
+bool shop_reroll(void)
+{
+	if (g.money - g.rerollCost < debt_limit()) return FALSE;
+	g.money -= g.rerollCost;
+	g.rerollCost++;
+	shop_roll_cards();
+	return TRUE;
+}
+
+//-----------------------------------------------------------------------------
+// booster packs: Arcana (tarots), Celestial (planets), Buffoon (jokers)
+//-----------------------------------------------------------------------------
+bool pack_open(u8 slot)
+{
+	u8 kind = g.packType[slot];
+	if (!kind) return FALSE;
+	u8 cost = pack_cost(kind);
+	if (g.money - cost < debt_limit()) return FALSE;
+	g.money -= cost;
+	g.packType[slot] = 0;
+	u8 type = (u8)((kind - 1) / 3), sz = (u8)((kind - 1) % 3);
+	g_packKind = kind;
+	g_packN = (type == 2) ? (sz == 0 ? 2 : 4) : (sz == 0 ? 3 : 5);
+	g_packPick = (sz == 2) ? 2 : 1;
+	u8 avoid[(JOKER_COUNT + 7) / 8];
+	for (u8 i = 0; i < sizeof(avoid); i++) avoid[i] = 0;
+	u16 usedPlanet = 0, usedTarot = 0;
+	for (u8 i = 0; i < g_packN; i++)
+	{
+		if (type == 0)
+		{
+			u8 t; do { t = random_tarot(); } while (usedTarot & (1u << t));
+			usedTarot |= (u16)(1u << t); g_packType[i] = ST_TAROT; g_packId[i] = t;
+		}
+		else if (type == 1)
+		{
+			u8 h; do { h = random_planet(); } while (usedPlanet & (1u << h));
+			usedPlanet |= (u16)(1u << h); g_packType[i] = ST_PLANET; g_packId[i] = h;
+		}
+		else
+		{
+			i8 j = random_joker(avoid);
+			if (j < 0) { g_packType[i] = 0; continue; }
+			avoid[j >> 3] |= (u8)(1 << (j & 7));
+			g_packType[i] = ST_JOKER; g_packId[i] = (u8)j;
+		}
+	}
+	return TRUE;
+}
+
+bool pack_choose(u8 i)
+{
+	if (i >= g_packN || !g_packType[i] || !g_packPick) return FALSE;
+	switch (g_packType[i])
+	{
+		case ST_PLANET: planet_use(g_packId[i]); g.lastCons = CONS_PLANET(g_packId[i]); break;
+		case ST_TAROT:  if (!cons_add(CONS_TAROT(g_packId[i]))) return FALSE; break;
+		case ST_JOKER:  if (!joker_add(g_packId[i])) return FALSE; break;
+	}
+	g_packType[i] = 0;
+	g_packPick--;
+	return TRUE;
+}
