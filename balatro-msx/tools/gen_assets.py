@@ -246,7 +246,8 @@ glyphs = []
 for code in range(32, 127):
     ch = chr(code)
     im = Image.new('L', (12, 14), 0)
-    ImageDraw.Draw(im).text((0, 0), ch, font=font, fill=255)
+    dr = ImageDraw.Draw(im); dr.fontmode = '1'          # 1-bit rasterisation: exact pixel font, no anti-alias mush
+    dr.text((0, 0), ch, font=font, fill=255)
     a = np.asarray(im) > 127
     cols = np.where(a.any(0))[0]
     width = int(cols.max()) + 2 if len(cols) else 3          # ink + 1px spacing
