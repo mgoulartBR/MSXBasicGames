@@ -319,13 +319,28 @@ for n, (su, col) in enumerate(suits):
 _src = os.path.join(ROOT, 'assets', 'logo_src.png')
 if os.path.exists(_src):
     im = Image.open(_src).convert('RGBA')
+    from collections import deque
+    def _bgmask(arr):
+        mn, mx = arr[..., :3].min(2), arr[..., :3].max(2)
+        loose = (mn > 215) & (mx - mn < 14)                  # whitish: background if reachable from the border
+        strict = (mn > 244) & (mx - mn < 7)                  # pure white: background anywhere (holes of B, R, O)
+        H, W = loose.shape
+        reach = np.zeros_like(loose)
+        q = deque((y, x) for y in range(H) for x in (0, W - 1) if loose[y, x])
+        q.extend((y, x) for x in range(W) for y in (0, H - 1) if loose[y, x])
+        for y, x in q: reach[y, x] = True
+        while q:
+            y, x = q.popleft()
+            for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= yy < H and 0 <= xx < W and loose[yy, xx] and not reach[yy, xx]:
+                    reach[yy, xx] = True; q.append((yy, xx))
+        return reach | strict | (arr[..., 3] < 20)
     px = np.asarray(im).astype(int)
-    bg = (px[..., 3] < 20) | ((px[..., :3].min(2) > 238) & (px[..., :3].max(2) - px[..., :3].min(2) < 14))
+    bg = _bgmask(px)
     ys, xs = np.where(~bg)
     im = im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     a = np.asarray(im).astype(np.float32)
-    keep = ~((a[..., 3] < 20) | ((a[..., :3].min(2) > 238) & (a[..., :3].max(2) - a[..., :3].min(2) < 14)))
-    a[..., 3] = np.where(keep, 255, 0)
+    a[..., 3] = np.where(_bgmask(a.astype(int)), 0, 255)
     im = Image.fromarray(a.astype(np.uint8), 'RGBA')
     sc = min((lw - 4) / im.width, (lh - 2) / im.height)
     sz = (max(2, int(round(im.width * sc)) // 2 * 2), max(2, int(round(im.height * sc))))
