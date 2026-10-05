@@ -4,3 +4,6 @@
 #define JK_PART 3
 #include "../../tests/test_cases2.c"      /* Z80 self-test: deck / stake cases */
 #endif
+#ifdef DEBUG_KEYS
+#include "ui/ui_debug.c"
+#endif
