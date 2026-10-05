@@ -3,6 +3,7 @@
 #include "platform/pvideo.h"
 #include "platform/ctrl.h"
 #include "platform/audio.h"
+#include "platform/save.h"
 #include "ui/ui.h"
 
 #ifdef SELFTEST
@@ -72,6 +73,7 @@ void main()
 #endif
 	Vid_Init();
 	Input_Init();
+	Save_Init();
 	Snd_Init(Vid_Hz());
 	ui_init();
 #ifdef DEBUG_KEYS

@@ -6,6 +6,8 @@
 
 const char T_PLAY[]    = "Play";
 const char T_START[]   = "Start";
+const char T_CONTINUE[] = "Continue";
+const char T_NEWRUN[]  = "New Run";
 const char T_DISCARD[] = "Discard";
 const char T_RANK[]    = "Rank";
 const char T_SUIT[]    = "Suit";

@@ -24,3 +24,12 @@ drives the emulated mouse with xdotool.
 
 ## Known toolchain bug
 SDCC 4.6.0 miscompiles chained stores of u32 fields into a volatile array; worked around with one store per call (`bset()`).
+
+## Save
+`src/platform/save.c`: the whole run is the single `Game g` struct (~600 bytes), so a save is that struct plus an 8-byte header
+(magic, version, screen, length, Fletcher checksum), written header-last. It lives in the cartridge SRAM of an ASCII8 + SRAM mapper
+(Koei-style; openMSX `-romtype ASCII8SRAM2`): writing the SRAM-enable segment number (probed from 0x20, 0x40, 0x80, 0x10) to the bank-3
+register maps the SRAM at 0xA000. On a plain ROM the probe fails and saving is simply off.
+`ui_update` checksums `g` every 32 frames and writes when it changed and the screen is idle (blind select, shop, or round waiting for input;
+not during scoring animations or packs). Game over / win erases the save. The title screen offers Continue / New Run.
+Tested in openMSX only (`tests/tcl/smoke_save.tcl` resets the emulated machine and continues); the SRAM persists in openMSX's persistent dir.

@@ -31,8 +31,12 @@ bash scripts/screenshot.sh tests/tcl/smoke_all.tcl "dist/$ROM_NAME-msx-$VERSION-
 for extra in smoke_mods smoke_jokers smoke_deck; do
   bash scripts/screenshot.sh tests/tcl/$extra.tcl "dist/$ROM_NAME-msx-$VERSION-debug.rom" >/dev/null 2>&1
 done
+# autosave / Continue needs the SRAM mapper; a throw-away openMSX user directory keeps the persistent SRAM file isolated
+SAVEDIR=$(mktemp -d)
+HOME="$SAVEDIR" ROMTYPE=ASCII8SRAM2 bash scripts/screenshot.sh tests/tcl/smoke_save.tcl "dist/$ROM_NAME-msx-$VERSION-debug.rom" >/dev/null 2>&1
+rm -rf "$SAVEDIR"
 cat "$RESULTS"
 grep -q FAIL "$RESULTS" && FAIL=1
-[ "$(grep -c PASS "$RESULTS")" -ge 18 ] || { echo "too few checks passed"; FAIL=1; }
+[ "$(grep -c PASS "$RESULTS")" -ge 22 ] || { echo "too few checks passed"; FAIL=1; }
 echo; [ $FAIL = 0 ] && echo "ALL TESTS PASSED" || echo "TESTS FAILED"
 exit $FAIL

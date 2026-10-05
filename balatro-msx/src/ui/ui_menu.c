@@ -1,8 +1,13 @@
 // Title, blind selection, run info, game over / win, screen dispatcher.
 #include "ui.h"
+#include "platform/save.h"
 #ifdef DEBUG_KEYS
 #include "msxgl.h"
 #endif
+
+static u16 s_savedSum;                      // checksum of the run as last written to the cartridge SRAM
+static bool s_hasSave;
+static SaveInfo s_info;
 
 static const char* const k_state[3] = { "Defeated", "Select", "Upcoming" };   /* (only [0] and [2] are drawn locally) */
 
@@ -30,6 +35,7 @@ void scr_focus(u8 o, u8 n) BANKED
 		case SC_PACK:  pack_focus(o, n); break;
 		case SC_BLIND: blind_focus(o, n); break;
 		case SC_DECK:  deck_focus(o, n); break;
+		case SC_TITLE: title_focus(o, n); break;
 	}
 }
 
@@ -67,7 +73,7 @@ void ui_goto(u8 sc) BANKED
 #ifdef DEBUG_KEYS
 // Debug build only (scripts/build.sh debug): 1 win round, 2 random joker, 3 +$50, 4 planet+tarot, 5 lose round
 // RAM beacon read by the openMSX test scripts (tests/tcl/asserts.tcl) through `peek`
-volatile u8 g_beacon[28];
+volatile u8 g_beacon[32];
 volatile u8 g_perf2[12];      // worst duration (frames) of each screen constructor
 static void bset(u8 i, u8 v) { g_beacon[i] = v; }   // one store per call: SDCC 4.6.0 mis-compiles chained stores of u32 fields
 static void beacon(void)
@@ -77,7 +83,7 @@ static void beacon(void)
 	bset(4, (u8)(g.money & 0xFF)); bset(5, (u8)((u16)g.money >> 8));
 	bset(6, g.handsLeft); bset(7, g.discardsLeft); bset(8, g.nHand); bset(9, g.nJk); bset(10, g.state);
 	bset(11, (u8)(sc & 0xFF)); sc >>= 8; bset(12, (u8)(sc & 0xFF)); sc >>= 8; bset(13, (u8)(sc & 0xFF)); sc >>= 8; bset(14, (u8)sc);
-	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss); bset(20, g.nTags); bset(21, g.skips); bset(22, g.tagSmall); bset(23, g.tagBig); bset(24, g.deckId); bset(25, g.stake); bset(26, g_deckSel); bset(27, g_stakeSel);
+	bset(15, (u8)ui.frame); bset(16, (u8)(ui.sel & 0xFF)); bset(17, g.nPile); bset(18, in.mouse); bset(19, g.boss); bset(20, g.nTags); bset(21, g.skips); bset(22, g.tagSmall); bset(23, g.tagBig); bset(24, g.deckId); bset(25, g.stake); bset(26, g_deckSel); bset(27, g_stakeSel); bset(28, Save_Available()); bset(29, s_hasSave); bset(30, g.discardsUsed); bset(31, g.nJk);
 }
 
 static void debug_keys(void)
@@ -143,6 +149,11 @@ void ui_update(void) BANKED
 		case SC_WIN:     upd_over(); break;
 		case SC_DECK:    upd_deck(); break;
 	}
+	if (!(ui.frame & 31) && Save_Available() && (ui.screen == SC_BLIND || ui.screen == SC_SHOP || (ui.screen == SC_ROUND && ui.phase == PH_INPUT && g.state == ROUND_PLAYING)))
+	{
+		u16 c = Save_Sum();                                     // autosave when the run changed and the screen is idle
+		if (c != s_savedSum) { Save_Write(ui.screen); s_savedSum = c; }
+	}
 	Vid_Cursor(in.mx, in.my, in.mouse);
 }
 
@@ -156,14 +167,61 @@ void scr_title(void) BANKED
 	// a fanned hand as decoration
 	static const u8 deco[5] = { 12, 25, 38, 51, 11 };   // A of hearts, clubs, diamonds, spades + K of hearts (atlas card indexes)
 	for (u8 i = 0; i < 5; i++) Vid_Card(CELL_CARD + deco[i], 66 + i * 26, 124 - (i == 2 ? 6 : 0));
-	Vid_TextC(128, 170, "MSX2 port", TC_GOLD);
-	Vid_TextC(128, 196, "Mouse  Joystick  Keyboard", TC_SLATE);
+	s_hasSave = Save_Peek(&s_info);
+	if (s_hasSave)                                       // a run is waiting: Continue / New Run
+	{
+		ui_add(W_CONTINUE, 70, 159, 116, 15);
+		ui_add(W_NEWRUN, 70, 177, 116, 15);
+		ui_set_focus(ui_find(W_CONTINUE));
+		ui_button(W_CONTINUE, T_CONTINUE, COL_GREEN, TRUE);
+		ui_button(W_NEWRUN, T_NEWRUN, COL_ORANGE, TRUE);
+		Vid_Text(40, 196, "Ante", TC_SLATE); Vid_Num(64, 196, s_info.ante, TC_GOLD);
+		Vid_Text(82, 196, "$", TC_GOLD); Vid_Num(88, 196, s_info.money, TC_GOLD);
+		Vid_Text(116, 196, g_DeckName[s_info.deck], TC_WHITE);
+	}
+	else
+	{
+		Vid_TextC(128, 170, "MSX2 port", TC_GOLD);
+		Vid_TextC(128, 196, Save_Available() ? "Mouse  Joystick  Keyboard   (autosave on)" : "Mouse  Joystick  Keyboard", TC_SLATE);
+	}
 	ui.timer = 0;
+}
+
+void title_focus(u8 o, u8 n) BANKED
+{
+	if (!s_hasSave) return;
+	for (u8 k = 0; k < 2; k++)
+	{
+		u8 id = k ? n : o;
+		if (id == W_CONTINUE) ui_button(W_CONTINUE, T_CONTINUE, COL_GREEN, TRUE);
+		else if (id == W_NEWRUN) ui_button(W_NEWRUN, T_NEWRUN, COL_ORANGE, TRUE);
+	}
 }
 
 void upd_title(void) BANKED
 {
 	ui.timer++;
+	if (s_hasSave)
+	{
+		ui_pointer_focus();
+		if (in.pressed & (IN_UP | IN_DOWN)) ui_nav((in.pressed & IN_UP) ? IN_UP : IN_DOWN);
+		u8 act = 0xFF;
+		if (in.click) { u8 h = ui_hit(in.mx, in.my); if (h != 0xFF) act = ui.w[h].id; }
+		else if ((in.pressed & (IN_OK | IN_PLAY)) && ui.focus != 0xFF) act = ui.w[ui.focus].id;
+		if (act == W_NEWRUN) ui_goto(SC_DECK);
+		else if (act == W_CONTINUE)
+		{
+			u8 sc;
+			if (Save_Load(&sc))
+			{
+				rng_seed((u16)(ui.frame * 31 + in.mx + in.my * 3));
+				ui.shownHand = 0xFF; ui.packReturn = SC_SHOP;
+				s_savedSum = Save_Sum();
+				ui_goto(sc);
+			}
+		}
+		return;
+	}
 	if ((ui.timer & 31) == 0 || ui.timer == 1)
 	{
 		bool on = (ui.timer & 32) == 0;
@@ -315,6 +373,7 @@ void upd_info(void) BANKED
 //-----------------------------------------------------------------------------
 void scr_over(void) BANKED
 {
+	Save_Erase(); s_savedSum = 0;                        // the run is over
 	Vid_Clear(COL_FELT);
 	Vid_TextC(128, 40, "GAME OVER", TC_RED);
 	Vid_TextC(128, 64, "You did not reach the Blind's score.", TC_WHITE);
@@ -327,6 +386,7 @@ void scr_over(void) BANKED
 
 void scr_win(void) BANKED
 {
+	Save_Erase(); s_savedSum = 0;
 	Vid_Clear(COL_FELT);
 	Vid_TextC(128, 40, "YOU WIN!", TC_GOLD);
 	Vid_TextC(128, 64, g.endless ? "You beat the Ante 12 Boss Blind." : "You beat the Ante 8 Boss Blind.", TC_WHITE);
