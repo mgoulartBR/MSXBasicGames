@@ -85,13 +85,13 @@ static void draw_hand_range(u8 lo, u8 hi)
 		u8 slot = g.hand[i];
 		u8 y = (ui.sel & (1u << i)) ? HAND_Y - HAND_RAISE : HAND_Y;
 		if (fi == W_HAND + i) { foc = i; continue; }
-		Vid_Card(C_CELL(g.deck[slot]), hand_x(i), y);
+		Vid_Card((g.dflag[slot] & DF_FD) ? CELL_BACK : C_CELL(g.deck[slot]), hand_x(i), y);
 		if (card_is_debuffed(slot)) Vid_Frame(hand_x(i), y, 24, 32, COL_RED);
 	}
 	if (foc != 0xFF)
 	{
 		u8 y = (ui.sel & (1u << foc)) ? HAND_Y - HAND_RAISE : HAND_Y;
-		Vid_Card(C_CELL(g.deck[g.hand[foc]]), hand_x(foc), y);
+		Vid_Card((g.dflag[g.hand[foc]] & DF_FD) ? CELL_BACK : C_CELL(g.deck[g.hand[foc]]), hand_x(foc), y);
 		Vid_Frame(hand_x(foc), y, 24, 32, card_is_debuffed(g.hand[foc]) ? COL_RED : COL_GOLD);
 	}
 }

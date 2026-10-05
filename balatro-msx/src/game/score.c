@@ -268,7 +268,7 @@ void round_play(u16 sel, ScoreOut* o) BANKED
 		{
 			u8 slot = g.hand[i];
 			g.played[np] = slot; pc[np] = g.deck[slot]; np++;
-			g.loc[slot] = LOC_PLAY;
+			g.loc[slot] = LOC_PLAY; g.dflag[slot] &= (u8)~DF_FD;       // played cards turn face up
 		}
 		else nhand[nh++] = g.hand[i];
 	}

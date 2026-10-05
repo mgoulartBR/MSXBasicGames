@@ -3,7 +3,8 @@
 - [TODO] Test on real MSX2 hardware (mouse, timing) — nothing tested outside openMSX/C-BIOS.
 - [TODO] Decide the repo licence; confirm legal status with rights holders before any ROM distribution.
 ## Gameplay
-- [TODO] Enchantments, editions, seals; Standard/Spectral packs; spectral cards; 5 omitted bosses; other decks/stakes; endless mode; save.
+- [DONE] All 28 bosses (face-down bosses reveal on play; Amber Acorn shuffles but does not flip jokers).
+- [TODO] Enchantments, editions, seals; Standard/Spectral packs; spectral cards; other decks/stakes; endless mode; save.
 - [PARTIAL] Jokers: 88 of 150; balance only checked by bot simulation.
 ## Graphics
 - [PARTIAL] 16-colour conversion; some joker art cropped to 20×28.

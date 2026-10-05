@@ -182,6 +182,7 @@ typedef struct
 } Game;
 enum { LOC_PILE, LOC_HAND, LOC_PLAY, LOC_DISCARD, LOC_GONE };
 #define VBIT(v) ((u16)(1u << (v)))
+#define DF_FD     2                  // drawn face down (House/Wheel/Fish/Mark)
 #define DF_PILLAR 1                  // played this ante (The Pillar)
 extern Game g;
 

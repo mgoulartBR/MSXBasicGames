@@ -74,6 +74,17 @@ void run_score_cases(void)
 	  g.ante = 8; g.blind = BLIND_SMALL; EXPECT("blind: ante 8 small target", blind_target(), 50000); }
 	{ fresh(); blind_start(); g.score = g.target; g.money = 23; Cash rows[CASH_MAX]; i16 t; cashout_build(rows, &t);
 	  EXPECT("cashout: $3 blind + 4 hands + $4 interest (23/5)", t, 3 + 4 + 4); }
+	{ fresh(); g.blind = BLIND_BOSS; g.boss = BS_HOUSE; blind_start(); u8 fd = 0;
+	  for (u8 i = 0; i < g.nHand; i++) fd += (g.dflag[g.hand[i]] & DF_FD) != 0;
+	  EXPECT("boss: House draws the first hand face down", fd == g.nHand && fd > 0, 1);
+	  ScoreOut o; round_play(1, &o);
+	  EXPECT("boss: played cards turn face up", g.dflag[g.played[0]] & DF_FD, 0); }
+	{ fresh(); g.blind = BLIND_BOSS; g.boss = BS_MARK; blind_start(); u8 bad = 0;
+	  for (u8 i = 0; i < g.nHand; i++) bad += ((g.dflag[g.hand[i]] & DF_FD) != 0) != card_is_face(g.deck[g.hand[i]]);
+	  EXPECT("boss: Mark hides exactly the face cards", bad, 0); }
+	{ fresh(); joker_add(JK_JOKER); joker_add(JK_GREEDY_JOKER); joker_add(JK_JOLLY); g.blind = BLIND_BOSS; g.boss = BS_FINAL_ACORN; blind_start();
+	  u8 sum = 0; for (u8 i = 0; i < g.nJk; i++) sum += g.jk[i].id;
+	  EXPECT("boss: Amber Acorn keeps the joker set", g.nJk == 3 ? sum : 0, JK_JOKER + JK_GREEDY_JOKER + JK_JOLLY); }
 }
 
 void run_all_cases(void) BANKED { run_poker_cases(); run_score_cases(); }

@@ -32,10 +32,10 @@ bash scripts/test.sh           # host unit/sim tests + Z80 self-test + openMSX s
 Full run structure: title, blind select (Small/Big/Boss, **Skip + 16 tags**), rounds (8 cards, 5 played, hands/
 discards, poker evaluation of all 12 hand types incl. Five of a Kind/Flush House/Flush Five, planet levels),
 cash-out with interest, shop (jokers, planets, tarots, **9 vouchers**, Booster packs: Arcana/Celestial/Buffoon),
-**88 jokers**, 18 of 23 boss blinds, 8 antes with win/game over, animated scoring, music + SFX.
+**88 jokers**, all 28 boss blinds, 8 antes with win/game over, animated scoring, music + SFX.
 
 ## Not implemented / simplified (see TODO.md)
-Card enchantments/editions/seals, Standard & Spectral packs, spectral cards, 5 boss blinds, other decks/stakes,
+Card enchantments/editions/seals, Standard & Spectral packs, spectral cards, other decks/stakes,
 endless mode, saving, controller rumble etc. Visuals are down-converted to 16 colours at 1:1 pixel scale.
 
 Docs: `docs/PORTABILITY_ASSESSMENT.md`, `docs/PORTING.md`, `docs/TOOLCHAIN.md`, `TODO.md`, `LICENSES.md`.

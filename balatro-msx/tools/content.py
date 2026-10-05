@@ -158,6 +158,11 @@ BOSSES = {
  "bl_final_leaf": "All cards debuffed until 1 Joker is sold",
  "bl_final_vessel": "Very large blind",
  "bl_final_bell": "Forces 1 card to always be selected",
+ "bl_house": "First hand is drawn face down",
+ "bl_wheel": "1 in 7 cards get drawn face down",
+ "bl_fish": "Cards drawn face down after each hand played",
+ "bl_mark": "All face cards are drawn face down",
+ "bl_final_acorn": "Shuffles Jokers at the start of the blind",
 }
 
 # skip tags carried over (key -> (position in tags.png, description)); order = icon order in VRAM and TG_* enum

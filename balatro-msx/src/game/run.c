@@ -107,6 +107,12 @@ void draw_to_hand(void) BANKED
 		u8 slot = g.pile[--g.nPile];
 		g.hand[g.nHand++] = slot;
 		g.loc[slot] = LOC_HAND;
+		g.dflag[slot] &= (u8)~DF_FD;
+		if ((bossActive(BS_HOUSE) && !g.handsPlayed && !g.discardsUsed) ||
+			(bossActive(BS_FISH) && g.handsPlayed) ||
+			(bossActive(BS_MARK) && card_is_face(g.deck[slot])) ||
+			(bossActive(BS_WHEEL) && rndn(7) == 0))
+			g.dflag[slot] |= DF_FD;
 		n--;
 	}
 	hand_sort(g.sortMode);
@@ -147,6 +153,11 @@ void blind_start(void) BANKED
 		if (g.boss == BS_NEEDLE) g.handsLeft = 1;
 	}
 	g.handsPlayed = 0; g.discardsUsed = 0;
+	if (bossActive(BS_FINAL_ACORN))                                // Amber Acorn: shuffle the Jokers
+		for (u8 i = g.nJk; i > 1; i--)
+		{
+			u8 j = rndn(i); JokerInst t = g.jk[i - 1]; g.jk[i - 1] = g.jk[j]; g.jk[j] = t;
+		}
 	for (u8 i = 0; i < HAND_COUNT; i++) g.playedCnt[i] = 0;
 	g.eyeMask = 0; g.mouthHand = 0xFF; g.crimsonPrep = FALSE;
 	for (u8 i = 0; i < g.nJk; i++) g.jk[i].flags &= (u8)~JF_DEBUFF;

@@ -315,7 +315,7 @@ void info_show(u8 id) BANKED
 	if (id < W_JOKER)
 	{
 		u8 i = id - W_HAND;
-		if (i < g.nHand) info_card(g.deck[g.hand[i]]);
+		if (i < g.nHand) { if (g.dflag[g.hand[i]] & DF_FD) info_text("Face down card", 0); else info_card(g.deck[g.hand[i]]); }
 	}
 	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0); else info_text("Empty Joker slot", 0); }
 	else if (id < W_PLAY) { u8 i = id - W_CONS; if (g.cons[i]) info_cons(g.cons[i], 0); else info_text("Empty consumable slot", 0); }
