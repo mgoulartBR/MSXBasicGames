@@ -1,0 +1,7 @@
+# Fonte externa (clonada por scripts/setup.sh) e artefatos de build
+external/
+out/
+emul/
+lib/
+# Material original/terceiros: NAO versionar (licenca nao confirmada)
+original/
