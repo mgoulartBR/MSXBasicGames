@@ -103,7 +103,7 @@ for k in bosses:
     src.append('\t{ %s, %d, %d, %d, %d, %d },' % (cs(b['name']), D(C.BOSSES[k]), int(b['mult'] * 2), b['dollars'], b['min'], order.index(k)))
 src.append('};')
 src.append('const TagDef g_Tags[TAG_COUNT] = {')
-TAG_MIN = {'handy': 2, 'garbage': 2, 'meteor': 2, 'buffoon': 2, 'top_up': 2, 'orbital': 2}
+TAG_MIN = {'double': 2, 'handy': 2, 'garbage': 2, 'meteor': 2, 'buffoon': 2, 'top_up': 2, 'orbital': 2}
 for k, d in C.TAGS:
     src.append('\t{ %s, %d, %d },' % (cs(cen['tag_' + k]['name'].replace(' Tag', '')), D(d), TAG_MIN.get(k, 1)))
 src.append('};')

@@ -72,8 +72,8 @@ void Vid_Init(void)
 		VDP_WriteVRAM((const u8*)0xA000, (u16)(dst & 0xFFFF), (u8)(dst >> 16), n);
 		dst += n; left -= n;
 	}
-	SET_BANK_SEGMENT(3, GFX_TAG_SEG);                      // tag icons -> page 0, lines 212..227 (hidden)
-	VDP_WriteVRAM((const u8*)0xA000, (u16)(GFX_TAG_Y * 128U), 0, 2048);
+	SET_BANK_SEGMENT(3, GFX_TAG_SEG);                      // tag icons (2 rows of 16) -> page 3, lines 768..799
+	VDP_WriteVRAM((const u8*)0xA000, (u16)((GFX_TAG_Y * 128UL) & 0xFFFF), (u8)((GFX_TAG_Y * 128UL) >> 16), 4096);
 	SET_BANK_SEGMENT(3, SEG_TEXT);
 	VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
 	VDP_EnableSprite(TRUE);
@@ -154,6 +154,7 @@ void Vid_EdStripe(u8 ed, u8 x, u8 y)
 	x &= 0xFE;
 	if (ed == ED_FOIL) Vid_Fill(x + 2, y + 1, 20, 2, COL_ICE);
 	else if (ed == ED_HOLO) Vid_Fill(x + 2, y + 1, 20, 2, COL_RED);
+	else if (ed == ED_NEG) { Vid_Fill(x + 2, y + 1, 20, 1, COL_INK); Vid_Fill(x + 2, y + 2, 20, 1, COL_CREAM); }     // inverted bar
 	else if (ed == ED_POLY)
 	{
 		static const u8 rb[4] = { COL_RED, COL_GOLD, COL_GREEN, COL_BLUE };
@@ -176,7 +177,7 @@ void Vid_PlayCard(u16 c, bool faceDown, u8 x, u8 y)
 
 void Vid_TagIcon(u8 tag, u8 x, u8 y)
 {
-	VDP_CommandLMMM((u16)tag * 16, GFX_TAG_Y, x, y, 16, 16, VDP_OP_TIMP);
+	VDP_CommandLMMM((u16)(tag & 15) * 16, GFX_TAG_Y + (u16)(tag >> 4) * 16, x, y, 16, 16, VDP_OP_TIMP);
 }
 
 void Vid_BlindIcon(u8 row, u8 x, u8 y)

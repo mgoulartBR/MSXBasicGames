@@ -81,7 +81,7 @@ void joker_main(SC* s, u8 ji, u16 ct, u8 type, u8 nPlayed, const Card* pc, u8 ma
 		case JK_HALF:         if (nPlayed <= 3) add_mult(s, src, 20); break;
 		case JK_STENCIL:
 		{
-			u8 empty = (u8)(joker_slots() - g.nJk);
+			i8 empty = (i8)((i8)joker_slots() - (i8)g.nJk);
 			if (empty > 0) x_mult(s, src, (i16)((empty + joker_count(JK_STENCIL)) * 100));
 			break;
 		}

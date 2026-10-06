@@ -116,6 +116,7 @@ void joker_sold(const JokerInst* sold) BANKED
 {
 	for (u8 i = 0; i < g.nJk; i++) if (g.jk[i].id == JK_CAMPFIRE) g.jk[i].v += 25;
 	if (!sold) return;
+	if (sold->id == JK_DIET_COLA) tag_gain(TG_DOUBLE);
 	if (sold->id == JK_LUCHADOR && g.blind == BLIND_BOSS && g.state == ROUND_PLAYING) g.bossOff = 1;
 	if (sold->id == JK_INVISIBLE && sold->v >= 2 && g.nJk && g.nJk < joker_slots())
 	{
@@ -155,6 +156,6 @@ void shop_leave(void) BANKED
 		{
 			u8 have[CONS_MAX], n = 0;
 			for (u8 k = 0; k < CONS_MAX; k++) if (g.cons[k]) have[n++] = g.cons[k];
-			if (n) cons_add(have[rndn(n)]);
+			if (n) cons_add_ed(have[rndn(n)], TRUE);                        // the copy is Negative: it needs no free slot
 		}
 }

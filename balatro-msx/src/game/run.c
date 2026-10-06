@@ -58,6 +58,9 @@ void run_new(void) BANKED
 		case DK_ZODIAC:  g.vouchers |= VBIT(VC_TAROT_MERCHANT) | VBIT(VC_PLANET_MERCHANT) | VBIT(VC_OVERSTOCK); break;
 		case DK_PAINTED: g.handSizeBase += 2; break;
 		case DK_GHOST:   g.cons[0] = CONS_SPECTRAL(SP_HEX); break;
+		case DK_BLACK:   g.handsBase--; break;                             // (+1 Joker slot: joker_slots())
+		case DK_MAGIC:   g.vouchers |= VBIT(VC_CRYSTAL_BALL); g.cons[0] = g.cons[1] = CONS_TAROT(TR_FOOL); break;
+		case DK_NEBULA:  g.vouchers |= VBIT(VC_TELESCOPE); break;           // (-1 consumable slot: cons_slots())
 	}
 	if (g.stake >= 4 && g.discardsBase > 0) g.discardsBase--;               // Blue Stake
 	g.forced = 0xFF; g.mouthHand = 0xFF; g.mostPlayed = 0xFF; g.lastHandType = 0xFF;
@@ -303,6 +306,7 @@ bool round_discard(u16 sel) BANKED
 void round_end_effects(void) BANKED
 {
 	g.unusedDiscards += g.discardsLeft;
+	if (g.deckId == DK_ANAGLYPH && g.blind == BLIND_BOSS && g.state == ROUND_WON) tag_gain(TG_DOUBLE);       // Anaglyph Deck
 	for (u8 i = 0; i < g.nHand; i++)                                  // Blue Seal: the Planet of the last hand played
 		if (C_SEAL(g.deck[g.hand[i]]) == SEAL_BLUE && g.lastHandType < HAND_COUNT) cons_add(CONS_PLANET(g.lastHandType));
 	g.tempHand = 0;

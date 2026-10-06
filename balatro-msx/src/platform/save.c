@@ -7,7 +7,7 @@
 #define BANK3_REG   (*(volatile u8*)0x7800)
 #define SRAM        ((volatile u8*)0xA000)
 #define SEG_TEXT    20                 // the segment normally mapped in bank 3 (see pvideo.h)
-#define SAVE_VERSION 1
+#define SAVE_VERSION 2
 
 typedef struct { u8 magic[4]; u8 version, screen; u16 len, sum; } Hdr;     // followed by the Game bytes
 

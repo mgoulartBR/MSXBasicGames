@@ -266,11 +266,11 @@ render(_jrender, 2).save(os.path.join(PREVIEW, 'jokers.png'))
 
 # ------------------------------------------------------------------ tags -----
 tg = load('tags.png')
-tag_img = np.zeros((16, 256), dtype=np.uint8)
+tag_img = np.zeros((32, 256), dtype=np.uint8)               # 2 rows of 16 icons, uploaded to VRAM page 3
 for i, (k, _) in enumerate(C.TAGS):
     tx, ty = centers['tag_' + k]['pos']
     ic = premult_resize(tg.crop((tx * 34, ty * 34, tx * 34 + 34, ty * 34 + 34)), (16, 16))
-    tag_img[:, i * 16:(i + 1) * 16] = pal.quantize(ic)
+    tag_img[(i >> 4) * 16:(i >> 4) * 16 + 16, (i & 15) * 16:((i & 15) + 1) * 16] = pal.quantize(ic)
 render(tag_img, 4).save(os.path.join(PREVIEW, 'tags.png'))
 
 # ------------------------------------------------------------------ logo ----
@@ -447,7 +447,7 @@ with open(os.path.join(OUT_INC, 'assets_gen.h'), 'w') as f:
     f.write('#define GFX_PALETTE_INIT { %s }\n' % ', '.join('0x%02X, 0x%02X' % (((r << 4) | b), g) for r, g, b in PAL))
     f.write('#define GFX_ATLAS_FIRST_SEG %d\n#define GFX_ATLAS_SEGS %d\n#define GFX_ATLAS_LINES %d\n#define GFX_ATLAS_Y0 %d\n' % (FIRST_SEG, nseg, ATLAS_LINES, ATLAS_Y0))
     f.write('#define GFX_LOGO_SEG %d\n#define GFX_LOGO_W %d\n#define GFX_LOGO_H %d\n' % (LOGO_SEG, lw, lh))
-    f.write('#define GFX_TAG_SEG %d\n#define GFX_TAG_Y 212\n' % TAG_SEG)
+    f.write('#define GFX_TAG_SEG %d\n#define GFX_TAG_Y 768\n' % TAG_SEG)
     f.write('#define GFX_CELL_W %d\n#define GFX_CELL_H %d\n#define GFX_CELLS_PER_ROW %d\n' % (OUT_W, OUT_H, CELLS_PER_ROW))
     for k in ('card', 'back', 'blank', 'planet', 'tarot', 'spectral', 'voucher'):
         f.write('#define CELL_%s %d\n' % (k.upper(), layout[k]))

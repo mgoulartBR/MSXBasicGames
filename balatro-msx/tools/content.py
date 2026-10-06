@@ -27,6 +27,8 @@ JOKERS = [
  "astronomer","burnt",
  # legendary (only from The Soul)
  "caino","triboulet","yorick","chicot","perkeo",
+ # needs the Double Tag
+ "diet_cola",
 ]
 
 # planet cards, in the order of the hand types they level (see HAND_* in the C code)
@@ -41,7 +43,7 @@ TAROTS = [
  "wheel_of_fortune","strength","hanged_man","death","temperance","devil","tower","star","moon","sun","judgement","world",
 ]
 
-SPECTRALS = ["familiar","grim","incantation","talisman","aura","wraith","sigil","ouija","immolate","ankh","deja_vu","hex","trance","medium","cryptid","black_hole","soul"]
+SPECTRALS = ["familiar","grim","incantation","talisman","aura","wraith","sigil","ouija","immolate","ankh","deja_vu","hex","trance","medium","cryptid","black_hole","ectoplasm","soul"]
 SPECTRAL_DESC = {
  "familiar": "Destroys 1 random card in hand, adds 3 random enhanced face cards",
  "grim": "Destroys 1 random card in hand, adds 2 random enhanced Aces",
@@ -59,6 +61,7 @@ SPECTRAL_DESC = {
  "medium": "Adds a Purple Seal to 1 selected card",
  "cryptid": "Creates 2 copies of 1 selected card",
  "black_hole": "Upgrades every poker hand by 1 level",
+ "ectoplasm": "Adds Negative (+1 Joker slot) to a random Joker, -1 hand size",
  "soul": "Creates a Legendary Joker",
 }
 
@@ -126,7 +129,8 @@ JOKER_DESC = {
  "triboulet": "Played Kings and Queens each give X2 Mult",
  "yorick": "Gains X1 Mult every 23 cards discarded",
  "chicot": "Disables the effect of every Boss Blind",
- "perkeo": "End of shop: creates a copy of a random consumable",
+ "perkeo": "End of shop: creates a Negative copy of a random consumable",
+ "diet_cola": "Sell this card to create a free Double Tag",
  "joker": "+4 Mult",
  "greedy_joker": "Played Diamonds give +3 Mult", "lusty_joker": "Played Hearts give +3 Mult",
  "wrathful_joker": "Played Spades give +3 Mult", "gluttenous_joker": "Played Clubs give +3 Mult",
@@ -284,6 +288,7 @@ TAGS = [
  ("skip",       "Gain $5 per Blind skipped this run"),
  ("orbital",    "Upgrade a random poker hand by 3 levels"),
  ("economy",    "Doubles your money (max +$40)"),
+ ("double",     "Gives a copy of the next Tag you gain, except Double Tags"),
 ]
 
 # tier-1 vouchers carried over (key, description). One is offered per Ante; each costs $10.
@@ -297,4 +302,6 @@ VOUCHERS = [
  ("paint_brush",      "+1 hand size"),
  ("tarot_merchant",   "Tarot cards appear more frequently in the shop"),
  ("planet_merchant",  "Planet cards appear more frequently in the shop"),
+ ("crystal_ball",     "+1 consumable slot"),
+ ("telescope",        "Celestial Packs always contain the Planet of your most played hand"),
 ]

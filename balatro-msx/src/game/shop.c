@@ -15,7 +15,7 @@ static u8 popcnt16(u16 m) { u8 n = 0; while (m) { n += (u8)(m & 1); m >>= 1; } r
 //-----------------------------------------------------------------------------
 // random generators
 //-----------------------------------------------------------------------------
-static i16 random_joker_r(u8 avoidMask[(JOKER_COUNT + 7) / 8], u8 forced)
+i16 random_joker_r(u8* avoidMask, u8 forced) BANKED
 {
 	u8 roll = rnd8();
 	u8 rarity = forced ? forced : (roll > 242 ? 3 : (roll > 178 ? 2 : 1));
@@ -64,17 +64,35 @@ static u8 random_tarot(void) { return rndn(TAROT_COUNT); }
 //-----------------------------------------------------------------------------
 // consumables
 //-----------------------------------------------------------------------------
-bool cons_add(u8 c) BANKED
+u8 cons_slots(void) BANKED
 {
-	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i] == 0) { g.cons[i] = c; return TRUE; }
+	u8 n = (u8)(CONS_BASE + ((g.vouchers & VBIT(VC_CRYSTAL_BALL)) != 0) - (g.deckId == DK_NEBULA));   // Crystal Ball +1, Nebula Deck -1
+	for (u8 i = 0; i < CONS_MAX; i++) if (g.consNeg & (1 << i)) n++;
+	return n > CONS_MAX ? CONS_MAX : n;
+}
+
+bool cons_add_ed(u8 c, bool negative) BANKED
+{
+	u8 have = 0;
+	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i]) have++;
+	if (have >= (negative ? CONS_MAX : cons_slots())) return FALSE;
+	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i] == 0) { g.cons[i] = c; if (negative) g.consNeg |= (u8)(1 << i); return TRUE; }
 	return FALSE;
+}
+bool cons_add(u8 c) BANKED { return cons_add_ed(c, FALSE); }
+
+void cons_remove(u8 s) BANKED
+{
+	g.consNeg = (u8)((g.consNeg & ((1 << s) - 1)) | ((g.consNeg >> (s + 1)) << s));
+	for (u8 k = s; k + 1 < CONS_MAX; k++) g.cons[k] = g.cons[k + 1];
+	g.cons[CONS_MAX - 1] = 0;
 }
 
 u8 cons_sell_value(u8 c) BANKED { (void)c; return 1; }
 
 void cons_sell(u8 slot) BANKED
 {
-	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); g.cons[slot] = 0; joker_sold(0); }
+	if (g.cons[slot]) { g.money += cons_sell_value(g.cons[slot]); cons_remove(slot); joker_sold(0); }
 }
 
 void joker_sell(u8 idx) BANKED
@@ -124,83 +142,7 @@ static void hand_remove(u8 idx)
 	g.nHand--;
 }
 
-static void hand_remove(u8 idx);
-static void destroy_random_in_hand(void)
-{
-	if (!g.nHand) return;
-	u8 i = rndn(g.nHand);
-	card_destroyed(g.deck[g.hand[i]]); g.loc[g.hand[i]] = LOC_GONE; hand_remove(i);
-}
-static void add_to_hand(Card c) { deck_add(c, TRUE); }
-static Card enhanced(u8 rank) { return C_SETENH(CARD(rndn(4), rank), 1 + rndn(ENH_COUNT - 1)); }
-
-// Spectral cards (Soul and Ectoplasm are not in this port: no legendary Jokers / no Negative edition)
-static bool spectral_use(u8 slot, u8 t, u16 sel)
-{
-	u8 first = 0xFF;
-	for (u8 i = 0; i < g.nHand; i++) if (sel & (1u << i)) { first = i; break; }
-	switch (t)
-	{
-		case SP_WRAITH:
-		{
-			if (g.nJk >= joker_slots()) return FALSE;
-			u8 none[(JOKER_COUNT + 7) / 8] = { 0 };
-			i16 j = random_joker_r(none, 3);
-			if (j < 0) return FALSE;
-			g.cons[slot] = 0; joker_add((u8)j); g.money = 0;
-			return TRUE;
-		}
-		case SP_ANKH: case SP_HEX:
-		{
-			if (!g.nJk) return FALSE;
-			g.cons[slot] = 0;
-			JokerInst keep = g.jk[rndn(g.nJk)], eternal[JOKER_MAX]; u8 ne = 0;
-			for (u8 i = 0; i < g.nJk; i++) if ((g.jk[i].flags & JF_ETERNAL) && ne < JOKER_MAX) eternal[ne++] = g.jk[i];      // eternal Jokers survive
-			g.nJk = 0;
-			g.jk[g.nJk++] = keep;
-			if (t == SP_HEX) g.jk[0].ed = ED_POLY;
-			for (u8 i = 0; i < ne && g.nJk < joker_slots(); i++) if (eternal[i].id != keep.id || eternal[i].flags != keep.flags) g.jk[g.nJk++] = eternal[i];
-			if (t == SP_ANKH && g.nJk < joker_slots()) { g.jk[g.nJk] = keep; g.jk[g.nJk].flags &= (u8)~JF_ETERNAL; g.nJk++; }
-			joker_recalc_modifiers();
-			return TRUE;
-		}
-		case SP_SOUL:
-			if (!joker_random_add(4)) return FALSE;
-			g.cons[slot] = 0;
-			return TRUE;
-		case SP_BLACK_HOLE:
-			g.cons[slot] = 0;
-			for (u8 h = 0; h < HAND_COUNT; h++) g.handLevel[h]++;
-			return TRUE;
-	}
-	if (!g.nHand) return FALSE;                  // every other Spectral works on the hand
-	g.cons[slot] = 0;
-	switch (t)
-	{
-		case SP_FAMILIAR: destroy_random_in_hand(); for (u8 k = 0; k < 3; k++) add_to_hand(enhanced(RANK_J + rndn(3))); break;
-		case SP_GRIM: destroy_random_in_hand(); for (u8 k = 0; k < 2; k++) add_to_hand(enhanced(RANK_A)); break;
-		case SP_INCANTATION: destroy_random_in_hand(); for (u8 k = 0; k < 4; k++) add_to_hand(enhanced(rndn(9))); break;
-		case SP_TALISMAN: case SP_DEJA_VU: case SP_TRANCE: case SP_MEDIUM:
-		{
-			Card* d = &g.deck[g.hand[first]];
-			*d = C_SETSEAL(*d, t == SP_TALISMAN ? SEAL_GOLD : t == SP_DEJA_VU ? SEAL_RED : t == SP_TRANCE ? SEAL_BLUE : SEAL_PURPLE);
-			break;
-		}
-		case SP_AURA: { Card* d = &g.deck[g.hand[first]]; *d = C_SETED(*d, 1 + rndn(3)); break; }
-		case SP_SIGIL: { u8 su = rndn(4); for (u8 i = 0; i < g.nHand; i++) g.deck[g.hand[i]] = C_SETSUIT(g.deck[g.hand[i]], su); break; }
-		case SP_OUIJA:
-		{
-			u8 r = rndn(13);
-			for (u8 i = 0; i < g.nHand; i++) g.deck[g.hand[i]] = C_SETRANK(g.deck[g.hand[i]], r);
-			if (g.handSizeBase > 1) g.handSizeBase--;
-			break;
-		}
-		case SP_IMMOLATE: for (u8 k = 0; k < 5; k++) destroy_random_in_hand(); g.money += 20; break;
-		case SP_CRYPTID: { Card c = g.deck[g.hand[first]]; add_to_hand(c); add_to_hand(c); break; }
-	}
-	hand_sort(g.sortMode);
-	return TRUE;
-}
+bool spectral_use(u8 slot, u8 t, u16 sel) BANKED;          // spectral.c
 
 // use the consumable in slot (planets need no cards); sel = highlighted hand positions
 bool cons_use(u8 slot, u16 sel) BANKED
@@ -215,7 +157,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 	if (CONS_IS_PLANET(c))
 	{
 		planet_use(c - 1);
-		g.cons[slot] = 0;
+		cons_remove(slot);
 		g.lastCons = c;
 		return TRUE;
 	}
@@ -223,7 +165,7 @@ bool cons_use(u8 slot, u16 sel) BANKED
 	u8 t = c - 0x20;
 	if (t == TR_JUDGEMENT && g.nJk >= joker_slots()) return FALSE;
 	if (t == TR_FOOL && (g.lastCons == 0 || g.lastCons == c)) return FALSE;
-	g.cons[slot] = 0;                         // the card is spent first: it frees its slot for the ones it creates
+	cons_remove(slot);                        // the card is spent first: it frees its slot for the ones it creates
 	if (g.tarotsUsed < 255) g.tarotsUsed++;   // Fortune Teller counts every Tarot used
 	switch (t)
 	{
@@ -474,7 +416,13 @@ static void pack_fill(u8 kind)
 		}
 		else if (type == 1)
 		{
-			u8 h; do { h = random_planet(); } while (usedPlanet & (1u << h));
+			u8 h;
+			if (i == 0 && (g.vouchers & VBIT(VC_TELESCOPE)))             // Telescope: the Planet of the most played hand comes first
+			{
+				h = 0;
+				for (u8 k = 1; k < HAND_COUNT; k++) if (g.handPlays[k] > g.handPlays[h]) h = k;
+			}
+			else do { h = random_planet(); } while (usedPlanet & (1u << h));
 			usedPlanet |= (u16)(1u << h); g_packType[i] = ST_PLANET; g_packId[i] = h;
 		}
 		else

@@ -238,7 +238,7 @@ static void info_card(Card c)
 	Vid_Text(AREA_X + 6, INFO_Y + 3, b, TC_WHITE);
 	Vid_Text(AREA_X + 6, INFO_Y + 14, "+", TC_BLUE);
 	Vid_Num(AREA_X + 12, INFO_Y + 14, C_NOMINAL(c), TC_BLUE);
-	Vid_Text(AREA_X + 12 + Vid_NumW(C_NOMINAL(c)) + 3, INFO_Y + 14, "chips when scored", TC_SLATE);
+	Vid_Text(AREA_X + 12 + Vid_NumW(C_NOMINAL(c)) + 3, INFO_Y + 14, I_CHIPSW, TC_SLATE);
 	if (C_ENH(c)) Vid_Text(AREA_X + 6, INFO_Y + 25, g_EnhText[C_ENH(c)], TC_GOLD);
 	if (C_ED(c)) Vid_Text(250 - Vid_TextW(g_EdName[C_ED(c)]), INFO_Y + 3, g_EdName[C_ED(c)], TC_BLUE);
 	if (C_SEAL(c))
@@ -253,6 +253,8 @@ static void info_jokerdef(const JokerDef* d, i8 sell, u8 price, const JokerInst*
 	Vid_Text(AREA_X + 6, INFO_Y + 3, d->name, TC_GOLD);
 	if (fl & (JF_ETERNAL | JF_PERISH | JF_RENTAL))              // stickers
 		Vid_Text(AREA_X + 6 + Vid_TextW(d->name) + 6, INFO_Y + 3, (fl & JF_ETERNAL) ? "Eternal" : ((fl & JF_PERISHED) ? "Perished" : ((fl & JF_PERISH) ? "Perishable" : "Rental")), TC_RED);
+	if (j && j->ed && !(fl & (JF_ETERNAL | JF_PERISH | JF_RENTAL)))
+		Vid_Text(AREA_X + 6 + Vid_TextW(d->name) + 6, INFO_Y + 3, g_EdName[j->ed], TC_BLUE);      // Foil / Holographic / Polychrome / Negative
 	if (j && (j->id == JK_ANCIENT || j->id == JK_CASTLE || j->id == JK_IDOL || j->id == JK_MAIL))      // this round's target
 	{
 		static const char rs[13] = { '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A' };
@@ -305,7 +307,7 @@ void info_blind(void) BANKED
 		Vid_Text(AREA_X + 6, INFO_Y + 3, g_Bosses[g.boss].name, TC_RED);
 		Vid_WrapDesc(g_Bosses[g.boss].desc, AREA_X + 6, INFO_Y + 14, 180, TC_WHITE, 2);
 	}
-	else info_text(g.blind == BLIND_SMALL ? "Small Blind" : "Big Blind", "Reach the target score before you run out of hands.");
+	else info_text(g.blind == BLIND_SMALL ? I_SMALLB : I_BIGB, I_BLINDDESC);
 }
 
 void info_show(u8 id) BANKED
@@ -316,21 +318,21 @@ void info_show(u8 id) BANKED
 	if (id < W_JOKER)
 	{
 		u8 i = id - W_HAND;
-		if (i < g.nHand) { if (g.dflag[g.hand[i]] & DF_FD) info_text("Face down card", 0); else info_card(g.deck[g.hand[i]]); }
+		if (i < g.nHand) { if (g.dflag[g.hand[i]] & DF_FD) info_text(I_FACEDOWN, 0); else info_card(g.deck[g.hand[i]]); }
 	}
-	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0, &g.jk[i], g.jk[i].flags); else info_text("Empty Joker slot", 0); }
-	else if (id < W_PLAY) { u8 i = id - W_CONS; if (g.cons[i]) info_cons(g.cons[i], 0); else info_text("Empty consumable slot", 0); }
+	else if (id < W_CONS) { u8 i = id - W_JOKER; if (i < g.nJk) info_jokerdef(&g_Jokers[g.jk[i].id], (i8)joker_sell_value(i), 0, &g.jk[i], g.jk[i].flags); else info_text(I_EMPTYJ, 0); }
+	else if (id < W_PLAY) { u8 i = id - W_CONS; if (g.cons[i]) { info_cons(g.cons[i], 0); if ((g.consNeg >> i) & 1) Vid_Text(250 - Vid_TextW(g_EdName[ED_NEG]), INFO_Y + 3, g_EdName[ED_NEG], TC_BLUE); } else info_text(I_EMPTYC, 0); }
 	else switch (id)
 	{
-		case W_PLAY:      info_text("Play Hand", "Score the selected cards (1-5)."); break;
-		case W_DISCARD:   info_text("Discard", "Throw away the selected cards and draw new ones."); break;
-		case W_SORT_RANK: info_text("Sort by Rank", "Highest rank on the left."); break;
-		case W_SORT_SUIT: info_text("Sort by Suit", "Group cards by suit."); break;
-		case W_INFO:      info_text("Run Info", "Poker hand levels and statistics."); break;
-		case W_SELL:      info_text("Sell", "Sell this card for money."); break;
-		case W_USE:       info_text("Use", "Use this consumable now."); break;
-		case W_REROLL:    info_text("Reroll", "Get a new set of shop cards. The price grows each time."); break;
-		case W_NEXT:      info_text("Next Round", "Leave the shop and pick the next Blind."); break;
+		case W_PLAY:      info_text(I_PLAYT, I_PLAYD); break;
+		case W_DISCARD:   info_text(T_DISCARD, I_DISCD); break;
+		case W_SORT_RANK: info_text(I_RANKT, I_RANKD); break;
+		case W_SORT_SUIT: info_text(I_SUITT, I_SUITD); break;
+		case W_INFO:      info_text(T_RUNINFO, I_INFOD); break;
+		case W_SELL:      info_text("Sell", I_SELLD); break;
+		case W_USE:       info_text("Use", I_USED); break;
+		case W_REROLL:    info_text("Reroll", I_REROLLD); break;
+		case W_NEXT:      info_text(T_NEXT, I_NEXTD); break;
 		default:
 			if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 			{
@@ -339,7 +341,7 @@ void info_show(u8 id) BANKED
 				else if (g.shopType[i] == 2) { info_planet(g.shopId[i], FALSE); info_price("Cost", 3); }
 				else if (g.shopType[i] == 3) info_cons(CONS_TAROT(g.shopId[i]), 3);
 				else if (g.shopType[i] == 5) info_cons(CONS_SPECTRAL(g.shopId[i]), 3);
-				else info_text("Sold out", 0);
+				else info_text(M_SOLDOUT, 0);
 			}
 			else if (id == W_VOUCHER)
 			{
@@ -355,18 +357,16 @@ void info_show(u8 id) BANKED
 				u8 k = g.packType[id - W_PACK];
 				if (k)
 				{
-					static const char* const nm[5] = { "Arcana Pack", "Celestial Pack", "Buffoon Pack", "Standard Pack", "Spectral Pack" };
-					static const char* const ds[5] = { "Choose from random Tarot cards.", "Choose from random Planet cards.", "Choose from random Jokers.", "Choose playing cards to add to your deck.", "Choose from random Spectral cards." };
 					static const char* const sz[3] = { "", "Jumbo ", "Mega " };
 					char b[28]; u8 n = 0; const char* p = sz[(k - 1) % 3];
 					while (*p) b[n++] = *p++;
-					p = nm[(k - 1) / 3]; while (*p) b[n++] = *p++;
+					p = g_PackName[(k - 1) / 3]; while (*p) b[n++] = *p++;
 					b[n] = 0;
 					Vid_Text(AREA_X + 6, INFO_Y + 3, b, TC_BLUE);
 					info_price("Cost", pack_price(id - W_PACK));
-					Vid_Wrap(AREA_X + 6, INFO_Y + 14, ds[(k - 1) / 3], 180, TC_WHITE, 2);
+					Vid_Wrap(AREA_X + 6, INFO_Y + 14, g_PackDesc[(k - 1) / 3], 180, TC_WHITE, 2);
 				}
-				else info_text("Sold out", 0);
+				else info_text(M_SOLDOUT, 0);
 			}
 			else if (id >= W_PACKCARD && id < W_PACKCARD + PACK_CARD_MAX)
 			{
@@ -383,7 +383,48 @@ void info_show(u8 id) BANKED
 //-----------------------------------------------------------------------------
 // joker + consumable row (also used by the shop)
 //-----------------------------------------------------------------------------
+u8 cslots(void) BANKED
+{
+	u8 n = cons_slots(), last = 0;
+	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i]) last = (u8)(i + 1);
+	return n > last ? n : last;
+}
+u8 jslots(void) BANKED { u8 n = joker_slots(); return n > g.nJk ? n : g.nJk; }
+u8 cx(u8 i) BANKED { return (u8)(256 - 26 * cslots() + i * 26); }
+u8 jpitch(void) BANKED
+{
+	u8 n = jslots();
+	if (n < 2) return 26;
+	u8 p = (u8)(((186 - 26 * cslots() - 24) / (n - 1)) & 0xFE);          // even: the VDP block copies work on byte (2 pixel) boundaries
+	return p > 26 ? 26 : p;
+}
+u8 jx(u8 i) BANKED { return (u8)(66 + i * jpitch()); }
+u8 jwidth(u8 i) BANKED { u8 p = jpitch(); return (i + 1 < g.nJk && p < 24) ? p : 24; }
+
 static u8 jslot_x(u8 id) { return id < W_CONS ? JOKER_X(id - W_JOKER) : CONS_X(id - W_CONS); }
+
+// Joker/consumable slots a focus change must repaint: the slot itself plus, when Jokers overlap, its neighbours (drawn left to right,
+// the focused one last, so it pops in front)
+u16 jmask_of(u8 id) BANKED
+{
+	if (id >= W_CONS) return (u16)(1u << (8 + id - W_CONS));
+	u8 i = id - W_JOKER;
+	u16 m = (u16)(1u << i);
+	if (jpitch() < 24) { if (i) m |= (u16)(1u << (i - 1)); if (i + 1 < g.nJk) m |= (u16)(1u << (i + 1)); }
+	return m;
+}
+
+void draw_jmask(u16 m) BANKED
+{
+	u8 f = ui_focus_id();
+	for (u8 pass = 0; pass < 2; pass++)
+		for (u8 b = 0; b < 12; b++)
+			if (m & (1u << b))
+			{
+				u8 id = b < 8 ? (u8)(W_JOKER + b) : (u8)(W_CONS + b - 8);
+				if ((id == f) == (pass == 1)) draw_jslot(id);
+			}
+}
 
 void draw_jslot(u8 id) BANKED
 {
@@ -395,7 +436,7 @@ void draw_jslot(u8 id) BANKED
 	Vid_Fill(x, y == JOKER_Y ? JOKER_Y + 32 : JOKER_Y, 24, 3, COL_FELT);     // only the 3 rows the card does not cover (no flicker)
 	if (!present) { Vid_Fill(x, JOKER_Y, 24, 32, COL_FELT); Vid_Frame(x, JOKER_Y, 24, 32, COL_SLATE); return; }
 	if (isJoker) { Vid_Joker(g.jk[idx].id, x, y); Vid_EdStripe(g.jk[idx].ed, x, y); Vid_Stickers(g.jk[idx].flags, x, y); }
-	else Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : (CONS_IS_SPECTRAL(g.cons[idx]) ? CELL_SPECTRAL + g.cons[idx] - 0x40 : CELL_TAROT + g.cons[idx] - 0x20), x, y);
+	else { Vid_Card(CONS_IS_PLANET(g.cons[idx]) ? CELL_PLANET + g.cons[idx] - 1 : (CONS_IS_SPECTRAL(g.cons[idx]) ? CELL_SPECTRAL + g.cons[idx] - 0x40 : CELL_TAROT + g.cons[idx] - 0x20), x, y); if ((g.consNeg >> idx) & 1) Vid_EdStripe(ED_NEG, x, y); }
 	if (isJoker && (g.jk[idx].flags & JF_DEBUFF)) Vid_Frame(x, y, 24, 32, COL_RED);
 	if (ui_find(id) != 0xFF && ui_find(id) == ui.focus) Vid_Frame(x, y, 24, 32, COL_GOLD);     // ring inside the card border
 }
@@ -403,10 +444,13 @@ void draw_jslot(u8 id) BANKED
 void draw_joker_row(bool shop) BANKED
 {
 	Vid_Fill(AREA_X, 0, AREA_W, 52, COL_FELT);
-	for (u8 i = 0; i < JOKER_MAX; i++) draw_jslot(W_JOKER + i);
-	for (u8 i = 0; i < CONS_MAX; i++) draw_jslot(W_CONS + i);
-	{ char s[6] = "0/5"; s[0] = '0' + g.nJk; Vid_Text(JOKER_X(0), 36, s, TC_SLATE); }
-	{ char s[6] = "0/2"; s[0] = '0' + (g.cons[0] != 0) + (g.cons[1] != 0); Vid_Text(CONS_X(0), 36, s, TC_SLATE); }
+	u8 nj = jslots(), nc = cslots();
+	for (u8 i = nj; i > g.nJk; i--) draw_jslot((u8)(W_JOKER + i - 1));              // empty outlines first: overlapping Jokers go on top
+	for (u8 i = 0; i < g.nJk; i++) draw_jslot(W_JOKER + i);
+	for (u8 i = 0; i < nc; i++) draw_jslot(W_CONS + i);
+	{ u8 f = ui_focus_id(); if (f >= W_JOKER && f < W_JOKER + g.nJk && jpitch() < 24) draw_jslot(f); }     // the focused card in front
+	{ char s[6] = "0/5"; s[0] = '0' + g.nJk; s[2] = '0' + joker_slots(); Vid_Text(JOKER_X(0), 36, s, TC_SLATE); }
+	{ char s[6] = "0/2"; u8 k = 0; for (u8 i = 0; i < CONS_MAX; i++) k += g.cons[i] != 0; s[0] = '0' + k; s[2] = '0' + cons_slots(); Vid_Text(CONS_X(0), 36, s, TC_SLATE); }
 	(void)shop;
 	if (ui.itemKind)
 	{

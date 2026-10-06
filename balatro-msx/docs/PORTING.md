@@ -10,8 +10,8 @@ Place the extracted Balatro source (`game.lua`, `card.lua`, `resources/…`) in 
 3. MSXgl `node build.js` (SDCC 4.6.0) → ROM; `tools/memreport.py` prints budgets; SHA256 printed; MAP in `build/`.
 
 ## Architecture
-- Bank 0–2 fixed (~14.9 KB code/rodata of the 16 KB fixed area), bank 2 swaps `__banked` code segments 24–31; bank 3 swaps data (atlas 4–11, logo 12, tags 13, joker art 14–18 (+19, 23 reserved), text 20, descriptions 21); code segment 22 holds the per-joker scoring phases. Strings shared across segments live in SEG20 or fixed memory.
-- VRAM: page 0 display; rows 212–227 tag icons; pages 1–2 atlas (cards, planets, tarots, vouchers, blind icons, font strips; 8 mapper segments). Page 3 is free.
+- Bank 0–2 fixed (~14.9 KB code/rodata of the 16 KB fixed area), bank 2 swaps `__banked` code segments 22, 24–30; bank 3 swaps data (atlas 4–11, logo 12, tags 13, joker art 14–19, text 20, descriptions 21 and 23); code segment 22 holds the per-joker scoring phases and the Spectral cards. The self-test and debug ROMs are 512 KB: their test code lives in segments 32–34 (the release ROM stays 256 KB and never links them). Strings shared across segments live in SEG20 or fixed memory.
+- VRAM: page 0 display; pages 1–2 atlas (cards, planets, tarots, vouchers, blind icons, font strips; 8 mapper segments); page 3 rows 768–799 tag icons (2 rows of 16).
 - Joker art is **streamed**: 24x32 cards live in ROM segments (21 per 8 KB segment, 384 bytes each, up to 7 segments = 147 jokers) and are blitted straight to the screen with HMMC by `Vid_Joker()`; nothing of it is kept in VRAM.
 - Rendering: HMMV/HMMM (even x/width) where possible, LMMV/LMMM otherwise; targeted redraw per widget/slot; display disabled during screen switches.
 - Scoring produces an event list (chips u32, mult ×100) replayed as animation. State in a single `Game g`.

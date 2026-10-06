@@ -21,29 +21,37 @@
 #define BTN_Y         158
 #define BTN_H         14
 #define INFO_Y        176
-#define JOKER_X(i)    (66 + (i) * 26)
-#define CONS_X(i)     (204 + (i) * 26)
+// The Joker and consumable rows grow with the slot count (Black Deck, Negative, Crystal Ball, Nebula Deck): consumables are
+// right-aligned, Jokers fill the rest of the row and overlap (like the hand) once 26 px per card no longer fits.
+u8 jslots(void) BANKED;          // slots drawn: max(Joker slots, Jokers owned)
+u8 cslots(void) BANKED;          // consumable slots drawn
+u8 jpitch(void) BANKED;          // x distance between Joker slots (<= 26; below 24 the cards overlap)
+u8 jwidth(u8 i) BANKED;          // width of the clickable strip of Joker i (the last one is the whole card)
+u8 jx(u8 i) BANKED;
+u8 cx(u8 i) BANKED;
+#define JOKER_X(i)    jx(i)
+#define CONS_X(i)     cx(i)
 
 //-----------------------------------------------------------------------------
 // widgets
 //-----------------------------------------------------------------------------
 typedef struct { u8 x, y, w, h, id; } Widget;
-#define WMAX 26
+#define WMAX 40
 enum
 {
 	W_HAND = 0,          // 0..15
-	W_JOKER = 16,        // 16..20
-	W_CONS = 21,         // 21..22
-	W_PLAY = 23, W_DISCARD, W_SORT_RANK, W_SORT_SUIT, W_INFO,    // 23..27
-	W_SELL = 28, W_USE,                                          // 28, 29
-	W_SHOPCARD = 30,     // 30..32
-	W_PACK = 33,         // 33..34
-	W_REROLL = 35, W_NEXT, W_OK, W_SKIP,                         // 35..38
-	W_BLIND = 39, W_BACK,                                        // 39, 40
-	W_PACKCARD = 41,     // 41..45
-	W_SKIPBLIND = 46, W_VOUCHER = 47,
-	W_DECK = 48, W_STAKE = 49, W_START = 50,                      // deck screen
-	W_CONTINUE = 51, W_NEWRUN = 52,                               // title screen with a saved run
+	W_JOKER = 16,        // 16..23 (JOKER_MAX)
+	W_CONS = 24,         // 24..27 (CONS_MAX)
+	W_PLAY = 28, W_DISCARD, W_SORT_RANK, W_SORT_SUIT, W_INFO,    // 28..32
+	W_SELL = 33, W_USE,                                          // 33, 34
+	W_SHOPCARD = 35,     // 35..39 (SHOP_CARD_MAX)
+	W_PACK = 40,         // 40..41
+	W_REROLL = 42, W_NEXT, W_OK, W_SKIP,                         // 42..45
+	W_BLIND = 46, W_BACK,                                        // 46, 47
+	W_PACKCARD = 48,     // 48..52
+	W_SKIPBLIND = 53, W_VOUCHER = 54,
+	W_DECK = 55, W_STAKE = 56, W_START = 57,                      // deck screen
+	W_CONTINUE = 58, W_NEWRUN = 59,                               // title screen with a saved run
 };
 
 enum { SC_TITLE, SC_BLIND, SC_ROUND, SC_CASHOUT, SC_SHOP, SC_PACK, SC_INFO, SC_OVER, SC_WIN, SC_DECK };
@@ -78,7 +86,8 @@ typedef struct
 	u8  dirty;            // D_* redraw flags
 	u8  hnc;              // the pending hand repaint comes from focus changes only: repaint cards in place, no felt clear (no flicker)
 	u8  hlo, hhi;         // hand cards to repaint (range) when D_HAND is set
-	u8  jmask, bmask;     // joker/consumable slots and buttons to repaint individually
+	u16 jmask;            // Joker (bits 0..7) and consumable (bits 8..11) slots to repaint individually
+	u8  bmask;            // buttons to repaint individually
 	u8  infoDelay;        // frames to wait before repainting the info panel (avoids repainting while the pointer sweeps)
 } UI;
 #define D_HAND    1
@@ -103,9 +112,12 @@ u8   ui_focus_id(void) BANKED;
 bool ui_pointer_focus(void) BANKED;   // true when the focus changed
 void ui_set_focus(u8 idx) BANKED;
 void ui_info_tick(void) BANKED;
-void draw_jslot(u8 id) BANKED;          // one joker / consumable slot (W_JOKER+i, W_CONS+i) with its focus ring
+void draw_jslot(u8 id) BANKED;
+u16  jmask_of(u8 id) BANKED;            // slots to repaint when this slot's focus changes
+void draw_jmask(u16 m) BANKED;          // one joker / consumable slot (W_JOKER+i, W_CONS+i) with its focus ring
 void scr_focus(u8 oldId, u8 newId) BANKED;   // repaint what a focus change touches (per screen)
 void rnd_focus(u8 o, u8 n) BANKED;
+void rnd_rebuild(void) BANKED;
 void shop_focus(u8 o, u8 n) BANKED;
 void pack_focus(u8 o, u8 n) BANKED;
 void blind_focus(u8 o, u8 n) BANKED;
@@ -155,6 +167,8 @@ void upd_over(void) BANKED;
 
 // shared strings (ui_text.c, always-mapped SEG20)
 extern const char T_PLAY[], T_START[], T_CONTINUE[], T_NEWRUN[], T_DISCARD[], T_RANK[], T_SUIT[], T_RUNINFO[], T_SELECT[], T_BACK[], T_NEXT[], T_USE[], T_SKIP[], T_SKIPBLIND[];
+extern const char I_BLINDDESC[], I_FACEDOWN[], I_EMPTYJ[], I_EMPTYC[], I_PLAYD[], I_DISCD[], I_RANKD[], I_SUITD[], I_INFOD[], I_SELLD[], I_USED[], I_REROLLD[], I_NEXTD[], I_RANKT[], I_SUITT[], I_PLAYT[], I_CHIPSW[], I_SMALLB[], I_BIGB[];
+extern const char* const g_PackName[], * const g_PackDesc[];
 extern const char M_NEEDCARDS[], M_CANTUSE[], M_NOMONEY[], M_NOROOM[], M_SOLDOUT[], M_NOJOKER[], M_NOCONS[], M_ETERNAL[];
 
 extern const char* const g_EnhText[], * const g_EdName[], * const g_SealName[], * const g_SealShort[];

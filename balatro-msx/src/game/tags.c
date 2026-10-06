@@ -1,5 +1,5 @@
-// Skip tags: what you get for skipping the Small / Big blind (tag.lua of the original, subset: no editions/vouchers/
-// standard or spectral packs, so Negative/Foil/Holo/Polychrome/Voucher/Standard/Ethereal/Double tags are not offered).
+// Skip tags: what you get for skipping the Small / Big blind (tag.lua of the original, subset: no edition / voucher /
+// standard / spectral pack tags: Negative, Foil, Holographic, Polychrome, Voucher, Standard and Ethereal are not offered).
 #include "bgame.h"
 
 static u8 tag_roll(void)
@@ -45,19 +45,27 @@ static void give_tag(u8 t)
 	if (g.nTags < TAG_MAX) g.tags[g.nTags++] = t;
 }
 
-void blind_skip(void) BANKED
-{
-	u8 tag = (g.blind == BLIND_SMALL ? g.tagSmall : g.tagBig);
-	g.skips++;
-	if (tag) give_tag((u8)(tag - 1));
-	g.blind++;
-}
-
 static bool take_tag(u8 t)
 {
 	for (u8 i = 0; i < g.nTags; i++)
 		if (g.tags[i] == t) { for (u8 k = i; k + 1 < g.nTags; k++) g.tags[k] = g.tags[k + 1]; g.nTags--; return TRUE; }
 	return FALSE;
+}
+
+void tag_gain(u8 t) BANKED { give_tag(t); }
+
+void blind_skip(void) BANKED
+{
+	u8 tag = (g.blind == BLIND_SMALL ? g.tagSmall : g.tagBig);
+	g.skips++;
+	if (tag)
+	{
+		u8 t = (u8)(tag - 1);
+		bool twice = t != TG_DOUBLE && take_tag(TG_DOUBLE);            // a held Double Tag copies the next Tag gained (not another Double)
+		give_tag(t);
+		if (twice) give_tag(t);
+	}
+	g.blind++;
 }
 
 u8 tags_choice_effects(void) BANKED

@@ -105,7 +105,7 @@ static void shop_item(u8 id)
 {
 	if (id == 0xFF) return;
 	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == id;
-	if (id >= W_JOKER && id < W_PLAY) { draw_jslot(id); return; }
+	if (id >= W_JOKER && id < W_PLAY) { draw_jmask(jmask_of(id)); return; }
 	if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 	{
 		u8 i = id - W_SHOPCARD, x = SHOP_X(i);
@@ -159,7 +159,7 @@ static void shop_focus_item(u8 id)
 {
 	if (id == 0xFF) return;
 	bool foc = ui.focus != 0xFF && ui.w[ui.focus].id == id;
-	if (id >= W_JOKER && id < W_PLAY) { draw_jslot(id); return; }
+	if (id >= W_JOKER && id < W_PLAY) { draw_jmask(jmask_of(id)); return; }
 	if (id >= W_SHOPCARD && id < W_SHOPCARD + SHOP_CARD_MAX)
 	{
 		u8 i = id - W_SHOPCARD, x = SHOP_X(i);
@@ -199,7 +199,7 @@ static void shop_widgets(void)
 {
 	ui_clear_widgets();
 	hud_mini();
-	for (u8 i = 0; i < g.nJk; i++) ui_add(W_JOKER + i, JOKER_X(i), JOKER_Y, 24, 32);
+	for (u8 i = 0; i < g.nJk; i++) ui_add(W_JOKER + i, JOKER_X(i), JOKER_Y, jwidth(i), 32);
 	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i]) ui_add(W_CONS + i, CONS_X(i), JOKER_Y, 24, 32);
 	for (u8 i = 0; i < g.shopN; i++) ui_add(W_SHOPCARD + i, SHOP_X(i), SHOP_Y, 24, 44);
 	for (u8 i = 0; i < 2; i++) ui_add(W_PACK + i, PACK_X(i), PACK_Y, 24, 44);

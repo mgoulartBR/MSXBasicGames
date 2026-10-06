@@ -15,6 +15,7 @@ static void check_state(void)
 	for (u8 i = 0; i < g.nHand; i++) { CHECK(g.hand[i] < g.nDeck, "slot"); CHECK(!seen[g.hand[i]]++, "dup hand slot"); CHECK(g.loc[g.hand[i]] == LOC_HAND, "loc hand"); }
 	for (u8 i = 0; i < g.nPile; i++) { CHECK(!seen[g.pile[i]]++, "dup pile slot"); CHECK(g.loc[g.pile[i]] == LOC_PILE, "loc pile"); }
 	CHECK(g.nJk <= JOKER_MAX, "jokers");
+	{ u8 nc = 0; for (u8 i = 0; i < CONS_MAX; i++) nc += g.cons[i] != 0; CHECK(nc <= cons_slots() && !(g.consNeg & ~((1 << CONS_MAX) - 1)), "consumables %d/%d", nc, cons_slots()); }
 	CHECK(g.handLevel[0] >= 1, "level");
 }
 
@@ -76,6 +77,7 @@ int main(int argc, char** argv)
 	for (int run = 0; run < runs; run++)
 	{
 		rng_seed((u16)(run * 7919 + 13));
+		g_deckSel = (u8)(run % DECK_COUNT); g_stakeSel = (u8)((run / DECK_COUNT) % 3);        // every deck, the first stakes
 		run_new();
 		int dead = 0;
 		while (!run_won() && !dead)

@@ -60,7 +60,7 @@ void run_deck_cases(void) BANKED
 	fresh_with(DK_ABANDONED, 0); { u8 f = 0; for (u8 i = 0; i < g.nDeck; i++) f += C_RANK(g.deck[i]) >= RANK_J && C_RANK(g.deck[i]) <= RANK_K; EXPECT("deck: Abandoned has 40 cards and no faces", g.nDeck == 40 && f == 0, 1); }
 	fresh_with(DK_CHECKERED, 0); { u8 h = 0, sp = 0; for (u8 i = 0; i < g.nDeck; i++) { h += C_SUIT(g.deck[i]) == SUIT_H; sp += C_SUIT(g.deck[i]) == SUIT_S; } EXPECT("deck: Checkered is 26 hearts + 26 spades", h == 26 && sp == 26, 1); }
 	fresh_with(DK_ZODIAC, 0); EXPECT("deck: Zodiac starts with 3 vouchers", (g.vouchers & VBIT(VC_TAROT_MERCHANT)) && (g.vouchers & VBIT(VC_PLANET_MERCHANT)) && (g.vouchers & VBIT(VC_OVERSTOCK)), 1);
-	fresh_with(DK_PAINTED, 0); EXPECT("deck: Painted +2 hand size, 4 Joker slots", g.handSizeBase == START_HAND_SIZE + 2 && joker_slots() == JOKER_MAX - 1, 1);
+	fresh_with(DK_PAINTED, 0); EXPECT("deck: Painted +2 hand size, 4 Joker slots", g.handSizeBase == START_HAND_SIZE + 2 && joker_slots() == JOKER_BASE - 1, 1);
 	fresh_with(DK_GHOST, 0); EXPECT("deck: Ghost starts with Hex", g.cons[0], CONS_SPECTRAL(SP_HEX));
 	fresh_with(DK_ERRATIC, 0); { u8 diff = 0; for (u8 i = 0; i < g.nDeck; i++) diff += g.deck[i] != CARD(i / 13, i % 13); EXPECT("deck: Erratic is shuffled", diff > 10, 1); }
 	fresh_with(DK_PLASMA, 0); { Card c[] = { CARD(C,RANK_K) }; EXPECT("deck: Plasma doubles the Blind", blind_target(), 600); EXPECT("deck: Plasma balances (5+10, 1) -> 8x8", score_of(c, 1), 64); }
@@ -73,5 +73,34 @@ void run_deck_cases(void) BANKED
 	fresh_with(DK_RED, 7); joker_add(JK_JOKER); g.jk[0].flags |= JF_RENTAL; { Cash rows[CASH_MAX]; i16 t; blind_start(); g.score = g.target; u8 n = cashout_build(rows, &t); u8 r = 0; for (u8 i = 0; i < n; i++) if (rows[i].kind == 6) r = (u8)(-rows[i].amount); EXPECT("stake: Gold Rental costs $3 per Joker", r, 3); }
 	fresh_with(DK_RED, 6); joker_add(JK_JOKER); g.jk[0].flags |= JF_PERISH; for (u8 i = 0; i < 5; i++) round_end_effects(); EXPECT("stake: Orange Perishable Jokers expire after 5 rounds", (g.jk[0].flags & JF_PERISHED) != 0, 1);
 	fresh_with(DK_RED, 3); joker_add(JK_GROS_MICHEL); g.jk[0].flags |= JF_ETERNAL | 0x80; round_end_effects(); EXPECT("stake: Eternal Jokers survive destruction", g.nJk, 1);
+}
+#endif
+
+// Negative edition, slot counts, the Black / Magic / Nebula / Anaglyph decks, Double Tag, Diet Cola, Crystal Ball, Telescope
+#if !defined(JK_PART) || JK_PART == 4
+void run_negative_cases(void) BANKED
+{
+	fresh_with(DK_BLACK, 0); EXPECT("deck: Black has +1 Joker slot and -1 hand", joker_slots() == JOKER_BASE + 1 && g.handsBase == START_HANDS - 1, 1);
+	fresh_with(DK_MAGIC, 0); EXPECT("deck: Magic starts with Crystal Ball and 2 Fools", (g.vouchers & VBIT(VC_CRYSTAL_BALL)) && g.cons[0] == CONS_TAROT(TR_FOOL) && g.cons[1] == CONS_TAROT(TR_FOOL) && cons_slots() == CONS_BASE + 1, 1);
+	fresh_with(DK_NEBULA, 0); EXPECT("deck: Nebula has the Telescope and one consumable slot", (g.vouchers & VBIT(VC_TELESCOPE)) && cons_slots() == CONS_BASE - 1, 1);
+	fresh_with(DK_ANAGLYPH, 0); g.blind = BLIND_BOSS; g.state = ROUND_WON; round_end_effects(); EXPECT("deck: Anaglyph gives a Double Tag after a Boss", g.nTags == 1 && g.tags[0] == TG_DOUBLE, 1);
+	fresh_with(DK_ANAGLYPH, 0); g.blind = BLIND_BIG; g.state = ROUND_WON; round_end_effects(); EXPECT("deck: Anaglyph gives no tag after a Big Blind", g.nTags, 0);
+	fresh(); joker_add(JK_JOKER); g.jk[0].ed = ED_NEG; EXPECT("negative: a Negative Joker adds a Joker slot", joker_slots(), JOKER_BASE + 1);
+	fresh(); joker_add(JK_JOKER); joker_add(JK_JOLLY); g.cons[0] = CONS_SPECTRAL(SP_ECTOPLASM); { u8 hs = g.handSizeBase;
+	  EXPECT("spectral: Ectoplasm adds Negative to a Joker, -1 hand size", cons_use(0, 0) && joker_slots() == JOKER_BASE + 1 && g.handSizeBase == hs - 1, 1); }
+	fresh(); g.cons[0] = CONS_SPECTRAL(SP_ECTOPLASM); EXPECT("spectral: Ectoplasm needs a Joker", cons_use(0, 0), 0);
+	fresh(); g.cons[0] = CONS_PLANET(1); g.cons[1] = CONS_PLANET(2); EXPECT("consumables: the slots are full", cons_add(CONS_PLANET(3)), 0);
+	EXPECT("negative: a Negative consumable makes its own slot", cons_add_ed(CONS_PLANET(3), TRUE) && cons_slots() == CONS_BASE + 1 && g.consNeg == 4, 1);
+	fresh(); cons_add_ed(CONS_PLANET(1), TRUE); cons_add(CONS_PLANET(2)); cons_add(CONS_PLANET(3)); cons_use(0, 0);
+	EXPECT("negative: using it moves the others down and drops the slot", g.cons[0] == CONS_PLANET(2) && g.cons[1] == CONS_PLANET(3) && g.consNeg == 0 && cons_slots() == CONS_BASE, 1);
+	fresh(); joker_add(JK_PERKEO); g.cons[0] = CONS_PLANET(1); g.cons[1] = CONS_PLANET(2); shop_leave();
+	EXPECT("joker: Perkeo copies a consumable as Negative", g.consNeg == 4 && g.cons[2] != 0, 1);
+	fresh(); g.tags[0] = TG_DOUBLE; g.nTags = 1; g.tagSmall = 1 + TG_JUGGLE; blind_skip();
+	EXPECT("tag: Double Tag copies the next tag", g.nTags == 2 && g.tags[0] == TG_JUGGLE && g.tags[1] == TG_JUGGLE, 1);
+	fresh(); g.tags[0] = TG_DOUBLE; g.nTags = 1; g.tagSmall = 1 + TG_DOUBLE; blind_skip();
+	EXPECT("tag: a Double Tag is not copied", g.nTags == 2 && g.tags[0] == TG_DOUBLE && g.tags[1] == TG_DOUBLE, 1);
+	fresh(); joker_add(JK_DIET_COLA); joker_sell(0); EXPECT("joker: Diet Cola gives a Double Tag when sold", g.nTags == 1 && g.tags[0] == TG_DOUBLE, 1);
+	fresh(); g.vouchers |= VBIT(VC_TELESCOPE); g.handPlays[HAND_FLUSH] = 5; g.nDeck = 52; pack_open_free(PACK_KIND(1, 0));
+	EXPECT("voucher: Telescope puts the most played hand's Planet first", g_packId[0], HAND_FLUSH);
 }
 #endif

@@ -9,8 +9,7 @@ using [MSXgl](https://github.com/aoineko-fr/MSXgl) v1.5.0. 256 KB ROM (ASCII-8 m
 > `docs/PORTING.md`). Generated ROM/asset segments are derived from them and are therefore git-ignored.
 > See `LICENSES.md`. Do not redistribute the ROM.
 
-> **Testing status:** everything was tested **only in the openMSX 19.1 emulator with the C-BIOS MSX2 ROM**.
-> Nothing was tested on real hardware; real-hardware timing is *unknown*.
+> **Testing status:** the automated tests run **only in the openMSX 19.1 emulator with the C-BIOS MSX2 ROM**. The project owner reports that an earlier build runs on a real MSX; this repo's automated tests run only in openMSX with the C-BIOS MSX2 ROM, and later builds were not tried on hardware.
 
 ## Quick start
 ```
@@ -29,15 +28,15 @@ bash scripts/test.sh           # host unit/sim tests + Z80 self-test + openMSX s
 | Mute music | M | – | – |
 
 ## What is implemented
-Full run structure: title, blind select (Small/Big/Boss, **Skip + 16 tags**), rounds (8 cards, 5 played, hands/
+Full run structure: title, blind select (Small/Big/Boss, **Skip + 17 tags**), rounds (8 cards, 5 played, hands/
 discards, poker evaluation of all 12 hand types incl. Five of a Kind/Flush House/Flush Five, planet levels),
-cash-out with interest, shop (jokers, planets, tarots, **9 vouchers**, Booster packs: Arcana/Celestial/Buffoon/Standard/Spectral),
-17 Spectral cards (incl. The Soul), 11 decks and 8 stakes (New Run screen; Eternal / Perishable / Rental Jokers),
-card enhancements, editions and seals (22 tarots),
-**149 jokers**, all 28 boss blinds, 8 antes with win/game over, optional endless mode to Ante 12, **autosave + Continue** (needs a cartridge with SRAM, see docs/PORTING.md), animated scoring, music + SFX.
+cash-out with interest, shop (jokers, planets, tarots, **11 vouchers**, Booster packs: Arcana/Celestial/Buffoon/Standard/Spectral),
+18 Spectral cards (incl. The Soul and Ectoplasm), 15 decks and 8 stakes (New Run screen; Eternal / Perishable / Rental Jokers),
+card enhancements, editions (incl. Negative) and seals (22 tarots),
+**150 jokers**, all 28 boss blinds, 8 antes with win/game over, optional endless mode to Ante 12, **autosave + Continue** (needs a cartridge with SRAM, see docs/PORTING.md), animated scoring, music + SFX.
 
 ## Not implemented / simplified (see TODO.md)
-Ectoplasm (Spectral), Negative edition, the Black / Magic / Nebula / Anaglyph decks, Diet Cola,
+Shop Jokers never roll editions, no Negative / Foil / Holographic / Polychrome / Voucher / Standard / Ethereal tags, no unlocks / challenges,
 endless mode beyond Ante 12, controller rumble etc. Visuals are down-converted to 16 colours at 1:1 pixel scale.
 
 Docs: `docs/PORTABILITY_ASSESSMENT.md`, `docs/PORTING.md`, `docs/TOOLCHAIN.md`, `TODO.md`, `LICENSES.md`.

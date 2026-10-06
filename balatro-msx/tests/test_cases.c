@@ -112,4 +112,5 @@ void run_score_cases(void)
 void run_deck_cases(void) BANKED;
 void run_joker_cases_a(void) BANKED;
 void run_joker_cases_b(void) BANKED;
-void run_all_cases(void) BANKED { run_poker_cases(); run_score_cases(); run_joker_cases_a(); run_joker_cases_b(); run_deck_cases(); }
+void run_negative_cases(void) BANKED;
+void run_all_cases(void) BANKED { run_poker_cases(); run_score_cases(); run_joker_cases_a(); run_joker_cases_b(); run_deck_cases(); run_negative_cases(); }

@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 typedef u16 Card;
 enum { ENH_NONE, ENH_BONUS, ENH_MULT, ENH_WILD, ENH_GLASS, ENH_STEEL, ENH_STONE, ENH_GOLD, ENH_LUCKY, ENH_COUNT };
-enum { ED_NONE, ED_FOIL, ED_HOLO, ED_POLY };
+enum { ED_NONE, ED_FOIL, ED_HOLO, ED_POLY, ED_NEG };      // ED_NEG (Negative: +1 Joker / consumable slot) exists on Jokers and consumables only: a Card has 2 edition bits
 enum { SEAL_NONE, SEAL_GOLD, SEAL_RED, SEAL_BLUE, SEAL_PURPLE, SEAL_COUNT };
 #define SUIT_H 0
 #define SUIT_C 1
@@ -43,8 +43,10 @@ enum { SEAL_NONE, SEAL_GOLD, SEAL_RED, SEAL_BLUE, SEAL_PURPLE, SEAL_COUNT };
 #define DECK_MAX         64
 #define HAND_MAX         16
 #define PLAY_MAX         5
-#define JOKER_MAX        5
-#define CONS_MAX         2
+#define JOKER_BASE       5             // Joker slots before decks / Negative Jokers
+#define JOKER_MAX        8             // most Joker slots (Black Deck + Negative Jokers)
+#define CONS_BASE        2             // consumable slots before Crystal Ball / Nebula Deck / Negative consumables
+#define CONS_MAX         4
 #define EVENT_MAX        110
 #define SHOP_CARD_MAX    5
 #define TAG_MAX          6
@@ -81,7 +83,7 @@ typedef struct
 	u8  flags;       // JF_*
 	i16 v;           // per-joker counter (chips, mult, x100 mult, hand type...)
 	u8  sell;        // sell value bonus (Egg)
-	u8  ed;          // ED_* edition (Foil / Holographic / Polychrome)
+	u8  ed;          // ED_* edition (Foil / Holographic / Polychrome / Negative)
 	u8  aux;         // second per-joker value (target suit / rank, counters)
 	u8  age;         // rounds owned (perishable)
 	
@@ -132,9 +134,9 @@ enum { TX_AGAIN, TX_UPGRADE, TX_RESET, TX_LEVELUP, TX_DEBUFFED, TX_EATEN, TX_EXT
 #define CONS_IS_SPECTRAL(c) ((c) >= 0x40)
 
 //-----------------------------------------------------------------------------
-// Decks and stakes (chosen on the deck screen; Black, Magic, Nebula and Anaglyph decks are not in this port)
+// Decks and stakes (chosen on the deck screen)
 //-----------------------------------------------------------------------------
-enum { DK_RED, DK_BLUE, DK_YELLOW, DK_GREEN, DK_GHOST, DK_ABANDONED, DK_CHECKERED, DK_ZODIAC, DK_PAINTED, DK_PLASMA, DK_ERRATIC, DECK_COUNT };
+enum { DK_RED, DK_BLUE, DK_YELLOW, DK_GREEN, DK_GHOST, DK_ABANDONED, DK_CHECKERED, DK_ZODIAC, DK_PAINTED, DK_PLASMA, DK_ERRATIC, DK_BLACK, DK_MAGIC, DK_NEBULA, DK_ANAGLYPH, DECK_COUNT };
 #define STAKE_COUNT 8              // White, Red, Green, Black, Blue, Purple, Orange, Gold (each includes the ones before)
 extern u8 g_deckSel, g_stakeSel;
 
@@ -175,6 +177,7 @@ typedef struct
 	JokerInst jk[JOKER_MAX];
 	u8   nJk;
 	u8   cons[CONS_MAX];
+	u8   consNeg;                    // bit per consumable slot: that consumable is Negative (it adds a slot)
 	// ---- deck ----
 	Card deck[DECK_MAX];
 	u8   dflag[DECK_MAX];            // DF_*
@@ -265,7 +268,12 @@ bool run_won(void) BANKED;
 // consumables
 bool cons_needs_cards(u8 c, u8* minc, u8* maxc) BANKED;
 bool cons_use(u8 slot, u16 selMask) BANKED;
+i16  random_joker_r(u8* avoidMask, u8 forced) BANKED;   // forced = rarity or 0; -1 when none left
+bool spectral_use(u8 slot, u8 t, u16 sel) BANKED;
 bool cons_add(u8 c) BANKED;
+bool cons_add_ed(u8 c, bool negative) BANKED;       // a Negative consumable does not need a free slot (it makes its own)
+void cons_remove(u8 slot) BANKED;                  // empties a slot and moves the others down
+u8   cons_slots(void) BANKED;
 void planet_use(u8 hand) BANKED;
 
 // jokers
@@ -306,6 +314,7 @@ u8   pack_cost(u8 kind) BANKED;
 
 // skip tags (tags.c)
 void tags_new_ante(void) BANKED;
+void tag_gain(u8 t) BANKED;                   // a tag obtained without skipping (Anaglyph Deck, Diet Cola): no Double Tag copy
 bool blind_can_skip(void) BANKED;
 void blind_skip(void) BANKED;                 // skip the current Small/Big blind and gain its tag
 u8   tags_choice_effects(void) BANKED;        // tags that fire when the next Blind choice appears; returns a free pack kind or 0

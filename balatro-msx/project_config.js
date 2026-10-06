@@ -11,7 +11,7 @@ LibModules = [ "system", "bios", "vdp", "input", "memory", "psg" ];
 
 Machine = "2";
 Target  = "ROM_ASCII8";
-ROMSize = 256;           // KB, ASCII-8 mapper
+ROMSize = (process.env.BAL_SELFTEST || process.env.BAL_DEBUG) ? 512 : 256;   // KB, ASCII-8 mapper. The test ROMs hold the test code in segments 32+; the release ROM is 256 KB
 ROMMainSegments = 2;     // 16 KB fixed code (banks 0-1); bank 2 = switchable code segments, bank 3 = data window
 BankedCall = true;
 

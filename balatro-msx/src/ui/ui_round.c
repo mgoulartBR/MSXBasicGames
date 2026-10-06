@@ -35,7 +35,7 @@ static void mark_id(u8 id)
 		else { if (lo < ui.hlo) ui.hlo = lo; if (hi > ui.hhi) ui.hhi = hi; }
 		ui.dirty |= D_HAND;
 	}
-	else if (id < W_PLAY) ui.jmask |= (u8)(1 << (id < W_CONS ? id - W_JOKER : 5 + id - W_CONS));
+	else if (id < W_PLAY) ui.jmask |= jmask_of(id);
 	else if (id <= W_INFO) ui.bmask |= (u8)(1 << (id - W_PLAY));
 }
 void rnd_focus(u8 o, u8 n) BANKED { mark_id(o); mark_id(n); }
@@ -43,13 +43,14 @@ void rnd_focus(u8 o, u8 n) BANKED { mark_id(o); mark_id(n); }
 //-----------------------------------------------------------------------------
 // widgets
 //-----------------------------------------------------------------------------
+void rnd_rebuild(void) BANKED;
 static void rebuild_widgets(void)
 {
 	ui_clear_widgets();
 	hand_geom();
 	for (u8 i = 0; i < g.nHand; i++)
 		ui_add(W_HAND + i, hand_x(i), HAND_Y - HAND_RAISE, (u8)(i + 1 < g.nHand && hstep < 24 ? hstep : 24), 32 + HAND_RAISE);
-	for (u8 i = 0; i < g.nJk; i++) ui_add(W_JOKER + i, JOKER_X(i), JOKER_Y, 24, 32);
+	for (u8 i = 0; i < g.nJk; i++) ui_add(W_JOKER + i, JOKER_X(i), JOKER_Y, jwidth(i), 32);
 	for (u8 i = 0; i < CONS_MAX; i++) if (g.cons[i]) ui_add(W_CONS + i, CONS_X(i), JOKER_Y, 24, 32);
 	ui_add(W_PLAY, 66, BTN_Y, 44, BTN_H);
 	ui_add(W_DISCARD, 112, BTN_Y, 44, BTN_H);
@@ -63,6 +64,7 @@ static void rebuild_widgets(void)
 		if (ui.itemKind == 2) ui_add(W_USE, 0, 0, 30, 12);
 	}
 }
+void rnd_rebuild(void) BANKED { rebuild_widgets(); }          // (debug keys)
 
 //-----------------------------------------------------------------------------
 // drawing
@@ -444,7 +446,7 @@ void upd_round(void) BANKED
 	{
 		u8 d = ui.dirty; ui.dirty = (u8)(d & D_INFO);
 		if (d & D_JOKERS) { draw_joker_row(FALSE); ui.jmask = 0; }
-		else if (ui.jmask) { for (u8 b = 0; b < 7; b++) if (ui.jmask & (1 << b)) draw_jslot(b < 5 ? W_JOKER + b : W_CONS + b - 5); ui.jmask = 0; }
+		else if (ui.jmask) { draw_jmask(ui.jmask); ui.jmask = 0; }
 		if (d & D_HAND) { draw_hand_range(ui.hlo, ui.hhi, !ui.hnc); ui.hlo = 0xFF; ui.hhi = 0; ui.hnc = 0; }
 		if (d & D_BUTTONS) { draw_buttons(); ui.bmask = 0; }
 		else if (ui.bmask) { for (u8 b = 0; b < 5; b++) if (ui.bmask & (1 << b)) ui_button_ring(W_PLAY + b); ui.bmask = 0; }
