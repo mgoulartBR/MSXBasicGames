@@ -1,7 +1,7 @@
 #!/usr/bin/env python3 -I
 """Converte um subconjunto do banco do TVTower (XML) em tabelas C compactas para o MSX.
 
-Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>
+Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>  (gera tambem db_data.c)
 
 Fonte da verdade: os XML originais. Nada aqui e escrito a mao; rode de novo para regenerar.
 Mapeamentos TVTower -> categorias Mad TV estao em CATEGORIES (decisao de design documentada em docs/PORTING.md).
@@ -91,17 +91,23 @@ def pick_movies(root, lang):
     return movies
 
 def pick_ads(root, lang):
+    """Contratos jogaveis no MSX: audiencia minima 0.5..9.0 milhoes (alcance maximo do jogo ~12M), prazo >= 1 dia.
+    Amostra espalhada ao longo da faixa de audiencia (nao so os primeiros por guid)."""
     ads = []
     for a in root.iter("ad"):
         c, d = a.find("conditions"), a.find("data")
         t = resolve(first_text(a, "title/all") or first_text(a, "title/en"), lang)
         if c is None or d is None or not t:
             continue
-        ads.append(dict(guid=a.get("guid"), title=ascii_fold(t)[:MAX_TITLE],
-                        min_audience=float(c.get("min_audience") or 0),
+        ma = float(c.get("min_audience") or 0)
+        if not (0.5 <= ma <= 9.0) or int(d.get("duration") or 0) < 1:
+            continue
+        ads.append(dict(guid=a.get("guid"), title=ascii_fold(t)[:MAX_TITLE], min_audience=ma,
                         reps=int(d.get("repetitions") or 1), days=int(d.get("duration") or 1),
                         profit=int(d.get("profit") or 0), penalty=int(d.get("penalty") or 0)))
-    return sorted(ads, key=lambda x: x["guid"])[:MAX_ADS]
+    ads.sort(key=lambda x: (x["min_audience"], x["guid"]))
+    step = max(1, len(ads) // MAX_ADS)
+    return ads[::step][:MAX_ADS]
 
 def pick_news(root, lang):
     out = []
@@ -115,21 +121,29 @@ def pick_news(root, lang):
     return sorted(out, key=lambda x: x["guid"])[:MAX_NEWS]
 
 def emit(movies, ads, news, out):
-    L = ["// GERADO por tools/convert_db.py - NAO EDITAR. Dados derivados do TVTower (c) 2002-2024 TVTower-Team,",
-         "// adaptados/alterados para MSX (ver LICENSES.md).", "#pragma once", '#include "core.h"', ""]
-    L.append("#define DB_NUM_CATEGORIES %d" % len(CATEGORIES))
-    L.append("#define DB_NUM_MOVIES %d" % len(movies))
-    L.append("#define DB_NUM_ADS %d" % len(ads))
-    L.append("#define DB_NUM_NEWS %d" % len(news))
-    L.append("")
+    """Gera <out>.h (declaracoes/contagens) e <out>.c (definicoes em ROM)."""
+    hdr = ("// GERADO por tools/convert_db.py - NAO EDITAR. Dados derivados do TVTower (c) 2002-2024 TVTower-Team,\n"
+           "// adaptados/alterados para MSX (ver LICENSES.md).\n")
+    H = [hdr, "#pragma once", '#include "../game_types.h"', ""]
+    H.append("#define DB_NUM_CATEGORIES %d" % len(CATEGORIES))
+    H.append("#define DB_NUM_MOVIES %d" % len(movies))
+    H.append("#define DB_NUM_ADS %d" % len(ads))
+    H.append("#define DB_NUM_NEWS %d" % len(news))
+    H.append("")
+    H.append("extern const char* const g_CategoryName[DB_NUM_CATEGORIES];")
+    H.append("extern const Movie g_Movies[DB_NUM_MOVIES];")
+    H.append("extern const Ad g_Ads[DB_NUM_ADS];")
+    H.append("extern const News g_News[DB_NUM_NEWS];")
+    L = [hdr, '#include "db_data.h"', ""]
     L.append("const char* const g_CategoryName[DB_NUM_CATEGORIES] = { %s };" % ", ".join(c_str(n) for n, _ in CATEGORIES))
     L.append("")
-    L.append("// year = ano-1900; price = price_mod*100 (preco real e calculado em runtime); fsk18 = flag X-rated do TVTower")
+    L.append("// year = ano-1850; price = price_mod*100 (preco real e calculado em runtime); fsk18 = flag X-rated do TVTower")
     L.append("const Movie g_Movies[DB_NUM_MOVIES] = {")
     for m in movies:
         L.append("\t{ %s, %d, %d, %d, %d, %d, %d, %d, %d }," % (
-            c_str(m["title"]), m["cat"], m["year"] - 1900, m["blocks"], m["critics"], m["speed"], m["outcome"], m["price"], m["fsk18"]))
+            c_str(m["title"]), m["cat"], m["year"] - 1850, m["blocks"], m["critics"], m["speed"], m["outcome"], m["price"], m["fsk18"]))
     L.append("};\n")
+    L.append("// min_audience = milhoes x10")
     L.append("const Ad g_Ads[DB_NUM_ADS] = {")
     for a in ads:
         L.append("\t{ %s, %d, %d, %d, %d, %d }," % (c_str(a["title"]), int(round(a["min_audience"] * 10)), a["reps"], a["days"], a["profit"], a["penalty"]))
@@ -138,7 +152,9 @@ def emit(movies, ads, news, out):
     for n in news:
         L.append("\t{ %s, %d, %d }," % (c_str(n["title"]), n["genre"], n["price"]))
     L.append("};")
-    Path(out).write_text("\n".join(L) + "\n", encoding="utf-8")
+    base = Path(out).with_suffix("")
+    base.with_suffix(".h").write_text("\n".join(H) + "\n", encoding="utf-8")
+    base.with_suffix(".c").write_text("\n".join(L) + "\n", encoding="utf-8")
 
 def main():
     src, out = Path(sys.argv[1]), sys.argv[2]
