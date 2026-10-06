@@ -1,0 +1,16 @@
+# Original (proprietary) Balatro source/assets: local reference only, never committed
+original/
+# Toolchain checkouts and build products
+toolchain/
+out/
+build/
+emul/
+*.log
+__pycache__/
+# Derived from proprietary Balatro art/text: generated locally by scripts/build.sh, never committed
+src/seg/seg_s*_b3.asm
+dist/
+screenshots/
+
+# optional user-supplied title logo (may be derived from proprietary art)
+assets/logo_src.png
