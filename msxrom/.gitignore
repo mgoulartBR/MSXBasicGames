@@ -1,3 +1,4 @@
 out/*
 !out/msxdoom.rom
 !out/preview_*.png
+__pycache__/
