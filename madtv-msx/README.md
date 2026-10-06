@@ -1,7 +1,7 @@
 # MadTV-MSX
 
 Port/reimplementacao do Mad TV (1991) para MSX2 em C + MSXgl, usando os dados do remake open source TVTower.
-Status: **0.3 - nucleo de gestao jogavel (comprar filmes, assinar contratos, montar a grade, competir por audiencia/Image).** Sem predio, Betty, noticias nem audio ainda.
+Status: **0.3.1 - nucleo de gestao jogavel (comprar filmes, assinar contratos, montar a grade, competir por audiencia/Image).** Sem predio, Betty, noticias nem audio ainda.
 
 - Alvo: MSX2 (V9938), ROM. Nao testado em hardware real.
 - Build: `scripts/setup.sh && scripts/build.sh` -> `dist/madtv-msx-0.2.rom` (versao em `VERSION`)

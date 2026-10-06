@@ -4,7 +4,7 @@
 #include "sim.h"
 #include "data/db_data.h"
 
-#define VERSION_STR "0.3"
+#define VERSION_STR "0.3.1"
 #define CONTENT_Y   28
 #define ROW_H       10
 #define MSG_Y       201
@@ -37,26 +37,62 @@ static u8 s_Dirty;       // bits: 1 = cabecalho, 2 = conteudo, 4 = rodape
 #define D_HDR 1
 #define D_CON 2
 #define D_MSG 4
+#define D_DAT 8   // atualizar so os dados dinamicos da tela (sem limpar tudo)
+
+// Cabecalho incremental: cada campo so e redesenhado se mudou (evita apagar/redesenhar tudo a cada minuto de jogo)
+static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
+static i32 c_Money = 0x7FFFFFFF;
+static u8  c_Image[NUM_STATIONS] = { 255, 255, 255 };
+static u8  c_Speed = 255;
+
+static void Header_Invalidate(void)
+{
+	u8 i;
+	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255;
+	for (i = 0; i < NUM_STATIONS; i++) c_Image[i] = 255;
+	Ui_Fill(0, 0, 255, 24, UI_BG);
+	Ui_Fill(0, 23, 255, 1, COLOR_GRAY);
+}
 
 static void Draw_Header(void)
 {
 	char b[8];
 	u8 st;
-	Ui_Fill(0, 0, 255, 24, UI_BG);
-	Ui_Color(UI_YELLOW);
-	Ui_Text(4, 2, "Day "); Ui_Int(28, 2, g_Game.day);
-	ClockStr(b, g_Game.t); Ui_Text(64, 2, b);
-	Ui_Color(g_Game.money < 0 ? UI_RED : UI_WHITE);
-	Money(120, 2, g_Game.money);
-	Ui_Color(UI_GRAY);
-	Ui_TextR(252, 2, s_Speed == SPEED_PAUSE ? "PAUSE" : s_Speed == SPEED_1 ? ">" : s_Speed == SPEED_2 ? ">>" : ">>>");
-	for (st = 0; st < NUM_STATIONS; st++)
+	if (c_Day != g_Game.day)
 	{
-		Ui_Color(s_StationCol[st]);
-		Ui_Text(4 + st * 84, 13, g_StationName[st]);
-		Ui_Int(40 + st * 84, 13, g_Game.image[st]);
+		c_Day = g_Game.day;
+		Ui_Fill(0, 1, 60, 10, UI_BG);
+		Ui_Color(UI_YELLOW); Ui_Text(4, 2, "Day "); Ui_Int(28, 2, g_Game.day);
 	}
-	Ui_Fill(0, 23, 255, 1, COLOR_GRAY);
+	if (c_T != g_Game.t)
+	{
+		c_T = g_Game.t;
+		Ui_Fill(62, 1, 34, 10, UI_BG);
+		Ui_Color(UI_YELLOW); ClockStr(b, g_Game.t); Ui_Text(64, 2, b);
+	}
+	if (c_Money != g_Game.money)
+	{
+		c_Money = g_Game.money;
+		Ui_Fill(118, 1, 72, 10, UI_BG);
+		Ui_Color(g_Game.money < 0 ? UI_RED : UI_WHITE);
+		Money(120, 2, g_Game.money);
+	}
+	if (c_Speed != s_Speed)
+	{
+		c_Speed = s_Speed;
+		Ui_Fill(200, 1, 55, 10, UI_BG);
+		Ui_Color(UI_GRAY);
+		Ui_TextR(252, 2, s_Speed == SPEED_PAUSE ? "PAUSE" : s_Speed == SPEED_1 ? ">" : s_Speed == SPEED_2 ? ">>" : ">>>");
+	}
+	for (st = 0; st < NUM_STATIONS; st++)
+		if (c_Image[st] != g_Game.image[st])
+		{
+			c_Image[st] = g_Game.image[st];
+			Ui_Fill(4 + st * 84, 12, 80, 10, UI_BG);
+			Ui_Color(s_StationCol[st]);
+			Ui_Text(4 + st * 84, 13, g_StationName[st]);
+			Ui_Int(40 + st * 84, 13, g_Game.image[st]);
+		}
 }
 
 static void Draw_Msg(void)
@@ -80,17 +116,10 @@ static const char* const k_Menu[] = { "Programme grid", "Film agency", "Ad agenc
 #define MENU_N 4
 static u8 s_Menu;
 
-static void Draw_Hub(void)
+static void Draw_HubDyn(void)
 {
-	u8 i, n = 0;
-	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Office");
-	for (i = 0; i < MENU_N; i++)
-	{
-		Ui_Color(i == s_Menu ? UI_YELLOW : UI_WHITE);
-		Ui_Text(4, CONTENT_Y + 14 + i * ROW_H, i == s_Menu ? "> " : "  ");
-		Ui_Text(16, CONTENT_Y + 14 + i * ROW_H, k_Menu[i]);
-	}
+	u8 i, n = 0, y;
+	Ui_Fill(0, CONTENT_Y + 60, 255, 80, UI_BG);
 	Ui_Color(UI_GRAY);
 	for (i = 0; i < DB_NUM_MOVIES; i++) n += g_Game.owned[i];
 	Ui_Text(4, CONTENT_Y + 62, "Movies owned:"); Ui_Int(86, CONTENT_Y + 62, n);
@@ -99,12 +128,27 @@ static void Draw_Hub(void)
 	{
 		const Contract* c = &g_Game.contract[i];
 		if (c->ad == NONE) continue;
+		y = CONTENT_Y + 86 + i * ROW_H;
 		Ui_Color(UI_WHITE);
-		Ui_TextN(4, CONTENT_Y + 86 + i * ROW_H, g_Ads[c->ad].title, 16);
+		Ui_TextN(4, y, g_Ads[c->ad].title, 16);
 		Ui_Color(UI_GRAY);
-		Ui_Int(112, CONTENT_Y + 86 + i * ROW_H, c->reps_left); Ui_Text(124, CONTENT_Y + 86 + i * ROW_H, "x");
-		Ui_Int(140, CONTENT_Y + 86 + i * ROW_H, c->days_left); Ui_Text(152, CONTENT_Y + 86 + i * ROW_H, "d");
+		Ui_Int(112, y, c->reps_left); Ui_Text(124, y, "x");
+		Ui_Int(140, y, c->days_left); Ui_Text(152, y, "d");
 	}
+}
+
+static void Draw_Hub(void)
+{
+	u8 i;
+	ClearContent();
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Office");
+	for (i = 0; i < MENU_N; i++)
+	{
+		Ui_Color(i == s_Menu ? UI_YELLOW : UI_WHITE);
+		Ui_Text(4, CONTENT_Y + 14 + i * ROW_H, i == s_Menu ? "> " : "  ");
+		Ui_Text(16, CONTENT_Y + 14 + i * ROW_H, k_Menu[i]);
+	}
+	Draw_HubDyn();
 	Hint("OK:enter  TAB:speed  P:pause");
 }
 
@@ -322,32 +366,41 @@ static void Ads_Input(u8 ev)
 }
 
 // ---------------------------------------------------------------- AUDIENCIAS / IMAGE
-static void Draw_Ratings(void)
+static void Draw_RatingsDyn(void)
 {
-	u8 s, st;
+	u8 s, st, y;
 	char b[8];
-	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Ratings (million viewers)");
-	for (st = 0; st < NUM_STATIONS; st++) { Ui_Color(s_StationCol[st]); Ui_Text(60 + st * 54, CONTENT_Y + 12, g_StationName[st]); }
 	for (s = 0; s < NUM_SLOTS; s++)
 	{
-		u8 y = CONTENT_Y + 24 + s * 10;
+		y = CONTENT_Y + 24 + s * 10;
+		Ui_Fill(56, y - 1, 190, 10, UI_BG);
 		ClockStr(b, FIRST_SLOT_T + s * 60);
 		Ui_Color(UI_GRAY); Ui_Text(8, y, b);
 		for (st = 0; st < NUM_STATIONS; st++)
 		{
 			if (!g_Game.aud_done[s]) { Ui_Color(UI_GRAY); Ui_Text(64 + st * 54, y, "-"); continue; }
 			Ui_Color(s_StationCol[st]); Ui_Dec1(60 + st * 54, y, g_Game.aud[st][s]);
-			Ui_Color(UI_GRAY); Ui_Int(84 + st * 54, y, Sim_Quota(st, s)); 
+			Ui_Color(UI_GRAY); Ui_Int(84 + st * 54, y, Sim_Quota(st, s));
 		}
 	}
-	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 100), "Image");
 	for (st = 0; st < NUM_STATIONS; st++)
 	{
-		Ui_Color(s_StationCol[st]); Ui_Text(4, CONTENT_Y + 112 + st * 10, g_StationName[st]);
-		Ui_Bar(50, CONTENT_Y + 113 + st * 10, 160, 6, g_Game.image[st], s_StationCol[st] == UI_RED ? COLOR_MEDIUM_RED : s_StationCol[st] == UI_GREEN ? COLOR_LIGHT_GREEN : COLOR_CYAN);
-		Ui_Int(216, CONTENT_Y + 112 + st * 10, g_Game.image[st]);
+		y = (u8)(CONTENT_Y + 112 + st * 10);
+		Ui_Bar(50, y + 1, 160, 6, g_Game.image[st], s_StationCol[st] == UI_RED ? COLOR_MEDIUM_RED : s_StationCol[st] == UI_GREEN ? COLOR_LIGHT_GREEN : COLOR_CYAN);
+		Ui_Fill(214, y - 1, 30, 9, UI_BG);
+		Ui_Color(s_StationCol[st]); Ui_Int(216, y, g_Game.image[st]);
 	}
+}
+
+static void Draw_Ratings(void)
+{
+	u8 st;
+	ClearContent();
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Ratings (million viewers)");
+	for (st = 0; st < NUM_STATIONS; st++) { Ui_Color(s_StationCol[st]); Ui_Text(60 + st * 54, CONTENT_Y + 12, g_StationName[st]); }
+	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 100), "Image");
+	for (st = 0; st < NUM_STATIONS; st++) { Ui_Color(s_StationCol[st]); Ui_Text(4, CONTENT_Y + 112 + st * 10, g_StationName[st]); }
+	Draw_RatingsDyn();
 	Hint("BACK:office");
 }
 
@@ -412,6 +465,7 @@ static void StartGame(void)
 	Sim_Init(*(volatile u16*)0xFC9E ^ 0x5A5A);   // semente: JIFFY do BIOS no momento do OK
 	s_Speed = SPEED_1; s_Menu = 0;
 	Ui_Clear();
+	Header_Invalidate();
 	s_Screen = SCR_HUB;
 	s_Dirty = D_HDR | D_CON | D_MSG;
 }
@@ -443,7 +497,12 @@ void main()
 			e = Sim_Tick();
 			s_Dirty |= D_HDR;
 			if (e & EV_MSG) s_Dirty |= D_MSG;
-			if (e & (EV_SLOT | EV_DAY)) { if (s_Screen == SCR_RATINGS || s_Screen == SCR_ADS || s_Screen == SCR_HUB || s_Screen == SCR_GRID) { if (!s_Pick) s_Dirty |= D_CON; } }
+			if (e & (EV_SLOT | EV_DAY))
+			{
+				if (s_Screen == SCR_ADS && (e & EV_DAY)) s_Dirty |= D_CON;       // ofertas novas
+				else if (s_Screen == SCR_GRID && !s_Pick) s_Dirty |= D_DAT;
+				else if (s_Screen == SCR_RATINGS || s_Screen == SCR_HUB) s_Dirty |= D_DAT;
+			}
 			if (g_Game.game_over) { s_Screen = SCR_OVER; Draw_Over(); continue; }
 		}
 
@@ -457,6 +516,15 @@ void main()
 		}
 
 		if (s_Dirty & D_HDR) Draw_Header();
+		if ((s_Dirty & D_DAT) && !(s_Dirty & D_CON))
+		{
+			switch (s_Screen)
+			{
+			case SCR_HUB:     Draw_HubDyn(); break;
+			case SCR_GRID:    Draw_GridRows(); break;
+			case SCR_RATINGS: Draw_RatingsDyn(); break;
+			}
+		}
 		if (s_Dirty & D_CON)
 		{
 			switch (s_Screen)
