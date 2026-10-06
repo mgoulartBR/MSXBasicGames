@@ -11,3 +11,6 @@ __pycache__/
 src/seg/seg_s*_b3.asm
 dist/
 screenshots/
+
+# optional user-supplied title logo (may be derived from proprietary art)
+assets/logo_src.png
