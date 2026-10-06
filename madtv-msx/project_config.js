@@ -11,4 +11,5 @@ AppCompany      = "MG";
 AppID           = "TV";
 Optim           = "Speed";
 DoRun           = false;    // execucao e feita por scripts/run.sh
+CompileOpt = (typeof process !== "undefined" && process.env.MADTV_PROF) ? "-DMADTV_PROF" : "";
 Verbose         = false;
