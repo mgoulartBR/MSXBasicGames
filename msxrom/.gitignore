@@ -1,0 +1,3 @@
+out/*
+!out/msxdoom.rom
+!out/preview_*.png
