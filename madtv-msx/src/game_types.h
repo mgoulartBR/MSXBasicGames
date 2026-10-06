@@ -5,7 +5,7 @@
 typedef struct {
 	const char* title;
 	u8 cat;       // indice de categoria Mad TV
-	u8 year;      // ano - 1900
+	u8 year;      // ano - 1850
 	u8 blocks;    // blocos de programa (1..5)
 	u8 critics;   // 0..100
 	u8 speed;     // 0..100
