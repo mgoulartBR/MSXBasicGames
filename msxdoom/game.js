@@ -23,7 +23,14 @@ const T=4; // tamanho da célula
 const tex=(cv,rx,ry)=>{const t=new THREE.CanvasTexture(cv);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;
   t.wrapS=t.wrapT=THREE.RepeatWrapping; if(rx)t.repeat.set(rx,ry); return t;};
 
-const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('gl'),antialias:false});
+const glc=document.createElement('canvas'); glc.width=W; glc.height=H;
+const renderer=new THREE.WebGLRenderer({canvas:glc,antialias:false,preserveDrawingBuffer:true});
+const disp=document.getElementById('gl'), dg=disp.getContext('2d',{willReadFrequently:true});
+// V9968 SCREEN 8: 256 cores GRB 3-3-2 (G3 R3 B2)
+function quantize(){ dg.drawImage(glc,0,0); const im=dg.getImageData(0,0,W,H), d=im.data;
+  for(let i=0;i<d.length;i+=4){ const r=d[i]>>5, g=d[i+1]>>5, b=d[i+2]>>6;
+    d[i]=(r*255/7)|0; d[i+1]=(g*255/7)|0; d[i+2]=(b*255/3)|0; }
+  dg.putImageData(im,0,0); }
 renderer.setSize(W,H,false);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x100000);
@@ -32,9 +39,9 @@ const camera=new THREE.PerspectiveCamera(70,W/H,.1,60);
 camera.rotation.order='YXZ';
 
 scene.add(new THREE.AmbientLight(0xb04848,1.6));
-const matWall=new THREE.MeshLambertMaterial({map:tex(tileWall(1,false))});
-const matLamp=new THREE.MeshLambertMaterial({map:tex(tileWall(2,true)),emissive:0x551100});
-const matDoor=new THREE.MeshLambertMaterial({map:tex(tileDoor())});
+const matWall=new THREE.MeshLambertMaterial({map:tex(tileWall(1,false)),flatShading:true});
+const matLamp=new THREE.MeshLambertMaterial({map:tex(tileWall(2,true)),emissive:0x551100,flatShading:true});
+const matDoor=new THREE.MeshLambertMaterial({map:tex(tileDoor()),flatShading:true});
 const geo=new THREE.BoxGeometry(T,T,T);
 const solid=[]; // grade de colisão
 const lights=[];
@@ -46,15 +53,34 @@ const isSolid=(x,z)=>{const c=cell(x,z);return c===undefined||c==='#'||c==='L'||
 const imp=[tex(spriteImp(0)),tex(spriteImp(1))], impHurt=tex(spriteImp(0,true)), dead=tex(spriteDead());
 imp.concat([impHurt,dead]).forEach(t=>{t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;});
 
+const buckets={'#':[],'L':[],'D':[]};
+// Só faces expostas (quads = 2 triângulos): reduz polígonos, respeitando o orçamento do Geo3D
+function addQuad(arr,p0,p1,p2,p3,n){ arr.push({p:[p0,p1,p2,p3],n}); }
 MAP.forEach((row,z)=>[...row].forEach((ch,x)=>{
   const wx=x*T+T/2, wz=z*T+T/2;
   if(ch==='#'||ch==='L'||ch==='D'){
-    const m=new THREE.Mesh(geo,ch==='L'?matLamp:ch==='D'?matDoor:matWall); m.position.set(wx,T/2,wz); scene.add(m);
+    const x0=x*T,x1=x0+T,z0=z*T,z1=z0+T,B=buckets[ch];
+    if(!isSolid(x,z-1)) addQuad(B,[x1,0,z0],[x0,0,z0],[x0,T,z0],[x1,T,z0],[0,0,-1]);
+    if(!isSolid(x,z+1)) addQuad(B,[x0,0,z1],[x1,0,z1],[x1,T,z1],[x0,T,z1],[0,0,1]);
+    if(!isSolid(x-1,z)) addQuad(B,[x0,0,z0],[x0,0,z1],[x0,T,z1],[x0,T,z0],[-1,0,0]);
+    if(!isSolid(x+1,z)) addQuad(B,[x1,0,z1],[x1,0,z0],[x1,T,z0],[x1,T,z1],[1,0,0]);
     if(ch==='L'&&lights.length<6){const l=new THREE.PointLight(0xff3020,4,18);l.position.set(wx,T/2,wz);scene.add(l);lights.push(l);}
   }
   if(ch==='P') spawn.set(wx,1.6,wz);
   if(ch==='E') enemies.push(makeEnemy(wx,wz));
 }));
+let wallTris=0;
+for(const [k,m] of [['#',matWall],['L',matLamp],['D',matDoor]]){
+  const q=buckets[k]; if(!q.length)continue;
+  const pos=[],nor=[],uv=[],idx=[];
+  q.forEach((f,i)=>{ f.p.forEach((p,j)=>{pos.push(...p);nor.push(...f.n);uv.push(j===0||j===3?0:1,j<2?0:1);});
+    const o=i*4; idx.push(o,o+1,o+2,o,o+2,o+3); });
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx);
+  scene.add(new THREE.Mesh(g,m)); wallTris+=idx.length/3;
+}
 const cols=MAP[0].length, rows=MAP.length;
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(cols*T,rows*T),new THREE.MeshLambertMaterial({map:tex(tileFloor(),cols,rows)}));
 floor.rotation.x=-Math.PI/2; floor.position.set(cols*T/2,0,rows*T/2); scene.add(floor);
@@ -132,6 +158,12 @@ function tryMove(p,dx,dz,r=.5){
 function endGame(win){ over=true; document.exitPointerLock(); msg.style.display='flex';
   msg.innerHTML=`<h1>${win?'VITÓRIA!':'VOCÊ MORREU'}</h1><p>${win?'BASE LIMPA':'MARTE VENCEU'}</p><p>CLIQUE PARA REINICIAR</p>`; }
 
+// Orçamento Geo3D: <=255 vértices/faces por RUN. Tecla F3 mostra o relatório.
+let dbg=false; addEventListener('keydown',e=>{if(e.code==='F3'){dbg=!dbg;e.preventDefault();}});
+const dbgE=document.createElement('div'); dbgE.id='dbg'; $('screen').appendChild(dbgE);
+function budget(){ if(!dbg){dbgE.style.display='none';return;} dbgE.style.display='block';
+  const tr=renderer.info.render.triangles, runs=Math.ceil(tr/255);
+  dbgE.textContent=`SCREEN 8 256x212 GRB332 | faces visíveis(GL):${tr} -> RUNs Geo3D(255):${runs} | geometria de paredes:${wallTris} faces | textura afim: n/d (GL é perspectiva-correta)`; }
 let last=performance.now();
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
@@ -158,7 +190,7 @@ function loop(now){
   flashT-=dt; flash.style.opacity=Math.max(0,flashT*2);
   lights.forEach((l,i)=>l.intensity=3.5+Math.sin(now*.004+i*2)*.8);
   camera.position.set(P.pos.x,1.6,P.pos.z); camera.rotation.set(P.pitch,P.yaw,0);
-  renderer.render(scene,camera); drawGun(now);
+  renderer.render(scene,camera); quantize(); drawGun(now); budget();
   requestAnimationFrame(loop);
 }
 enE.textContent=enemies.length; requestAnimationFrame(loop);
