@@ -9,7 +9,7 @@ using [MSXgl](https://github.com/aoineko-fr/MSXgl) v1.5.0. 256 KB ROM (ASCII-8 m
 > `docs/PORTING.md`). Generated ROM/asset segments are derived from them and are therefore git-ignored.
 > See `LICENSES.md`. Do not redistribute the ROM.
 
-> **Testing status:** the automated tests run **only in the openMSX 19.1 emulator with the C-BIOS MSX2 ROM**. The project owner reports that an earlier build runs on a real MSX; this repo's automated tests run only in openMSX with the C-BIOS MSX2 ROM, and later builds were not tried on hardware.
+> **Testing status:** the automated tests run **only in the openMSX 19.1 emulator with the C-BIOS MSX2 ROM**. The project owner reports that an earlier build runs on a real MSX; later builds were not tried on hardware.
 
 ## Quick start
 ```
