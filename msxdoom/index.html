@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>MSX DOOM - Base Marte</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="screen">
+  <canvas id="gl" width="256" height="212"></canvas>
+  <canvas id="gun" width="256" height="212"></canvas>
+  <div id="cross"></div>
+  <div id="flash"></div>
+  <div id="hud">
+    <span>VIDA <b id="hp">100</b></span>
+    <span>MUNIÇÃO <b id="ammo">∞</b></span>
+    <span>INIMIGOS <b id="en">0</b></span>
+  </div>
+  <div id="msg">
+    <h1>MSX DOOM</h1>
+    <p>BASE MARTE &middot; V9968 256&times;212</p>
+    <p>CLIQUE PARA JOGAR</p>
+    <small>↑↓ andar &middot; ←→ giro lateral (strafe) &middot; mouse olhar &middot; botão esq./ESPAÇO atirar &middot; ESC pausa</small>
+  </div>
+</div>
+<script src="three.min.js"></script>
+<script src="sprites.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
