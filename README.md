@@ -7,4 +7,4 @@ AI games created using a GPT agent that I created in ChatGPT: https://chatgpt.co
 FPS 2.5D estilo DOOM em Three.js (abra `msxdoom/index.html`). Render 256x212 com paleta adaptativa de 256 cores (estilo V9968 SCREEN 8/EPAL), texturas, sprites e HUD em 3 painéis. F3 mostra orçamento Geo3D. Veja `msxdoom/HARDWARE.md`. Controles: ↑↓ andar, ←→ strafe, mouse olhar, botão esquerdo/ESPAÇO atirar.
 
 ## msxrom/
-Esqueleto de ROM MSX (turbo R + V9968 + Geo3D) em C/SDCC. BUILD OK e testado só em simulação; sem teste em emulador MSX, FPGA ou hardware. Veja `msxrom/README.md`.
+ROM MSX (turbo R + V9968 + Geo3D), ASCII16 de 256 KiB, em C/SDCC: SCREEN 8 com paleta EPAL de 256 cores e paredes/inimigos texturizados pelo Geo3D. BUILD OK e testada só em simulação (Z80 emulado + modelo próprio do V9968/Geo3D); sem teste em emulador MSX, FPGA ou hardware. Veja `msxrom/README.md`.

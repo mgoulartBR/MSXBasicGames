@@ -20,7 +20,7 @@ ok=True
 def check(name,cond,info=''):
     global ok; ok&=bool(cond); print(('PASS' if cond else 'FAIL'),name,info)
 frames(2)
-check('estado inicial',rd16('hp')==100 and rd8('alive_count')==5,f"hp={rd16('hp')} vivos={rd8('alive_count')}")
+check('estado inicial',rd16('hp')==100 and rd8('alive_count')==9,f"hp={rd16('hp')} vivos={rd8('alive_count')}")
 x0,z0=rd16('px'),rd16('pz'); held.add('up'); frames(10); held.clear()
 x1,z1=rd16('px'),rd16('pz'); check('andar para frente',abs(x1-x0)+abs(z1-z0)>10,f'({x0},{z0})->({x1},{z1})')
 y0=rd8('yaw'); held.add('right'); frames(5); held.clear(); check('girar',(rd8('yaw')-y0)&255==15,f"yaw {y0}->{rd8('yaw')}")
@@ -28,11 +28,11 @@ held.add('up'); frames(120); held.clear()   # empurra contra parede
 px,pz=rd16('px'),rd16('pz'); check('colisão com parede (dentro do mapa)',0<px<1024 and 0<pz<1024,f'({px},{pz})')
 # mira no inimigo mais próximo e atira
 ex=[(rd16('en')+0,0)]  # placeholder para usar o símbolo
-base=sym['en']; mem=M.m.memory
+base=sym['en']; ES=14; mem=M.m.memory
 def enemy(i):
-    o=base+i*6; g=lambda k:(lambda v:v-65536 if v>32767 else v)(mem[o+k]|mem[o+k+1]<<8); return g(0),g(2),g(4)
+    o=base+i*ES; g=lambda k:(lambda v:v-65536 if v>32767 else v)(mem[o+k]|mem[o+k+1]<<8); return g(0),g(2),g(4)
 px,pz=rd16('px'),rd16('pz'); wr8('yaw',0)
-alive=[i for i in range(5) if enemy(i)[2]>0]
+alive=[i for i in range(9) if enemy(i)[2]>0]
 ex_,ez_,_=enemy(alive[0]); 
 # escolhe uma posição livre a 60-90 unidades do inimigo, com linha de visão, e mira nele
 import level
@@ -51,11 +51,11 @@ for k in range(3):
     held.add('fire'); frames(1); held.discard('fire'); frames(12)
     hits=3-0
 frames(2)
-e_hp=[enemy(i)[2] for i in range(5)]
+e_hp=[enemy(i)[2] for i in range(9)]
 check('tiro abate inimigo (3 disparos, 3 de vida)',rd8('alive_count')==n0-1,f'vivos {n0}->{rd8("alive_count")} hp_inimigos={e_hp}')
 # derrota: zera vida
 mem[sym['hp']:sym['hp']+2]=(0).to_bytes(2,'little'); frames(2)
 check('fim de jogo ao zerar vida',rd8('over')==1)
 held.add('fire'); frames(1); held.clear(); frames(2)
-check('reinício com SPACE',rd8('over')==0 and rd16('hp')>=90 and rd8('alive_count')==5)
+check('reinício com SPACE',rd8('over')==0 and rd16('hp')>=90 and rd8('alive_count')==9)
 print('RESULTADO:','TODOS OS TESTES PASSARAM' if ok else 'HÁ FALHAS'); sys.exit(0 if ok else 1)

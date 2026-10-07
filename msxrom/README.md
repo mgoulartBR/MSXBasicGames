@@ -1,58 +1,71 @@
-# MSX DOOM — ROM (turbo R + V9968 + Geo3D)
+# MSX DOOM — ROM texturizada (turbo R + V9968 + Geo3D)
 
-Esqueleto jogável em C/SDCC: ROM de 16 KiB, sem mapper, cabeçalho `AB` em 0x4000.
-O protótipo web equivalente está em [`../msxdoom`](../msxdoom).
+ROM **ASCII16** de 256 KiB em C/SDCC: SCREEN 8 com paleta **EPAL de 256 cores**, paredes **texturizadas pelo Geo3D**
+(LRMM por linha), inimigos como billboards texturizados com transparência, arma/mira/HUD por blits de fonte.
+O protótipo web com a mesma arte está em [`../msxdoom`](../msxdoom).
+
+![Cena](out/preview_start.png) ![Inimigo](out/preview_enemy.png)
 
 ```sh
-./build.sh                       # SDCC >= 4.2, makebin, Python 3 -> out/msxdoom.rom
-python3 tools/test_game.py       # testes de lógica no Z80 emulado (pip install z80 pillow)
-python3 tools/z80_harness.py 4   # renderiza quadros em out/harness_N.png
+./build.sh                         # SDCC >= 4.2, Python 3, numpy, pillow  ->  out/msxdoom.rom
+python3 tools/test_boot.py         # boot no Z80 emulado: VRAM, paleta e quadro conferidos
+python3 tools/test_game.py         # 7 testes de lógica (andar, girar, colisão, tiro, fim de jogo, reinício)
+python3 tools/z80_harness.py 4     # renderiza quadros em out/harness_N.png
+node tools/export_art.js           # (opcional) reexporta a arte de ../msxdoom/sprites.js para assets/*.png
 ```
-
-![Cena inicial](out/preview_start.png) ![Inimigo na mira](out/preview_enemy.png)
-
-## Controles (MSX)
-Cursor ←/→ giram, ↑/↓ andam, ESPAÇO atira (reinicia após o fim). Mouse: não implementado.
+Rodar: `openmsx -machine Panasonic_FS-A1ST_V9968 -ext geo3d -cart out/msxdoom.rom -romtype ASCII16`
+(**o tipo de ROM precisa ser ASCII16 explicitamente**). Controles: cursor ←/→ giram, ↑/↓ andam, ESPAÇO atira/reinicia.
 
 ## Status de validação
 
 | Nível | Resultado |
 |---|---|
-| BUILD OK | Sim. SDCC 4.2.0, ~10 KiB de 16 KiB usados. |
-| BOOT OK | **UNTESTED** em openMSX, blueMSX+, FPGA e hardware. |
-| SIMULATED | Sim: ROM executada num Z80 emulado (pip `z80`) com um modelo próprio e simplificado de V9968 (SCREEN 5, LMMV, paleta, páginas) e Geo3D (registradores de `geo3d_engine.v`, faces preenchidas). 7 testes de lógica passam (andar, girar, colisão, tiro que mata, fim de jogo, reinício). **Isso não é um emulador de MSX.** |
-| EMULATOR TESTED (openMSX/blueMSX+ com Geo3D) | **UNTESTED** |
-| FPGA TESTED / HARDWARE TESTED | **UNTESTED** |
+| BUILD OK | Sim. SDCC 4.2.0. Código: 8,7 KB do banco 1; 10 bancos de dados; ROM 256 KiB. |
+| BOOT OK | **UNTESTED** (openMSX, blueMSX+, FPGA, hardware) |
+| SIMULATED | Sim: a ROM roda num Z80 emulado (pip `z80`) com modelo próprio e simplificado de ASCII16, V9968 (SCREEN 8, EPAL, LMMV, LMMM/TIMP) e Geo3D (faces texturizadas conforme `geo3d_engine.v`). `test_boot.py` e `test_game.py` passam. **Não é um emulador de MSX.** |
+| EMULATOR TESTED / FPGA TESTED / HARDWARE TESTED | **UNTESTED** |
 
 ```text
-MSXgl: não usado
-SDCC: 4.2.0 #13081
-V9968 specification/revision: hra1129/V9968_Cartridge @ 55966fb
-Geo3D specification/revision: geo3d_engine.v (alexmoncks, v1.0.0 conforme geo3d/readme.md), cópia em V9968_Cartridge
+MSXgl: não usado                    SDCC: 4.2.0 #13081
+V9968 spec/revision: hra1129/V9968_Cartridge 55966fb (RTL: vdp_cpu_interface.v, vdp_command.v)
+Geo3D spec/revision: geo3d_engine.v (alexmoncks, v1.0.0)  | referências: kanon-ai/V9968_Geo3D_SampleDemo 3fe8a01, NEON_REVENANT 030555e
 openMSX build / commit / Machine XML: não testado
-V9968 configuration: I/O base 0x98 (Geo3D em 0x9D/0x9F, como NEON_REVENANT)
-Mapper: nenhum (ROM 16 KiB em 0x4000)   ROM size: 16384
-Target machine: MSX turbo R + V9968 + Geo3D   CPU mode: R800 ROM (CHGCPU 0x81) se MSXVER>=3
+V9968 configuration: I/O base 0x98 (Geo3D em 0x9D/0x9F)    Mapper: ASCII16   ROM size: 262144
+Target machine: MSX turbo R + V9968 + Geo3D    CPU mode: R800 ROM (CHGCPU 0x81) se MSXVER>=3
 Test status: BUILD OK + SIMULATED; todo o resto UNTESTED
 ```
-Fontes lidas em 2026-10-06: V9968_Cartridge `55966fb` (hra1129); V9968_Geo3D_SampleDemo `3fe8a01` e NEON_REVENANT `030555e` (kanon-ai).
 
-## Arquitetura
-R800/Z80: input, IA, colisão, hitscan, câmera. Geo3D: transformação, projeção, culling, sombreado e ordem do pintor
-(4 chunks do mapa + 1 RUN por inimigo, cada um <= 255 vértices/faces). V9968: teto/chão, arma, HUD, mira e a página exibida.
-`tools/gen_level.py` converte o mapa em streams VDATA/FDATA prontos para `OTIR`.
+## Como funciona
+- **Mapper:** banco 0 = cabeçalho `AB` + boot; o boot seleciona o banco 1 na janela 0x8000 (`0x7000`) e faz `ENASLT` da página 2 para o slot do cartucho; o **código roda do banco 1**. Os dados ficam nos bancos 2+, lidos pela janela 0x4000 (registrador em `0x6000`).
+- **Vídeo:** `R#0=14` (SCREEN 8), `R#20=0x11` (EPAL + HS) após `OUT (0x9C),0`, `R#21=0`, `R#16`+porta `0x9A` com 256×(R,G,B de 5 bits) (RTL: `vdp_cpu_interface.v`). `R#51..58 = 0,0,0,0,255,0,255,3` (janela de origem do LRMM), como o NEON_REVENANT.
+- **VRAM (256 KiB = 1024 linhas de 256 B):** páginas de desenho em 0..511 (`YPAGE = página<<8`); texturas em 512..1023 (carregadas no boot a partir dos bancos 2..9):
 
-## Suposições NÃO verificadas em hardware (revisar primeiro se algo falhar)
-1. Matriz enviada linha a linha (M00,M01,M02,M10...) e `p' = M·v + T` (T somado depois da rotação, como em NEON_REVENANT).
-2. Convenção da câmera: +Z para frente, +X direita, +Y cima; `F=170, CX=128, CY=106, ZNEAR=4`.
-3. Desbloqueio `OUT (0x9C),0` e `R#20=1, R#21=0`, copiados da prática do NEON_REVENANT/TECHNICAL.md. Não confirmei que SCREEN 5 + LMMV exige isso.
-4. Troca de página via `R#2 = 0x1F | page<<5` e `YPAGE = page<<8` (como nas demos); espera de VBLANK por polling de S#0 bit 7.
-5. Teclado: linha 8 da matriz (setas e espaço), como em NEON_REVENANT. PSG: R7 = 0xB7 (ruído no canal A).
-6. Paleta de 16 cores (SCREEN 5). Rampa 1-7 para paredes, 8-14 para inimigos (`BASE + nível de sombra`), 15 chão.
+| Linhas | Conteúdo |
+|---|---|
+| 512–575 | atlas de paredes 256×64 (4 tiles 64×64), cópia escura (nível 0) |
+| 576–639 | sprites 256×64 (2 tipos × 6 poses, 24×32), sem sombra |
+| 640–703 | atlas de paredes, cópia média (nível 2) |
+| 768–831 | atlas de paredes, cópia clara (nível 4) |
+| 832–895 | pistola (parada e disparando) e clarão |
+| 896–934 | fontes 5×7 (cinza, laranja, vermelho) e dígitos grandes |
+
+- **Por que só 3 cópias de sombra:** o Geo3D escolhe a linha-fonte por `TEXY + nível*TSTRIDE`. A luz é **fixa no mundo** (recalculada por quadro no espaço da câmera), então paredes alinhadas aos eixos só recebem os níveis 0, 2 e 4; os intervalos entre as cópias guardam sprites. Com `TSTRIDE=0` os sprites usam uma cópia só.
+- **Paleta (256):** 63 cores-base escolhidas por median-cut sobre as texturas, em 3 brilhos (índices 1–63 claro, 65–127 médio, 129–191 escuro; 0 = preto/transparente) + 14 rampas de teto/chão + cores do HUD.
+- **Geometria:** cada parede exposta vira 4 tiras de 16 unidades (limita a distorção afim e o buraco do plano próximo); 544 faces em 16 chunks de 4×4 células (≤255 faces/vértices por RUN). Chunks fora do campo de visão são descartados na CPU e os visíveis são desenhados do mais longe ao mais perto. Jogador com raio de colisão 14 e `ZNEAR=2`.
+- **Inimigos:** 1 RUN por inimigo, quad de câmera (matriz identidade), textura do atlas de sprites com `LOP=8` (TIMP). Só são desenhados se houver linha de visão (não há Z-buffer entre RUNs).
+- **Arma e HUD:** LMMM com TIMP a partir da VRAM; o painel (y ≥ 178) é desenhado nas duas páginas, e os valores só são redesenhados quando mudam.
+
+## Suposições NÃO verificadas em emulador/hardware (revisar primeiro se algo falhar)
+1. **TIMP no LRMM:** `LOP=8` (registrador Geo3D 0x45) faz o LRMM tratar o texel 0 como transparente. O RTL repassa o `lop` ao comando, mas não testei o comportamento. Se estiver errado, os inimigos aparecem com fundo preto.
+2. Matriz enviada linha a linha e `p' = M·v + T`; câmera +Z frente/+X direita/+Y cima; `F=170, CX=128, CY=89, ZNEAR=2, W=256, H=178`.
+3. Coordenadas U/V são relativas a `TEXX/TEXY` (e o nível soma `nível*TSTRIDE` às linhas), como descreve o cabeçalho de `geo3d_engine.v`.
+4. `IN A,(0xFF)` / `XOR 1` / `OUT (0xFE),A` no boot foi **copiado de todas as demos kanon-ai**; a finalidade não está documentada (provavelmente configuração do cartucho/máquina V9968).
+5. Teclado: linha 8 da matriz (setas e espaço), como no NEON_REVENANT; PSG: `R7=0xB7`. `R#2 = 0x1F | página<<5` para trocar de página; polling de VBLANK em S#0 bit 7.
+6. A rampa de brilho e o atlas foram validados só pelo meu simulador (rasterização afim por linha, como descrito no RTL).
 
 ## Achados e limitações
-- **SDCC 4.2.0 gerou `(s32)a*b` errado** com multiplicador negativo (ex.: `(-16384*151)>>14` deu +453). Todo o jogo usa `mulq14()` (soma e deslocamento), validado contra Python em 600 pares.
-- Sem Z-buffer entre RUNs: um inimigo seria desenhado através da parede. Mitigação: só desenha inimigo com linha de visão (grade). Chunks são ordenados do mais distante ao mais próximo; paredes de chunks diferentes podem se sobrepor incorretamente em casos extremos.
-- Os modelos de nível são reenviados ao Geo3D a cada quadro (4 chunks); o custo real é desconhecido (UNTESTED). Se for lento, enviar só os chunks próximos.
-- Sem texturas (o Geo3D suporta LRMM; exigiria atlas na VRAM e `CTRL bit2`). Inimigo é uma pirâmide provisória, não o imp do protótipo web.
-- Sem mouse, sem portas que abrem, sem texto (HUD só com barras), sem tela de título.
+- **Bug do SDCC 4.2.0:** `(s32)a*b` com multiplicador negativo deu resultado errado; o jogo usa `mulq14()` (soma e deslocamento), validado contra Python em 600 pares.
+- **Desempenho (UNTESTED):** no simulador, ~18 KB por quadro vão ao Geo3D por `OTIR` (vértices, faces e coordenadas dos chunks visíveis + inimigos). Estimativa de cálculo, sem medir: ~80 ms por quadro em Z80, bem menos no R800. Se for lento no seu emulador, reduza `CHUNK`/`STRIPS` em `tools/make_assets.py` ou limite os chunks desenhados.
+- Sem Z-buffer entre RUNs: paredes de chunks diferentes podem se sobrepor incorretamente em casos extremos. Sem sombreado por distância.
+- Sem mouse, sem portas que abrem, sem tela de título, sem texto de vitória/derrota (só uma faixa colorida).
+- **Se a imagem sair preta ou sem texturas**, verifique nesta ordem: ROM tipo ASCII16; extensão `geo3d` no openMSX; EPAL/`R#20`; janela do LRMM (`R#51–58`).

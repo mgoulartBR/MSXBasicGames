@@ -1,44 +1,53 @@
-/* MSX DOOM - esqueleto de ROM para MSX turbo R + V9968 + Geo3D (SDCC, ROM 16 KiB sem mapper).
- * STATUS: BUILD OK apenas. Nunca executado em emulador/FPGA/hardware (UNTESTED).
- * Registradores Geo3D conforme geo3d_engine.v (alexmoncks/V9968_Cartridge); SCREEN 5 como nas demos. */
-#include "level.h"
+/* MSX DOOM — ROM ASCII16 para MSX turbo R + V9968 + Geo3D (SDCC). SCREEN 8 com paleta EPAL de 256 cores,
+ * paredes texturizadas pelo Geo3D (LRMM), inimigos como billboards texturizados, HUD por blits de fonte.
+ * STATUS: BUILD OK + SIMULATED apenas. Nunca executado em emulador MSX/FPGA/hardware (UNTESTED).
+ * Registradores: geo3d_engine.v e vdp_cpu_interface.v (hra1129/alexmoncks V9968_Cartridge); sequência de
+ * inicialização conforme NEON_REVENANT / V9968_Geo3D_SampleDemo. */
+#include "assets.h"
 typedef unsigned char u8; typedef unsigned int u16; typedef int s16; typedef long s32;
 
-__sfr __at(0x98) vdp_d;
-__sfr __at(0x99) vc;      /* porta de comando/status do VDP */
+__sfr __at(0x98) vdp_d;   /* dados de VRAM */
+__sfr __at(0x99) vc;      /* comando/status */
 __sfr __at(0x9A) vp;      /* paleta */
 __sfr __at(0x9B) vi;      /* registrador indireto */
-__sfr __at(0x9C) vp4;     /* Port#4: desbloqueio dos recursos estendidos V9968 */
-__sfr __at(0x9D) gi;      /* Geo3D: índice (escrita) / status (leitura) */
+__sfr __at(0x9C) vp4;     /* Port#4: bit7 = trava dos registradores estendidos */
+__sfr __at(0x9D) gi;      /* Geo3D: índice / status */
 __sfr __at(0x9F) gd;      /* Geo3D: dados */
 __sfr __at(0xA0) psg_a;
 __sfr __at(0xA1) psg_d;
 __sfr __at(0xAA) ppi_c;
 __sfr __at(0xA9) ppi_b;
 
+#define BANK(n) (*(volatile u8*)0x6000=(n))      /* ASCII16: janela 0x4000-0x7FFF */
+#define DATA ((const u8*)0x4000)
 #define SCR_W 256
-#define SCR_H 212
+#define VIEW_H 178                                /* janela 3D; abaixo dela fica o HUD */
+#define HUD_Y 178
 #define CAM_Y 32
 #define ENEMY_HP 3
+#define PLAYER_R 14                               /* tiras de 16 unidades + ZNEAR=2: ver README */
 
 static void vr(u8 r,u8 v){ vc=v; vc=r|0x80; }
-static void wait_ce(void){ while(vc&1); }              /* S#2 bit0 = CE (R#15 = 2) */
+static void wait_ce(void){ while(vc&1); }          /* S#2 bit0 = CE (R#15 = 2) */
 static void wait_vblank(void){ vr(15,0); (void)vc; while(!(vc&0x80)); vr(15,2); }
-
 static void vw(s16 v){ vi=(u8)v; vi=(u8)((u16)v>>8); }
 static void gw(s16 v){ gd=(u8)v; gd=(u8)((u16)v>>8); }
 
-/* LMMV: retângulo preenchido, colour 0..15 (SCREEN 5), na página "page" */
 static u8 page;
+/* LMMV */
 static void fill(s16 x,s16 y,s16 w,s16 h,u8 c){
   if(x<0){w+=x;x=0;} if(y<0){h+=y;y=0;}
-  if(x+w>SCR_W)w=SCR_W-x; if(y+h>SCR_H)h=SCR_H-y;
+  if(x+w>SCR_W)w=SCR_W-x; if(y+h>212)h=212-y;
   if(w<=0||h<=0)return;
   wait_ce(); vr(17,36);
   vw(x); vw(y+((u16)page<<8)); vw(w); vw(h); vi=c; vi=0; vi=0x80;
 }
+/* LMMM com TIMP (índice 0 = transparente); sy é absoluto (atlas na VRAM), dy relativo à página */
+static void blit(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h){
+  wait_ce(); vr(17,32);
+  vw(sx); vw(sy); vw(dx); vw(dy+((u16)page<<8)); vw(w); vw(h); vi=0; vi=0; vi=0x98;
+}
 
-/* stream de n bytes para a porta 0x9F (OTIR) */
 static void gtransfer(const u8 *p,u16 n) __naked __sdcccall(1) {
   (void)p;(void)n;
   __asm
@@ -60,28 +69,46 @@ tr_rest:
     ret
   __endasm;
 }
-
-/* ---- Geo3D ---- */
-static void geo_init(void){
-  gi=0x18; gw(170); gw(128); gw(106); gw(4); gw(256); gw(212);   /* F, CX, CY, ZNEAR, W, H */
-  gi=0x5A; gw(-5000); gw(10500); gw(-11500);                     /* luz (espaço da câmera) */
+static void vtransfer16k(const u8 *p) __naked __sdcccall(1) {   /* 16384 bytes -> porta 0x98 */
+  (void)p;
+  __asm
+    ld c,#0x98
+    ld a,#64
+vt_blk:
+    ld b,#0
+    otir
+    dec a
+    jr nz,vt_blk
+    ret
+  __endasm;
 }
-static void geo_model(const u8 *v,const u8 *f,u8 nv,u8 nf){
-  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=0;                       /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP */
+
+/* ---------------------------------------------------------------- Geo3D */
+#define TEXY_WALL 512
+#define TEXY_SPR 576
+static void geo_tex(u16 texy,u8 stride){ gi=0x60; gw(0); gw(texy); gd=stride; }
+static void geo_init(void){
+  gi=0x18; gw(170); gw(128); gw(VIEW_H/2); gw(2); gw(256); gw(VIEW_H);   /* F, CX, CY, ZNEAR, W, H */
+  geo_tex(TEXY_WALL,64);
+}
+static void geo_light(const s16 *l){ gi=0x5A; gw(l[0]); gw(l[1]); gw(l[2]); }
+/* carrega um modelo texturizado: vértices, faces (11 B) e coordenadas de textura (8 B/face) */
+static void geo_model(const u8 *v,u8 nv,const u8 *f,u8 nf,const u8 *t){
+  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=8;                      /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP=TIMP */
   gi=0x50; gtransfer(v,(u16)nv*6);
   gi=0x58; gd=0; gd=nf;                                          /* FADDR, NFACE */
   gi=0x52; gtransfer(f,(u16)nf*11);
+  gi=0x65; gd=0;                                                 /* TADDR */
+  gi=0x53; gtransfer(t,(u16)nf*8);
 }
-/* M (Q2.14, linha a linha) e T; RUN preenchido; espera o fim */
 static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
   u8 i; gi=0; for(i=0;i<9;i++)gw(m[i]); gw(tx); gw(ty); gw(tz);
   gi=0x46; gw((u16)page<<8);
-  gi=0x48; gd=3;                                                 /* RUN | faces preenchidas */
+  gi=0x48; gd=7;                                                 /* RUN | faces preenchidas | texturas */
   while(gi&1); wait_ce();
 }
 
-/* (a*b)>>14 por soma e deslocamento. Evita (s32)a*b do SDCC 4.2.0, que gerou resultado errado
- * com multiplicador negativo (ver README, "Achados"). |a|,|b| < 32768. */
+/* (a*b)>>14 por soma e deslocamento; evita (s32)a*b do SDCC 4.2.0 (resultado errado com multiplicador negativo) */
 s16 mulq14(s16 a,s16 b){
   u8 neg=0,i; u16 ub; long acc=0,t;
   if(a<0){a=-a;neg^=1;} if(b<0){b=-b;neg^=1;}
@@ -90,10 +117,10 @@ s16 mulq14(s16 a,s16 b){
   acc>>=14; return neg?-(s16)acc:(s16)acc;
 }
 
-/* ---- estado do jogo ---- */
-s16 px,pz; u8 yaw; s16 hp; u8 cool,flash,hurt,over;   /* globais: lidas pelos testes */
-typedef struct{s16 x,z; s16 hp;}Enemy;
-Enemy en[NENEMY]; u8 alive_count; u8 sfx;
+/* ---------------------------------------------------------------- estado do jogo */
+typedef struct{s16 x,z,hp; s16 t,atk,hurt,dying;}Enemy;
+s16 px,pz; u8 yaw; s16 hp; u8 cool,flash,hurt,over;
+Enemy en[NENEMY]; u8 alive_count; u8 kills; u8 sfx; u8 msg_id,msg_t;
 static u8 keys,old_keys;
 #define K_LEFT 1
 #define K_RIGHT 2
@@ -119,10 +146,9 @@ static void sound_tick(void){
 }
 
 static void new_game(void){
-  u8 i; px=START_X; pz=START_Z; yaw=32; hp=100; over=0; cool=flash=hurt=0; alive_count=NENEMY;
-  for(i=0;i<NENEMY;i++){ en[i].x=enemy_start[i][0]; en[i].z=enemy_start[i][1]; en[i].hp=ENEMY_HP; }
+  u8 i; px=START_X; pz=START_Z; yaw=32; hp=100; over=0; cool=flash=hurt=0; alive_count=NENEMY; kills=0; msg_id=0; msg_t=0;
+  for(i=0;i<NENEMY;i++){ en[i].x=enemy_start[i][0]; en[i].z=enemy_start[i][1]; en[i].hp=ENEMY_HP; en[i].t=i*5; en[i].atk=en[i].hurt=en[i].dying=0; }
 }
-
 static u8 los(s16 x0,s16 z0,s16 x1,s16 z1){
   u8 i; for(i=1;i<12;i++) if(solid_at(x0+(x1-x0)*i/12,z0+(z1-z0)*i/12))return 0;   /* |delta*i|<=11264: cabe em s16 */
   return 1;
@@ -135,81 +161,146 @@ static void shoot(void){
     s16 xc=mulq14(dx,c)-mulq14(dz,s), zc=mulq14(dx,s)+mulq14(dz,c);
     if(zc>8&&xc>-22&&xc<22&&zc<bz&&los(px,pz,en[i].x,en[i].z)){bz=zc;best=i;}
   }
-  if(best!=255 && --en[best].hp<=0){ alive_count--; sfx=60; }
+  if(best!=255){ en[best].hurt=4; if(--en[best].hp<=0){ alive_count--; kills++; en[best].dying=10; msg_id=1; msg_t=90; sfx=60; } }
 }
 static void update(void){
   u8 i; s16 s=isin(yaw),c=icos(yaw),mv=0;
   if(keys&K_LEFT)yaw-=3; if(keys&K_RIGHT)yaw+=3;
   if(keys&K_UP)mv=1; if(keys&K_DOWN)mv=-1;
-  if(mv) try_move(&px,&pz,mulq14(s,5*mv),mulq14(c,5*mv),8);
-  if(cool)cool--; if(flash)flash--; if(hurt)hurt--;
+  if(mv) try_move(&px,&pz,mulq14(s,5*mv),mulq14(c,5*mv),PLAYER_R);
+  if(cool)cool--; if(flash)flash--; if(hurt)hurt--; if(msg_t&&!--msg_t)msg_id=0;
   if((keys&K_FIRE)&&!(old_keys&K_FIRE)&&!cool)shoot();
-  for(i=0;i<NENEMY;i++){ if(en[i].hp<=0)continue;
-    s16 dx=px-en[i].x,dz=pz-en[i].z,ad=(dx<0?-dx:dx)+(dz<0?-dz:dz);
-    if(ad>60) try_move(&en[i].x,&en[i].z,dx>0?1:-1,dz>0?1:-1,12);
-    else if(!(old_keys&0x80)&&(u8)(i+yaw+px)%16==0){ hp-=2; hurt=4; sfx=20; }   /* ataque corpo a corpo */
+  for(i=0;i<NENEMY;i++){
+    if(en[i].hp<=0){ if(en[i].dying)en[i].dying--; continue; }
+    { s16 dx=px-en[i].x,dz=pz-en[i].z,ad=(dx<0?-dx:dx)+(dz<0?-dz:dz);
+      en[i].t++; if(en[i].hurt)en[i].hurt--; if(en[i].atk)en[i].atk--;
+      if(ad>60) try_move(&en[i].x,&en[i].z,dx>0?1:-1,dz>0?1:-1,12);
+      else if(!en[i].atk&&(u8)(i+yaw+px)%16==0){ hp-=2; hurt=4; sfx=20; en[i].atk=12; }   /* ataque corpo a corpo */
+    }
   }
   if(hp<=0||alive_count==0)over=1;
 }
 
-/* ---- render ---- */
-static s16 M[9]; static s16 TX,TY,TZ;
+/* ---------------------------------------------------------------- HUD (blits de fonte; páginas 0 e 1) */
+static const char fontchars[]=FONT_CHARS;
+#define FONT_GRAY 896
+#define FONT_ORANGE 904
+#define FONT_RED 912
+#define FONT_RED2 920
+static u8 glyph(char ch){ u8 i; for(i=0;fontchars[i];i++) if(fontchars[i]==ch)return i; return 0; }
+static void text(u16 x,u16 y,u16 row,const char *s){ for(;*s;s++,x+=6) blit((u16)glyph(*s)*6,row,x,y,5,7); }
+static void bigtext(u16 x,u16 y,const char *s){ for(;*s;s++,x+=12) blit((u16)glyph(*s)*12,FONT_RED2,x,y,10,14); }
+static char numbuf[8];
+static const char *itoa3(s16 v){ u8 i=0; if(v<0)v=0; if(v>=100)numbuf[i++]='0'+v/100; if(v>=10)numbuf[i++]='0'+(v/10)%10; numbuf[i++]='0'+v%10; numbuf[i]=0; return numbuf; }
+static const char *const msgs[2]={"MSX DOOM","ABATIDO!"};
+static s16 sh_hp=-1; static u8 sh_kills=255,sh_alive=255,sh_msg=255;
+
+static void hud_static(void){
+  fill(0,HUD_Y,SCR_W,34,C_HUD_BG); fill(0,HUD_Y,SCR_W,1,C_HUD_BORDER); fill(82,HUD_Y,1,34,C_HUD_BORDER); fill(172,HUD_Y,1,34,C_HUD_BORDER);
+  text(30,HUD_Y+3,FONT_GRAY,"VIDA"); text(92,HUD_Y+3,FONT_GRAY,"ABATES"); text(182,HUD_Y+3,FONT_GRAY,"INIMIGOS");
+}
+static void hud_dynamic(void){
+  char t[8]; u8 i,n;
+  if(hp!=sh_hp){ s16 v=hp<0?0:hp; const char *s=itoa3(v); n=0; while(s[n])n++;
+    fill(22,191,52,14,C_HUD_BG); bigtext(22,191,s); bigtext(22+12*n,191,"%");
+    fill(8,207,66,3,C_BAR_BG); fill(8,207,(u16)v*66/100,3,C_BAR_RED); }
+  if(kills!=sh_kills){ const char *s=itoa3(kills); fill(134,HUD_Y+3,36,7,C_HUD_BG); for(i=0;s[i];i++)t[i]=s[i]; t[i++]='/'; t[i]=0; text(134,HUD_Y+3,FONT_GRAY,t); text(134+6*i,HUD_Y+3,FONT_GRAY,itoa3(NENEMY)); }
+  if(msg_id!=sh_msg){ fill(92,195,72,7,C_HUD_BG); text(92,195,FONT_ORANGE,msgs[msg_id]); }
+  if(alive_count!=sh_alive){ fill(205,191,40,14,C_HUD_BG); bigtext(214,191,itoa3(alive_count)); }
+}
+static void hud_update(void){
+  u8 p0=page;
+  if(hp==sh_hp&&kills==sh_kills&&msg_id==sh_msg&&alive_count==sh_alive)return;
+  for(page=0;page<2;page++)hud_dynamic();
+  page=p0; sh_hp=hp; sh_kills=kills; sh_msg=msg_id; sh_alive=alive_count;
+}
+
+/* ---------------------------------------------------------------- render */
+static s16 M[9]; static s16 TX,TY,TZ; static s16 LC[3];
+static const s16 LW[3]={-5734,11207,-10486};       /* luz no mundo: gera apenas os niveis 0,2,4 nas paredes */
+static const s16 IDENT[9]={16384,0,0,0,16384,0,0,0,16384};
 static void make_view(void){
   s16 s=isin(yaw),c=icos(yaw);
   M[0]=c; M[1]=0; M[2]=-s; M[3]=0; M[4]=16384; M[5]=0; M[6]=s; M[7]=0; M[8]=c;
   TX=-(mulq14(c,px)-mulq14(s,pz)); TY=-CAM_Y; TZ=-(mulq14(s,px)+mulq14(c,pz));
+  LC[0]=mulq14(M[0],LW[0])+mulq14(M[2],LW[2]); LC[1]=mulq14(M[4],LW[1]); LC[2]=mulq14(M[6],LW[0])+mulq14(M[8],LW[2]);
 }
-static s16 dist2(s16 x,s16 z){ s16 dx=x-px,dz=z-pz; return (dx<0?-dx:dx)+(dz<0?-dz:dz); }  /* distância Manhattan, só para ordenar */
+static s16 dist1(s16 x,s16 z){ s16 dx=x-px,dz=z-pz; return (dx<0?-dx:dx)+(dz<0?-dz:dz); }   /* Manhattan: só para ordenar */
+static s16 s16abs(s16 v){ return v<0?-v:v; }
 
-static void draw_gun(void){
-  s16 k=flash?4:0;
-  if(flash){ fill(116,118,24,14,14); fill(122,112,12,10,7); }
-  fill(120,132+k,16,40,15); fill(122,132+k,3,40,14);              /* cano */
-  fill(112,150+k,32,22,3); fill(114,150+k,28,3,15);               /* corrediça */
-  fill(104,172+k,48,40,2); fill(108,176+k,40,36,3);               /* empunhadura/mão */
+static u8 enemy_sprite(u8 i){
+  const Enemy *e=&en[i]; u8 base=(i&1)*6;
+  if(e->hp<=0) return base+(e->dying?4:5);
+  if(e->hurt) return base+3;
+  if(e->atk) return base+2;
+  return base+((e->t>>3)&1);
 }
-static void draw_hud(void){
-  u8 i; fill(0,198,SCR_W,14,0);
-  fill(4,201,102,8,2); fill(5,202,(hp>0?hp:0),6,hurt?14:7);        /* barra de vida */
-  for(i=0;i<NENEMY;i++) fill(130+i*10,201,8,8,en[i].hp>0?12:2);   /* inimigos restantes */
-  fill(124,100,9,1,14); fill(127,97,3,7,14);                       /* mira central */
+static void draw_enemy(u8 i,s16 xc,s16 zc){
+  u8 k=enemy_sprite(i); u8 u=(k%10)*24,v=(k/10)*32; u8 tex[8];
+  static const u8 vtx0[24]={ 0xEB,0xFF, 24,0, 0,0,  21,0, 24,0, 0,0,  21,0, 0xE0,0xFF, 0,0,  0xEB,0xFF, 0xE0,0xFF, 0,0 };   /* (-21,24),(21,24),(21,-32),(-21,-32) */
+  tex[0]=u;tex[1]=v;tex[2]=u+23;tex[3]=v;tex[4]=u+23;tex[5]=v+31;tex[6]=u;tex[7]=v+31;
+  { static const u8 face[11]={0,1,2,3, 0,0, 0,0, 0x00,0xC0, 0x80};   /* normal (0,0,-16384) = para a câmera */
+    geo_model(vtx0,4,face,1,tex); }
+  geo_run(IDENT,xc,0,zc);
+}
+static void draw_chunk(u8 i){
+  const Chunk *c=&chunks[i]; const u8 *p;
+  BANK(c->bank); p=DATA+c->off;
+  geo_model(p,c->nv,p+(u16)c->nv*6,c->nf,p+(u16)c->nv*6+(u16)c->nf*11);
+  geo_run(M,TX,TY,TZ);
+}
+static u8 chunk_visible(const Chunk *c){
+  s16 dx=c->cx-px,dz=c->cz-pz; s16 zc=mulq14(M[6],dx)+mulq14(M[8],dz), xc=mulq14(M[0],dx)+mulq14(M[2],dz);
+  if(zc+c->rad<4) return 0;
+  if(s16abs(xc)-c->rad > (((zc+c->rad)*7)>>3)) return 0;
+  return 1;
+}
+static void draw_gun(void){
+  if(flash){ blit(64,832,96,114,64,64); blit(128,832,104,86,48,32); } else blit(0,832,96,114,64,64);
 }
 static void render(void){
-  u8 i,j,order[4]; s16 mx[9]; u8 ord[NENEMY]; s16 t;
-  fill(0,0,SCR_W,106,0); fill(0,106,SCR_W,106,15);                 /* teto e chão */
-  make_view();
-  for(i=0;i<NCHUNK;i++)order[i]=i;                                 /* chunks do mais distante ao mais próximo */
-  for(i=1;i<NCHUNK;i++){ u8 v=order[i]; j=i; while(j>0&&dist2(chunks[order[j-1]].cx,chunks[order[j-1]].cz)<dist2(chunks[v].cx,chunks[v].cz)){order[j]=order[j-1];j--;} order[j]=v; }
-  for(i=0;i<NCHUNK;i++){ const Chunk *ch=&chunks[order[i]]; geo_model(ch->v,ch->f,ch->nv,ch->nf); geo_run(M,TX,TY,TZ); }
+  u8 i,j,order[NCHUNK],n=0,ord[NENEMY];
+  for(i=0;i<6;i++) fill(0,i*15,SCR_W,i==5?(89-75):15,C_CEIL5-i);              /* teto: do topo (claro) ao horizonte (escuro) */
+  for(i=0;i<8;i++) fill(0,89+i*11,SCR_W,i==7?(VIEW_H-166):11,C_FLOOR0+i);        /* chão: do horizonte (escuro) para perto (claro) */
+  make_view(); geo_light(LC); geo_tex(TEXY_WALL,64);
+  for(i=0;i<NCHUNK;i++) if(chunk_visible(&chunks[i]))order[n++]=i;
+  for(i=1;i<n;i++){ u8 v=order[i]; j=i; while(j>0&&dist1(chunks[order[j-1]].cx,chunks[order[j-1]].cz)<dist1(chunks[v].cx,chunks[v].cz)){order[j]=order[j-1];j--;} order[j]=v; }
+  for(i=0;i<n;i++) draw_chunk(order[i]);
   for(i=0;i<NENEMY;i++)ord[i]=i;
-  for(i=1;i<NENEMY;i++){ u8 v=ord[i]; j=i; while(j>0&&dist2(en[ord[j-1]].x,en[ord[j-1]].z)<dist2(en[v].x,en[v].z)){ord[j]=ord[j-1];j--;} ord[j]=v; }
-  geo_model(enemy_v,enemy_f,ENEMY_NV,ENEMY_NF);
-  for(i=0;i<NENEMY;i++){ const Enemy *e=&en[ord[i]]; if(e->hp<=0||!los(px,pz,e->x,e->z))continue;   /* sem Z-buffer entre RUNs: oculta inimigo atrás de parede */
-    s16 zc=mulq14(M[6],e->x)+mulq14(M[8],e->z)+TZ; if(zc<12)continue;
-    for(j=0;j<9;j++)mx[j]=M[j];
-    t=TX+mulq14(M[0],e->x)+mulq14(M[2],e->z);
-    geo_run(mx,t,TY,zc);
+  for(i=1;i<NENEMY;i++){ u8 v=ord[i]; j=i; while(j>0&&dist1(en[ord[j-1]].x,en[ord[j-1]].z)<dist1(en[v].x,en[v].z)){ord[j]=ord[j-1];j--;} ord[j]=v; }
+  geo_tex(TEXY_SPR,0);
+  for(i=0;i<NENEMY;i++){ const Enemy *e=&en[ord[i]]; s16 dx,dz,zc,xc;
+    if(!los(px,pz,e->x,e->z))continue;                 /* sem Z-buffer entre RUNs: oculta inimigo atrás de parede */
+    dx=e->x-px; dz=e->z-pz; zc=mulq14(M[6],dx)+mulq14(M[8],dz); if(zc<12)continue; xc=mulq14(M[0],dx)+mulq14(M[2],dz);
+    draw_enemy(ord[i],xc,zc);
   }
-  draw_gun(); draw_hud();
-  if(over){ fill(0,60,SCR_W,60,hp>0?14:3); }                       /* vitória (laranja) / derrota (vermelho) */
+  draw_gun();
+  fill(124,88,5,1,C_WHITE); fill(132,88,5,1,C_WHITE); fill(130,81,1,5,C_WHITE); fill(130,91,1,5,C_WHITE);   /* mira */
+  if(over){ fill(0,60,SCR_W,40,hp>0?C_BAR_RED:C_BAR_BG); }
 }
+
+static void set_vram_write(u8 blk,u16 addr){ vr(14,blk); vc=(u8)addr; vc=((u8)(addr>>8)&0x3F)|0x40; }
 
 void main(void){
   u8 i;
-  __asm
-    ld a,#5
-    call 0x005F        ; BIOS CHGMOD: SCREEN 5
-    di
-  __endasm;
-  vp4=0; vr(20,1); vr(21,0);                                       /* desbloqueio V9968 (doc: R#21=0,R#20=1) */
-  vr(9,0x80); vr(8,0x0A); vr(2,0x1F);                              /* 212 linhas, sprites off, página 0 */
-  vr(16,0); for(i=0;i<32;i++)vp=palette[i];
-  geo_init(); vr(15,2);
+  vp4=0;                                              /* destrava os registradores estendidos do V9968 */
+  vr(0,14); vr(1,0); vr(2,31); vr(7,0); vr(8,10); vr(9,128);      /* SCREEN 8, 212 linhas, tela apagada */
+  vr(21,0); vr(20,0x11);                                          /* modo V9968; EPAL=1, HS=1 */
+  vr(51,0);vr(52,0);vr(53,0);vr(54,0);vr(55,255);vr(56,0);vr(57,255);vr(58,3);   /* janela de origem LRMM: 0..255 x 0..1023 */
+  vr(16,0);
+  { u16 n; for(n=0;n<768;n++)vp=palette[n]; }                     /* 256 entradas x (R,G,B) de 5 bits */
+  vr(15,2);
+  set_vram_write(8,0);                                            /* linha 512: início da área de texturas */
+  for(i=0;i<NVRAM_BANKS;i++){ BANK(FIRST_VRAM_BANK+i); vtransfer16k(DATA); }
+  geo_init();
   new_game(); keys=old_keys=0;
+  for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
+  page=0; sh_hp=-1; sh_kills=255; sh_msg=255; sh_alive=255; hud_update();
+  vr(1,0x40);                                                     /* liga a tela */
   for(;;){
     read_keys();
     if(over){ if((keys&K_FIRE)&&!(old_keys&K_FIRE))new_game(); } else update();
-    page^=1; render(); wait_ce();
+    page^=1; render(); hud_update(); wait_ce();
     wait_vblank(); vr(2,0x1F|((u16)page<<5));                     /* exibe a página recém-desenhada */
     sound_tick();
   }
