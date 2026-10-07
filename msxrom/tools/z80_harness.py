@@ -10,7 +10,7 @@ from PIL import Image
 ROM=os.path.join(os.path.dirname(__file__),'..','out','msxdoom.rom')
 
 class Machine:
-    def __init__(s,keys_fn,rom=ROM):
+    def __init__(s,keys_fn,rom=ROM,geo=True):
         s.m=Z80Machine(); mem=s.m.memory
         s.rom=open(rom,'rb').read(); s.banks=[s.rom[i:i+16384] for i in range(0,len(s.rom),16384)]
         s.win1=0; s.win2=0
@@ -25,7 +25,7 @@ class Machine:
         s.vlatch=None; s.ind=0; s.vaddr=0; s.pal_i=0; s.pal_ph=0; s.pal_cur=[0,0,0]
         # --- Geo3D
         s.gi=0; s.gb=bytearray(256); s.gv={}; s.gf={}; s.gt={}; s.gbuf={0x50:bytearray(),0x52:bytearray(),0x53:bytearray()}
-        s.keys_fn=keys_fn; s.ppi=0; s.frames=[]
+        s.geo=geo; s.keys_fn=keys_fn; s.ppi=0; s.frames=[]
         s.log={'geo_runs':0,'lmmv':0,'lmmm':0,'page_flips':0,'faces':0,'tex_pixels':0,'geo_bytes':0}
         s.m.set_input_callback(s.inp); s.m.set_output_callback(s.out)
     # ---- mapper
@@ -37,7 +37,7 @@ class Machine:
     def inp(s,port):
         port&=0xFF
         if port==0x99: return 0x80 if s.vreg[15]==0 else 0x00         # S#0 vblank / S#2 CE=0
-        if port==0x9D: return 0
+        if port==0x9D: return 0 if s.geo else 0xFF                    # sem Geo3D: barramento flutuante
         if port==0xA9: return s.keys_fn(s.ppi&0x0F)
         return 0xFF
     # ---- saída

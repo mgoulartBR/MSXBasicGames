@@ -101,11 +101,15 @@ static void geo_model(const u8 *v,u8 nv,const u8 *f,u8 nf,const u8 *t){
   gi=0x65; gd=0;                                                 /* TADDR */
   gi=0x53; gtransfer(t,(u16)nf*8);
 }
+/* espera o fim do RUN (status bit 0), com limite: nunca trava se o Geo3D não responder */
+static u8 geo_ok=1;
+static void geo_wait(void){ u16 t=50000; while((gi&1)&&--t); if(!t)geo_ok=0; }
+static u8 geo_present(void){ return gi!=0xFF; }                 /* porta 0x9D sem dispositivo devolve 0xFF */
 static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
   u8 i; gi=0; for(i=0;i<9;i++)gw(m[i]); gw(tx); gw(ty); gw(tz);
   gi=0x46; gw((u16)page<<8);
   gi=0x48; gd=7;                                                 /* RUN | faces preenchidas | texturas */
-  while(gi&1); wait_ce();
+  geo_wait(); wait_ce();
 }
 
 s16 mulq14(s16 a,s16 b) __sdcccall(1);          /* src/math.s: (a*b)>>14 sem usar (s32)a*b do SDCC 4.2.0 */
@@ -281,6 +285,15 @@ static void render(void){
   if(over){ fill(0,60,SCR_W,40,hp>0?C_BAR_RED:C_BAR_BG); }
 }
 
+/* Marcadores de progresso no canto inferior direito do HUD (nunca sobrescritos pelo render), da esquerda p/ a direita:
+ * 1=boot/VRAM/paleta ok, 2=Geo3D detectado, 3=primeiro quadro desenhado, 4=primeiro quadro exibido.
+ * Marcador 3/4 em vermelho = o Geo3D não terminou um RUN (tempo esgotado). Se parar no n, o problema veio depois do passo n. */
+static void mark(u8 n){ u8 p0=page; for(page=0;page<2;page++) fill(228+n*6,205,4,4,(n>=2&&!geo_ok)?C_CROSS_RED:C_WHITE); page=p0; }
+static void no_geo(void){
+  page=0; fill(0,0,SCR_W,HUD_Y,C_BAR_BG);
+  text(46,70,FONT_ORANGE,"GEO3D NAO ENCONTRADO"); text(46,86,FONT_GRAY,"USE EXT GEO3D NO OPENMSX"); text(46,102,FONT_GRAY,"TIPO DE ROM ASCII16");
+  vr(2,0x1F); vr(1,0x40); for(;;);
+}
 static void set_vram_write(u8 blk,u16 addr){ vr(14,blk); vc=(u8)addr; vc=((u8)(addr>>8)&0x3F)|0x40; }
 
 void main(void){
@@ -294,16 +307,21 @@ void main(void){
   vr(15,2);
   set_vram_write(8,0);                                            /* linha 512: início da área de texturas */
   for(i=0;i<NVRAM_BANKS;i++){ BANK(FIRST_VRAM_BANK+i); vtransfer16k(DATA); }
-  geo_init();
   new_game(); keys=old_keys=0;
   for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
+  vr(1,0x40);                                                     /* liga a tela (HUD aparece) */
+  mark(0);
+  if(!geo_present()) no_geo();
+  mark(1); geo_init();
   page=0; sh_hp=-1; sh_kills=255; sh_msg=255; sh_alive=255; hud_update();
-  vr(1,0x40);                                                     /* liga a tela */
+  { u8 first=1;
   for(;;){
     read_keys();
     if(over){ if((keys&K_FIRE)&&!(old_keys&K_FIRE))new_game(); } else update();
     page^=1; render(); hud_update(); wait_ce();
+    if(first){ mark(2); }
     wait_vblank(); vr(2,0x1F|((u16)page<<5));                     /* exibe a página recém-desenhada */
+    if(first){ mark(3); first=0; }
     sound_tick();
-  }
+  } }
 }
