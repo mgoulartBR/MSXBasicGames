@@ -34,13 +34,13 @@ static void vw(s16 v){ vi=(u8)v; vi=(u8)((u16)v>>8); }
 static void gw(s16 v){ gd=(u8)v; gd=(u8)((u16)v>>8); }
 
 static u8 page;
-/* LMMV */
+/* HMMV */
 static void fill(s16 x,s16 y,s16 w,s16 h,u8 c){
   if(x<0){w+=x;x=0;} if(y<0){h+=y;y=0;}
   if(x+w>SCR_W)w=SCR_W-x; if(y+h>212)h=212-y;
   if(w<=0||h<=0)return;
   wait_ce(); vr(17,36);
-  vw(x); vw(y+((u16)page<<8)); vw(w); vw(h); vi=c; vi=0; vi=0x80;
+  vw(x); vw(y+((u16)page<<8)); vw(w); vw(h); vi=c; vi=0; vi=0xC0;      /* HMMV: 1 byte/pixel em SCREEN 8, mais rápido que LMMV */
 }
 /* LMMM com TIMP (índice 0 = transparente); sy é absoluto (atlas na VRAM), dy relativo à página */
 static void blit(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h){
@@ -108,14 +108,7 @@ static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
   while(gi&1); wait_ce();
 }
 
-/* (a*b)>>14 por soma e deslocamento; evita (s32)a*b do SDCC 4.2.0 (resultado errado com multiplicador negativo) */
-s16 mulq14(s16 a,s16 b){
-  u8 neg=0,i; u16 ub; long acc=0,t;
-  if(a<0){a=-a;neg^=1;} if(b<0){b=-b;neg^=1;}
-  ub=(u16)b; t=(u16)a;
-  for(i=0;i<16;i++){ if(ub&1)acc+=t; t<<=1; ub>>=1; }
-  acc>>=14; return neg?-(s16)acc:(s16)acc;
-}
+s16 mulq14(s16 a,s16 b) __sdcccall(1);          /* src/math.s: (a*b)>>14 sem usar (s32)a*b do SDCC 4.2.0 */
 
 /* ---------------------------------------------------------------- estado do jogo */
 typedef struct{s16 x,z,hp; s16 t,atk,hurt,dying;}Enemy;
@@ -132,7 +125,7 @@ static void read_keys(void){
   u8 a; ppi_c=(ppi_c&0xF0)|8; a=~ppi_b; old_keys=keys; keys=0;   /* linha 8: SPACE,←,↑,↓,→ */
   if(a&0x10)keys|=K_LEFT; if(a&0x80)keys|=K_RIGHT; if(a&0x20)keys|=K_UP; if(a&0x40)keys|=K_DOWN; if(a&1)keys|=K_FIRE;
 }
-static u8 solid_at(s16 x,s16 z){ s16 cx=x>>6,cz=z>>6; if(x<0||z<0||cx>=MAPW||cz>=MAPH)return 1; return map_solid[cz*MAPW+cx]; }
+static u8 solid_at(s16 x,s16 z){ s16 cx=x>>6,cz=z>>6; if(x<0||z<0||cx>=MAPW||cz>=MAPH)return 1; return map_solid[(cz<<4)+cx];      /* MAPW=16 */ }
 static void try_move(s16 *x,s16 *z,s16 dx,s16 dz,s16 r){
   if(!solid_at(*x+dx+(dx>0?r:-r),*z))*x+=dx;
   if(!solid_at(*x,*z+dz+(dz>0?r:-r)))*z+=dz;
@@ -150,7 +143,8 @@ static void new_game(void){
   for(i=0;i<NENEMY;i++){ en[i].x=enemy_start[i][0]; en[i].z=enemy_start[i][1]; en[i].hp=ENEMY_HP; en[i].t=i*5; en[i].atk=en[i].hurt=en[i].dying=0; }
 }
 static u8 los(s16 x0,s16 z0,s16 x1,s16 z1){
-  u8 i; for(i=1;i<12;i++) if(solid_at(x0+(x1-x0)*i/12,z0+(z1-z0)*i/12))return 0;   /* |delta*i|<=11264: cabe em s16 */
+  s16 dx=(x1-x0)>>4,dz=(z1-z0)>>4; u8 i;                     /* 16 amostras, sem divisão */
+  for(i=1;i<16;i++){ x0+=dx; z0+=dz; if(solid_at(x0,z0))return 0; }
   return 1;
 }
 static void shoot(void){
@@ -173,6 +167,7 @@ static void update(void){
   for(i=0;i<NENEMY;i++){
     if(en[i].hp<=0){ if(en[i].dying)en[i].dying--; continue; }
     { s16 dx=px-en[i].x,dz=pz-en[i].z,ad=(dx<0?-dx:dx)+(dz<0?-dz:dz);
+      if(ad>900)continue;                                    /* longe do jogador: parado (nao custa CPU) */
       en[i].t++; if(en[i].hurt)en[i].hurt--; if(en[i].atk)en[i].atk--;
       if(ad>60) try_move(&en[i].x,&en[i].z,dx>0?1:-1,dz>0?1:-1,12);
       else if(!en[i].atk&&(u8)(i+yaw+px)%16==0){ hp-=2; hurt=4; sfx=20; en[i].atk=12; }   /* ataque corpo a corpo */
@@ -243,37 +238,44 @@ static void draw_enemy(u8 i,s16 xc,s16 zc){
     geo_model(vtx0,4,face,1,tex); }
   geo_run(IDENT,xc,0,zc);
 }
-static void draw_chunk(u8 i){
-  const Chunk *c=&chunks[i]; const u8 *p;
-  BANK(c->bank); p=DATA+c->off;
-  geo_model(p,c->nv,p+(u16)c->nv*6,c->nf,p+(u16)c->nv*6+(u16)c->nf*11);
+static void draw_chunk(u8 i,u8 near){
+  const Chunk *c=&chunks[i]; const u8 *p; u8 nv,nf;
+  BANK(c->bank);
+  if(near){ p=DATA+c->off_n; nv=c->nv_n; nf=c->nf_n; } else { p=DATA+c->off_f; nv=c->nv_f; nf=c->nf_f; }
+  geo_model(p,nv,p+(u16)nv*6,nf,p+(u16)nv*6+(u16)nf*11);
   geo_run(M,TX,TY,TZ);
-}
-static u8 chunk_visible(const Chunk *c){
-  s16 dx=c->cx-px,dz=c->cz-pz; s16 zc=mulq14(M[6],dx)+mulq14(M[8],dz), xc=mulq14(M[0],dx)+mulq14(M[2],dz);
-  if(zc+c->rad<4) return 0;
-  if(s16abs(xc)-c->rad > (((zc+c->rad)*7)>>3)) return 0;
-  return 1;
 }
 static void draw_gun(void){
   if(flash){ blit(64,832,96,114,64,64); blit(128,832,104,86,48,32); } else blit(0,832,96,114,64,64);
 }
 static void render(void){
-  u8 i,j,order[NCHUNK],n=0,ord[NENEMY];
+  u8 i,j,k,n=0,order[NCHUNK],dk[NCHUNK],vis=0; u8 vi_[NENEMY]; s16 vzc[NENEMY],vxc[NENEMY];
+  s16 dx0,dz0,zrow,xrow,stzi,stzj,stxi,stxj;
   for(i=0;i<6;i++) fill(0,i*15,SCR_W,i==5?(89-75):15,C_CEIL5-i);              /* teto: do topo (claro) ao horizonte (escuro) */
   for(i=0;i<8;i++) fill(0,89+i*11,SCR_W,i==7?(VIEW_H-166):11,C_FLOOR0+i);        /* chão: do horizonte (escuro) para perto (claro) */
   make_view(); geo_light(LC); geo_tex(TEXY_WALL,64);
-  for(i=0;i<NCHUNK;i++) if(chunk_visible(&chunks[i]))order[n++]=i;
-  for(i=1;i<n;i++){ u8 v=order[i]; j=i; while(j>0&&dist1(chunks[order[j-1]].cx,chunks[order[j-1]].cz)<dist1(chunks[v].cx,chunks[v].cz)){order[j]=order[j-1];j--;} order[j]=v; }
-  for(i=0;i<n;i++) draw_chunk(order[i]);
-  for(i=0;i<NENEMY;i++)ord[i]=i;
-  for(i=1;i<NENEMY;i++){ u8 v=ord[i]; j=i; while(j>0&&dist1(en[ord[j-1]].x,en[ord[j-1]].z)<dist1(en[v].x,en[v].z)){ord[j]=ord[j-1];j--;} ord[j]=v; }
-  geo_tex(TEXY_SPR,0);
-  for(i=0;i<NENEMY;i++){ const Enemy *e=&en[ord[i]]; s16 dx,dz,zc,xc;
+  /* visibilidade dos 16 chunks (grade 4x4, centros em 256*i+128 / 256*j+128): 4 multiplicações + somas */
+  dx0=128-px; dz0=128-pz;
+  zrow=mulq14(M[6],dx0)+mulq14(M[8],dz0); xrow=mulq14(M[0],dx0)+mulq14(M[2],dz0);
+  stzi=M[6]>>6; stzj=M[8]>>6; stxi=M[0]>>6; stxj=M[2]>>6;                      /* 256/16384 = 1/64 */
+  for(j=0;j<4;j++){ s16 zc=zrow,xc=xrow;
+    for(i=0;i<4;i++){ s16 v; k=(j<<2)|i; v=zc+chunks[k].rad;
+      dk[k]=(u8)((s16abs((s16)(i<<8)+dx0)+s16abs((s16)(j<<8)+dz0))>>4);        /* distância/16 (cabe em u8) */
+      if(v>=4 && s16abs(xc)-chunks[k].rad <= v-(v>>3)) order[n++]=k;          /* tan(meio campo) ~ 0.75 -> margem 0.875 */
+      zc+=stzi; xc+=stxi; }
+    zrow+=stzj; xrow+=stxj; }
+  for(i=1;i<n;i++){ u8 v=order[i]; j=i; while(j>0&&dk[order[j-1]]<dk[v]){order[j]=order[j-1];j--;} order[j]=v; }   /* longe -> perto */
+  for(i=0;i<n;i++) draw_chunk(order[i],dk[order[i]]<=20);                      /* 20*16 = 320 unidades: LOD perto/longe */
+  for(i=0;i<NENEMY;i++){ const Enemy *e=&en[i]; s16 dx,dz,zc,xc;
+    dx=e->x-px; dz=e->z-pz;
+    if(s16abs(dx)+s16abs(dz)>1400)continue;
+    zc=mulq14(M[6],dx)+mulq14(M[8],dz); if(zc<12||zc>1500)continue;
+    xc=mulq14(M[0],dx)+mulq14(M[2],dz); if(s16abs(xc)>zc+40)continue;           /* fora do campo de visão */
     if(!los(px,pz,e->x,e->z))continue;                 /* sem Z-buffer entre RUNs: oculta inimigo atrás de parede */
-    dx=e->x-px; dz=e->z-pz; zc=mulq14(M[6],dx)+mulq14(M[8],dz); if(zc<12)continue; xc=mulq14(M[0],dx)+mulq14(M[2],dz);
-    draw_enemy(ord[i],xc,zc);
+    vi_[vis]=i; vzc[vis]=zc; vxc[vis]=xc; vis++;
   }
+  for(i=1;i<vis;i++){ u8 v=vi_[i]; s16 z=vzc[i],x=vxc[i]; j=i; while(j>0&&vzc[j-1]<z){vi_[j]=vi_[j-1];vzc[j]=vzc[j-1];vxc[j]=vxc[j-1];j--;} vi_[j]=v;vzc[j]=z;vxc[j]=x; }   /* longe -> perto */
+  if(vis){ geo_tex(TEXY_SPR,0); for(i=0;i<vis;i++) draw_enemy(vi_[i],vxc[i],vzc[i]); }
   draw_gun();
   fill(124,88,5,1,C_WHITE); fill(132,88,5,1,C_WHITE); fill(130,81,1,5,C_WHITE); fill(130,91,1,5,C_WHITE);   /* mira */
   if(over){ fill(0,60,SCR_W,40,hp>0?C_BAR_RED:C_BAR_BG); }

@@ -76,7 +76,7 @@ class Machine:
     def exec_vdp(s):
         r=s.vreg; cmd=r[46]>>4; lop=r[46]&15
         g=lambda lo:r[lo]|(r[lo+1]&3)<<8
-        if cmd==8:                                                   # LMMV
+        if cmd in (8,12):                                            # LMMV / HMMV (SCREEN 8: 1 byte por pixel)
             x,y,w,h=r[36]|(r[37]&1)<<8,g(38),r[40]|(r[41]&1)<<8,g(42)
             for yy in range(y,min(y+h,1024)):
                 s.vram[yy*256+x:yy*256+min(x+w,256)]=r[44]

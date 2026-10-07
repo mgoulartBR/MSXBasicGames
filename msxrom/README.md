@@ -13,8 +13,18 @@ python3 tools/test_game.py         # 7 testes de lógica (andar, girar, colisão
 python3 tools/z80_harness.py 4     # renderiza quadros em out/harness_N.png
 node tools/export_art.js           # (opcional) reexporta a arte de ../msxdoom/sprites.js para assets/*.png
 ```
-Rodar: `openmsx -machine Panasonic_FS-A1ST_V9968 -ext geo3d -cart out/msxdoom.rom -romtype ASCII16`
-(**o tipo de ROM precisa ser ASCII16 explicitamente**). Controles: cursor ←/→ giram, ↑/↓ andam, ESPAÇO atira/reinicia.
+Rodar (**o tipo de ROM precisa ser ASCII16 explicitamente**):
+
+```text
+# turbo R / R800 (BIOS própria):
+openmsx -machine Panasonic_FS-A1ST_V9968 -ext geo3d -cart out/msxdoom.rom -romtype ASCII16
+# MSX2+ / Z80, sem turbo R e sem BIOS dumpada (C-BIOS):
+openmsx -machine C-BIOS_V9968_JP -ext geo3d -cart out/msxdoom.rom -romtype ASCII16
+```
+`C-BIOS_V9968_JP` não vem no openMSX oficial: é o `config/machines/C-BIOS_V9968_JP.xml` do repositório
+[renatus-xxxx/openmsx-v9968-windows-setup](https://github.com/renatus-xxxx/openmsx-v9968-windows-setup) (o `setup-cbios-v9968.bat` monta o ambiente),
+usado com o openMSX com Geo3D de [alexmoncks/openMSX](https://github.com/alexmoncks/openMSX) (ramo `geo3d`), conforme o `README.geo3d.md` dele.
+Nesse perfil `MSXVER=2`, então a ROM **não** chama `CHGCPU` e roda em Z80. **Z80 não é mais rápido que o R800**: use-o só se o turbo R der problema. Controles: cursor ←/→ giram, ↑/↓ andam, ESPAÇO atira/reinicia.
 
 ## Status de validação
 
@@ -65,7 +75,7 @@ Test status: BUILD OK + SIMULATED; todo o resto UNTESTED
 
 ## Achados e limitações
 - **Bug do SDCC 4.2.0:** `(s32)a*b` com multiplicador negativo deu resultado errado; o jogo usa `mulq14()` (soma e deslocamento), validado contra Python em 600 pares.
-- **Desempenho (UNTESTED):** no simulador, ~18 KB por quadro vão ao Geo3D por `OTIR` (vértices, faces e coordenadas dos chunks visíveis + inimigos). Estimativa de cálculo, sem medir: ~80 ms por quadro em Z80, bem menos no R800. Se for lento no seu emulador, reduza `CHUNK`/`STRIPS` em `tools/make_assets.py` ou limite os chunks desenhados.
+- **Desempenho (medido só em simulação; UNTESTED no openMSX):** `tools/profile.py` conta T-states de CPU por quadro. A 1ª versão gastava ~1,21 M (3 fps em Z80); a atual gasta **~0,56 M (~6,4 fps de teto de CPU em Z80 de 3,58 MHz)**. Ganhos: `mulq14` em assembly (`src/math.s`), visibilidade dos chunks por incrementos na grade 4×4 (4 multiplicações em vez de ~64), `los()` sem divisão, LOD das paredes (2 tiras longe / 4 perto), HMMV nos preenchimentos, inimigos fora do campo de visão filtrados antes de ordenar/desenhar e inimigos distantes parados. Hoje ~38 % do tempo é `OTIR` para o Geo3D (~10 KB por quadro). **Não medi** o tempo de VDP/Geo3D (LRMM, HMMV) do emulador, que pode dominar; no R800 a parte de CPU cai bastante.
 - Sem Z-buffer entre RUNs: paredes de chunks diferentes podem se sobrepor incorretamente em casos extremos. Sem sombreado por distância.
 - Sem mouse, sem portas que abrem, sem tela de título, sem texto de vitória/derrota (só uma faixa colorida).
 - **Se a imagem sair preta ou sem texturas**, verifique nesta ordem: ROM tipo ASCII16; extensão `geo3d` no openMSX; EPAL/`R#20`; janela do LRMM (`R#51–58`).
