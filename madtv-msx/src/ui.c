@@ -10,6 +10,9 @@
 static const u8 s_Col[UI_NUM_COLORS] = {
 	COLOR_WHITE, COLOR_LIGHT_YELLOW, COLOR_LIGHT_RED, COLOR_GRAY, COLOR_LIGHT_GREEN, COLOR_CYAN
 };
+#define BUF_Y 512                // pagina 2 = buffer de composicao fora da tela
+static u16 s_YOff;               // 0 = desenha na tela; BUF_Y = desenha no buffer
+static u8  s_Depth;
 static u16 s_FontY;              // base Y da variante de cor atual
 
 void Ui_Init(void)
@@ -46,7 +49,7 @@ void Ui_Text(u8 x, u8 y, const char* s)
 		if (c == ' ') continue;
 		row = 0;
 		while (c >= GLYPHS_ROW) { c -= GLYPHS_ROW; row++; }
-		VDP_CommandLMMM((u16)c * GLYPH_W, s_FontY + (u16)row * GLYPH_H, x, y, GLYPH_W, GLYPH_H, VDP_OP_TIMP);
+		VDP_CommandLMMM((u16)c * GLYPH_W, s_FontY + (u16)row * GLYPH_H, x, y + s_YOff, GLYPH_W, GLYPH_H, VDP_OP_TIMP);
 	}
 }
 
@@ -89,7 +92,33 @@ u8 Ui_Int(u8 x, u8 y, i16 v)
 
 void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col)
 {
-	VDP_CommandHMMV(x, y, w, h, COLOR_MERGE2(col));
+	VDP_CommandHMMV(x, y + s_YOff, w, h, COLOR_MERGE2(col));
+}
+
+void Ui_Begin(void)
+{
+	s_Depth++;
+	s_YOff = BUF_Y;
+}
+
+void Ui_End(u8 x, u8 y, u8 w, u8 h)
+{
+	if (s_Depth) s_Depth--;
+	if (s_Depth) return;
+	s_YOff = 0;
+	VDP_CommandHMMM(x, y + BUF_Y, x, y, ((u16)w + 1) & 0xFFFE, h);   // HMMM trabalha em bytes (2 pixels): largura par
+}
+
+u16 Ui_DirectBegin(void)
+{
+	u16 s = s_YOff;
+	s_YOff = 0;
+	return s;
+}
+
+void Ui_DirectEnd(u16 saved)
+{
+	s_YOff = saved;
 }
 
 void Ui_Clear(void)

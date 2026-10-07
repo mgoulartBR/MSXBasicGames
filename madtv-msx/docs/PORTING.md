@@ -43,6 +43,25 @@ Medicao (openMSX, escrita na porta 0x9B do VDP = parametros de comandos, velocid
 **52 191 -> 12 022 escritas (-77%)**. O loop principal nao estava saturado (nenhuma das duas versoes perde frames por CPU);
 o ganho e menos comandos VDP/flicker.
 
+### 0.3.2 - sem apagar/reescrever ao mover o cursor
+Relato: ao mexer o cursor com o teclado os textos eram apagados e reescritos. Causa: todo movimento de cursor marcava a tela
+inteira como suja (`ClearContent` + redesenho completo). Correcao em duas camadas:
+1. **Redesenho minimo:** cada tela tem `DrawRow_*` (uma linha), `DrawDetail_*` (painel de detalhes) e lista completa; o cursor
+   marca so as linhas antiga/nova (`D_ROWS`), a rolagem/troca de genero so a lista (`D_LIST`), e os detalhes so se mudaram (`D_DET`).
+   A tela so e limpa ao *entrar* na tela.
+2. **Composicao fora da tela:** `Ui_Begin()/Ui_End()` desenham na pagina 2 da VRAM e copiam o retangulo pronto para a tela
+   de uma vez (HMMM), entao o estado intermediario "apagado" nunca fica visivel. Cabecalho, mensagens e todas as telas usam isso.
+Medicao (escritas na porta 0x9B do VDP por acao, jogo pausado, openMSX):
+| Acao | antes (0.3.1) | agora (0.3.2) |
+|---|---|---|
+| mover cursor no Hub | 1589 | 513 (-68%) |
+| mover cursor na Agencia de Filmes | 3534 | 1385 (-61%) |
+| mover cursor na Agencia de Publicidade | 2928 | 1424 (-51%) |
+| trocar de genero (lista inteira) | 3369 | 3108 |
+O numero de comandos inclui as copias HMMM da composicao. **Nao foi possivel observar cintilacao ao vivo no sandbox**: a
+ausencia de estado intermediario e garantida pelo desenho (so a copia final toca a tela), e as telas finais foram conferidas
+por screenshot. Grade/lista de escolha usam o mesmo mecanismo mas nao foram medidas separadamente.
+
 ## Modelo de simulacao 0.3 (PROPRIO - nao e o do Mad TV nem o do TVTower; ver src/sim.c)
 - Tempo: 1 minuto de jogo = 1/2, 1/5 ou 1/12 s reais (3 velocidades + pausa), normalizado para 50/60 Hz.
   Dia = 17:00 a 01:00 (480 min). Grade 18:00-00:00 (7 slots); :55 mede audiencia e exibe o anuncio.
