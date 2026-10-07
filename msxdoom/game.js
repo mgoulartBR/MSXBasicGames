@@ -28,7 +28,6 @@ const glc=document.createElement('canvas'); glc.width=W; glc.height=VH;
 const renderer=new THREE.WebGLRenderer({canvas:glc,antialias:false,preserveDrawingBuffer:true});
 renderer.setSize(W,VH,false);
 const disp=document.getElementById('gl'), dg=disp.getContext('2d',{willReadFrequently:true});
-// V9968 SCREEN 8: 256 cores GRB 3-3-2 (G3 R3 B2)
 // ---- Paleta EPAL de 256 cores (SCREEN 8 do V9968): escolhida pelo jogo (median-cut), não GRB 3-3-2 fixa.
 const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
 const PALN=256, palette=new Uint8Array(PALN*3), lut=new Uint8Array(32768);   // lut: RGB555 -> índice

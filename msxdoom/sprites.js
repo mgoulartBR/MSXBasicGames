@@ -1,5 +1,5 @@
 // Arte procedural em pixel art (sem assets externos). Texturas 64x64, sprites 24x32 ampliados 2x.
-// Cores livres: a imagem final passa pela quantização GRB 3-3-2 (SCREEN 8, 256 cores).
+// Cores livres: a imagem final é mapeada para uma paleta adaptativa de 256 cores (ver game.js).
 function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.imageSmoothingEnabled=false;return [c,g];}
 function rng(seed){let s=seed>>>0;return ()=>(s=(Math.imul(s,1664525)+1013904223)>>>0)/4294967296;}
 function hash(x,y,s){let h=(x*374761393+y*668265263+s*2147483647)|0;h=(h^(h>>>13))*1274126177|0;return ((h^(h>>>16))>>>0)/4294967296;}
