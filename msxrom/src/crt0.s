@@ -3,12 +3,32 @@
  .module crt0
  .globl _main
  .globl init
+ .globl l__INITIALIZER
+ .globl s__INITIALIZER
+ .globl s__INITIALIZED
  .area _HEADER (ABS)
  .org 0x4000
  .db 0x41,0x42
  .dw boot
  .dw 0,0,0
  .db 0,0,0,0,0,0
+ .ascii "ROM_AS16"          ; assinatura de tipo de ROM (MSXgl) em 0x4010: o openMSX identifica o mapper ASCII16 sozinho
+ .ascii "ASCII16 MegaROM, mapper ASCII16 (16 KB banks, registers 6000h and 7000h)"
+ .db 0
+ ; etiqueta de mapper (como geo3d/tools/mapper_tag_ascii16.asm): nunca executada, o INIT pula por cima
+ jr boot
+ ld (0x6000),a
+ ld (0x6000),a
+ ld (0x6000),a
+ ld (0x6000),a
+ ld (0x7000),a
+ ld (0x7000),a
+ ld (0x7000),a
+ ld (0x7000),a
+ ld (0x77FF),a
+ ld (0x77FF),a
+ ld (0x77FF),a
+ ld (0x77FF),a
 boot:
  di
  ld sp,#0xF300
@@ -56,6 +76,14 @@ noturbo:
  ld bc,#0x1FFF
  ld (hl),#0
  ldir
+ ld bc,#l__INITIALIZER   ; copia os valores iniciais das globais inicializadas (ROM -> RAM)
+ ld a,b
+ or c
+ jr z,noinit
+ ld de,#s__INITIALIZED
+ ld hl,#s__INITIALIZER
+ ldir
+noinit:
  call _main
 halt_loop:
  jr halt_loop

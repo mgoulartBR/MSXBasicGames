@@ -8,7 +8,9 @@ O protótipo web com a mesma arte está em [`../msxdoom`](../msxdoom).
 
 ```sh
 ./build.sh                         # SDCC >= 4.2, Python 3, numpy, pillow  ->  out/msxdoom.rom
-python3 tools/test_boot.py         # boot no Z80 emulado: VRAM, paleta e quadro conferidos
+python3 tools/test_boot.py         # boot no Z80 emulado: VRAM, paleta, quadro e aviso de Geo3D ausente
+# o simulador usa o modelo do desenvolvedor: git clone https://github.com/alexmoncks/V9968_Cartridge e
+#   export GEO3D_SIM=<clone>/geo3d/sim   (padrão: /home/user/alexmoncks/v9968_cartridge/geo3d/sim)
 python3 tools/test_game.py         # 7 testes de lógica (andar, girar, colisão, tiro, fim de jogo, reinício)
 python3 tools/z80_harness.py 4     # renderiza quadros em out/harness_N.png
 node tools/export_art.js           # (opcional) reexporta a arte de ../msxdoom/sprites.js para assets/*.png
@@ -32,12 +34,13 @@ Nesse perfil `MSXVER=2`, então a ROM **não** chama `CHGCPU` e roda em Z80. **Z
 |---|---|
 | BUILD OK | Sim. SDCC 4.2.0. Código: 8,7 KB do banco 1; 10 bancos de dados; ROM 256 KiB. |
 | BOOT OK | **UNTESTED** (openMSX, blueMSX+, FPGA, hardware) |
-| SIMULATED | Sim: a ROM roda num Z80 emulado (pip `z80`) com modelo próprio e simplificado de ASCII16, V9968 (SCREEN 8, EPAL, LMMV, LMMM/TIMP) e Geo3D (faces texturizadas conforme `geo3d_engine.v`). `test_boot.py` e `test_game.py` passam. **Não é um emulador de MSX.** |
+| SIMULATED | Sim: a ROM roda num Z80 emulado (pip `z80`) com modelo próprio e simplificado de ASCII16 e do V9968 (SCREEN 8, EPAL, HMMV, LMMM/TIMP). O **Geo3D é simulado pelo modelo de referência bit-exato do desenvolvedor** (`geo3d/sim/gen_scenes.py::render_faces`, em `alexmoncks/V9968_Cartridge`) com um executor de LRMM conforme `vdp_command.v`. `test_boot.py`, `test_game.py` e `test_mulq14.py` passam. **Não é um emulador de MSX.** |
 | EMULATOR TESTED / FPGA TESTED / HARDWARE TESTED | **UNTESTED** |
 
 ```text
 MSXgl: não usado                    SDCC: 4.2.0 #13081
 V9968 spec/revision: hra1129/V9968_Cartridge 55966fb (RTL: vdp_cpu_interface.v, vdp_command.v)
+Geo3D reference model / demos: alexmoncks/V9968_Cartridge eeb13f4 (geo3d/sim, geo3d/z80/geo3d_tex_demo.asm, geo3d/game)
 Geo3D spec/revision: geo3d_engine.v (alexmoncks, v1.0.0)  | referências: kanon-ai/V9968_Geo3D_SampleDemo 3fe8a01, NEON_REVENANT 030555e
 openMSX build / commit / Machine XML: não testado
 V9968 configuration: I/O base 0x98 (Geo3D em 0x9D/0x9F)    Mapper: ASCII16   ROM size: 262144
@@ -65,8 +68,11 @@ Test status: BUILD OK + SIMULATED; todo o resto UNTESTED
 - **Inimigos:** 1 RUN por inimigo, quad de câmera (matriz identidade), textura do atlas de sprites com `LOP=8` (TIMP). Só são desenhados se houver linha de visão (não há Z-buffer entre RUNs).
 - **Arma e HUD:** LMMM com TIMP a partir da VRAM; o painel (y ≥ 178) é desenhado nas duas páginas, e os valores só são redesenhados quando mudam.
 
+## Conferido contra o código do desenvolvedor do Geo3D
+Li o `geo3d_tex_demo.asm`, o jogo `geo3d/game/*.asm`, `geo3d_rom.asm` e o modelo de referência. Bate: sequência de registradores (config em `0x18`, bloco `0x40`, streams `0x50/0x52/0x53`, `0x58` e `0x60`), RUN por `0x48`, espera por `bit0` do status, detecção de Geo3D ausente (`IN A,(0x9D)` = `0xFF`), tempo-limite nas esperas, desbloqueio `Port#4`, `R#21=0`, `R#20` com HS, janela de origem `R#51–58`, `ROM_AS16` em `0x4010`. O TIMP no LRMM está no RTL (`func_lop`). As faces/skip/níveis de sombra foram conferidos com o `render_faces` dele. Diferenças conscientes: eu uso SCREEN 8/EPAL (ele, nas demos, SCREEN 5), `F=170`, `ZNEAR=2`.
+
 ## Suposições NÃO verificadas em emulador/hardware (revisar primeiro se algo falhar)
-1. **TIMP no LRMM:** `LOP=8` (registrador Geo3D 0x45) faz o LRMM tratar o texel 0 como transparente. O RTL repassa o `lop` ao comando, mas não testei o comportamento. Se estiver errado, os inimigos aparecem com fundo preto.
+1. **TIMP no LRMM:** `LOP=8` nos sprites faz o texel 0 ser transparente. Está no RTL (`func_lop`), mas não vi o comportamento num emulador. Se estiver errado, os inimigos aparecem com fundo preto. As paredes usam `LOP=0`, como a demo do desenvolvedor.
 2. Matriz enviada linha a linha e `p' = M·v + T`; câmera +Z frente/+X direita/+Y cima; `F=170, CX=128, CY=89, ZNEAR=2, W=256, H=178`.
 3. Coordenadas U/V são relativas a `TEXX/TEXY` (e o nível soma `nível*TSTRIDE` às linhas), como descreve o cabeçalho de `geo3d_engine.v`.
 4. `IN A,(0xFF)` / `XOR 1` / `OUT (0xFE),A` no boot foi **copiado de todas as demos kanon-ai**; a finalidade não está documentada (provavelmente configuração do cartucho/máquina V9968).

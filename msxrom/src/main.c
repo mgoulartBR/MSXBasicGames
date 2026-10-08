@@ -93,8 +93,8 @@ static void geo_init(void){
 }
 static void geo_light(const s16 *l){ gi=0x5A; gw(l[0]); gw(l[1]); gw(l[2]); }
 /* carrega um modelo texturizado: vértices, faces (11 B) e coordenadas de textura (8 B/face) */
-static void geo_model(const u8 *v,u8 nv,const u8 *f,u8 nf,const u8 *t){
-  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=8;                      /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP=TIMP */
+static void geo_model(const u8 *v,u8 nv,const u8 *f,u8 nf,const u8 *t,u8 lop){
+  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=lop;                    /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP (0=IMP paredes, 8=TIMP sprites) */
   gi=0x50; gtransfer(v,(u16)nv*6);
   gi=0x58; gd=0; gd=nf;                                          /* FADDR, NFACE */
   gi=0x52; gtransfer(f,(u16)nf*11);
@@ -239,14 +239,14 @@ static void draw_enemy(u8 i,s16 xc,s16 zc){
   static const u8 vtx0[24]={ 0xEB,0xFF, 24,0, 0,0,  21,0, 24,0, 0,0,  21,0, 0xE0,0xFF, 0,0,  0xEB,0xFF, 0xE0,0xFF, 0,0 };   /* (-21,24),(21,24),(21,-32),(-21,-32) */
   tex[0]=u;tex[1]=v;tex[2]=u+23;tex[3]=v;tex[4]=u+23;tex[5]=v+31;tex[6]=u;tex[7]=v+31;
   { static const u8 face[11]={0,1,2,3, 0,0, 0,0, 0x00,0xC0, 0x80};   /* normal (0,0,-16384) = para a câmera */
-    geo_model(vtx0,4,face,1,tex); }
+    geo_model(vtx0,4,face,1,tex,8); }
   geo_run(IDENT,xc,0,zc);
 }
 static void draw_chunk(u8 i,u8 near){
   const Chunk *c=&chunks[i]; const u8 *p; u8 nv,nf;
   BANK(c->bank);
   if(near){ p=DATA+c->off_n; nv=c->nv_n; nf=c->nf_n; } else { p=DATA+c->off_f; nv=c->nv_f; nf=c->nf_f; }
-  geo_model(p,nv,p+(u16)nv*6,nf,p+(u16)nv*6+(u16)nf*11);
+  geo_model(p,nv,p+(u16)nv*6,nf,p+(u16)nv*6+(u16)nf*11,0);
   geo_run(M,TX,TY,TZ);
 }
 static void draw_gun(void){
@@ -257,6 +257,7 @@ static void render(void){
   s16 dx0,dz0,zrow,xrow,stzi,stzj,stxi,stxj;
   for(i=0;i<6;i++) fill(0,i*15,SCR_W,i==5?(89-75):15,C_CEIL5-i);              /* teto: do topo (claro) ao horizonte (escuro) */
   for(i=0;i<8;i++) fill(0,89+i*11,SCR_W,i==7?(VIEW_H-166):11,C_FLOOR0+i);        /* chão: do horizonte (escuro) para perto (claro) */
+  wait_ce();                                                      /* mesma ordem da demo do Geo3D: fundo pronto antes do RUN */
   make_view(); geo_light(LC); geo_tex(TEXY_WALL,64);
   /* visibilidade dos 16 chunks (grade 4x4, centros em 256*i+128 / 256*j+128): 4 multiplicações + somas */
   dx0=128-px; dz0=128-pz;

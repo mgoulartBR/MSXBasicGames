@@ -8,6 +8,10 @@ import numpy as np
 from z80 import Z80Machine
 from PIL import Image
 ROM=os.path.join(os.path.dirname(__file__),'..','out','msxdoom.rom')
+# modelo de referência do Geo3D (repo do desenvolvedor); caminho configurável por GEO3D_SIM
+_SIM=os.environ.get('GEO3D_SIM','/home/user/alexmoncks/v9968_cartridge/geo3d/sim')
+sys.path.insert(0,_SIM)
+from gen_scenes import render_faces as _render_faces
 
 class Machine:
     def __init__(s,keys_fn,rom=ROM,geo=True):
@@ -108,46 +112,32 @@ class Machine:
         if i<0x24 or 0x40<=i<=0x4F or 0x58<=i<=0x5F or 0x60<=i<=0x67: s.gi=i+1
         if i==0x48 and v&1: s.run(v)
     def run(s,ctrl):
+        """RUN do Geo3D executado pelo MODELO DE REFERENCIA do desenvolvedor (alexmoncks/V9968_Cartridge geo3d/sim/gen_scenes.py,
+        bit-exato com o RTL) + executor de LRMM conforme vdp_command.v. Cai no meu rasterizador aproximado se o modelo faltar."""
         s.log['geo_runs']+=1; gb=s.gb; w=lambda o:struct.unpack('<h',bytes(gb[o:o+2]))[0]
-        M=[w(2*k)/16384 for k in range(9)]; T=[w(18+2*k) for k in range(3)]
-        F,CX,CY,ZN,SW,SH=w(24),w(26),w(28),w(30),w(32),w(34)
-        L=[w(0x5A+2*k)/16384 for k in range(3)]
-        texx=gb[0x60]|gb[0x61]<<8; texy=gb[0x62]|gb[0x63]<<8; tstride=gb[0x64]
-        yp=(gb[0x46]|gb[0x47]<<8); nv=gb[0x42]; nf=gb[0x59]; lop=gb[0x45]&15
-        P=[[sum(M[3*i+j]*v[j] for j in range(3))+T[i] for i in range(3)] for v in (s.gv[k] for k in range(nv))]
-        LM=[sum(M[3*i+j]*L[i] for i in range(3)) for j in range(3)]
-        todo=[]
-        for k in range(nf):
-            idx,n,base=s.gf[k]; pts=[P[i] for i in idx]
-            if any(p[2]<ZN for p in pts): s.log.setdefault('near_skipped',0); s.log['near_skipped']+=1; continue
-            sc=[(CX+F*p[0]/p[2],CY-F*p[1]/p[2]) for p in pts]
-            area=(sc[1][0]-sc[0][0])*(sc[2][1]-sc[0][1])-(sc[2][0]-sc[0][0])*(sc[1][1]-sc[0][1])
-            if area<=0: continue
-            lv=min(6,int(7*max(0,sum(LM[i]*n[i]/16384 for i in range(3)))))
-            todo.append((sum(p[2] for p in pts),k,lv,sc,base))
-        for _,k,lv,sc,base in sorted(todo,key=lambda t:-t[0]):
-            s.log['faces']+=1
-            if (ctrl&4) and (base&0x80) and k in s.gt: s.raster_tex(sc,s.gt[k],lv,texx,texy,tstride,yp,SW,SH,lop)
-    def raster_tex(s,sc,uv,lv,texx,texy,tstride,yp,SW,SH,lop):
-        pts=[(sc[i][0],sc[i][1],uv[2*i],uv[2*i+1]) for i in range(4)]
-        ys=[p[1] for p in pts]; y0=max(0,int(np.ceil(min(ys)-0.5))); y1=min(SH-1,int(np.floor(max(ys)-0.5)))
-        for y in range(y0,y1+1):
-            yc=y+0.5; xs=[]
-            for a in range(4):
-                A=pts[a];B=pts[(a+1)%4]
-                if (A[1]<=yc<B[1]) or (B[1]<=yc<A[1]):
-                    t=(yc-A[1])/(B[1]-A[1]); xs.append((A[0]+(B[0]-A[0])*t,A[2]+(B[2]-A[2])*t,A[3]+(B[3]-A[3])*t))
-            if len(xs)<2: continue
-            xs.sort(key=lambda e:e[0]); l,r=xs[0],xs[-1]
-            xl=max(0,int(np.ceil(l[0]-0.5))); xr=min(SW-1,int(np.floor(r[0]-0.5)))
-            if xr<xl: continue
-            X=np.arange(xl,xr+1); den=(r[0]-l[0]) or 1.0; t=(X+0.5-l[0])/den
-            u=np.clip(np.floor(l[1]+(r[1]-l[1])*t).astype(int),0,255); v=np.clip(np.floor(l[2]+(r[2]-l[2])*t).astype(int),0,255)
-            src=s.vram[((texy+lv*tstride+v)&1023)*256+((texx+u)&255)]
-            d=(y+yp)*256+X
-            if lop&8: keep=src!=0; s.vram[d[keep]]=src[keep]
-            else: s.vram[d]=src
-            s.log['tex_pixels']+=len(X)
+        cfg=[w(2*k) for k in range(9)]+[w(18+2*k) for k in range(3)]+[w(24+2*k) for k in range(6)]
+        nv=gb[0x42]; nf=gb[0x59]; light=[w(0x5A+2*k) for k in range(3)]
+        verts=[s.gv[k] for k in range(nv)]
+        faces=[tuple(s.gf[k][0])+tuple(s.gf[k][1])+(s.gf[k][2],) for k in range(nf)]
+        tex=dict(on=bool(ctrl&4),texx=gb[0x60]|gb[0x61]<<8,texy=gb[0x62]|gb[0x63]<<8,tstride=gb[0x64],uv=[s.gt.get(k,(0,)*8) for k in range(nf)])
+        cmds,skip,draw,cull=_render_faces(cfg,verts,faces,gb[0x45]&15,gb[0x46]|gb[0x47]<<8,light,tex)
+        s.log['faces']+=draw; s.log['near_skipped']=s.log.get('near_skipped',0)+skip
+        for c in cmds:
+            if len(c)==19: s.lrmm(c)
+    def lrmm(s,c):
+        """LRMM de uma linha: texel de origem = (SX<<8 + i*VX, SY<<8 + i*VY) >> 8 (vdp_command.v); TIMP via func_lop."""
+        sx=c[0]|(c[1]&15)<<8; sy=c[2]|(c[3]&31)<<8; dx=c[4]|(c[5]&1)<<8; dy=(c[6]|c[7]<<8)&0x3FF
+        nx=c[8]|(c[9]&7)<<8; col=c[12]; lop=c[18]&15
+        du=c[14]|c[15]<<8; dv=c[16]|c[17]<<8
+        du-=65536*(du>>15); dv-=65536*(dv>>15)
+        for i in range(nx):
+            x=((sx<<8)+i*du)>>8; y=((sy<<8)+i*dv)>>8
+            src=int(s.vram[(y&1023)*256+(x&255)]) if (0<=x<=255 and 0<=y<=1023) else col
+            d=dx+i
+            if d>255: break
+            if lop&8 and src==0: continue
+            s.vram[dy*256+d]=src
+        s.log['tex_pixels']+=nx
     def run_frames(s,n,max_chunks=200000):
         for _ in range(max_chunks):
             s.m.ticks_to_stop=100000; s.m.run()
