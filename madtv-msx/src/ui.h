@@ -37,3 +37,6 @@ void Ui_Bar(u8 x, u8 y, u8 w, u8 h, u8 pct, u8 col);
 #define IN_SPEED (1 << 6)   // TAB: alterna velocidade
 #define IN_PAUSE (1 << 7)   // P
 u8 Input_Poll(void);
+
+// Tecla digitada neste frame (borda): '0'-'9', 'A'-'Z' ou 8 (BS); 0 se nenhuma. Varre a matriz do teclado (so usar na tela de codigo).
+u8 Input_TypedChar(void);

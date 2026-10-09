@@ -14,7 +14,8 @@ static const u8 s_Col[UI_NUM_COLORS] = {
 static u16 s_YOff;               // 0 = desenha na tela; BUF_Y = desenha no buffer
 static u8  s_Depth;
 static u16 s_FontY;
-static u8  s_PrevIn;             // NAO ha zeragem de BSS no crt0: todo estado e inicializado em Ui_Init/main              // base Y da variante de cor atual
+static u8  s_PrevIn;
+static u8  s_TypeHeld[5];        // bitmap de teclas ja tratadas (borda). NAO ha zeragem de BSS no crt0: tudo e inicializado em Ui_Init
 
 // formato (MSXimg): 4 bytes de cabecalho (tamanho dos dados, tamanho da fonte, 1o e ultimo caractere) + 8 bytes por glifo, bit 7 = pixel mais a esquerda
 static void FontUnpack(void)
@@ -40,6 +41,7 @@ void Ui_Init(void)
 {
 	u8 i;
 	s_YOff = 0; s_Depth = 0; s_PrevIn = 0; s_FontY = 0;
+	{ u8 k; for (k = 0; k < 5; k++) s_TypeHeld[k] = 0; }
 	VDP_SetMode(VDP_MODE_SCREEN5);
 	VDP_SetColor(UI_BG);
 	VDP_EnableVBlank(TRUE);
@@ -170,4 +172,22 @@ u8 Input_Poll(void)
 	pushed = in & ~s_PrevIn;
 	s_PrevIn = in;
 	return pushed;
+}
+
+static const u8 k_TypeKeys[37] = {
+	KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
+	KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J, KEY_K, KEY_L, KEY_M,
+	KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T, KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z, KEY_BS
+};
+
+u8 Input_TypedChar(void)
+{
+	u8 i, ret = 0;
+	for (i = 0; i < 37; i++)
+	{
+		u8 mask = (u8)(1 << (i & 7)), *h = &s_TypeHeld[i >> 3];
+		if (Keyboard_IsKeyPressed(k_TypeKeys[i])) { if (!(*h & mask)) { *h |= mask; if (!ret) ret = (i < 10) ? (u8)('0' + i) : (i < 36) ? (u8)('A' + i - 10) : 8; } }
+		else *h &= (u8)~mask;
+	}
+	return ret;
 }

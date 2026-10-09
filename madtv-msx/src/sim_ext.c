@@ -63,6 +63,15 @@ u8 Sim_NewsQuality(void) __banked
 	return (u8)(sum / NEWS_SLATE);
 }
 
+// remove buracos do pool (itens ocupados vem primeiro, mantendo a ordem) - a lista na tela nunca tem linhas vazias no meio
+static void PoolCompact(void)
+{
+	u8 i, n = 0;
+	for (i = 0; i < NEWS_POOL; i++)
+		if (g_Game.news_pool[i].idx != NONE) g_Game.news_pool[n++] = g_Game.news_pool[i];
+	for (i = n; i < NEWS_POOL; i++) g_Game.news_pool[i].idx = NONE;
+}
+
 static u8 NewsHas(u8 idx)
 {
 	u8 i;
@@ -101,6 +110,7 @@ void Sim_ExtHour(void) __banked
 			g_Game.news_pool[i].age++;
 			if (g_Game.news_pool[i].age >= NEWS_MAX_AGE) g_Game.news_pool[i].idx = NONE;
 		}
+	PoolCompact();
 	for (i = 0; i < NEWS_SLATE; i++)
 		if (g_Game.news_slate[i].idx != NONE && g_Game.news_slate[i].age < 250) g_Game.news_slate[i].age++;
 	for (i = 0; i < DB_NUM_AGENCIES; i++)
@@ -122,6 +132,7 @@ u8 Sim_NewsPick(u8 pi) __banked
 	g_Game.money -= c; g_Game.day_cost += c;
 	g_Game.news_slate[s] = g_Game.news_pool[pi];
 	g_Game.news_pool[pi].idx = NONE;
+	PoolCompact();
 	return 0;
 }
 

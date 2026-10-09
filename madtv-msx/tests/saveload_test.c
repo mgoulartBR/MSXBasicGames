@@ -64,6 +64,15 @@ int main(void)
 		CHECK(q0 == 0 && q1 > 0 && q1 <= 100, "qualidade do telejornal");
 		CHECK(Sim_NewsFresh(0) == 100 && Sim_NewsFresh(5) == 50 && Sim_NewsFresh(20) == 10, "frescor");
 	}
+	// pool de noticias sem buracos depois de comprar um item do meio
+	Sim_Init(5);
+	{
+		int n0 = 0, n1 = 0, gap = 0;
+		for (i = 0; i < NEWS_POOL; i++) n0 += g_Game.news_pool[i].idx != NONE;
+		if (n0 >= 3) { CHECK(Sim_NewsPick(1) == 0, "pick do meio"); }
+		for (i = 0; i < NEWS_POOL; i++) { if (g_Game.news_pool[i].idx != NONE) n1++; else if (i + 1 < NEWS_POOL && g_Game.news_pool[i + 1].idx != NONE) gap = 1; }
+		CHECK(n1 == n0 - 1 && !gap, "pool compactado (sem buracos)");
+	}
 	// credito: limite, juros, quitacao
 	Sim_Init(7);
 	{

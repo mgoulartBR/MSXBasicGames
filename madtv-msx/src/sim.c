@@ -2,6 +2,17 @@
 #include "data/db_data.h"
 
 Game g_Game;
+// Ganchos de teste: offsets dos campos de Game conforme o compilador Z80, preenchidos em Sim_Init (os testes no openMSX leem
+// g_DbgOffsets pelo mapa de simbolos). Custa ~20 bytes de RAM e ~150 de ROM.
+u16 g_DbgOffsets[10];
+#define OFF(f) ((u16)((u8*)&g_Game.f - (u8*)&g_Game))
+static void DbgInit(void)
+{
+	g_DbgOffsets[0] = OFF(day); g_DbgOffsets[1] = OFF(t); g_DbgOffsets[2] = OFF(money); g_DbgOffsets[3] = OFF(debt);
+	g_DbgOffsets[4] = OFF(image); g_DbgOffsets[5] = OFF(owned); g_DbgOffsets[6] = OFF(slot); g_DbgOffsets[7] = OFF(news_slate);
+	g_DbgOffsets[8] = OFF(news_sub); g_DbgOffsets[9] = OFF(contract);
+}
+
 #ifdef BALANCE_STATS
 long g_StatDone, g_StatFail, g_StatIncome, g_StatPenalty, g_StatMissed, g_StatSpots;
 #define STAT(x) (x)
@@ -189,6 +200,7 @@ void Sim_Init(u16 seed)
 {
 	u16 n;
 	u8 i, st, s;
+	DbgInit();
 	g_Rng = seed ? seed : 0xACE1;
 	for (n = 0; n < sizeof(Game); n++) ((u8*)&g_Game)[n] = 0;
 	g_Game.money = START_MONEY;
