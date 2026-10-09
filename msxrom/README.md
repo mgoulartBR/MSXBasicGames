@@ -124,3 +124,6 @@ Pisos e ttetos (v3): uma LRMM por linha de tela (plano em perspectiva) com o fla
 256x64 da VRAM, linhas 640..767; janela de origem LRMM X 0..511 para o wrap). So ate ~120 unidades de profundidade (as linhas mais proximas); alem disso volta a
 faixa de cor do flat. Custo: o atlas de paredes caiu para 128 linhas (algumas texturas voltaram a 0,25 texel/unidade). Corrigido tambem o endereco do upload das
 fontes (antes ficavam fora da VRAM util).
+
+v4: piso/teto texturizados ate ~240 unidades (linhas de profundidade >120 usam 2 LRMM de 128 pixels). Limitacao conhecida: so existe UM plano de piso e UM de teto por quadro
+(o flat e a altura do setor do jogador); setores vizinhos com teto/piso em outra altura ou outro flat aparecem com o plano do jogador na altura errada.

@@ -131,7 +131,7 @@ def main():
     flat_idx={}
     for i,f in enumerate(used):
         c=np.array(flat_cols[f],float)
-        for j,k in enumerate((0.55,0.9)):
+        for j,k in enumerate((0.8,1.0)):
             pal[1+len(base)+2*i+j]=c*k
         flat_idx[f]=(1+len(base)+2*i,1+len(base)+2*i+1)             # (longe, perto)
     def q(rgba,dither=False):

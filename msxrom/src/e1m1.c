@@ -391,23 +391,28 @@ static void overlay(void){
 /* Piso e teto texturizados: uma LRMM por linha de tela (mapeamento afim por linha = perspectiva correta de plano). Tile de 16x16 texels
  * por 64 unidades; a regiao replicada (256x64) faz o wrap em X (modulo 256) e deixa a faixa de V caber sem cruzar o limite. So ate zr<=120 unidades. */
 static u8 cur_ff=255,cur_cf=255;
-static void plane_row(u8 y,s16 zr,u16 ry,s16 s,s16 c){
-  s16 Kq=(zr*51)>>3,du=mulq14(c,Kq)>>4,dv=mulq14(-s,Kq)>>4,hx=(zr*51)>>6;
-  s16 X=px+mulq14(s,zr)-mulq14(c,hx),Y=py+mulq14(c,zr)+mulq14(s,hx);
+static void plane_seg(u8 y,s16 X,s16 Y,s16 du,s16 dv,u16 ry,u8 xd,u16 nx){
   s16 u0=X>>2,v0=Y>>2; u16 sy=ry+(v0&15); if(dv<0)sy+=48;
   wait_ce(); vr(17,32);
-  vw(256+(u0&127)); vw(sy); vw(0); vw(y+((u16)page<<8)); vw(256); vw(1); vi=0; vi=0;
+  vw(256+(u0&127)); vw(sy); vw(xd); vw(y+((u16)page<<8)); vw(nx); vw(1); vi=0; vi=0;
   vr(17,47); vw(du); vw(dv); vr(17,46); vi=0x30;
+}
+/* uma linha de tela; zr>120: duas LRMM de 128 pixels (o salto de V de cada uma cabe na regiao de 64 linhas) */
+static void plane_row(u8 y,s16 zr,u16 ry,s16 s,s16 c){
+  s16 Kq=(zr*51)>>3,du=mulq14(c,Kq)>>4,dv=mulq14(-s,Kq)>>4,hx=(zr*51)>>6;
+  s16 cx=px+mulq14(s,zr),cy=py+mulq14(c,zr);
+  plane_seg(y,cx-mulq14(c,hx),cy+mulq14(s,hx),du,dv,ry,0,zr>120?128:256);
+  if(zr>120) plane_seg(y,cx,cy,du,dv,ry,128,128);
 }
 static void planes(const Sec *sc){
   s16 s=isin(yaw),c=icos(yaw),H; u8 r,rmin;
   if(sc->fid!=cur_ff){ build_region(sc->fid,FL_REG_Y); cur_ff=sc->fid; }
   H=eye-sc->floor;
-  if(H>4){ rmin=(u8)((4*H+2)/3); for(r=rmin;r<VIEW_H-89;r++) plane_row(89+r,(160*H)/r,FL_REG_Y,s,c); }
+  if(H>4){ rmin=(u8)((2*H+1)/3); if(rmin<12)rmin=12; for(r=rmin;r<VIEW_H-89;r++) plane_row(89+r,(160*H)/r,FL_REG_Y,s,c); }
   if(sc->cid!=255){
     if(sc->cid!=cur_cf){ build_region(sc->cid,CE_REG_Y); cur_cf=sc->cid; }
     H=sc->ceil-eye;
-    if(H>4){ rmin=(u8)((4*H+2)/3); for(r=rmin;r<=89;r++) plane_row(89-r,(160*H)/r,CE_REG_Y,s,c); }
+    if(H>4){ rmin=(u8)((2*H+1)/3); if(rmin<12)rmin=12; for(r=rmin;r<=89;r++) plane_row(89-r,(160*H)/r,CE_REG_Y,s,c); }
   }
 }
 static void render(void){
