@@ -182,7 +182,7 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 - Balanceamento (autoplay smart, sem presentes): 30 dias 3% de falencia, Image ~55; 150 dias 12% de falencia, Image ~89. O final feliz nao foi alcancado por autoplay; so testado forcando o estado.
 
 ## 0.7: catalogo, dificuldade, Image baixo, autoplay com presentes
-- Catalogo: 144 filmes (20 por categoria; Culture so 4 por causa do filtro de titulo <= 26 letras). O segmento 3 (dados) ficou com ~4,6 KB de 8 KB, entao **nao foi preciso ASCII16 nem trocar de mapper**; filmes continuam acessiveis por ponteiro direto (indice u8 cabe ate 255). Codigo de save passou a 109 caracteres (bitmask de filmes possuidos = 18 bytes).
+- Catalogo: 144 filmes (20 por categoria; Culture so 4 - ver correcao na 0.8). O segmento 3 (dados) ficou com ~4,6 KB de 8 KB, entao **nao foi preciso ASCII16 nem trocar de mapper**; filmes continuam acessiveis por ponteiro direto (indice u8 cabe ate 255). Codigo de save passou a 109 caracteres (bitmask de filmes possuidos = 18 bytes).
 - Dificuldade: tabelas em src/sim.c (`k_RivalQ` 65/78/82 e `k_StartMoney` 3500/2500/2000); guardada no nibble alto do byte de versao do savegame (v6).
 - Image < 20 (`IMAGE_LOW`): contratos pagam 80% e `Sim_CreditLimit()` = 0. Isso piorou o autoplay (sem a regra: 4% de falencia em 30 dias; com a regra: 17%), o que e o efeito desejado, mas o bot depende do credito do chefe como colchao.
 - Autoplay smart com presentes (`tests/balance.sh 200 100`, caixa folgado >= 2500k para comprar presente, Dream trip no fim; `BAL_DIFF=0|1|2`, `NO_GIFTS=1`):
@@ -195,3 +195,19 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 
 - Esses numeros sao do bot heuristico (mesma sim.c compilada no PC), nao de jogadores humanos, e o balanceamento e extremamente sensivel a `k_RivalQ` (variar de 78 para 85 no Normal leva o casamento de 64% para quase 0%).
 - Com 144 filmes o Image medio do bot caiu em relacao a 88 filmes no mesmo cenario (~30 vs ~52 em 30 dias, sem presentes); suspeita: o bot compra por qualidade/preco e os filmes extras (ordenados por GUID, nao por qualidade) o atraem para filmes ruins. Nao investiguei mais.
+
+## 0.8: Porteiro e escritorios dos rivais
+- `src/screens_d.c` (segmento 10, agora ~3,7 KB): `Porter_*` e `Rival_*` (uma tela para FunTV e SunTV; `g_Screen - SCR_FUN + 1` = emissora). Atualizacao horaria via `ScreenDyn` (redesenha a tela inteira, ~poucos jiffies).
+- Espionagem e gratuita e so leitura: mostra `g_Game.slot[st]` (a grade que a IA montou para hoje) e `aud[st][slot]` quando `aud_done`. Nao altera o balanceamento (o autoplay nao usa).
+- Correcao do catalogo: a categoria Culture tinha 4 filmes porque 60 dos 67 candidatos do TVTower nao tem `year` no banco (o conversor os descartava, nao era o filtro de titulo, como escrevi antes). Agora Culture assume o ano 1985 quando falta. Total 160 filmes, 20 por categoria; as outras categorias nao mudaram. O balanceamento do autoplay **nao foi refeito** com o catalogo novo.
+- Segmento fixo: 15.830 de 16.384 bytes.
+- **Rebalanceamento 0.8** (o catalogo com Culture mudou o autoplay: Normal caiu de 64% para 0% de casamentos com os mesmos parametros). `k_RivalQ` agora 55/68/74. Autoplay smart com presentes, 200 dias, 100 partidas:
+
+| Dificuldade | falencia | casou | dia medio |
+|---|---|---|---|
+| Easy (55%) | 12% | 88% | 69 |
+| Normal (68%) | 47% | 53% | 128 |
+| Hard (74%) | 76% | 12% | 172 |
+
+(a tabela da 0.7 acima ficou obsoleta; valem estes numeros, tambem de um bot e nao de humanos)
+- Armadilha (0.8): `Ui_Text` usa x em `u8`; texto que passa de x=255 **da a volta** e aparece no canto esquerdo da mesma linha (fantasma "ng" sobre o titulo da tela dos rivais). Regra: 6 px/caractere, x + 6*len <= 256. Corrigidos tambem 3 textos antigos que estouravam por 2-6 px.

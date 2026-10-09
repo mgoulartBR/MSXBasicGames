@@ -127,7 +127,7 @@ void Save_Draw(void) __banked
 		Ui_Text(4, CONTENT_Y + 60, "No battery in the cartridge: your game is");
 		Ui_Text(4, CONTENT_Y + 70, "stored as a code. Write it down (or take a");
 		Ui_Text(4, CONTENT_Y + 80, "photo) and type it back to continue later.");
-		Ui_Text(4, CONTENT_Y + 96, "Not saved: film wear, news, today's rivals.");
+		Ui_Text(4, CONTENT_Y + 96, "Not saved: film wear, news, rival plans.");
 		Ui_Text(4, (u8)(CONTENT_Y + 106), "Time is stopped on this screen.");
 	}
 	else

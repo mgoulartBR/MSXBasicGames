@@ -166,7 +166,7 @@ void Archive_Draw(void) __banked
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Archive");
 	Ui_Color(UI_GRAY);   Ui_Text(60, CONTENT_Y, "plays / resale value");
-	if (!s_OwnN) { Ui_Color(UI_GRAY); Ui_Text(14, (u8)(CONTENT_Y + 14), "(no movies - buy some at the Film agency)"); }
+	if (!s_OwnN) { Ui_Color(UI_GRAY); Ui_Text(14, (u8)(CONTENT_Y + 14), "(no movies - buy at the Film agency)"); }
 	for (i = 0; i < LIST_ROWS; i++) ArchiveRowBody(i);
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:sell BACK:office");
