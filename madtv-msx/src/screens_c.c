@@ -161,7 +161,7 @@ void Save_Input(u8 ev) __banked
 		if ((ev & IN_DOWN) && g_Sel < 1) g_Sel++;
 		if ((ev & IN_UP) && g_Sel > 0) g_Sel--;
 		if (g_Sel != old) MarkRows(old, g_Sel);
-		if (ev & IN_BACK) { Goto(SCR_HUB); return; }
+		if (ev & IN_BACK) { Goto(SCR_OFFICE); return; }
 		if (ev & IN_OK)
 		{
 			if (g_Sel == 0) { Sim_SaveCode(g_SaveCode); SetMode(1); }

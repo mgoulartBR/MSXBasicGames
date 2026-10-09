@@ -116,6 +116,8 @@ u8 Ui_Int(u8 x, u8 y, i16 v)
 
 void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col)
 {
+	// HMMV em Screen 5 conta bytes (2 pixels): w < 2 viraria 0 bytes = a linha inteira. Sempre use w >= 2.
+	if (w < 2) w = 2;
 	VDP_CommandHMMV(x, y + s_YOff, w, h, COLOR_MERGE2(col));
 }
 

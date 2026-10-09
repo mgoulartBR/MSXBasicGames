@@ -1,5 +1,6 @@
 #!/bin/bash
-# Smoke test 0.4 (openMSX, C-BIOS MSX2): joga por teclas injetadas e confere o estado interno via mapa de simbolos.
+# Uso: tests/smoke.sh [rom]   (SHOTS=1 tests/smoke.sh para screenshots fieis, ~2,5 min; sem SHOTS roda em ~3 s mas os screenshots podem sair defasados)
+# Smoke test 0.5 (openMSX, C-BIOS MSX2): joga por teclas injetadas e confere o estado interno via mapa de simbolos.
 # Cobre: titulo -> hub -> comprar filmes -> grade -> contrato -> noticias -> credito -> vender -> salvar/carregar (codigo digitado
 # tecla a tecla) -> simular dias em velocidade maxima. Screenshots em screenshots/test/.
 cd "$(dirname "$0")/.."
@@ -7,14 +8,17 @@ ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-DM=$(sym _g_DrawMax); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode)
+DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode)
 [ -n "$G" ] && [ -n "$OFFS" ] && [ -n "$CODE" ] || { echo "FAIL: simbolos ausentes no mapa"; exit 1; }
 cat > /tmp/madtv_smoke.tcl <<TCL
 set G $G
 set OFFS $OFFS
 set CODE $CODE
 set DM $DM
+set SCR $SCR
+set SEL $SEL
 set SHOTDIR $PWD/$OUT
+set ::env(SHOTS) ${SHOTS:-0}
 TCL
 cat >> /tmp/madtv_smoke.tcl <<'TCL'
 proc press {row mask} { keymatrixdown $row $mask; after time 0.12 "keymatrixup $row $mask" }
@@ -25,7 +29,7 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]]"
+  puts $f "$tag scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]]"
   close $f
 }
 proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 82} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
@@ -45,57 +49,72 @@ proc typecode {code} {       # digita a partir de agora: 0,16 s por tecla (apert
 set ::RET "7 0x80"; set ::ESC "7 0x04"; set ::TAB "7 0x08"
 set ::UP "8 0x20"; set ::DOWN "8 0x40"; set ::LEFT "8 0x10"; set ::RIGHT "8 0x80"
 set t 8
+if {!$::env(SHOTS)} { set throttle off }     ;# modo rapido (so asserts); SHOTS=1 = tempo real, screenshots confiaveis
 proc at {dt script} { global t; set t [expr {$t + $dt}]; after time $t $script }
 proc key {k} { at 0.3 "press {*}\$::$k" }
-proc hubto {n} { for {set i 0} {$i < 8} {incr i} { key UP }; for {set i 0} {$i < $n} {incr i} { key DOWN }; key RET; at 0.5 {} }
+proc room {i} { at 0.2 "poke $::SEL $i"; key RET; at 4.5 {} }              ;# escolhe a sala (indice) e viaja ate a porta (ate ~4 s)
 proc back {} { key ESC; at 0.3 {} }
 at 0   { shot 1_title }
 key RET
-at 1.6 { shot 2_hub; dump start }
-# --- Film agency: comprar os filmes 1 e 2 de Lovestory
-hubto 1
+at 1.6 { shot 2_building; dump start }
+# --- navegacao do cursor no predio (teclas): UP -> BOSS(12), DOWN -> OFFC(9), RIGHT -> FUN(10), LEFT -> OFFC(9)
+key UP;    at 0.3 { dump navup }
+key DOWN;  at 0.3 { dump navdown }
+key RIGHT; at 0.3 { dump navright }
+key LEFT;  at 0.3 { dump navleft; shot 2b_cursor }
+# --- Film agency (sala 3): comprar os filmes 1 e 2 de Lovestory
+room 3
 key DOWN; key RET; key DOWN; key RET
 at 0.6 { shot 3_agency; dump bought }
 back
-# --- Programme grid: colocar o 1o filme possuido no slot 0
-hubto 0
-key RET; at 0.3 {}; key DOWN; key RET
+# --- Escritorio (sala 9) -> Programme grid: colocar o 1o filme possuido no slot 0
+room 9
+at 0.6 { shot 3b_office; dump office }
+key RET
+at 0.5 {}; key RET; at 0.3 {}; key DOWN; key RET
 at 0.6 { shot 4_grid; dump placed }
 back
-# --- Ad agency: assinar oferta 0
-hubto 2
+back
+# --- Ad agency (sala 4): assinar oferta 0
+room 4
 key RET
 at 0.6 { shot 5_ads; dump signed }
 back
-# --- News room: comprar a 1a noticia recebida (linha 4)
-hubto 3
+# --- News room (sala 5): comprar a 1a noticia recebida (linha 4)
+room 5
 for {set i 0} {$i < 4} {incr i} { key DOWN }
 key RET
 at 0.6 { shot 6_news; dump news }
 back
-# --- Boss: tomar emprestimo (item 0)
-hubto 5
+# --- Boss (sala 12): tomar emprestimo (item 0)
+room 12
 key RET
 at 0.6 { shot 7_boss; dump borrowed }
 back
-# --- Archive: vender o 2o filme da lista (o 1o esta na grade)
-hubto 4
+# --- Archive (sala 1): vender o 2o filme da lista (o 1o esta na grade)
+room 1
 key DOWN; key RET
 at 0.6 { shot 8_archive; dump sold }
 back
-# --- Save: mostrar o codigo e guardar
-hubto 7
-key RET
+# --- Sala fechada (Betty, sala 13): nao muda de tela
+room 13
+at 0.3 { shot 8b_closed; dump closed }
+# --- Escritorio -> Save/Load: mostrar o codigo e guardar
+room 9
+key DOWN; key DOWN; key RET
+at 0.5 {}; key RET
 at 0.8 { shot 9_savecode; set ::SAVED [readcode]; dump saved; set f [open /tmp/madtv_code.txt w]; puts $f $::SAVED; close $f }
 back
 back
+back
 # --- mudar o estado (mais credito), depois carregar o codigo digitando-o tecla a tecla
-hubto 5
+room 12
 key RET; key RET
 at 0.5 { dump changed }
 back
-hubto 7
-key DOWN; key RET                                   ;# Enter a code
+room 9
+key DOWN; key DOWN; key RET
+at 0.5 {}; key DOWN; key RET                        ;# Enter a code
 at 0.5 { shot 10_enter_empty }
 at 0.3 { typecode $::SAVED }
 at 14.0 { shot 11_enter_typed }
@@ -105,7 +124,7 @@ at 1.0 { shot 12_loaded; dump loaded }
 key TAB
 at 0.1 { set throttle off }
 key TAB
-at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 11} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
+at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 12} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
 TCL
 timeout 290 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/madtv_smoke.tcl >/tmp/madtv_smoke.log 2>&1
 cat /tmp/madtv_state.txt 2>/dev/null
@@ -118,6 +137,10 @@ def need(c,m):
 g=lambda tag,k:int(S[tag][k])
 need('later' in S,'script nao completou (estados ate: %s)'%list(S))
 need(g('start','money')==2500,'dinheiro inicial != 2500')
+need(g('start','scr')==1 and g('start','sel')==9,'inicio nao esta no predio com cursor no escritorio')
+need((g('navup','sel'),g('navdown','sel'),g('navright','sel'),g('navleft','sel'))==(12,9,10,9),'navegacao do cursor no predio (cima/baixo/direita/esquerda)')
+need(g('bought','scr')==3 and g('office','scr')==10 and g('placed','scr')==2 and g('signed','scr')==4 and g('news','scr')==5 and g('borrowed','scr')==7 and g('sold','scr')==6 and g('saved','scr')==9,'viagem ate as salas nao abriu a tela esperada')
+need(g('closed','scr')==1,'sala fechada abriu uma tela')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')
 need(g('placed','slot0movie')!=255,'filme nao entrou na grade')
 need(g('signed','contract0')!=255,'contrato nao assinado')
@@ -130,7 +153,7 @@ need(g('loaded','day')==g('saved','day'),'LOAD nao restaurou o dia')
 need(g('later','day')>=2,'jogo nao avancou para o dia 2')
 need(sum(map(int,S['later']['image'].split(',')))<=100,'Image invalido')
 d=open('/tmp/madtv_draw.txt').read().split()
-names=['title','hub','grid','agency','ads','news','archive','boss','ratings','save','over']
+names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','over']
 print('desenho completo por tela (jiffies, max):',dict(zip(names,map(int,d))))
 need(max(map(int,d))<=90,'alguma tela leva > 90 jiffies para desenhar')
 print('PASS')
