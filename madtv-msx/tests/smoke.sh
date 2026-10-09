@@ -70,7 +70,7 @@ S={l.split()[0]:dict(kv.split('=') for kv in l.split()[1:]) for l in L}
 def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
 need('start' in S and 'later' in S,'estados ausentes (script nao completou)')
-need(int(S['start']['money'])==1500,'dinheiro inicial != 1500')
+need(int(S['start']['money'])==2500,'dinheiro inicial != 2500')
 need(S['bought']['owned0'] is not None and int(S['bought']['money'])<1500,'compra nao debitou dinheiro')
 need(int(S['placed']['slot0movie'])!=255,'filme nao entrou na grade')
 need(int(S['signed']['contract0ad'])!=255,'contrato nao assinado')

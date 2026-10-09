@@ -12,9 +12,26 @@
 #define NONE          0xFF
 #define MAX_CONTRACTS 4
 #define NUM_OFFERS    6
-#define START_MONEY   1500       // k$
-#define DAILY_UPKEEP  120        // k$/dia (torres/estudio - fixo ate existirem torres)
+// --- parametros de balanceamento (ajustados pelo autoplay: tests/balance.sh) ---
+#ifndef START_MONEY
+#define START_MONEY   2500       // k$
+#endif
+#ifndef PRICE_DIV
+#define PRICE_DIV     20         // preco do filme = media(atributos)*price_mod/PRICE_DIV * blocos/2 + 50
+#endif
+#ifndef RIVAL_Q
+#define RIVAL_Q       88         // % aplicado a audiencia dos rivais (dificuldade normal)
+#endif
+#ifndef DAILY_UPKEEP
+#define DAILY_UPKEEP  100        // k$/dia (torres/estudio - fixo ate existirem torres)
+#endif
 #define BANKRUPT_AT   (-2000)    // k$
+#ifndef RIVAL_LIB_START
+#define RIVAL_LIB_START 5        // filmes iniciais de cada rival
+#endif
+#ifndef RIVAL_LIB_GROWTH_DAYS
+#define RIVAL_LIB_GROWTH_DAYS 1  // +1 filme a cada N dias
+#endif
 
 typedef struct { u8 movie; u8 part; u8 ad; } Slot;          // movie=NONE: vazio; part = bloco dentro do filme; ad = indice de contrato
 typedef struct { u8 ad; u8 reps_left; u8 days_left; } Contract; // ad=NONE: livre
@@ -33,6 +50,7 @@ typedef struct {
 	u8  offer[NUM_OFFERS];              // ofertas do dia na Agencia de Publicidade (NONE = ja assinada)
 	i16 day_income, day_cost;
 	u8  game_over;                      // 0 = jogando, 1 = falencia
+	u8  rival_lib[2][DB_NUM_MOVIES];    // biblioteca de cada rival: permutacao do catalogo; so os primeiros N sao "possuidos"
 } Game;
 
 extern Game g_Game;

@@ -2,6 +2,12 @@
 #include "data/db_data.h"
 
 Game g_Game;
+#ifdef BALANCE_STATS
+long g_StatDone, g_StatFail, g_StatIncome, g_StatPenalty, g_StatMissed, g_StatSpots;
+#define STAT(x) (x)
+#else
+#define STAT(x) ((void)0)
+#endif
 char g_Msg[44];
 const u8 g_Reach[NUM_STATIONS] = { 120, 110, 100 };
 const char* const g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };
@@ -63,7 +69,7 @@ u8 Sim_Quality(u8 m)
 u16 Sim_MoviePrice(u8 idx)        // k$ (formula propria)
 {
 	u16 avg = (u16)(((u16)g_Movies[idx].critics + g_Movies[idx].speed + g_Movies[idx].outcome) / 3);
-	return (u16)((avg * g_Movies[idx].price) / 10 * g_Movies[idx].blocks / 2 + 50);
+	return (u16)((avg * g_Movies[idx].price) / PRICE_DIV * g_Movies[idx].blocks / 2 + 50);
 }
 
 void Sim_MsgNum(const char* a, i32 v, const char* b)
@@ -89,6 +95,7 @@ static u8 Audience(u8 st, u8 s)
 		if (mv->fsk18 && s < 3) a = a * 40 / 100;          // FSK18 antes das 21h
 	}
 	a = a * (90 + Rnd(21)) / 100;
+	if (st) a = a * RIVAL_Q / 100;
 	return (u8)a;
 }
 
@@ -124,6 +131,13 @@ void Sim_PlaceAd(u8 s, u8 c)
 	g_Game.slot[0][s].ad = c;
 }
 
+// tamanho da biblioteca do rival: comeca pequeno e cresce com os dias (rivais tambem tem caixa limitado)
+static u8 RivalLib(void)
+{
+	u16 n = RIVAL_LIB_START + g_Game.day / RIVAL_LIB_GROWTH_DAYS;
+	return (u8)(n > DB_NUM_MOVIES ? DB_NUM_MOVIES : n);
+}
+
 static void AiSchedule(u8 st)
 {
 	Slot* sl = g_Game.slot[st];
@@ -134,7 +148,7 @@ static void AiSchedule(u8 st)
 		best = NONE; bestv = 0;
 		for (tries = 0; tries < 6; tries++)
 		{
-			m = Rnd(DB_NUM_MOVIES);
+			m = g_Game.rival_lib[st - 1][Rnd(RivalLib())];     // so filmes da biblioteca do rival
 			if (s + g_Movies[m].blocks > NUM_SLOTS) continue;
 			v = (u8)((u16)Sim_Quality(m) * s_Fit[g_Movies[m].cat][s] / 100);
 			if (g_Movies[m].fsk18 && s < 3) v = 0;
@@ -186,6 +200,11 @@ void Sim_Init(u16 seed)
 	for (st = 0; st < NUM_STATIONS; st++)
 		for (s = 0; s < NUM_SLOTS; s++) { g_Game.slot[st][s].movie = NONE; g_Game.slot[st][s].ad = NONE; }
 	for (i = 0; i < MAX_CONTRACTS; i++) g_Game.contract[i].ad = NONE;
+	for (st = 0; st < 2; st++)                 // biblioteca de cada rival = permutacao embaralhada do catalogo
+	{
+		for (i = 0; i < DB_NUM_MOVIES; i++) g_Game.rival_lib[st][i] = i;
+		for (i = DB_NUM_MOVIES - 1; i > 0; i--) { u8 j = Rnd(i + 1), tmp = g_Game.rival_lib[st][i]; g_Game.rival_lib[st][i] = g_Game.rival_lib[st][j]; g_Game.rival_lib[st][j] = tmp; }
+	}
 	g_Game.day = 0;
 	StartDay();
 	Sim_Msg("Welcome, program director!");
@@ -237,15 +256,17 @@ static void EndSlot(u8 s)
 		if (g_Game.aud[0][s] >= ad->min_audience && ct->reps_left)
 		{
 			ct->reps_left--;
+			STAT(g_StatSpots++);
 			if (ct->reps_left == 0)
 			{
+				STAT(g_StatDone++); STAT(g_StatIncome += ad->profit);
 				g_Game.money += ad->profit; g_Game.day_income += ad->profit;
 				Sim_MsgNum("Contract done! +", ad->profit, "k");
 				ct->ad = NONE;
 			}
 			else Sim_Msg("Spot aired OK");
 		}
-		else Sim_Msg("Spot missed audience!");
+		else { Sim_Msg("Spot missed audience!"); STAT(g_StatMissed++); }
 	}
 	// Image: maior quota tira 1 ponto da menor
 	for (st = 1; st < NUM_STATIONS; st++)
@@ -281,6 +302,7 @@ static void EndDay(void)
 		if (ct->days_left) ct->days_left--;
 		if (ct->days_left == 0 && ct->reps_left)
 		{
+			STAT(g_StatFail++); STAT(g_StatPenalty += g_Ads[ct->ad].penalty);
 			g_Game.money -= g_Ads[ct->ad].penalty; g_Game.day_cost += g_Ads[ct->ad].penalty;
 			Sim_MsgNum("Contract failed! -", g_Ads[ct->ad].penalty, "k");
 			ct->ad = NONE;
