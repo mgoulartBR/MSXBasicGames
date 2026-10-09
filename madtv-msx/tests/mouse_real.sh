@@ -1,6 +1,6 @@
 #!/bin/bash
 # Teste do caminho REAL do mouse: openMSX com mouse emulado na porta 1 + movimento/clique do host via xdotool (Xvfb).
-# Requer: xvfb, xdotool. Verifica: M liga o mouse, o cursor se move, passar sobre uma porta a realca e o clique viaja ate la e entra.
+# Requer: xvfb, xdotool. Verifica: deteccao automatica do mouse (sem apertar M), o cursor se move, passar sobre uma porta a realca e o clique viaja ate la e entra.
 cd "$(dirname "$0")/.."
 ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}; MAP=out/madtv.map
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
@@ -12,7 +12,7 @@ plug joyporta mouse
 proc press {row mask} { keymatrixdown \$row \$mask; after time 0.12 "keymatrixup \$row \$mask" }
 proc rec {tag} { set f [open /tmp/mouse_real.txt a]; puts \$f "\$tag x=[peek $PX] y=[peek $PY] mode=[peek $PM] scr=[peek $SC] sel=[peek $BS]"; close \$f }
 after time 8 { press 7 0x80 }                 ;# inicia o jogo
-after time 9.5 { press 4 0x04 }               ;# tecla M: mouse na porta 1
+after time 6.0 { screenshot -raw $PWD/screenshots/test/mouse_title.png }   ;# o cursor ja aparece no titulo (modo automatico, sem apertar M)
 after time 10.5 { rec before }
 after time 14 { rec moved; screenshot -raw $PWD/screenshots/test/mouse_cursor.png }
 after time 23 { rec entered }
@@ -34,7 +34,7 @@ S={l.split()[0]:{k:int(v) for k,v in (kv.split('=') for kv in l.split()[1:])} fo
 def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
 need('entered' in S,'script nao completou')
-need(S['before']['mode']==1,'tecla M nao ligou o mouse na porta 1')
+need(S["before"]["mode"]==1,"deteccao automatica nao achou o mouse na porta 1")
 need((S['moved']['x'],S['moved']['y'])!=(S['before']['x'],S['before']['y']),'o cursor nao se moveu com o mouse')
 need(S['moved']['sel']==5 and S['moved']['scr']==1,'passar sobre a porta NEWS nao a realcou')
 need(S['entered']['scr']==5,'clique do mouse nao levou a News room')

@@ -172,3 +172,11 @@ pagina 2 = buffer de composicao (512-723).
 Lovestory=Romance | Action=Acao,Aventura,Western | Monumental=Monumental,Historia | Comedy=Comedia |
 Crime=Crime,Thriller,Misterio | Culture=Documentario | SciFi=Ficcao cientifica,Fantasia | Other=Animacao,Drama,Familia,Terror.
 Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes do genero Erotic e 109 de Acao tem o bit).
+
+## Betty e presentes (0.6)
+- Modelo proprio (src/sim_ext.c). Presentes (k$): 20,40,80,120,200,350,600,900,1500,2500; efeito em simpatia 1,2,3,4,6,8,10,12,14 (a Dream trip, 10o, so serve para o casamento). Cada uso reduz o efeito em 30% (recupera aos poucos); estoque max 3 de cada.
+- Simpatia <= Image da emissora; sem presente no dia = -1; passar uma producao de Culture completa = +1. Rivais ganham simpatia aleatoria diaria.
+- Image 0 = emissora falida (audiencia zero, sai da disputa); o jogador com Image 0 perde. Para casar: simpatia 100, os dois rivais falidos e 1 Dream trip.
+- Savegame v5: bloco da Betty anexado (sym, alive, estoque, usos); codigo de 98 caracteres.
+- Telas novas em src/screens_d.c (segmento 10); titulo e fim de jogo foram movidos para screens_c.c (segmento 8) para liberar o segmento fixo (agora 15.623 de 16.384 bytes).
+- Balanceamento (autoplay smart, sem presentes): 30 dias 3% de falencia, Image ~55; 150 dias 12% de falencia, Image ~89. O final feliz nao foi alcancado por autoplay; so testado forcando o estado.

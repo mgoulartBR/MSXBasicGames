@@ -199,7 +199,8 @@ u8 Input_TypedChar(void)
 // ---------------------------------------------------------------- ponteiro (mouse) e sprites comuns
 u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_InExtra;
 static Mouse_State s_Mouse;
-static u8 s_PtrShown;
+static u8 s_PtrShown, s_AutoIdle[2], s_AutoTurn;
+u8 g_PtrFound;                     // 1 = o modo automatico acabou de achar um mouse (a UI mostra um aviso e zera)
 
 // seta 16x16 (branca) e contorno (preto): arte propria. Hotspot = ponta da seta em (2,2) do sprite.
 static const u8 k_SprArrow[32] = { 0x00,0x00,0x20,0x30,0x38,0x3C,0x3E,0x3F,0x3F,0x3F,0x3E,0x36,0x23,0x03,0x01,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,0xC0,0x00,0x00,0x00,0x00,0x80,0x00 };
@@ -226,15 +227,16 @@ void Ui_SpriteSetup(void)
 	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 24);         // sprites do predio comecam escondidos
 	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3 da VRAM
 	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
-	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0;
+	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoTurn = 0;   // modo 3 = automatico
 	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; s_Mouse.dX = 0; s_Mouse.dY = 0;
 	PtrDraw();
 	VDP_EnableSprite(TRUE);
 }
 
-void Pointer_Cycle(void)
+void Pointer_Cycle(void)                 // M: auto -> porta 1 -> porta 2 -> desligado -> auto
 {
-	g_PtrMode = (g_PtrMode + 1) % 3;
+	static const u8 k_Next[4] = { 3, 2, 0, 1 };   // proximo modo a partir do atual (0,1,2,3)
+	g_PtrMode = k_Next[g_PtrMode & 3]; s_AutoIdle[0] = s_AutoIdle[1] = 0;
 	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF;
 	PtrDraw();
 }
@@ -245,7 +247,16 @@ u8 Pointer_Update(void)
 	i16 nx, ny;
 	g_PtrInject = 0;
 	if (g_PtrMode == 0) return ret;
+	if (g_PtrMode == 3)       // automatico: um mouse parado le (0,0) em dX/dY; porta vazia ou joystick parado le (-1,-1) (tudo 1) e nunca (0,0)
+	{
+		u8 p = s_AutoTurn ^= 1;                                   // alterna as portas a cada quadro
+		Mouse_Read(p ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);
+		if (s_Mouse.dX == 0 && s_Mouse.dY == 0) { if (++s_AutoIdle[p] >= 4) { g_PtrMode = p ? 1 : 2; g_PtrFound = 1; s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; } }
+		else s_AutoIdle[p] = 0;
+		return ret;
+	}
 	Mouse_Read(g_PtrMode == 1 ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);
+	if (s_Mouse.dX == -1 && s_Mouse.dY == -1) { s_Mouse.dX = 0; s_Mouse.dY = 0; }   // linhas flutuando (sem mouse): ignora, evita deriva do cursor
 	nx = (i16)g_PtrX + Mouse_GetOffsetX(&s_Mouse);
 	ny = (i16)g_PtrY + Mouse_GetOffsetY(&s_Mouse);
 	if (nx < 2) nx = 2; if (nx > 253) nx = 253;
