@@ -56,7 +56,9 @@
 #define GIFT_DREAM    9          // "Dream trip": presente de casamento (nao conta como simpatia)
 #define CAT_CULTURE   5          // indice da categoria Culture em db_data
 #define OWNED_BYTES   ((DB_NUM_MOVIES + 7) / 8)
-#define SAVE_BYTES    (50 + OWNED_BYTES)
+#define SAVE_BYTES    (51 + OWNED_BYTES)
+#define TOWER_MAX     4          // niveis de torre do jogador (Corretor); rivais sobem 1 nivel a cada 30 dias
+#define TOWER_UPKEEP  40         // k$/dia por nivel
 #define SAVE_CHARS    ((SAVE_BYTES * 8 + 4) / 5)   // ceil(SAVE_BYTES*8/5)
 #ifndef IMAGE_LOW
 #define IMAGE_LOW     20         // Image abaixo disto: anunciantes pagam menos e o chefe fecha o credito
@@ -88,6 +90,7 @@ typedef struct {
 	u8  gift_have[NUM_GIFTS];           // presentes comprados e ainda nao dados (max 3 de cada)
 	u8  gift_uses[NUM_GIFTS];           // quantas vezes cada presente ja foi dado a Betty (por qualquer pretendente): efeito cai
 	u8  gift_today;                     // jogador deu presente hoje (senao a simpatia diminui)
+	u8  tower;                          // nivel de torres do jogador (0..TOWER_MAX): alcance maior
 	u8  last_gain;                      // pontos do ultimo presente dado
 	u16 seed;                           // semente da partida (reconstroi as bibliotecas dos rivais ao carregar)
 	i32 debt;                           // credito do chefe (k$)
@@ -115,6 +118,7 @@ u8    Sim_SignAd(u8 offer);             // 0 ok, 1 sem espaco, 2 ja assinada
 u8    Sim_PlaceMovie(u8 slot, u8 movie);// 0 ok, 1 nao cabe
 void  Sim_ClearSlot(u8 slot);
 void  Sim_PlaceAd(u8 slot, u8 contract);
+u8    Sim_Reach(u8 station);            // alcance efetivo (0,1 milhao) com torres
 u8    Sim_Quota(u8 station, u8 slot);   // % de audiencia
 u8    Sim_Quality(u8 movie);            // 0..100
 void  Sim_Msg(const char* s);
@@ -140,6 +144,8 @@ u8    Sim_BuyGift(u8 g) __banked;           // 0 ok, 1 sem dinheiro, 2 estoque c
 u8    Sim_GiveGift(u8 g) __banked;          // 0 ok (ganho em g_Game.last_gain), 1 sem estoque, 2 simpatia ja no teto (Image), 3 reservado p/ casamento
 u8    Sim_Propose(void) __banked;           // 0 casou, 1 simpatia < 100, 2 ainda ha rivais, 3 falta a Dream trip
 void  Sim_BettyDay(void) __banked;          // fim do dia: decaimento, pretendentes rivais, recuperacao dos usos
+u16   Sim_TowerCost(void) __banked;         // k$ do proximo nivel (0 = nivel maximo)
+u8    Sim_BuyTower(void) __banked;          // 0 ok, 1 sem dinheiro, 2 nivel maximo
 // credito / arquivo
 i32   Sim_CreditLimit(void);
 u8    Sim_Borrow(i32 k);                    // 0 ok, 1 acima do limite

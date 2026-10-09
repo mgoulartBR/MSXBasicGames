@@ -211,3 +211,19 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 
 (a tabela da 0.7 acima ficou obsoleta; valem estes numeros, tambem de um bot e nao de humanos)
 - Armadilha (0.8): `Ui_Text` usa x em `u8`; texto que passa de x=255 **da a volta** e aparece no canto esquerdo da mesma linha (fantasma "ng" sobre o titulo da tela dos rivais). Regra: 6 px/caractere, x + 6*len <= 256. Corrigidos tambem 3 textos antigos que estouravam por 2-6 px.
+
+## 0.9: Corretor e torres
+- Alcance efetivo `Sim_Reach(st)` = alcance base x `k_TowerPct` {100,112,125,140,155}%. Jogador: nivel comprado (`g_Game.tower`); rivais: nivel = min(4, dia/30).
+- Custos (`k_TowerCost`): 1500, 3000, 5000, 8000 k$; manutencao +40 k$/dia por nivel (alem dos 100 fixos).
+- Mudanca de regra: o Image passa a ser disputado pela audiencia **absoluta** (antes pela quota = % do proprio alcance); sem isso torres nao teriam efeito no Image. `Sim_Quota` continua sendo a % do proprio alcance (so exibicao).
+- Savegame v7: +1 byte (nivel da torre); SAVE_BYTES = 51 + bitmask de filmes -> 114 caracteres.
+- Autoplay smart (compra a proxima torre quando sobra caixa > custo + 3000k; `NO_TOWERS=1` desliga), 200 dias, 60 partidas:
+
+| Dificuldade | sem torres: falencia / casou | com torres: falencia / casou | dia medio |
+|---|---|---|---|
+| Easy | 18% / 81% | 28% / 71% | 60 |
+| Normal | 73% / 26% | 50% / 48% | 80 |
+| Hard | 100% / 0% | 83% / 16% | 92 |
+
+  Os parametros de dificuldade (55/68/74) nao foram alterados. De novo: numeros de um bot, nao de humanos; o bot gasta com torres e presentes e isso explica falencia maior no Easy.
+- Tela: `Realtor_*` em src/screens_d.c; segmento fixo 15.984 de 16.384 bytes.

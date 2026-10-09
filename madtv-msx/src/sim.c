@@ -11,7 +11,7 @@ static void DbgInit(void)
 	g_DbgOffsets[0] = OFF(day); g_DbgOffsets[1] = OFF(t); g_DbgOffsets[2] = OFF(money); g_DbgOffsets[3] = OFF(debt);
 	g_DbgOffsets[4] = OFF(image); g_DbgOffsets[5] = OFF(owned); g_DbgOffsets[6] = OFF(slot); g_DbgOffsets[7] = OFF(news_slate);
 	g_DbgOffsets[8] = OFF(news_sub); g_DbgOffsets[9] = OFF(contract);
-	g_DbgOffsets[10] = OFF(sym); g_DbgOffsets[11] = OFF(alive); g_DbgOffsets[12] = OFF(gift_have); g_DbgOffsets[13] = OFF(gift_uses); g_DbgOffsets[14] = OFF(won);
+	g_DbgOffsets[10] = OFF(sym); g_DbgOffsets[11] = OFF(alive); g_DbgOffsets[12] = OFF(gift_have); g_DbgOffsets[13] = OFF(gift_uses); g_DbgOffsets[14] = OFF(won); g_DbgOffsets[15] = OFF(tower);
 }
 
 #ifdef BALANCE_STATS
@@ -98,7 +98,7 @@ static u8 Audience(u8 st, u8 s)
 {
 	if (!g_Game.alive[st]) return 0;
 	const Slot* sl = &g_Game.slot[st][s];
-	u16 a = (u16)g_Reach[st] * s_TimeShare[s] / 100;
+	u16 a = (u16)Sim_Reach(st) * s_TimeShare[s] / 100;
 	if (sl->movie == NONE)
 		a = a * 5 / 100;                                   // programa de teste
 	else
@@ -117,9 +117,17 @@ static u8 Audience(u8 st, u8 s)
 	return (u8)a;
 }
 
+static const u8 k_TowerPct[TOWER_MAX + 1] = { 100, 112, 125, 140, 155 };
+u8 Sim_Reach(u8 st)
+{
+	u8 l = g_Game.tower;
+	if (st) { l = (u8)(g_Game.day / 30); if (l > TOWER_MAX) l = TOWER_MAX; }
+	return (u8)((u16)g_Reach[st] * k_TowerPct[l] / 100);
+}
+
 u8 Sim_Quota(u8 st, u8 s)
 {
-	return (u8)((u16)g_Game.aud[st][s] * 100 / g_Reach[st]);
+	return (u8)((u16)g_Game.aud[st][s] * 100 / Sim_Reach(st));
 }
 
 // ---------------------------------------------------------------- grade
@@ -263,7 +271,7 @@ static void EndSlot(u8 s)
 	for (st = 0; st < NUM_STATIONS; st++)
 	{
 		g_Game.aud[st][s] = Audience(st, s);
-		q[st] = Sim_Quota(st, s);
+		q[st] = g_Game.aud[st][s];                       // Image: disputa por audiencia absoluta (torres ajudam)
 	}
 	g_Game.aud_done[s] = 1;
 	// anuncio do jogador
@@ -351,7 +359,7 @@ static void EndDay(void)
 		}
 	}
 	Sim_BettyDay();                                                           // pretendentes, decaimento (banked)
-	g_Game.money -= DAILY_UPKEEP; g_Game.day_cost += DAILY_UPKEEP;
+	{ u8 up = (u8)(DAILY_UPKEEP + TOWER_UPKEEP * g_Game.tower); g_Game.money -= up; g_Game.day_cost += up; }
 	for (i = 0; i < DB_NUM_AGENCIES; i++) if (g_Game.news_sub[i]) { g_Game.money -= NEWS_FEE; g_Game.day_cost += NEWS_FEE; }
 	if (g_Game.debt > 0) g_Game.debt += g_Game.debt * INTEREST_PCT / 100;     // juros do chefe
 	if (g_Game.money < BANKRUPT_AT) g_Game.game_over = 1;

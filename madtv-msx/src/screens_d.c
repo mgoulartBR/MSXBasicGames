@@ -229,3 +229,45 @@ void Rival_Draw(void) __banked
 }
 
 void Rival_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
+
+// ---------------------------------------------------------------- CORRETOR (torres de transmissao)
+void Realtor_Draw(void) __banked
+{
+	u8 x, st;
+	u16 c = Sim_TowerCost();
+	Ui_Begin();
+	ClearContent();
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Realtor - transmitter towers");
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 16), "Your tower level");  Ui_Color(UI_WHITE); Ui_Int(130, (u8)(CONTENT_Y + 16), g_Game.tower); Ui_Text(142, (u8)(CONTENT_Y + 16), "/"); Ui_Int(150, (u8)(CONTENT_Y + 16), TOWER_MAX);
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 26), "Audience reach");    Ui_Color(UI_WHITE); Ui_Dec1(130, (u8)(CONTENT_Y + 26), Sim_Reach(0)); Ui_Text(154, (u8)(CONTENT_Y + 26), "million");
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 36), "Tower upkeep");      Ui_Color(UI_WHITE); x = Ui_Int(130, (u8)(CONTENT_Y + 36), TOWER_UPKEEP * g_Game.tower); Ui_Text(x, (u8)(CONTENT_Y + 36), "k/day");
+	for (st = 1; st < NUM_STATIONS; st++)
+	{
+		u8 y = (u8)(CONTENT_Y + 50 + st * 10);
+		Ui_Color(g_StationCol[st]); Ui_Text(4, y, g_StationName[st]);
+		Ui_Color(UI_GRAY); Ui_Text(60, y, "reach"); Ui_Dec1(100, y, Sim_Reach(st));
+	}
+	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 84), c ? ">" : " ");
+	if (c) { Ui_Text(14, (u8)(CONTENT_Y + 84), "Build next tower:"); Money(120, (u8)(CONTENT_Y + 84), c); }
+	else { Ui_Color(UI_GREEN); Ui_Text(14, (u8)(CONTENT_Y + 84), "Maximum coverage reached."); }
+	Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 100), "More reach = more audience, Image and ads.");
+	Ui_End(0, CONTENT_Y - 2, 255, 160);
+	Hint("OK:build tower  BACK:building");
+}
+
+void Realtor_Input(u8 ev) __banked
+{
+	if (ev & IN_BACK) { Goto(SCR_HUB); return; }
+	if (ev & IN_OK)
+	{
+		u8 r = Sim_BuyTower();
+		Sim_Msg(r == 0 ? "Tower built! Your reach grows." : r == 1 ? "Not enough money!" : "No more towers to build.");
+		g_Dirty |= D_CON | D_MSG | D_HDR;
+	}
+}
+
+void Realtor_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	(void)x;
+	if (btn && y >= CONTENT_Y + 82 && y < CONTENT_Y + 96) Realtor_Input(IN_OK);
+}
