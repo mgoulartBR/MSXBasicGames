@@ -16,6 +16,7 @@ static void AiSchedule(u8 st)
 	Slot* sl = g_Game.slot[st];
 	u8 s = 0, k, best, bestv, m, v, tries;
 	for (k = 0; k < NUM_SLOTS; k++) { sl[k].movie = NONE; sl[k].part = 0; sl[k].ad = NONE; }
+	if (!g_Game.alive[st]) return;
 	while (s < NUM_SLOTS)
 	{
 		best = NONE; bestv = 0;
@@ -183,6 +184,68 @@ void Sim_ExtInit(void) __banked
 	}
 }
 
+// ---------------------------------------------------------------- Betty e presentes
+// 10 presentes de todas as faixas de preco (manual). Custos/efeitos sao PROPRIOS (o original nao documenta os numeros).
+// Efeito cai 30% a cada vez que o presente e dado (por qualquer pretendente) e se recupera aos poucos.
+static const u16 k_GiftCost[NUM_GIFTS] = { 20, 40, 80, 120, 200, 350, 600, 900, 1500, 2500 };
+static const u8 k_GiftEff[NUM_GIFTS]   = {  1,  2,  3,   4,   6,   8,  10,  12,   14,    0 };   // 9 = Dream trip (so para o casamento)
+
+u16 Sim_GiftCost(u8 g) __banked { return k_GiftCost[g]; }
+
+u8 Sim_GiftEffect(u8 g) __banked
+{
+	u8 u = g_Game.gift_uses[g];
+	return (u >= 3) ? (u8)(k_GiftEff[g] / 10) : (u8)((u16)k_GiftEff[g] * (100 - 30 * u) / 100);
+}
+
+u8 Sim_BuyGift(u8 g) __banked
+{
+	if (g_Game.gift_have[g] >= GIFT_MAX_STOCK) return 2;
+	if (g_Game.money < (i32)k_GiftCost[g]) return 1;
+	g_Game.money -= k_GiftCost[g]; g_Game.day_cost += k_GiftCost[g];
+	g_Game.gift_have[g]++;
+	return 0;
+}
+
+u8 Sim_GiveGift(u8 g) __banked
+{
+	u8 gain, room;
+	if (g == GIFT_DREAM) return 3;
+	if (!g_Game.gift_have[g]) return 1;
+	if (g_Game.sym[0] >= g_Game.image[0]) return 2;               // Betty so gosta de quem for tao grande quanto o Image da emissora
+	gain = Sim_GiftEffect(g);
+	room = (u8)(g_Game.image[0] - g_Game.sym[0]);
+	if (gain > room) gain = room;
+	g_Game.gift_have[g]--; g_Game.gift_uses[g]++;
+	g_Game.sym[0] += gain; g_Game.last_gain = gain; g_Game.gift_today = 1;
+	return 0;
+}
+
+u8 Sim_Propose(void) __banked
+{
+	u8 st;
+	if (g_Game.sym[0] < 100) return 1;
+	for (st = 1; st < NUM_STATIONS; st++) if (g_Game.alive[st]) return 2;
+	if (!g_Game.gift_have[GIFT_DREAM]) return 3;
+	g_Game.gift_have[GIFT_DREAM]--;
+	g_Game.won = 1;
+	return 0;
+}
+
+void Sim_BettyDay(void) __banked
+{
+	u8 st, g;
+	if (!g_Game.gift_today && g_Game.sym[0] > 0) g_Game.sym[0]--;     // sem presentes, a atencao dela esfria
+	for (st = 1; st < NUM_STATIONS; st++)                              // os rivais tambem cortejam a Betty
+	{
+		if (!g_Game.alive[st]) continue;
+		if (Rnd(10) < 6) { u8 add = (u8)(1 + Rnd(3)); g_Game.sym[st] = (u8)(g_Game.sym[st] + add > g_Game.image[st] ? g_Game.image[st] : g_Game.sym[st] + add); }
+		else if (g_Game.sym[st] && Rnd(10) < 3) g_Game.sym[st]--;
+		if (Rnd(10) < 4) { g = Rnd(GIFT_DREAM); if (g_Game.gift_uses[g] < 3) g_Game.gift_uses[g]++; }   // presente dado pelo rival gasta o efeito
+	}
+	for (g = 0; g < NUM_GIFTS; g++) if (g_Game.gift_uses[g] && Rnd(4) == 0) g_Game.gift_uses[g]--;      // o efeito se recupera aos poucos
+}
+
 // ---------------------------------------------------------------- salvar / carregar por codigo
 // Sem SRAM no cartucho ASCII8: o estado essencial vira um codigo de SAVE_CHARS caracteres (alfabeto de 32). Nao salvos:
 // desgaste dos filmes (plays), noticias (pool/telejornal), ofertas do dia e a grade de hoje dos rivais - sao regerados.
@@ -206,7 +269,7 @@ void Sim_SaveCode(char* out) __banked
 	u8 bits = 0, o = 0;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
-	b[n++] = 4;                                                       // versao do formato
+	b[n++] = 5;                                                       // versao do formato
 	b[n++] = (u8)g_Game.day; b[n++] = (u8)(g_Game.day >> 8);
 	b[n++] = (u8)g_Game.t;   b[n++] = (u8)(g_Game.t >> 8);
 	b[n++] = (u8)g_Game.money; b[n++] = (u8)(g_Game.money >> 8); b[n++] = (u8)(g_Game.money >> 16); b[n++] = (u8)(g_Game.money >> 24);
@@ -223,6 +286,14 @@ void Sim_SaveCode(char* out) __banked
 		b[n++] = c->days_left;
 	}
 	for (s = 0; s < NUM_SLOTS; s++) { b[n++] = g_Game.slot[0][s].movie; b[n++] = g_Game.slot[0][s].ad; }
+	b[n++] = g_Game.sym[0]; b[n++] = g_Game.sym[1]; b[n++] = g_Game.sym[2];                       // Betty (v5)
+	b[n++] = (u8)(g_Game.alive[0] | (g_Game.alive[1] << 1) | (g_Game.alive[2] << 2));
+	for (i = 0; i < NUM_GIFTS; i++)                                                                // estoque e usos: 2 bits cada
+	{
+		b[n + (i >> 2)] |= (u8)((g_Game.gift_have[i] & 3) << ((i & 3) * 2));
+		b[n + 3 + (i >> 2)] |= (u8)((g_Game.gift_uses[i] & 3) << ((i & 3) * 2));
+	}
+	n += 6;
 	ck = Fletcher16(b, n);
 	b[n++] = (u8)ck; b[n++] = (u8)(ck >> 8);
 	for (i = 0; i < n; i++)                                           // base32
@@ -257,7 +328,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	if (n != SAVE_BYTES) return 1;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
-	if (b[0] != 4) return 3;
+	if (b[0] != 5) return 3;
 	// validacao semantica antes de aplicar
 	n = 12;
 	if (b[11] + b[12] > 100) return 3;
@@ -293,6 +364,16 @@ u8 Sim_LoadCode(const char* code) __banked
 		sl->movie = b[n + s * 2]; sl->ad = b[n + s * 2 + 1];
 		sl->part = (s && sl->movie != NONE && g_Game.slot[0][s - 1].movie == sl->movie && g_Game.slot[0][s - 1].part + 1 < g_Movies[sl->movie].blocks)
 			? (u8)(g_Game.slot[0][s - 1].part + 1) : 0;
+	}
+	{                                                                  // Betty (v5): comeca apos a grade (n aponta para o fim da grade)
+		u8 p = (u8)(n + NUM_SLOTS * 2);
+		g_Game.sym[0] = b[p]; g_Game.sym[1] = b[p + 1]; g_Game.sym[2] = b[p + 2];
+		for (i = 0; i < NUM_STATIONS; i++) g_Game.alive[i] = (b[p + 3] >> i) & 1;
+		for (i = 0; i < NUM_GIFTS; i++)
+		{
+			g_Game.gift_have[i] = (b[p + 4 + (i >> 2)] >> ((i & 3) * 2)) & 3;
+			g_Game.gift_uses[i] = (b[p + 7 + (i >> 2)] >> ((i & 3) * 2)) & 3;
+		}
 	}
 	AiSchedule(1); AiSchedule(2);
 	NewOffers();

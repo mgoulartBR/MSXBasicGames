@@ -229,3 +229,36 @@ void Save_Mouse(u8 x, u8 y, u8 btn) __banked
 		MarkRows(old / CODE_COLS, s_Pos / CODE_COLS);
 	}
 }
+
+// ---------------------------------------------------------------- titulo e fim de jogo (fora do nucleo fixo p/ poupar espaco)
+void Title_Draw(void) __banked
+{
+	Ui_Clear();
+	Ui_Color(UI_YELLOW); Ui_Text(70, 50, "M A D   T V");
+	Ui_Color(UI_WHITE);  Ui_Text(52, 66, "MSX2 port - version " VERSION_STR);
+	Ui_Color(UI_GRAY);
+	Ui_Text(14, 100, "Run the station: buy movies, sign");
+	Ui_Text(14, 110, "ad contracts, fill the programme grid");
+	Ui_Text(14, 120, "and beat FunTV and SunTV in the ratings.");
+	Ui_Color(UI_GREEN);  Ui_Text(14, 146, "Arrows/joystick: move   OK(Enter/Space)");
+	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
+	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");
+	Ui_Color(UI_CYAN);   Ui_Text(36, 188, "Esc: load a game from a save code");
+	Ui_Fill(0, 166, 255, 10, UI_BG);
+	Ui_Color(g_PtrMode == 3 ? UI_CYAN : g_PtrMode ? UI_GREEN : UI_GRAY); Ui_Text(14, 167, k_MouseTxt[g_PtrMode]);
+	Ui_Color(UI_GRAY);   Ui_Text(4, 202, "Data: TVTower (altered for MSX)");
+}
+
+void Over_Draw(void) __banked
+{
+	Ui_Clear();
+	if (g_Game.won) { Ui_Color(UI_GREEN); Ui_Text(60, 70, "BETTY SAID YES!"); Ui_Color(UI_WHITE); Ui_Text(28, 90, "You are the king of television."); }
+	else
+	{
+		Ui_Color(UI_RED);   Ui_Text(84, 70, "BANKRUPT!");
+		Ui_Color(UI_WHITE); Ui_Text(40, 90, g_Game.alive[0] ? "Mr. Raffer shows you the door." : "Nobody watches your station.");
+	}
+	Ui_Color(UI_GRAY);  Ui_Text(60, 110, "Survived "); Ui_Int(114, 110, g_Game.day); Ui_Text(132, 110, "day(s)");
+	Ui_Color(UI_YELLOW); Ui_Text(60, 150, "Press OK to restart");
+}
+

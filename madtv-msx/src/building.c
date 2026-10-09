@@ -15,7 +15,7 @@ typedef struct { u8 floor; u8 x; u8 col; u8 scr; const char* lbl; const char* na
 static const Room k_Rooms[NROOMS] = {
 	{ 0,  40, COLOR_GRAY,        CODE_STUB,  "PORT", "Porter's desk (not open yet)" },
 	{ 0,  84, COLOR_DARK_YELLOW, SCR_ARCHIVE, "ARCH", "Archive - sell movies" },
-	{ 0, 172, COLOR_GRAY,        CODE_STUB,  "SHOP", "Supermarket (not open yet)" },
+	{ 0, 172, COLOR_LIGHT_BLUE,  SCR_SHOP,   "SHOP", "Supermarket - buy gifts" },
 	{ 1,  40, COLOR_MEDIUM_RED,  SCR_AGENCY, "FILM", "Film agency - buy movies" },
 	{ 1,  84, COLOR_LIGHT_GREEN, SCR_ADS,    "ADS",  "Ad agency - sign contracts" },
 	{ 1, 172, COLOR_CYAN,        SCR_NEWS,   "NEWS", "News room" },
@@ -26,7 +26,7 @@ static const Room k_Rooms[NROOMS] = {
 	{ 3, 172, COLOR_GRAY,        CODE_LOCKED, "FUN",  "FunTV's office (locked)" },
 	{ 3, 216, COLOR_GRAY,        CODE_LOCKED, "SUN",  "SunTV's office (locked)" },
 	{ 4,  40, COLOR_DARK_RED,    SCR_BOSS,   "BOSS", "Mr. Raffer - credit" },
-	{ 4, 172, COLOR_GRAY,        CODE_STUB,  "BETY", "Betty's office (not open yet)" },
+	{ 4, 172, COLOR_MAGENTA,     SCR_BETTY,  "BETY", "Betty's office - gifts, marriage" },
 };
 #define ROOM_OFFICE 9
 

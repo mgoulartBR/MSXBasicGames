@@ -12,6 +12,7 @@ static void Churn(void)
 	int i, t;
 	for (i = 0; i < 6; i++) Sim_Buy((u8)(rand() % DB_NUM_MOVIES));
 	for (i = 0; i < 3; i++) Sim_SignAd((u8)i);
+	g_Game.sym[0] = 17; g_Game.sym[1] = 9; g_Game.sym[2] = 4; g_Game.alive[2] = 0; g_Game.gift_have[3] = 2; g_Game.gift_have[GIFT_DREAM] = 1; g_Game.gift_uses[1] = 2; g_Game.gift_uses[8] = 3;
 	for (i = 0; i < NUM_SLOTS; i += 2) { int m; for (m = 0; m < DB_NUM_MOVIES; m++) if (g_Game.owned[m]) { Sim_PlaceMovie((u8)i, (u8)m); break; } }
 	Sim_PlaceAd(1, 0);
 	Sim_NewsPick(0); Sim_NewsToggle(1);
@@ -41,6 +42,8 @@ int main(void)
 	CHECK(memcmp(a.news_sub, g_Game.news_sub, DB_NUM_AGENCIES) == 0, "agencias");
 	CHECK(memcmp(a.contract, g_Game.contract, sizeof a.contract) == 0, "contratos");
 	CHECK(memcmp(a.slot[0], g_Game.slot[0], sizeof a.slot[0]) == 0, "grade do jogador (incl. part)");
+	CHECK(memcmp(a.sym, g_Game.sym, 3) == 0 && memcmp(a.alive, g_Game.alive, 3) == 0, "Betty: simpatia e emissoras vivas");
+	CHECK(memcmp(a.gift_have, g_Game.gift_have, NUM_GIFTS) == 0 && memcmp(a.gift_uses, g_Game.gift_uses, NUM_GIFTS) == 0, "Betty: estoque e usos dos presentes");
 	Sim_SaveCode(code2);
 	CHECK(strcmp(code, code2) == 0, "save(load(save)) idempotente");
 
@@ -95,6 +98,54 @@ int main(void)
 		m0 = g_Game.money;
 		CHECK(Sim_Sell(5) == 0 && g_Game.money == m0 + Sim_MovieValue(5) && !g_Game.owned[5], "venda ok");
 		CHECK(Sim_Sell(5) == 1, "nao vende o que nao possui");
+	}
+	// Betty: presentes, teto pelo Image, decaimento, pedido de casamento
+	Sim_Init(21);
+	{
+		u8 r; i32 m0;
+		g_Game.money = 50000; g_Game.image[0] = 20; g_Game.sym[0] = 0;
+		CHECK(Sim_BuyGift(2) == 0 && g_Game.gift_have[2] == 1 && g_Game.money == 50000 - Sim_GiftCost(2), "comprar presente");
+		g_Game.gift_have[2] = GIFT_MAX_STOCK; CHECK(Sim_BuyGift(2) == 2, "estoque cheio");
+		g_Game.money = 1; CHECK(Sim_BuyGift(3) == 1, "sem dinheiro para o presente");
+		g_Game.money = 50000;
+		CHECK(Sim_GiveGift(0) == 1, "dar presente sem estoque");
+		CHECK(Sim_GiveGift(GIFT_DREAM) == 3, "Dream trip so no casamento");
+		{ u8 e0 = Sim_GiftEffect(2); CHECK(Sim_GiveGift(2) == 0 && g_Game.sym[0] == e0 && g_Game.last_gain == e0, "efeito pleno do 1o presente");
+		  CHECK(Sim_GiftEffect(2) < e0, "efeito cai com o uso"); }
+		g_Game.sym[0] = 19; g_Game.gift_have[5] = 1; r = Sim_GiveGift(5);
+		CHECK(r == 0 && g_Game.sym[0] == 20, "ganho limitado pelo Image (teto)");
+		g_Game.gift_have[5] = 1; CHECK(Sim_GiveGift(5) == 2 && g_Game.gift_have[5] == 1, "simpatia no teto: recusa sem consumir");
+		// pedido de casamento
+		g_Game.sym[0] = 99; CHECK(Sim_Propose() == 1, "pedir com simpatia < 100");
+		g_Game.sym[0] = 100; g_Game.image[0] = 100; CHECK(Sim_Propose() == 2, "pedir com rivais vivos");
+		g_Game.alive[1] = g_Game.alive[2] = 0; g_Game.gift_have[GIFT_DREAM] = 0; CHECK(Sim_Propose() == 3, "pedir sem Dream trip");
+		g_Game.gift_have[GIFT_DREAM] = 1; m0 = g_Game.money; CHECK(Sim_Propose() == 0 && g_Game.won == 1 && g_Game.gift_have[GIFT_DREAM] == 0 && g_Game.money == m0, "casamento");
+	}
+	// decaimento diario sem presente; com presente nao decai
+	Sim_Init(22);
+	{
+		int t; u8 s0;
+		g_Game.image[0] = 50; g_Game.sym[0] = 10; s0 = g_Game.sym[0];
+		for (t = 0; t < DAY_MINUTES; t++) Sim_Tick();
+		CHECK(g_Game.sym[0] <= s0 - 1 || g_Game.sym[0] < s0, "sem presente a simpatia esfria no fim do dia");
+	}
+	// emissora rival falida: sai da disputa (Image 0), audiencia zero e o jogador passa a ter mais Image
+	Sim_Init(23);
+	{
+		int t;
+		g_Game.image[0] = 98; g_Game.image[1] = 1; g_Game.image[2] = 1; g_Game.sym[1] = 1; g_Game.sym[2] = 1; g_Game.alive[0] = 0;   // jogador fora: so os rivais disputam
+		for (t = 0; t < DAY_MINUTES; t++) Sim_Tick();
+		CHECK(!g_Game.alive[1] || !g_Game.alive[2], "rival com Image 0 faliu");
+		CHECK(g_Game.image[0] + g_Game.image[1] + g_Game.image[2] == 100, "soma do Image continua 100");
+		CHECK((!g_Game.alive[1] && g_Game.image[1] == 0) || g_Game.alive[1], "rival falido tem Image 0");
+	}
+	// jogador com Image 0 = fim de jogo
+	Sim_Init(24);
+	{
+		int t;
+		g_Game.image[0] = 1; g_Game.image[1] = 60; g_Game.image[2] = 39;
+		for (t = 0; t < DAY_MINUTES && !g_Game.game_over; t++) Sim_Tick();
+		CHECK(g_Game.game_over, "jogador sem Image perde");
 	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;

@@ -4,13 +4,14 @@
 Game g_Game;
 // Ganchos de teste: offsets dos campos de Game conforme o compilador Z80, preenchidos em Sim_Init (os testes no openMSX leem
 // g_DbgOffsets pelo mapa de simbolos). Custa ~20 bytes de RAM e ~150 de ROM.
-u16 g_DbgOffsets[10];
+u16 g_DbgOffsets[16];
 #define OFF(f) ((u16)((u8*)&g_Game.f - (u8*)&g_Game))
 static void DbgInit(void)
 {
 	g_DbgOffsets[0] = OFF(day); g_DbgOffsets[1] = OFF(t); g_DbgOffsets[2] = OFF(money); g_DbgOffsets[3] = OFF(debt);
 	g_DbgOffsets[4] = OFF(image); g_DbgOffsets[5] = OFF(owned); g_DbgOffsets[6] = OFF(slot); g_DbgOffsets[7] = OFF(news_slate);
 	g_DbgOffsets[8] = OFF(news_sub); g_DbgOffsets[9] = OFF(contract);
+	g_DbgOffsets[10] = OFF(sym); g_DbgOffsets[11] = OFF(alive); g_DbgOffsets[12] = OFF(gift_have); g_DbgOffsets[13] = OFF(gift_uses); g_DbgOffsets[14] = OFF(won);
 }
 
 #ifdef BALANCE_STATS
@@ -91,6 +92,7 @@ void Sim_MsgNum(const char* a, i32 v, const char* b)
 // ---------------------------------------------------------------- audiencia
 static u8 Audience(u8 st, u8 s)
 {
+	if (!g_Game.alive[st]) return 0;
 	const Slot* sl = &g_Game.slot[st][s];
 	u16 a = (u16)g_Reach[st] * s_TimeShare[s] / 100;
 	if (sl->movie == NONE)
@@ -188,6 +190,7 @@ static void StartDay(void)
 {
 	u8 st, m;
 	g_Game.t = 0;
+	g_Game.gift_today = 0;
 	g_Game.day++;
 	g_Game.day_income = 0; g_Game.day_cost = 0;
 	for (st = 0; st < NUM_SLOTS; st++) g_Game.aud_done[st] = 0;
@@ -205,6 +208,7 @@ void Sim_Init(u16 seed)
 	for (n = 0; n < sizeof(Game); n++) ((u8*)&g_Game)[n] = 0;
 	g_Game.money = START_MONEY;
 	g_Game.image[0] = 34; g_Game.image[1] = 33; g_Game.image[2] = 33;
+	for (st = 0; st < NUM_STATIONS; st++) { g_Game.alive[st] = 1; g_Game.sym[st] = 5; }
 	for (st = 0; st < NUM_STATIONS; st++)
 		for (s = 0; s < NUM_SLOTS; s++) { g_Game.slot[st][s].movie = NONE; g_Game.slot[st][s].ad = NONE; }
 	g_Game.seed = g_Rng;
@@ -278,13 +282,29 @@ static void EndSlot(u8 s)
 		}
 		else { Sim_Msg("Spot missed audience!"); STAT(g_StatMissed++); }
 	}
-	// Image: maior quota tira 1 ponto da menor
-	for (st = 1; st < NUM_STATIONS; st++)
+	// cultura no ar agrada a Betty (+1 simpatia ao fim do ultimo bloco), sem passar do Image
+	if (g_Game.slot[0][s].movie != NONE && g_Movies[g_Game.slot[0][s].movie].cat == CAT_CULTURE
+		&& g_Game.slot[0][s].part + 1 == g_Movies[g_Game.slot[0][s].movie].blocks && g_Game.sym[0] < g_Game.image[0])
+		g_Game.sym[0]++;
+	// Image: entre as emissoras vivas, a maior quota tira 1 ponto da menor; Image 0 = falencia da emissora
+	best = worst = NONE;
+	for (st = 0; st < NUM_STATIONS; st++)
 	{
-		if (q[st] > q[best]) best = st;
-		if (q[st] < q[worst]) worst = st;
+		if (!g_Game.alive[st]) continue;
+		if (best == NONE || q[st] > q[best]) best = st;
+		if (worst == NONE || q[st] < q[worst]) worst = st;
 	}
-	if (best != worst && g_Game.image[worst] > 0) { g_Game.image[best]++; g_Game.image[worst]--; }
+	if (best != worst && worst != NONE && g_Game.image[worst] > 0)
+	{
+		g_Game.image[best]++; g_Game.image[worst]--;
+		if (g_Game.image[worst] == 0)
+		{
+			g_Game.alive[worst] = 0;
+			if (worst == 0) g_Game.game_over = 1;                       // o jogador perdeu todo o Image
+			else { Sim_Msg(worst == 1 ? "FunTV went bankrupt!" : "SunTV went bankrupt!"); }
+		}
+	}
+	for (st = 0; st < NUM_STATIONS; st++) if (g_Game.sym[st] > g_Game.image[st]) g_Game.sym[st] = g_Game.image[st];   // Betty: simpatia <= Image
 }
 
 static void EndDay(void)
@@ -322,6 +342,7 @@ static void EndDay(void)
 			for (st = 0; st < NUM_SLOTS; st++) if (g_Game.slot[0][st].ad == i) g_Game.slot[0][st].ad = NONE;
 		}
 	}
+	Sim_BettyDay();                                                           // pretendentes, decaimento (banked)
 	g_Game.money -= DAILY_UPKEEP; g_Game.day_cost += DAILY_UPKEEP;
 	for (i = 0; i < DB_NUM_AGENCIES; i++) if (g_Game.news_sub[i]) { g_Game.money -= NEWS_FEE; g_Game.day_cost += NEWS_FEE; }
 	if (g_Game.debt > 0) g_Game.debt += g_Game.debt * INTEREST_PCT / 100;     // juros do chefe

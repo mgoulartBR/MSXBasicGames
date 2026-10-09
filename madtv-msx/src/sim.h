@@ -51,8 +51,12 @@
 #define INTEREST_PCT  6          // juros diarios do credito do chefe (%)
 #define CREDIT_BASE   3000       // limite de credito base (k$)
 #define CREDIT_PER_IMAGE 40      // + k$ por ponto de Image
-#define SAVE_BYTES    51
-#define SAVE_CHARS    82         // ceil(SAVE_BYTES*8/5)
+#define NUM_GIFTS     10
+#define GIFT_MAX_STOCK 3
+#define GIFT_DREAM    9          // "Dream trip": presente de casamento (nao conta como simpatia)
+#define CAT_CULTURE   5          // indice da categoria Culture em db_data
+#define SAVE_BYTES    61
+#define SAVE_CHARS    98         // ceil(SAVE_BYTES*8/5)
 
 typedef struct { u8 movie; u8 part; u8 ad; } Slot;          // movie=NONE: vazio; part = bloco dentro do filme; ad = indice de contrato
 typedef struct { u8 ad; u8 reps_left; u8 days_left; } Contract;
@@ -71,7 +75,14 @@ typedef struct {
 	Contract contract[MAX_CONTRACTS];
 	u8  offer[NUM_OFFERS];              // ofertas do dia na Agencia de Publicidade (NONE = ja assinada)
 	i16 day_income, day_cost;
-	u8  game_over;                      // 0 = jogando, 1 = falencia
+	u8  game_over;                      // 0 = jogando, 1 = falencia ou Image zerado
+	u8  won;                            // 1 = casou com a Betty
+	u8  sym[NUM_STATIONS];              // simpatia da Betty por cada emissora (<= Image da emissora)
+	u8  alive[NUM_STATIONS];            // 0 = emissora faliu (Image 0)
+	u8  gift_have[NUM_GIFTS];           // presentes comprados e ainda nao dados (max 3 de cada)
+	u8  gift_uses[NUM_GIFTS];           // quantas vezes cada presente ja foi dado a Betty (por qualquer pretendente): efeito cai
+	u8  gift_today;                     // jogador deu presente hoje (senao a simpatia diminui)
+	u8  last_gain;                      // pontos do ultimo presente dado
 	u16 seed;                           // semente da partida (reconstroi as bibliotecas dos rivais ao carregar)
 	i32 debt;                           // credito do chefe (k$)
 	u8  news_sub[DB_NUM_AGENCIES];      // agencias assinadas
@@ -115,6 +126,13 @@ void  Sim_ExtHour(void) __banked;           // hora cheia: noticias + telejornal
 u8    Sim_Rnd(u8 n);                        // 0..n-1
 extern u16 g_Rng;
 extern const u8 g_Fit[DB_NUM_CATEGORIES][NUM_SLOTS];
+// Betty e presentes (sim_ext.c)
+u16   Sim_GiftCost(u8 g) __banked;          // k$
+u8    Sim_GiftEffect(u8 g) __banked;        // pontos de simpatia que o presente daria agora (cai 30%/uso)
+u8    Sim_BuyGift(u8 g) __banked;           // 0 ok, 1 sem dinheiro, 2 estoque cheio
+u8    Sim_GiveGift(u8 g) __banked;          // 0 ok (ganho em g_Game.last_gain), 1 sem estoque, 2 simpatia ja no teto (Image), 3 reservado p/ casamento
+u8    Sim_Propose(void) __banked;           // 0 casou, 1 simpatia < 100, 2 ainda ha rivais, 3 falta a Dream trip
+void  Sim_BettyDay(void) __banked;          // fim do dia: decaimento, pretendentes rivais, recuperacao dos usos
 // credito / arquivo
 i32   Sim_CreditLimit(void);
 u8    Sim_Borrow(i32 k);                    // 0 ok, 1 acima do limite

@@ -42,11 +42,12 @@ u8 Input_Poll(void);
 u8 Input_TypedChar(void);
 
 // ---- ponteiro (mouse). O MSX nao distingue "mouse" de "joystick" na porta: o modo e escolhido pelo jogador (tecla M).
-// Modo 0 = sem mouse (teclado/joystick 1); 1 = mouse na porta 1 (joystick passa a ser lido na porta 2); 2 = mouse na porta 2.
+// Modo 3 = AUTOMATICO (padrao: procura um mouse nas portas 1 e 2; o cursor ja aparece), 1 = mouse na porta 1 (joystick passa a
+// ser lido na porta 2), 2 = mouse na porta 2, 0 = desligado (cursor escondido). Tecla M cicla 3 -> 1 -> 2 -> 0 -> 3.
 #define PTR_MOVED  1
 #define PTR_LEFT   2     // botao esquerdo apertado agora (borda)
 #define PTR_RIGHT  4     // botao direito apertado agora (borda)
-extern u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject;
+extern u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_PtrFound;
 extern u8 g_InExtra;           // bit 0 = tecla M apertada agora (borda); preenchido por Input_Poll
 u8   Pointer_Update(void);     // le o mouse (se ativo), move o cursor-sprite; retorna PTR_*
 void Pointer_Cycle(void);      // M: desligado -> porta 1 -> porta 2 -> desligado

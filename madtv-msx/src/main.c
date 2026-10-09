@@ -1,7 +1,6 @@
 // MadTV-MSX - nucleo fixo: laco principal, cabecalho, mensagens, hub e despacho para as telas (segmentos banked).
 #include "app.h"
 
-#define VERSION_STR "0.5.1"
 
 u8 g_Screen, g_Speed, g_Dirty, g_RowA, g_RowB, g_Sel, g_First;
 u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
@@ -145,34 +144,10 @@ void NavApply(u8 r)
 }
 
 // ---------------------------------------------------------------- telas especiais
-static const char* const k_MouseTxt[3] = { "Mouse: off (press M to use a mouse)", "Mouse: on, port 1 (joystick on port 2)", "Mouse: on, port 2" };
+const char* const k_MouseTxt[4] = { "Mouse: off (press M)", "Mouse: port 1 (joystick on port 2)", "Mouse: port 2", "Mouse: auto-detect (or press M)" };
 
-static void Draw_Title(void)
-{
-	Ui_Clear();
-	Ui_Color(UI_YELLOW); Ui_Text(70, 50, "M A D   T V");
-	Ui_Color(UI_WHITE);  Ui_Text(52, 66, "MSX2 port - version " VERSION_STR);
-	Ui_Color(UI_GRAY);
-	Ui_Text(14, 100, "Run the station: buy movies, sign");
-	Ui_Text(14, 110, "ad contracts, fill the programme grid");
-	Ui_Text(14, 120, "and beat FunTV and SunTV in the ratings.");
-	Ui_Color(UI_GREEN);  Ui_Text(14, 146, "Arrows/joystick: move   OK(Enter/Space)");
-	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
-	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");
-	Ui_Color(UI_CYAN);   Ui_Text(36, 188, "Esc: load a game from a save code");
-	Ui_Fill(0, 166, 255, 10, UI_BG);
-	Ui_Color(g_PtrMode ? UI_GREEN : UI_GRAY); Ui_Text(14, 167, k_MouseTxt[g_PtrMode]);
-	Ui_Color(UI_GRAY);   Ui_Text(4, 202, "Data: TVTower (altered for MSX)");
-}
-
-static void Draw_Over(void)
-{
-	Ui_Clear();
-	Ui_Color(UI_RED);   Ui_Text(84, 70, "BANKRUPT!");
-	Ui_Color(UI_WHITE); Ui_Text(40, 90, "Mr. Raffer shows you the door.");
-	Ui_Color(UI_GRAY);  Ui_Text(60, 110, "Survived "); Ui_Int(114, 110, g_Game.day); Ui_Text(132, 110, "day(s)");
-	Ui_Color(UI_YELLOW); Ui_Text(60, 150, "Press OK to restart");
-}
+#define Draw_Title Title_Draw
+#define Draw_Over Over_Draw
 
 // ---------------------------------------------------------------- despacho para as telas (todas __banked)
 static void ScreenEnter(u8 scr)
@@ -188,6 +163,8 @@ static void ScreenEnter(u8 scr)
 	case SCR_SAVE:   Save_Enter(); break;
 	case SCR_HUB:    Building_Enter(); break;
 	case SCR_OFFICE: Office_Enter(); break;
+	case SCR_SHOP:   Shop_Enter(); break;
+	case SCR_BETTY:  Betty_Enter(); break;
 	}
 }
 
@@ -212,6 +189,8 @@ static void ScreenInput(u8 ev)
 	case SCR_ARCHIVE: Archive_Input(ev); break;
 	case SCR_BOSS:    Boss_Input(ev); break;
 	case SCR_SAVE:    Save_Input(ev); break;
+	case SCR_SHOP:    Shop_Input(ev); break;
+	case SCR_BETTY:   Betty_Input(ev); break;
 	}
 }
 
@@ -229,6 +208,8 @@ static void ScreenDraw(void)
 	case SCR_ARCHIVE: Archive_Draw(); break;
 	case SCR_BOSS:    Boss_Draw(); break;
 	case SCR_SAVE:    Save_Draw(); break;
+	case SCR_SHOP:    Shop_Draw(); break;
+	case SCR_BETTY:   Betty_Draw(); break;
 	}
 }
 
@@ -267,6 +248,8 @@ static void ScreenRow(u8 r)
 	case SCR_ARCHIVE: Archive_Row(r); break;
 	case SCR_BOSS:   Boss_Row(r); break;
 	case SCR_SAVE:   Save_Row(r); break;
+	case SCR_SHOP:   Shop_Row(r); break;
+	case SCR_BETTY:  Betty_Row(r); break;
 	}
 }
 
@@ -294,6 +277,8 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	case SCR_ARCHIVE: Archive_Mouse(x, y, btn); break;
 	case SCR_BOSS:    Boss_Mouse(x, y, btn); break;
 	case SCR_SAVE:    Save_Mouse(x, y, btn); break;
+	case SCR_SHOP:    Shop_Mouse(x, y, btn); break;
+	case SCR_BETTY:   Betty_Mouse(x, y, btn); break;
 	}
 }
 
@@ -329,6 +314,7 @@ void main()
 		}
 		{
 			u8 p = Pointer_Update();
+			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Draw_Title(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
 			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
@@ -363,7 +349,6 @@ void main()
 				if (g_Screen == SCR_ADS && (e & EV_DAY)) g_Dirty |= D_CON;       // ofertas novas
 				else g_Dirty |= D_DAT;
 			}
-			if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); continue; }
 		}
 
 		if (g_Screen == SCR_HUB)                                // predio: movimento das figuras a cada frame
@@ -372,6 +357,7 @@ void main()
 			if (r != 0xFF) Goto(r);
 		}
 		ScreenInput(ev);
+		if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); continue; }
 
 		if (g_Dirty & D_HDR) Draw_Header();
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
