@@ -127,3 +127,6 @@ fontes (antes ficavam fora da VRAM util).
 
 v4: piso/teto texturizados ate ~240 unidades (linhas de profundidade >120 usam 2 LRMM de 128 pixels). Limitacao conhecida: so existe UM plano de piso e UM de teto por quadro
 (o flat e a altura do setor do jogador); setores vizinhos com teto/piso em outra altura ou outro flat aparecem com o plano do jogador na altura errada.
+
+v5: pisos/tetos POR SETOR. Um raio pelo centro da tela (passos de 32 unidades) lista os setores a frente; cada um desenha seu flat e sua altura (z=160*H/r) em ordem
+do mais longe ao mais perto. Aproximacao: o setor do centro vale para a linha inteira (cantos laterais podem mostrar o flat/altura do setor do centro).

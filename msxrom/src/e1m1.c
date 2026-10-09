@@ -404,22 +404,49 @@ static void plane_row(u8 y,s16 zr,u16 ry,s16 s,s16 c){
   plane_seg(y,cx-mulq14(c,hx),cy+mulq14(s,hx),du,dv,ry,0,zr>120?128:256);
   if(zr>120) plane_seg(y,cx,cy,du,dv,ry,128,128);
 }
-static void planes(const Sec *sc){
-  s16 s=isin(yaw),c=icos(yaw),H; u8 r,rmin;
-  if(sc->fid!=cur_ff){ build_region(sc->fid,FL_REG_Y); cur_ff=sc->fid; }
-  H=eye-sc->floor;
-  if(H>4){ rmin=(u8)((2*H+1)/3); if(rmin<12)rmin=12; for(r=rmin;r<VIEW_H-89;r++) plane_row(89+r,(160*H)/r,FL_REG_Y,s,c); }
-  if(sc->cid!=255){
-    if(sc->cid!=cur_cf){ build_region(sc->cid,CE_REG_Y); cur_cf=sc->cid; }
-    H=sc->ceil-eye;
-    if(H>4){ rmin=(u8)((2*H+1)/3); if(rmin<12)rmin=12; for(r=rmin;r<=89;r++) plane_row(89-r,(160*H)/r,CE_REG_Y,s,c); }
+/* Pisos/tetos por setor: um raio pelo centro da tela, em passos de 32 unidades, da a sequencia de setores a frente (segmentos). Cada segmento tem seu flat, sua
+ * altura de piso/teto e sua faixa de linhas (z = 160*H/r). Desenha do mais longe para o mais perto. Aproximacao: o setor do centro vale para a linha toda. */
+typedef struct{ u8 sec; s16 d0,d1; } Seg;
+static Seg segs[10]; static u8 nseg;
+static void probe(s16 s,s16 c){
+  s16 x=px,y=py,d=0,dx=mulq14(s,32),dy=mulq14(c,32); u8 last=255,i,sc; nseg=0;
+  for(i=0;i<20;i++){
+    sc=rast(x,y); if(sc==255)break;
+    if(sc!=last){ if(nseg>=10)break; if(nseg)segs[nseg-1].d1=d; segs[nseg].sec=sc; segs[nseg].d0=d; nseg++; last=sc; }
+    x+=dx; y+=dy; d+=32;
+  }
+  if(nseg)segs[nseg-1].d1=d+32;
+}
+static void planes(s16 s,s16 c){
+  s16 H,i,rlo,rhi,rz,r; u16 d0,d1; const Sec *sc;
+  probe(s,c);
+  for(i=nseg-1;i>=0;i--){                                          /* piso */
+    sc=&secs[segs[i].sec]; H=eye-sc->floor; if(H<=4)continue;
+    d0=segs[i].d0; if(d0<1)d0=1; d1=segs[i].d1;
+    rhi=(s16)((160u*H)/d0); if(rhi>88)rhi=88; rlo=(s16)((160u*H+d1-1)/d1); if(rlo<1)rlo=1;
+    if(rlo>rhi)continue;
+    rz=(2*H+2)/3; if(rz<12)rz=12;                                 /* z<=240: textura */
+    if(rlo<rz){ s16 e=rz-1<rhi?rz-1:rhi; fill(0,89+rlo,SCR_W,e-rlo+1,sc->f0); }
+    if(rhi>=rz){ if(sc->fid!=cur_ff){ build_region(sc->fid,FL_REG_Y); cur_ff=sc->fid; }
+      for(r=rlo>rz?rlo:rz;r<=rhi;r++) plane_row(89+r,(160u*H)/r,FL_REG_Y,s,c); }
+  }
+  for(i=nseg-1;i>=0;i--){                                          /* teto */
+    sc=&secs[segs[i].sec]; H=sc->ceil-eye; if(H<=4)continue;
+    d0=segs[i].d0; if(d0<1)d0=1; d1=segs[i].d1;
+    rhi=(s16)((160u*H)/d0); if(rhi>89)rhi=89; rlo=(s16)((160u*H+d1-1)/d1); if(rlo<1)rlo=1;
+    if(rlo>rhi)continue;
+    if(sc->cid==255){ fill(0,89-rhi,SCR_W,rhi-rlo+1,sc->c0); continue; }
+    rz=(2*H+2)/3; if(rz<12)rz=12;
+    if(rlo<rz){ s16 e=rz-1<rhi?rz-1:rhi; fill(0,89-e,SCR_W,e-rlo+1,sc->c0); }
+    if(rhi>=rz){ if(sc->cid!=cur_cf){ build_region(sc->cid,CE_REG_Y); cur_cf=sc->cid; }
+      for(r=rlo>rz?rlo:rz;r<=rhi;r++) plane_row(89-r,(160u*H)/r,CE_REG_Y,s,c); }
   }
 }
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
   /* piso e teto: cores do setor do jogador */
-  if(s0!=255){ sc=&secs[s0]; fill(0,0,SCR_W,44,sc->c1); fill(0,44,SCR_W,45,sc->c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); planes(sc); }
+  if(s0!=255){ sc=&secs[s0]; fill(0,0,SCR_W,44,sc->c1); fill(0,44,SCR_W,45,sc->c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); planes(isin(yaw),icos(yaw)); }
   else { fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
   wait_ce();
   make_view();
