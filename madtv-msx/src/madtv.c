@@ -4,7 +4,7 @@
 #include "sim.h"
 #include "data/db_data.h"
 
-#define VERSION_STR "0.3.2"
+#define VERSION_STR "0.3.3"
 #define CONTENT_Y   28
 #define ROW_H       10
 #define MSG_Y       201
@@ -674,6 +674,8 @@ static void StartGame(void)
 void main()
 {
 	u8 ev, e, hz, fc = 0, fpm;
+	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
+	s_Dirty = 0; s_Menu = 0; s_Sel = 0; s_First = 0; s_GridCol = 0; s_Slot = 0; s_Pick = 0; s_PickN = 0; s_Cat = 0;
 	Ui_Init();
 	Index_Movies();
 	Draw_Title();

@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")/.."
 [ -d external/msxgl ] || scripts/setup.sh
 [ "$1" = clean ] && rm -rf out emul lib dist/*.rom
-node external/msxgl/engine/script/js/build.js target=ROM_32K 2>&1 | tail -n 25
+node external/msxgl/engine/script/js/build.js target=ROM_ASCII8 2>&1 | tail -n 25
 mkdir -p dist
 VER=$(cat VERSION)
 cp emul/rom/madtv.rom dist/madtv-msx-$VER.rom

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3 -I
 """Converte um subconjunto do banco do TVTower (XML) em tabelas C compactas para o MSX.
 
-Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>  (gera tambem db_data.c)
+Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>  (gera tambem db_data_s3_b3.c = segmento 3 do mapper ASCII8)
 
 Fonte da verdade: os XML originais. Nada aqui e escrito a mao; rode de novo para regenerar.
 Mapeamentos TVTower -> categorias Mad TV estao em CATEGORIES (decisao de design documentada em docs/PORTING.md).
@@ -154,7 +154,8 @@ def emit(movies, ads, news, out):
     L.append("};")
     base = Path(out).with_suffix("")
     base.with_suffix(".h").write_text("\n".join(H) + "\n", encoding="utf-8")
-    base.with_suffix(".c").write_text("\n".join(L) + "\n", encoding="utf-8")
+    # o arquivo .c vira o SEGMENTO 3 do mapper (banco 3, 0xA000): MSXgl compila *_s3_b3.c na area SEG3
+    Path(str(base) + "_s3_b3.c").write_text("\n".join(L) + "\n", encoding="utf-8")
 
 def main():
     src, out = Path(sys.argv[1]), sys.argv[2]
