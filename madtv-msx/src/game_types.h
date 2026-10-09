@@ -23,8 +23,9 @@ typedef struct {
 	u16 penalty;
 } Ad;
 
-typedef struct {
-	const char* title;
-	u8 genre;
-	u8 price;     // preco * 10
-} News;
+typedef struct {                // registro FIXO no segmento 4 (copiado para RAM por Db_News)
+	char title[40];
+	u8 agency;                  // 0 Politics, 1 Showbiz, 2 Misc
+	u8 quality;                 // 0..100
+	u8 price;                   // x100 (0.4 -> 40)
+} NewsRec;
