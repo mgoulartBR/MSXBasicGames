@@ -47,3 +47,12 @@ void Agency_Row(u8 r) __banked;    void Agency_List(void) __banked;  void Agency
 void Ads_Enter(void) __banked;     void Ads_Draw(void) __banked;     void Ads_Input(u8 ev) __banked;
 void Ads_Row(u8 r) __banked;       void Ads_Detail(void) __banked;
 void Ratings_Draw(void) __banked;  void Ratings_Dyn(void) __banked;  void Ratings_Input(u8 ev) __banked;
+
+void News_Enter(void) __banked;    void News_Draw(void) __banked;    void News_Input(u8 ev) __banked;
+void News_Row(u8 r) __banked;      void News_Dyn(void) __banked;     void News_Detail(void) __banked;
+void Archive_Enter(void) __banked; void Archive_Draw(void) __banked; void Archive_Input(u8 ev) __banked;
+void Archive_Row(u8 r) __banked;   void Archive_List(void) __banked;
+void Boss_Enter(void) __banked;    void Boss_Draw(void) __banked;    void Boss_Input(u8 ev) __banked;
+void Boss_Row(u8 r) __banked;
+void Save_Enter(void) __banked;    void Save_EnterLoad(void) __banked; void Save_Draw(void) __banked; void Save_Input(u8 ev) __banked;
+void Save_Row(u8 r) __banked;

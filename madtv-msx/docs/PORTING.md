@@ -10,17 +10,19 @@ Video strategy  : Screen 5 (256x212, 16 cores), texto bitmap do MSXgl + barras c
 Audio strategy  : PSG (a definir; nenhuma implementacao ainda)
 Input strategy  : teclado (setas) + joystick 1, ambos simultaneos. Mouse original -> cursor por setas/botao.
 Memory strategy : tabelas const em ROM geradas por tools/convert_db.py; RAM so para estado do jogo.
-ROM mapper      : ROM_ASCII8 (128 KB, 16 segmentos de 8 KB). Segmentos 0-2 = codigo fixo (4000h-9FFFh, 24 KB); banco 3 (A000h-BFFFh)
-                  = janela de dados (segmento 3 = tabelas do catalogo; novos lotes = segmentos 4..15 via `db_data_s<N>_b3.c`).
+ROM mapper      : ROM_ASCII8 (128 KB, 16 segmentos de 8 KB), 3 regioes: segmentos 0-1 = codigo FIXO (4000h-7FFFh, 16 KB);
+                  banco 2 (8000h-9FFFh) = janela de CODIGO banked (segmentos 5-8, chamadas `__banked` por trampolim do MSXgl);
+                  banco 3 (A000h-BFFFh) = janela de DADOS (segmento 3 = catalogo filmes/anuncios; 4 = noticias).
 
 Features preserved : dia 17h-1h em tempo real, grade 18h-0h, categorias, atributos de filme (critica/ritmo/bilheteria, FSK18, blocos),
-                     compra de filmes, contratos de publicidade (preco/multa/repeticoes/prazo/audiencia minima), audiencia por hora,
+                     compra e venda de filmes (Arquivo), Sala de Noticias com 3 agencias, credito do chefe com juros, salvar/carregar por codigo,
+                     contratos de publicidade (preco/multa/repeticoes/prazo/audiencia minima), audiencia por hora,
                      Image dividido em 100 pontos com a regra de transferencia por slot, 3 emissoras, falencia.
 Features adapted   : catalogo do TVTower reduzido a subconjunto curado (88 filmes, 24 anuncios, 24 noticias);
                      8 categorias (TVTower tem generos mais finos -> CATEGORIES em tools/convert_db.py);
                      preco de filme provisorio = media(criticas,ritmo,bilheteria) * price_mod (NAO e a formula do TVTower).
-Features omitted   : Betty/presentes, noticias, producao propria, estudios, Sammys, sabotagem, torres/satelites, credito do chefe,
-                     venda de filmes, salvar/carregar, audio, escolha da emissora, dificuldade, grade de "amanha".
+Features omitted   : Betty/presentes, producao propria, estudios, Sammys, sabotagem, torres/satelites, audio, escolha da emissora,
+                     dificuldade, grade de "amanha", predio navegavel.
 
 Known limitations  : textos so em ingles/ASCII; titulos com ${...} nao resolvidos sao descartados.
 Performance issues : texto resolvido com fonte em VRAM (ver Medicoes); ROM_32K quase cheia.
@@ -76,6 +78,17 @@ por screenshot. Grade/lista de escolha usam o mesmo mecanismo mas nao foram medi
 - Rivais (FunTV/SunTV): grade preenchida por heuristica (melhor de 6 candidatos por slot) **so entre os filmes da propria biblioteca**
   (comeca com 5 e ganha 1 por dia, ordem aleatoria por partida); audiencia dos rivais x0,88 (dificuldade normal); sem contratos.
 
+- Noticias (0.4): 3 agencias (Politics = genero 0 do TVTower; Showbiz = 1 e 5; Misc = 2, 3 e 4), taxa de 30k$/dia por agencia assinada.
+  A cada hora cheia cada agencia assinada entrega (50%) 1 noticia ao pool (8 itens, expiram em 10 h). O jogador compra itens
+  (custo = price/4 k$) para o telejornal de 3 posicoes; frescor = 100% - 10%/hora (min 10%); qualidade do telejornal = media(qualidade x frescor).
+  Audiencia do programa seguinte x (70% + 30% x qualidade); rivais fixos em x0,80. Telejornal vazio = x0,70.
+- Credito do chefe: limite = 3000k + 40k por ponto de Image; juros 6%/dia sobre a divida; emprestimo/pagamento em passos de 500k.
+- Arquivo: revenda = metade do preco x (100% - 8% por exibicao recente, min 20%); nao vende filme que esta na grade.
+- Multa de contrato efetiva = 60% da multa do banco de dados (TVTower e mais duro que as audiencias deste modelo).
+- Salvar/carregar: sem SRAM no ASCII8 -> codigo de 82 caracteres (alfabeto de 32, sem I/O/Y/Z) com checksum Fletcher-16.
+  Salva: dia, hora, caixa, divida, Image, filmes possuidos, agencias, contratos, grade de hoje, semente. Nao salva: desgaste
+  dos filmes, noticias do pool/telejornal, ofertas do dia, grade de hoje dos rivais (regerados). Tempo para na tela de codigo.
+
 ## Balanceamento (autoplay: `tests/balance.sh [dias] [partidas]`, mesma `src/sim.c` compilada no PC)
 Politicas: *idle* (nao faz nada), *naive* (assina todos os contratos), *careful* (assina so se a qualidade maxima permite), *smart*
 (usa a audiencia real do dia anterior, so assina o que consegue cumprir, compra filmes ate acompanhar a biblioteca dos rivais).
@@ -83,21 +96,33 @@ Achados que mudaram o jogo (primeira versao: **100% de falencia em todas as poli
 1. rivais tinham o catalogo inteiro de graca -> Image do jogador ia a ~0 em poucos dias; agora tem biblioteca limitada (+1/dia) e x0,88.
 2. filmes caros (preco/10) e caixa inicial 1500k$ deixavam o jogador sem capital para uma grade completa; agora preco/20 e 2500k$.
 3. multas dos contratos sao maiores que o pagamento (dados do TVTower: ate 2500k$ vs 1583k$) - assinar sem conferir a audiencia e fatal.
-Resultado atual (500 partidas, 30 dias): *smart* **7% de falencia**, Image medio **32** (fatia justa = 33), caixa mediana ~10,4M k$;
-*naive* e *careful* **100%** de falencia (contratos assinados sem audiencia suficiente); *idle* termina o mes com -500k$.
-(60 dias, 300 partidas: smart 8% de falencia, Image 26.) **Limites:** as politicas sao heuristicas minhas, nao jogadores
+Resultado antes das noticias (0.3.4): smart 7% de falencia, Image 32. **Com noticias, credito e multa efetiva de 60% (0.4)**
+(rivais x0,85 e telejornal fixo x0,80; politica *smart* agora tambem atualiza o telejornal e usa o credito como colchao),
+500 partidas / 30 dias: *smart* **~1% de falencia**, Image medio **~52**; *naive* e *careful* **100%** de falencia (assinam sem
+checar audiencia); *idle* termina o mes com -1400k$. (60 dias, 300 partidas: smart 4%, Image 63.) Achado: a primeira versao com noticias
+falia 35-43% porque o jogador sem telejornal perde 30% de audiencia - o harness tambem tinha um bug (filmes de 3 blocos
+sobrepunham os ja colocados) que so apareceu ao corrigir a politica. **Limites:** as politicas sao heuristicas minhas, nao jogadores
 humanos; o caixa cresce muito para o jogador competente (sera drenado por torres/estudios/presentes/juros nos proximos milestones).
 
-## Mapper: decisao (0.3.3)
-Por que ASCII8 e nao ASCII16: ASCII16 so tem 2 bancos de 16 KB - para ter uma janela de dados sem tirar codigo do ar seria
-preciso que todo o codigo coubesse em 16 KB. Com ASCII8 o codigo fixo ocupa 3 bancos (24 KB) e sobra um banco de 8 KB para
-janela de dados/codigo. ASCII8 e suportado por openMSX, flash carts comuns e FPGA. Alternativas descartadas: ROM_48K/64K
-(dependem de a cartucho decodificar a pagina 0/3 - menos portavel) e Konami (sem vantagem aqui).
-Passo 1 (config): desligar recursos nao usados do MSXgl em `msxgl_config.h` (modos de video, sprites, Print FX/format/32 bits,
-BIOS sub/disk): **31 907 -> 24 037 bytes (-7,9 KB)** sem mudar o comportamento (verificado por teste + screenshot).
-Passo 2 (mapper): codigo fixo 20 170 bytes (4000h-8EC9h) de 24 576 disponiveis; dados no segmento 3: 3 895 de 8 192 bytes.
-Regra atual: o banco 3 fica sempre mapeado no segmento 3 (dados lidos por ponteiro direto). **Quando o catalogo passar de
-um segmento, introduzir acessores que mapeiam o segmento (SET_BANK_SEGMENT(3, n)) antes de ler** - previsto no 0.4 (noticias).
+## Mapper: decisao (0.3.3) e arquitetura de segmentos (0.4)
+Por que ASCII8 e nao ASCII16: ASCII16 so tem 2 bancos de 16 KB - uma janela de dados tiraria codigo do ar. Com ASCII8 ha 4 bancos
+de 8 KB e e suportado por openMSX, flash carts comuns e FPGA. Alternativas descartadas: ROM_48K/64K (dependem de o cartucho decodificar
+as paginas 0/3 - menos portavel) e Konami (sem vantagem aqui).
+Passo 1 (0.3.3): desligar recursos nao usados do MSXgl em `msxgl_config.h`: **31 907 -> 24 037 bytes**. No 0.4 tambem sai o modulo
+Print inteiro (a fonte e desempacotada por `FontUnpack` em ui.c): -2 KB.
+**0.4: o codigo passou de 24 KB e foi dividido em segmentos banked** (BankedCall do MSXgl; o trampolim troca o banco 2 durante a chamada):
+| Segmento | Banco | Conteudo | Bytes (de 8192) |
+|---|---|---|---|
+| 0-1 (fixo) | 4000h | crt0, MSXgl, ui.c, main.c, sim.c (nucleo), db.c | 14 857 de 16 384 |
+| 3 | A000h | catalogo: 88 filmes, 24 anuncios | 3 073 |
+| 4 | A000h | noticias (115 registros fixos de 43 bytes) | 4 945 |
+| 5 | 8000h | telas Grade / Agencia de filmes / Publicidade / Audiencias | 5 051 |
+| 6 | 8000h | sim_ext: IA dos rivais, noticias, ofertas, salvar/carregar | 4 596 |
+| 7 | 8000h | telas Noticias + Arquivo | 2 218 |
+| 8 | 8000h | telas Chefe (credito) + Salvar/Carregar | 2 951 |
+Regras: (1) o banco 3 fica no segmento 3; dados de outros segmentos so sao lidos dentro de `Db_News` (copia para RAM e restaura o
+banco); (2) funcoes banked recebem/retornam so valores ou ponteiros para RAM/ROM fixa; (3) literais de codigo banked ficam no
+proprio segmento (`--codeseg`); (4) estado compartilhado entre telas fica em RAM fixa (`app.h`) e e inicializado em `main()`.
 
 ### Bug latente encontrado na migracao: RAM nao zerada
 O crt0 do MSXgl nao zera o BSS; o codigo dependia de variaveis estaticas valerem 0 (o emulador mascarava). Ao mudar o layout o

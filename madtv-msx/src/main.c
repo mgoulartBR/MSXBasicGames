@@ -5,6 +5,9 @@
 
 u8 g_Screen, g_Speed, g_Dirty, g_RowA, g_RowB, g_Sel, g_First;
 u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
+// Medicao de desempenho: maior tempo (jiffies = interrupcoes do VDP) gasto no desenho completo de cada tela. Lido pelos testes.
+u8 g_DrawMax[SCR_OVER + 1];
+#define JIFFY (*(volatile u16*)0xFC9E)
 
 // ---------------------------------------------------------------- utilitarios
 static void Pad2(char* d, u8 v) { d[0] = '0' + v / 10; d[1] = '0' + v % 10; }
@@ -126,37 +129,35 @@ void NavApply(u8 r)
 }
 
 // ---------------------------------------------------------------- HUB
-static const char* const k_Menu[] = { "Programme grid", "Film agency", "Ad agency", "Ratings & image" };
-static const u8 k_MenuScr[] = { SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_RATINGS };
-#define MENU_N 4
+static const char* const k_Menu[] = { "Programme grid", "Film agency", "Ad agency", "News room", "Archive (sell movies)", "Boss office (credit)", "Ratings & image", "Save / Load" };
+static const u8 k_MenuScr[] = { SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE };
+#define MENU_N 8
 static u8 s_Menu;
 
+#define HY(n) ((u8)(CONTENT_Y + 98 + (n)))     // (u8) evita falso aviso de overflow do SDCC em constantes > 127
 static void Draw_HubDyn_Body(void)
 {
-	u8 i, n = 0, y;
-	Ui_Fill(0, CONTENT_Y + 60, 255, 80, UI_BG);
+	u8 i, n = 0, c = 0, a = 0;
+	Ui_Fill(0, HY(0), 255, 34, UI_BG);
 	Ui_Color(UI_GRAY);
 	for (i = 0; i < DB_NUM_MOVIES; i++) n += g_Game.owned[i];
-	Ui_Text(4, CONTENT_Y + 62, "Movies owned:"); Ui_Int(86, CONTENT_Y + 62, n);
-	Ui_Text(4, CONTENT_Y + 76, "Contracts:");
-	for (i = 0; i < MAX_CONTRACTS; i++)
-	{
-		const Contract* c = &g_Game.contract[i];
-		if (c->ad == NONE) continue;
-		y = CONTENT_Y + 86 + i * ROW_H;
-		Ui_Color(UI_WHITE);
-		Ui_TextN(4, y, g_Ads[c->ad].title, 16);
-		Ui_Color(UI_GRAY);
-		Ui_Int(112, y, c->reps_left); Ui_Text(124, y, "x");
-		Ui_Int(140, y, c->days_left); Ui_Text(152, y, "d");
-	}
+	for (i = 0; i < MAX_CONTRACTS; i++) c += (g_Game.contract[i].ad != NONE);
+	for (i = 0; i < DB_NUM_AGENCIES; i++) a += g_Game.news_sub[i];
+	Ui_Text(4, HY(2), "Movies"); Ui_Int(40, HY(2), n);
+	Ui_Text(70, HY(2), "Contracts"); Ui_Int(124, HY(2), c);
+	Ui_Text(150, HY(2), "Agencies"); Ui_Int(198, HY(2), a);
+	Ui_Color(g_Game.debt ? UI_RED : UI_GRAY);
+	Ui_Text(4, HY(14), "Debt"); Money(34, HY(14), g_Game.debt);
+	Ui_Color(UI_GRAY);
+	Ui_Text(110, HY(14), "Betty"); Ui_Text(146, HY(14), "(not yet)");
+	Ui_Text(4, HY(26), "Next newscast quality"); Ui_Int(136, HY(26), Sim_NewsQuality()); Ui_Text(154, HY(26), "%");
 }
 
 static void Draw_HubDyn(void)
 {
 	Ui_Begin();
 	Draw_HubDyn_Body();
-	Ui_End(0, CONTENT_Y + 60, 255, 80);
+	Ui_End(0, HY(0), 255, 34);
 }
 
 static void DrawRow_Hub(u8 i)
@@ -204,7 +205,8 @@ static void Draw_Title(void)
 	Ui_Text(14, 120, "and beat FunTV and SunTV in the ratings.");
 	Ui_Color(UI_GREEN);  Ui_Text(14, 146, "Arrows/joystick: move   OK(Enter/Space)");
 	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
-	Ui_Color(UI_YELLOW); Ui_Text(60, 184, "Press OK to start");
+	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");
+	Ui_Color(UI_CYAN);   Ui_Text(36, 188, "Esc: load a game from a save code");
 	Ui_Color(UI_GRAY);   Ui_Text(4, 202, "Data: TVTower (altered for MSX)");
 }
 
@@ -225,6 +227,10 @@ static void ScreenEnter(u8 scr)
 	case SCR_GRID:   Grid_Enter(); break;
 	case SCR_AGENCY: Agency_Enter(); break;
 	case SCR_ADS:    Ads_Enter(); break;
+	case SCR_NEWS:   News_Enter(); break;
+	case SCR_ARCHIVE: Archive_Enter(); break;
+	case SCR_BOSS:   Boss_Enter(); break;
+	case SCR_SAVE:   Save_Enter(); break;
 	}
 }
 
@@ -243,6 +249,10 @@ static void ScreenInput(u8 ev)
 	case SCR_AGENCY:  Agency_Input(ev); break;
 	case SCR_ADS:     Ads_Input(ev); break;
 	case SCR_RATINGS: Ratings_Input(ev); break;
+	case SCR_NEWS:    News_Input(ev); break;
+	case SCR_ARCHIVE: Archive_Input(ev); break;
+	case SCR_BOSS:    Boss_Input(ev); break;
+	case SCR_SAVE:    Save_Input(ev); break;
 	}
 }
 
@@ -255,6 +265,10 @@ static void ScreenDraw(void)
 	case SCR_AGENCY:  Agency_Draw(); break;
 	case SCR_ADS:     Ads_Draw(); break;
 	case SCR_RATINGS: Ratings_Draw(); break;
+	case SCR_NEWS:    News_Draw(); break;
+	case SCR_ARCHIVE: Archive_Draw(); break;
+	case SCR_BOSS:    Boss_Draw(); break;
+	case SCR_SAVE:    Save_Draw(); break;
 	}
 }
 
@@ -265,6 +279,8 @@ static void ScreenDyn(void)
 	case SCR_HUB:     Draw_HubDyn(); break;
 	case SCR_GRID:    Grid_Dyn(); break;
 	case SCR_RATINGS: Ratings_Dyn(); break;
+	case SCR_NEWS:    News_Dyn(); break;
+	case SCR_BOSS:    Boss_Draw(); break;
 	}
 }
 
@@ -274,6 +290,7 @@ static void ScreenList(void)
 	{
 	case SCR_GRID:   Grid_List(); break;
 	case SCR_AGENCY: Agency_List(); break;
+	case SCR_ARCHIVE: Archive_List(); break;
 	}
 }
 
@@ -285,6 +302,10 @@ static void ScreenRow(u8 r)
 	case SCR_GRID:   Grid_Row(r); break;
 	case SCR_AGENCY: Agency_Row(r); break;
 	case SCR_ADS:    Ads_Row(r); break;
+	case SCR_NEWS:   News_Row(r); break;
+	case SCR_ARCHIVE: Archive_Row(r); break;
+	case SCR_BOSS:   Boss_Row(r); break;
+	case SCR_SAVE:   Save_Row(r); break;
 	}
 }
 
@@ -294,6 +315,7 @@ static void ScreenDetail(void)
 	{
 	case SCR_AGENCY: Agency_Detail(); break;
 	case SCR_ADS:    Ads_Detail(); break;
+	case SCR_NEWS:   News_Detail(); break;
 	}
 }
 
@@ -311,6 +333,7 @@ void main()
 {
 	u8 ev, e, hz, fc = 0, fpm;
 	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
+	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
 	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; s_Menu = 0; g_Speed = SPEED_1; g_Screen = SCR_TITLE;
 	Ui_Init();
 	Draw_Title();
@@ -320,15 +343,21 @@ void main()
 		Halt();
 		ev = Input_Poll();
 
-		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) { if (ev & IN_OK) StartGame(); continue; }
+		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
+		{
+			if (ev & IN_OK) StartGame();
+			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Goto(SCR_SAVE); Save_EnterLoad(); }   // Esc no titulo: carregar codigo
+			continue;
+		}
 
 		// velocidade (normalizada para 50/60 Hz): 1 min de jogo = 1/2, 1/5 ou 1/12 de segundo real
 		hz = VDP_GetFrequency() ? 50 : 60;
 		fpm = (g_Speed == SPEED_1) ? hz / 2 : (g_Speed == SPEED_2) ? hz / 5 : hz / 12;
+		if (g_Screen == SCR_SAVE) ev &= (u8)~(IN_SPEED | IN_PAUSE);      // P/TAB sao letras do codigo na tela de salvar/carregar
 		if (ev & IN_SPEED) { g_Speed = (g_Speed % (SPEED_COUNT - 1)) + 1; g_Dirty |= D_HDR; }
 		if (ev & IN_PAUSE) { g_Speed = (g_Speed == SPEED_PAUSE) ? SPEED_1 : SPEED_PAUSE; g_Dirty |= D_HDR; }
 
-		if (g_Speed != SPEED_PAUSE && ++fc >= fpm)
+		if (g_Speed != SPEED_PAUSE && g_Screen != SCR_SAVE && ++fc >= fpm)    // tempo parado na tela Salvar/Carregar
 		{
 			fc = 0;
 			e = Sim_Tick();
@@ -346,7 +375,14 @@ void main()
 
 		if (g_Dirty & D_HDR) Draw_Header();
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
-		if (g_Dirty & D_CON) ScreenDraw();
+		if (g_Dirty & D_CON)
+		{
+			u16 t0 = JIFFY;
+			u8 d;
+			ScreenDraw();
+			d = (u8)(JIFFY - t0);
+			if (d > g_DrawMax[g_Screen]) g_DrawMax[g_Screen] = d;
+		}
 		else if (g_Dirty & (D_ROWS | D_LIST | D_DET))
 		{
 			// cursor/lista: so redesenha o que mudou (linhas A/B, lista inteira sem limpar a tela, ou detalhes)
