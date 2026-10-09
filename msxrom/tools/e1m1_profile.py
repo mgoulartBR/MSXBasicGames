@@ -17,7 +17,7 @@ M=Machine(lambda row:0xFF,rom=os.path.join(P,'p.rom')); STEP=157; hist=collectio
 mem=M.m.memory
 while len(M.frames)<2: M.m.ticks_to_stop=STEP; M.m.run()
 sy={m.group(2):int(m.group(1),16) for m in re.finditer(r'^\s+([0-9A-F]{8})\s+_(\w+)\s',txt,re.M)}
-mem[sy['msg_t']]=0; mem[sy['msg']]=0; mem[sy['msg']+1]=0; mem[sy['tex_planes']]=int(os.environ.get('TEX','0'))
+mem[sy['msg_t']]=0; mem[sy['msg']]=0; mem[sy['msg']+1]=0
 if len(sys.argv)>3:
     sy={m.group(2):int(m.group(1),16) for m in re.finditer(r'^\s+([0-9A-F]{8})\s+_(\w+)\s',txt,re.M)}
     for n,v in (('px',int(sys.argv[1])),('py',int(sys.argv[2]))): mem[sy[n]:sy[n]+2]=(v&0xFFFF).to_bytes(2,'little')

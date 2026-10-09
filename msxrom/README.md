@@ -145,3 +145,7 @@ por setor (so piso). Padrao: ~0,50 M T-states/quadro de CPU (so o custo base); p
 v9: pisos e tetos como GEOMETRIA no PVS (retangulos de 32..320 unidades por setor, faces lisas do Geo3D): o teto de um setor baixo oculta o que esta alem/acima (antes a parede alta do salao vazava
 por cima do teto rebaixado) e pisos de outros setores (lago, degraus) ficam na altura certa. Tetos so para setores com vizinho mais alto; tiles que tocam o bloco do jogador sao omitidos (a faixa de cor cobre).
 Competem com as paredes pelo limite de 255 vertices/faces (peso: tetos 3x, pisos 0,25x). Paleta: indices < 128 reservados a cores lisas. ROM ainda de 4 MiB (empacotamento first-fit decrescente dos blobs).
+
+v11: TETO PRETO SOLIDO em tempo de execucao: depois do Geo3D, tudo acima da linha do teto e pintado de preto. A linha vem de um leque de 8 raios (12 passos de 32 de profundidade, recalculado a cada 2 quadros): por faixa
+de colunas, max sobre os trechos de setor de 89-160*H/d_fim (H = teto - altura do olho); entre faixas interpola (diferenca >24 linhas: usa a menor). Removidos: piso texturizado por LRMM (TAB), tampas pretas e tetos como geometria.
+Pisos continuam como faixas do setor a frente + retangulos lisos no PVS. Banco de codigo: ~12,7 KB.

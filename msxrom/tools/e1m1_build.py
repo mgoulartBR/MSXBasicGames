@@ -217,10 +217,10 @@ def main():
     for i,(bx,by) in enumerate(bl):
         vps=P.block_viewpoints(L,bx,by)
         if not vps: continue
-        allids=sorted(P.visible_subs(L,vps)); allt=P.visible_tiles(L,vps,bx,by)
+        allids=sorted(P.visible_subs(L,vps)); allt=P.visible_tiles(L,vps,bx,by); alll=[]                                                  # tampas pretas: descartadas (custavam vertices demais); o teto e pintado em tempo de execucao
         for hd in range(P.NHEAD):
             ids=[j for j in allids if P.inview(L,j,bx,by,P.head_deg(hd),P.CONE)]
-            r=P.build_block(L,bx,by,ids=ids,tiles=[t for t in allt if P.tile_in_cone(L,t,bx,by,P.head_deg(hd),P.CONE)])
+            r=P.build_block(L,bx,by,ids=ids,tiles=[t for t in allt if P.tile_in_cone(L,t,bx,by,P.head_deg(hd),P.CONE)],lids=[i_ for i_ in alll if P.lid_in_cone(L,i_,bx,by,P.head_deg(hd),P.CONE)])
             res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
             nv=len(r['verts']); nf=len(r['faces'])
             blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])

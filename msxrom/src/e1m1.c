@@ -80,15 +80,6 @@ vt_blk:
     ret
   __endasm;
 }
-/* cpia simples (LMMM, sem pagina): monta as regioes de piso/teto 256x64 a partir do tile 16x16 do flat */
-static void copyv(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h){
-  wait_ce(); vr(17,32); vw(sx); vw(sy); vw(dx); vw(dy); vw(w); vw(h); vi=0; vi=0; vi=0x90;
-}
-static void build_region(u8 id,u16 ry){
-  u16 tx=(u16)(id&15)<<4, ty=FLAT_TILE_Y+((u16)(id>>4)<<4);
-  copyv(tx,ty,0,ry,16,16); copyv(0,ry,16,ry,16,16); copyv(0,ry,32,ry,32,16); copyv(0,ry,64,ry,64,16); copyv(0,ry,128,ry,128,16);
-  copyv(0,ry,0,ry+16,256,16); copyv(0,ry,0,ry+32,256,32);
-}
 static void set_vram_write(u8 blk,u16 addr){ vr(14,blk); vc=(u8)addr; vc=((u8)(addr>>8)&0x3F)|0x40; }
 s16 mulq14(s16 a,s16 b) __sdcccall(1);
 
@@ -173,7 +164,7 @@ static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
 
 /* ---------------------------------------------------------------- estado */
 s16 px,py,eye,hp,armor,ammo; u8 yaw,cool,fire_t,hurt,over,kills,items_got,tick,sfx,msg_t,face_t;
-static const char *msg; u8 tex_planes;
+static const char *msg;
 static u8 keys,old_keys,fcnt;
 #define K_LEFT 1
 #define K_RIGHT 2
@@ -311,7 +302,6 @@ static void update(void){
   if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R);
   if(cool)cool--; if(fire_t)fire_t--; if(hurt)hurt--; if(face_t)face_t--; if(msg_t&&!--msg_t)msg=0;
   if((keys&K_FIRE)&&!cool)shoot();
-  if((keys&K_TAB)&&!(old_keys&K_TAB)){ tex_planes^=1; say(tex_planes?"PISO TEXTURIZADO: LIGADO":"PISO TEXTURIZADO: DESLIGADO",50); }
   tgt=floor_at(px,py)+41; if(tgt>eye){ eye+=(tgt-eye+3)>>2; } else if(tgt<eye){ eye-=(eye-tgt+3)>>2; }
   for(i=0;i<NTHING;i++){
     if(!th[i].on)continue;
@@ -392,90 +382,31 @@ static void overlay(void){
 }
 /* Piso e teto texturizados: uma LRMM por linha de tela (mapeamento afim por linha = perspectiva correta de plano). Tile de 16x16 texels
  * por 64 unidades; a regiao replicada (256x64) faz o wrap em X (modulo 256) e deixa a faixa de V caber sem cruzar o limite. So ate zr<=120 unidades. */
-static u8 cur_ff=255,cur_cf=255;
-static void plane_span(u8 y,u16 x,u16 nx,u8 ny,s16 X,s16 Y,s16 du,s16 dv,u16 ry){
-  s16 u0=(X+2)>>2,v0=(Y+2)>>2; u16 sy=ry+(v0&15); if(dv<0)sy+=48;
-  wait_ce(); vr(17,32);
-  vw(256+(u0&127)); vw(sy); vw(x); vw(y+((u16)page<<8)); vw(nx); vw(ny); vi=0; vi=0;
-  vr(17,47); vw(du); vw(dv); vr(17,46); vi=0x30;
-}
-/* Pisos/tetos por setor. Um leque de NG=8 raios (um por faixa de 32 colunas), em passos de 32 unidades de PROFUNDIDADE, lista os setores a frente em cada faixa
- * (segmentos). Cada segmento tem a faixa de linhas (z=160*H/r) do piso e do teto do seu setor. A linha de tela pertence ao segmento mais proximo da faixa que a
- * contem; faixas vizinhas do mesmo setor viram uma LRMM so. Modo texturizado (tecla TAB): blocos de 2 ou 4 linhas por LRMM (NY: a LRMM repete a linha com um
- * deslocamento de menos de 1 texel), 4 multiplicacoes por trecho; modo liso: so cores do setor. */
-#ifndef NG
-#define NG 4
-#endif
-#define NS 4
-#define GW (256/NG)
-static u8 sg_n[NG],sg_sec[NG*NS],lo0[NG*NS],hi0[NG*NS],rz0[NG*NS],lo1[NG*NS],hi1[NG*NS],rz1[NG*NS];
-static u8 *const LO[2]={lo0,lo1},*const HI[2]={hi0,hi1},*const RZ[2]={rz0,rz1};
-static void seg_close(u8 k,s16 d0,s16 d1){
-  u8 p; s16 H; u8 sec=sg_sec[k]; u16 h,l;
-  if(d0<1)d0=1;
-  for(p=0;p<1;p++){                                                  /* so piso (o teto e preto liso) */
-    H=eye-secs[sec].floor;
-    if(H<=4){ LO[p][k]=1; HI[p][k]=0; continue; }
-    h=(160u*H)/d0; if(h>(p?89:88))h=p?89:88; l=(160u*H+d1-1)/d1; if(l<1)l=1;
-    LO[p][k]=(u8)l; HI[p][k]=(u8)h; l=(2*H+2)/3; RZ[p][k]=(u8)(l<12?12:l);
-  }
-}
-static void probe_fan(s16 s,s16 c){
-  u8 g,i,n,sc,last,k; s16 x,y,d,d0,dx,dy,t;
-  for(g=0;g<NG;g++){
-    t=GW/2+GW*g-128; dx=mulq14(s,32)+(mulq14(c,32)*t)/160; dy=mulq14(c,32)+(mulq14(-s,32)*t)/160;
-    x=px; y=py; d=0; n=0; last=255; d0=0; k=g*NS;
-    for(i=0;i<10;i++){
+/* Teto: preto solido. O Geo3D nao tem profundidade por pixel, entao paredes/objetos mais altos que o teto atras de uma abertura apareceriam por cima dele.
+ * Depois do Geo3D, pintamos de preto tudo ACIMA da linha do teto: um leque de 8 raios (passos de 32 de profundidade) da, por faixa de colunas, o setor
+ * em cada trecho; a linha de corte e a mais baixa entre as projecoes do teto de cada trecho no seu fim (z = 160*H/(linha)). Entre faixas, interpola. */
+static u8 ycut[8];
+static void ceil_probe(s16 s,s16 c){
+  u8 g,i,sc,last,yc; s16 x,y,d,dx,dy,t,H; u16 r;
+  for(g=0;g<8;g++){
+    t=16+32*g-128; dx=mulq14(s,32)+(mulq14(c,32)*t)/160; dy=mulq14(c,32)+(mulq14(-s,32)*t)/160;
+    x=px; y=py; d=0; last=255; yc=0;
+    for(i=0;i<12;i++){
       sc=rast(x,y); if(sc==255)break;
-      if(sc!=last){ if(n>=NS)break; if(n)seg_close(k+n-1,d0,d); sg_sec[k+n]=sc; d0=d; n++; last=sc; }
+      if(sc!=last){ if(last!=255){ H=secs[last].ceil-eye; if(H>4){ r=(160u*H)/d; if(r<89){ r=89-r; if(r>yc)yc=(u8)r; } } } last=sc; }
       x+=dx; y+=dy; d+=32;
     }
-    if(n)seg_close(k+n-1,d0,i<10?d:2000);
-    sg_n[g]=n;
+    if(last!=255){ H=secs[last].ceil-eye; if(H>4){ r=(160u*H)/(i<12?d:1500); if(r<89){ r=89-r; if(r>yc)yc=(u8)r; } } }
+    ycut[g]=yc;
   }
 }
-static u8 run_r[48],run_a[48],run_b[48],run_s[48],run_n[48];
-static s16 axt[8],ayt[8],pxq,pyq;                                  /* camera encaixada na grade de texels: o piso se move em passos coerentes (sem tremer linha a linha) */
-static void plane_pass(u8 p,s16 s,s16 c){
-  u8 g,r,rp,ny,i,n,k,nr=0,o[NG],a,j,f,rmax=p?89:88; u16 ry=p?CE_REG_Y:FL_REG_Y; u8 *cur=p?&cur_cf:&cur_ff;
-  const u8 *lo=LO[p],*hi=HI[p],*rz=RZ[p]; s16 c8=mulq14(c,6527),s8=-mulq14(s,6527);
-  for(r=12;r<=rmax;r+=ny){
-    ny=r<24?2:4; if(r+ny-1>rmax)ny=rmax-r+1; rp=p?r+ny-1:r;
-    for(g=0;g<NG;g++){ o[g]=255; n=sg_n[g]; k=g*NS;
-      for(i=0;i<n;i++,k++) if(lo[k]<=rp&&rp<=hi[k]){ if(rp>=rz[k]&&(p==0||secs[sg_sec[k]].cid!=255))o[g]=sg_sec[k]; break; } }
-    for(g=0;g<NG;g++){ if(o[g]==255)continue; a=g; while(g+1<NG&&o[g+1]==o[a])g++;
-      if(nr<48){ run_r[nr]=rp; run_n[nr]=ny; run_a[nr]=a; run_b[nr]=g; run_s[nr]=o[a]; nr++; } }
-  }
-  for(k=0;k<nr;k++){ if(run_r[k]==255)continue;
-    f=p?secs[run_s[k]].cid:secs[run_s[k]].fid;
-    if(f!=*cur){ build_region(f,ry); *cur=f; }
-    for(j=k;j<nr;j++){ s16 H,zr,du,dv; u16 x,xe,m; u8 y;
-      if(run_r[j]==255||(p?secs[run_s[j]].cid:secs[run_s[j]].fid)!=f)continue;
-      rp=run_r[j]; H=p?secs[run_s[j]].ceil-eye:eye-secs[run_s[j]].floor; zr=(160u*H)/rp; y=p?89-rp:89+rp;
-      du=mulq14(c8,zr); dv=mulq14(s8,zr);
-      for(x=(u16)run_a[j]*GW,xe=((u16)run_b[j]+1)*GW;x<xe;x+=m){
-        m=xe-x; if(zr>120&&m>128)m=128;
-        plane_span(y,x,m,run_n[j],pxq+mulq14(axt[x>>5],zr),pyq+mulq14(ayt[x>>5],zr),du,dv,ry);
-      }
-      run_r[j]=255; }
-  }
-}
-static void planes(s16 s,s16 c){
-  u8 g,i,p,top,bot,m,k; const Sec *sc; s16 lat; u8 xi;
-  probe_fan(s,c);
-  for(g=0;g<NG;g++) for(i=sg_n[g];i-->0;){ k=g*NS+i; sc=&secs[sg_sec[k]];            /* cores do setor (e partes longe demais para textura) */
-    for(p=0;p<1;p++){ u8 lo=LO[p][k],hi=HI[p][k]; if(lo>hi)continue;
-      top=hi; if(tex_planes&&(p==0||sc->cid!=255)){ if(RZ[p][k]-1<top)top=RZ[p][k]-1; }
-      if(top<lo)continue;
-      m=44;                                                                          /* duas faixas de tom: ate a linha 44 (longe) e alem (perto) */
-      bot=top<m?top:m-1;
-      if(p==0){ if(bot>=lo)fill(g*GW,89+lo,GW,bot-lo+1,sc->f0); if(top>=m)fill(g*GW,89+(lo>m?lo:m),GW,top-(lo>m?lo:m)+1,sc->f1); }
-      else    { if(bot>=lo)fill(g*GW,89-bot,GW,bot-lo+1,sc->c0); if(top>=m)fill(g*GW,89-top,GW,top-(lo>m?lo:m)+1,sc->c1); } } }
-  if(tex_planes){
-    pxq=(px+2)&~3; pyq=(py+2)&~3;
-    for(xi=0;xi<8;xi++){ lat=((s16)(xi*32-128)*205)>>1; axt[xi]=s+mulq14(c,lat); ayt[xi]=c-mulq14(s,lat); }
-    plane_pass(0,s,c);
-  }
+static void ceil_fill(void){
+  u8 j,g,f,a,b; s16 y;
+  for(j=0;j<16;j++){ s16 x=8+16*j;
+    if(x<=16)y=ycut[0]; else if(x>=240)y=ycut[7];
+    else{ g=(u8)((x-16)>>5); f=(u8)((x-16)&31); a=ycut[g]; b=ycut[g+1];
+      y=((a>b?a-b:b-a)>24)?(a<b?a:b):(s16)a+(((s16)b-(s16)a)*(s16)f)/32; }
+    if(y>0)fill(j*16,0,16,y,C_BLACK); }
 }
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
@@ -483,7 +414,7 @@ static void render(void){
   /* teto: preto liso (um plano de teto por quadro vazava para os setores vizinhos). Piso: cores do setor 96 unidades a frente (nao pula ao trocar de setor);
    * com TAB, piso texturizado por setor (leque de raios). */
   { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
-  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,C_BLACK); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); if(tex_planes)planes(sn,cs); } }
+  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,C_BLACK); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); if(!(fcnt&1))ceil_probe(sn,cs); } }
   if(s0==255){ fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
   wait_ce();
   make_view();
@@ -523,6 +454,7 @@ static void render(void){
   gi=0x58; gd=cell_nf; gd=cell_nf+k;
   if(k){ gi=0x50; gtransfer(vbuf,(u16)24*k); gi=0x52; gtransfer(fbuf,(u16)11*k); gi=0x65; gd=cell_nf; gi=0x53; gtransfer(tbuf,(u16)8*k); }
   geo_run(M,TX,TY,TZ);
+  ceil_fill();
   draw_gun();
   if(msg) text(4,4,FONT_ORANGE,msg);
   if(hurt) { fill(0,0,SCR_W,2,C_RED); fill(0,VIEW_H-2,SCR_W,2,C_RED); }
@@ -549,7 +481,7 @@ void main(void){
   set_vram_write(7,0x1400); BANK(AREAB_BANK); vtransfer16k(DATA);          /* linhas 468..531 (fontes); as 512.. sao sobrescritas a seguir */
   set_vram_write(8,0);
   for(i=0;i<NVRAM_BANKS;i++){ BANK(VRAM_BANK0+i); vtransfer16k(DATA); }
-  load_meta(); new_game(); keys=old_keys=0; say("TAB LIGA PISO E TETO TEXTURIZADOS",120);
+  load_meta(); new_game(); keys=old_keys=0;
   for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
   vr(1,0x40);
   mark(0);
