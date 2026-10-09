@@ -391,56 +391,77 @@ static void overlay(void){
 /* Piso e teto texturizados: uma LRMM por linha de tela (mapeamento afim por linha = perspectiva correta de plano). Tile de 16x16 texels
  * por 64 unidades; a regiao replicada (256x64) faz o wrap em X (modulo 256) e deixa a faixa de V caber sem cruzar o limite. So ate zr<=120 unidades. */
 static u8 cur_ff=255,cur_cf=255;
-static void plane_seg(u8 y,s16 X,s16 Y,s16 du,s16 dv,u16 ry,u8 xd,u16 nx){
-  s16 u0=X>>2,v0=Y>>2; u16 sy=ry+(v0&15); if(dv<0)sy+=48;
+static void plane_span(u8 y,u16 x,u16 nx,s16 X,s16 Y,s16 du,s16 dv,u16 ry){
+  s16 u0=(X+2)>>2,v0=(Y+2)>>2; u16 sy=ry+(v0&15); if(dv<0)sy+=48;
   wait_ce(); vr(17,32);
-  vw(256+(u0&127)); vw(sy); vw(xd); vw(y+((u16)page<<8)); vw(nx); vw(1); vi=0; vi=0;
+  vw(256+(u0&127)); vw(sy); vw(x); vw(y+((u16)page<<8)); vw(nx); vw(1); vi=0; vi=0;
   vr(17,47); vw(du); vw(dv); vr(17,46); vi=0x30;
 }
-/* uma linha de tela; zr>120: duas LRMM de 128 pixels (o salto de V de cada uma cabe na regiao de 64 linhas) */
-static void plane_row(u8 y,s16 zr,u16 ry,s16 s,s16 c){
-  s16 Kq=(zr*51)>>3,du=mulq14(c,Kq)>>4,dv=mulq14(-s,Kq)>>4,hx=(zr*51)>>6;
-  s16 cx=px+mulq14(s,zr),cy=py+mulq14(c,zr);
-  plane_seg(y,cx-mulq14(c,hx),cy+mulq14(s,hx),du,dv,ry,0,zr>120?128:256);
-  if(zr>120) plane_seg(y,cx,cy,du,dv,ry,128,128);
-}
-/* Pisos/tetos por setor: um raio pelo centro da tela, em passos de 32 unidades, da a sequencia de setores a frente (segmentos). Cada segmento tem seu flat, sua
- * altura de piso/teto e sua faixa de linhas (z = 160*H/r). Desenha do mais longe para o mais perto. Aproximacao: o setor do centro vale para a linha toda. */
-typedef struct{ u8 sec; s16 d0,d1; } Seg;
-static Seg segs[10]; static u8 nseg;
-static void probe(s16 s,s16 c){
-  s16 x=px,y=py,d=0,dx=mulq14(s,32),dy=mulq14(c,32); u8 last=255,i,sc; nseg=0;
-  for(i=0;i<20;i++){
-    sc=rast(x,y); if(sc==255)break;
-    if(sc!=last){ if(nseg>=10)break; if(nseg)segs[nseg-1].d1=d; segs[nseg].sec=sc; segs[nseg].d0=d; nseg++; last=sc; }
-    x+=dx; y+=dy; d+=32;
+/* Pisos/tetos por setor. Um leque de NG=8 raios (um por faixa de 32 colunas), em passos de 32 unidades de PROFUNDIDADE, lista os setores a frente em cada faixa
+ * (segmentos). Cada segmento tem o flat, a altura e a faixa de linhas (z=160*H/r) do piso e do teto. Cada linha de tela pertence ao segmento mais proximo da faixa
+ * cuja faixa de linhas a contem; faixas vizinhas do mesmo setor viram uma LRMM so (ate 128 px quando z>120: o salto de V cabe na regiao de 64 linhas). */
+#define NG 8
+#define NS 5
+typedef struct{ u8 sec; s16 d0,lo[2],hi[2],rz[2],H[2]; } Seg;
+static Seg sg[NG][NS]; static u8 ns[NG];
+static void seg_close(Seg *q,s16 d1){
+  u8 p; s16 H,d0=q->d0<1?1:q->d0;
+  for(p=0;p<2;p++){
+    H=p?secs[q->sec].ceil-eye:eye-secs[q->sec].floor; q->H[p]=H;
+    if(H<=4){ q->lo[p]=1; q->hi[p]=0; continue; }
+    q->hi[p]=(s16)((160u*H)/d0); if(q->hi[p]>(p?89:88))q->hi[p]=p?89:88;
+    q->lo[p]=(s16)((160u*H+d1-1)/d1); if(q->lo[p]<1)q->lo[p]=1;
+    q->rz[p]=(2*H+2)/3; if(q->rz[p]<12)q->rz[p]=12;
   }
-  if(nseg)segs[nseg-1].d1=d+32;
+}
+static void probe_fan(s16 s,s16 c){
+  u8 g,i,n,sc,last; s16 x,y,d,dx,dy,t;
+  for(g=0;g<NG;g++){
+    t=16+32*g-128; dx=mulq14(s,32)+(mulq14(c,32)*t)/160; dy=mulq14(c,32)+(mulq14(-s,32)*t)/160;
+    x=px; y=py; d=0; n=0; last=255;
+    for(i=0;i<20;i++){
+      sc=rast(x,y); if(sc==255)break;
+      if(sc!=last){ if(n>=NS)break; if(n)seg_close(&sg[g][n-1],d); sg[g][n].sec=sc; sg[g][n].d0=d; n++; last=sc; }
+      x+=dx; y+=dy; d+=32;
+    }
+    if(n)seg_close(&sg[g][n-1],d+32);
+    ns[g]=n;
+  }
+}
+static u8 run_r[140],run_a[140],run_b[140],run_s[140];
+static void plane_pass(u8 p,s16 s,s16 c){
+  u8 g,r,i,nr=0,o[NG],a,k,j,f,rmax=p?89:88; const Seg *q; u16 ry=p?CE_REG_Y:FL_REG_Y; u8 *cur=p?&cur_cf:&cur_ff;
+  for(r=12;r<=rmax;r++){
+    for(g=0;g<NG;g++){ o[g]=255;
+      for(i=0;i<ns[g];i++){ q=&sg[g][i];
+        if(q->lo[p]<=r&&r<=q->hi[p]){ if(r>=q->rz[p]&&(p==0||secs[q->sec].cid!=255))o[g]=q->sec; break; } } }
+    for(g=0;g<NG;g++){ if(o[g]==255)continue; a=g; while(g+1<NG&&o[g+1]==o[a])g++;
+      if(nr<140){ run_r[nr]=r; run_a[nr]=a; run_b[nr]=g; run_s[nr]=o[a]; nr++; } }
+  }
+  for(k=0;k<nr;k++){ if(run_r[k]==255)continue;
+    f=p?secs[run_s[k]].cid:secs[run_s[k]].fid;
+    if(f!=*cur){ build_region(f,ry); *cur=f; }
+    for(j=k;j<nr;j++){ s16 H,zr,Kq,du,dv,lat,X,Y; u16 x,xe,n; u8 y;
+      if(run_r[j]==255||(p?secs[run_s[j]].cid:secs[run_s[j]].fid)!=f)continue;
+      r=run_r[j]; H=p?secs[run_s[j]].ceil-eye:eye-secs[run_s[j]].floor; zr=(160u*H)/r; y=p?89-r:89+r;
+      Kq=(zr*51)>>3; du=mulq14(c,Kq)>>4; dv=mulq14(-s,Kq)>>4;
+      for(x=(u16)run_a[j]*32,xe=((u16)run_b[j]+1)*32;x<xe;x+=n){
+        n=xe-x; if(zr>120&&n>128)n=128;
+        lat=(zr*(s16)(x-128))/160; X=px+mulq14(s,zr)+mulq14(c,lat); Y=py+mulq14(c,zr)+mulq14(-s,lat);
+        plane_span(y,x,n,X,Y,du,dv,ry);
+      }
+      run_r[j]=255; }
+  }
 }
 static void planes(s16 s,s16 c){
-  s16 H,i,rlo,rhi,rz,r; u16 d0,d1; const Sec *sc;
-  probe(s,c);
-  for(i=nseg-1;i>=0;i--){                                          /* piso */
-    sc=&secs[segs[i].sec]; H=eye-sc->floor; if(H<=4)continue;
-    d0=segs[i].d0; if(d0<1)d0=1; d1=segs[i].d1;
-    rhi=(s16)((160u*H)/d0); if(rhi>88)rhi=88; rlo=(s16)((160u*H+d1-1)/d1); if(rlo<1)rlo=1;
-    if(rlo>rhi)continue;
-    rz=(2*H+2)/3; if(rz<12)rz=12;                                 /* z<=240: textura */
-    if(rlo<rz){ s16 e=rz-1<rhi?rz-1:rhi; fill(0,89+rlo,SCR_W,e-rlo+1,sc->f0); }
-    if(rhi>=rz){ if(sc->fid!=cur_ff){ build_region(sc->fid,FL_REG_Y); cur_ff=sc->fid; }
-      for(r=rlo>rz?rlo:rz;r<=rhi;r++) plane_row(89+r,(160u*H)/r,FL_REG_Y,s,c); }
-  }
-  for(i=nseg-1;i>=0;i--){                                          /* teto */
-    sc=&secs[segs[i].sec]; H=sc->ceil-eye; if(H<=4)continue;
-    d0=segs[i].d0; if(d0<1)d0=1; d1=segs[i].d1;
-    rhi=(s16)((160u*H)/d0); if(rhi>89)rhi=89; rlo=(s16)((160u*H+d1-1)/d1); if(rlo<1)rlo=1;
-    if(rlo>rhi)continue;
-    if(sc->cid==255){ fill(0,89-rhi,SCR_W,rhi-rlo+1,sc->c0); continue; }
-    rz=(2*H+2)/3; if(rz<12)rz=12;
-    if(rlo<rz){ s16 e=rz-1<rhi?rz-1:rhi; fill(0,89-e,SCR_W,e-rlo+1,sc->c0); }
-    if(rhi>=rz){ if(sc->cid!=cur_cf){ build_region(sc->cid,CE_REG_Y); cur_cf=sc->cid; }
-      for(r=rlo>rz?rlo:rz;r<=rhi;r++) plane_row(89-r,(160u*H)/r,CE_REG_Y,s,c); }
-  }
+  u8 g,i,p; const Seg *q; const Sec *sc; s16 e,top;
+  probe_fan(s,c);
+  for(g=0;g<NG;g++) for(i=ns[g];i-->0;){ q=&sg[g][i]; sc=&secs[q->sec];             /* partes lisas (longe demais para textura / teto de ceu) */
+    for(p=0;p<2;p++){ if(q->lo[p]>q->hi[p])continue;
+      top=q->hi[p]; if(p==0||sc->cid!=255){ if(q->rz[p]-1<top)top=q->rz[p]-1; }
+      if(top<q->lo[p])continue; e=top-q->lo[p]+1;
+      if(p==0) fill(g*32,89+q->lo[p],32,e,sc->f0); else fill(g*32,89-top,32,e,sc->c0); } }
+  plane_pass(0,s,c); plane_pass(1,s,c);
 }
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;

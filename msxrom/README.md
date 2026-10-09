@@ -130,3 +130,7 @@ v4: piso/teto texturizados ate ~240 unidades (linhas de profundidade >120 usam 2
 
 v5: pisos/tetos POR SETOR. Um raio pelo centro da tela (passos de 32 unidades) lista os setores a frente; cada um desenha seu flat e sua altura (z=160*H/r) em ordem
 do mais longe ao mais perto. Aproximacao: o setor do centro vale para a linha inteira (cantos laterais podem mostrar o flat/altura do setor do centro).
+
+v6: leque de 8 raios (um por faixa de 32 colunas, passos de 32 unidades de profundidade) em vez de um raio central: cada faixa tem a propria sequencia de setores, e cada linha
+de tela pertence ao segmento mais proximo da faixa; faixas vizinhas do mesmo setor viram uma LRMM so. Inicio do mapeamento arredondado ((X+2)>>2). Limite que permanece: o inicio de
+cada linha so tem precisao de 1 texel (4 unidades) porque SX/SY da LRMM nao tem fracao, entao a textura pode tremer de leve ao andar. Banco de codigo: ~15,3 KB de 16 KB.
