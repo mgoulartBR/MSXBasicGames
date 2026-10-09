@@ -138,3 +138,6 @@ cada linha so tem precisao de 1 texel (4 unidades) porque SX/SY da LRMM nao tem 
 v7 (desempenho): pisos/tetos TEXTURIZADOS agora sao opcionais, tecla TAB (padrao: desligado = cores lisas por setor, com 2 tons). Medido no Z80 emulado (so CPU, sem esperas de VDP/Geo3D):
 sem pisos ~0,5 M T-states/quadro; cores por setor ~0,74 M; texturizado ~1,4 M (antes 5,8 M). Z80 a 3,58 MHz fica lento de qualquer jeito; prefira a maquina R800. O modo texturizado usa blocos de 2/4 linhas por LRMM
 (NY>1: a linha seguinte avanca (-VY,+VX) no espaco da textura) e a camera de mapeamento encaixada na grade de texels, para o piso nao tremer linha a linha.
+
+v8: teto = preto liso (o plano unico de teto vazava texturas de setores vizinhos); piso = cores do setor 96 unidades a frente (nao pula ao trocar de setor). TAB liga piso texturizado
+por setor (so piso). Padrao: ~0,50 M T-states/quadro de CPU (so o custo base); piso texturizado ~1,0 M. Suspeita de gargalo no openMSX: area preenchida por quadro (HMMV da tela toda + texels do Geo3D).

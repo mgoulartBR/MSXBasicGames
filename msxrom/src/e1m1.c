@@ -413,8 +413,8 @@ static u8 *const LO[2]={lo0,lo1},*const HI[2]={hi0,hi1},*const RZ[2]={rz0,rz1};
 static void seg_close(u8 k,s16 d0,s16 d1){
   u8 p; s16 H; u8 sec=sg_sec[k]; u16 h,l;
   if(d0<1)d0=1;
-  for(p=0;p<2;p++){
-    H=p?secs[sec].ceil-eye:eye-secs[sec].floor;
+  for(p=0;p<1;p++){                                                  /* so piso (o teto e preto liso) */
+    H=eye-secs[sec].floor;
     if(H<=4){ LO[p][k]=1; HI[p][k]=0; continue; }
     h=(160u*H)/d0; if(h>(p?89:88))h=p?89:88; l=(160u*H+d1-1)/d1; if(l<1)l=1;
     LO[p][k]=(u8)l; HI[p][k]=(u8)h; l=(2*H+2)/3; RZ[p][k]=(u8)(l<12?12:l);
@@ -464,7 +464,7 @@ static void planes(s16 s,s16 c){
   u8 g,i,p,top,bot,m,k; const Sec *sc; s16 lat; u8 xi;
   probe_fan(s,c);
   for(g=0;g<NG;g++) for(i=sg_n[g];i-->0;){ k=g*NS+i; sc=&secs[sg_sec[k]];            /* cores do setor (e partes longe demais para textura) */
-    for(p=0;p<2;p++){ u8 lo=LO[p][k],hi=HI[p][k]; if(lo>hi)continue;
+    for(p=0;p<1;p++){ u8 lo=LO[p][k],hi=HI[p][k]; if(lo>hi)continue;
       top=hi; if(tex_planes&&(p==0||sc->cid!=255)){ if(RZ[p][k]-1<top)top=RZ[p][k]-1; }
       if(top<lo)continue;
       m=44;                                                                          /* duas faixas de tom: ate a linha 44 (longe) e alem (perto) */
@@ -474,15 +474,17 @@ static void planes(s16 s,s16 c){
   if(tex_planes){
     pxq=(px+2)&~3; pyq=(py+2)&~3;
     for(xi=0;xi<8;xi++){ lat=((s16)(xi*32-128)*205)>>1; axt[xi]=s+mulq14(c,lat); ayt[xi]=c-mulq14(s,lat); }
-    plane_pass(0,s,c); plane_pass(1,s,c);
+    plane_pass(0,s,c);
   }
 }
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
-  /* piso e teto: cores do setor do jogador */
-  if(s0!=255){ sc=&secs[s0]; fill(0,0,SCR_W,44,sc->c1); fill(0,44,SCR_W,45,sc->c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); planes(isin(yaw),icos(yaw)); }
-  else { fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
+  /* teto: preto liso (um plano de teto por quadro vazava para os setores vizinhos). Piso: cores do setor 96 unidades a frente (nao pula ao trocar de setor);
+   * com TAB, piso texturizado por setor (leque de raios). */
+  { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
+  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,C_BLACK); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); if(tex_planes)planes(sn,cs); } }
+  if(s0==255){ fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
   wait_ce();
   make_view();
   bx=(px>>7)-BX0; by=(py>>7)-BY0;
