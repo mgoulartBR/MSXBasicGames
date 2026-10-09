@@ -38,12 +38,8 @@ static const u8 k_SprFig[2][32] = {
 static const u8 k_SprCar[32] = {
 	0xFF,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0xFF, 0xFF,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0xFF };
 
-// tabelas de sprites na pagina 3 da VRAM (livre): padroes 1F000h, cores 1F800h, atributos 1FA00h
-#define SPR_PAT_LO  0xF000
-#define SPR_COL_LO  0xF800
-#define SPR_ATT_LO  0xFA00                    // R#5 = F7h: o VDP ignora os bits 8-7 (tabela de atributos efetiva em 1FA00h; cores em 1F800h)
-#define NSPR 4                                   // 0 = jogador, 1-2 = rivais, 3 = elevador
-#define HIDE_Y 224
+#define NSPR 4                                   // sprites do predio: indices 2 (jogador), 3-4 (rivais), 5 (elevador); 0-1 = cursor do mouse (ui.c)
+#define HIDE_Y SPR_HIDE_Y
 
 // ---------------------------------------------------------------- estado (RAM fixa, inicializado em Building_Reset)
 typedef struct { u8 x, y, floor, tfloor, tx, phase, frame, wait, vis; } Mover;   // phase: 0 parado, 1 ate o elevador, 2 subindo/descendo, 3 ate a porta
@@ -110,7 +106,7 @@ static void SprWrite(void)
 		s_Spr[i * 4 + 3] = 0;
 	}
 	s_Spr[12] = (u8)(s_CarY - 16); s_Spr[13] = (u8)(SHAFT_X - 8); s_Spr[14] = 8; s_Spr[15] = 0;
-	VDP_WriteVRAM_128K(s_Spr, SPR_ATT_LO, 1, NSPR * 4);
+	VDP_WriteVRAM_128K(s_Spr, SPR_ATT_LO + 8, 1, NSPR * 4);
 }
 
 static void SprInit(void)
@@ -123,12 +119,10 @@ static void SprInit(void)
 	for (s = 0; s < 3; s++)                                    // cor por linha: cabeca / tronco (cor da emissora) / pernas
 	{
 		for (r = 0; r < 16; r++) col[r] = (r < 5) ? COLOR_LIGHT_RED : (r < 11) ? k_Cols[s] : COLOR_DARK_BLUE;
-		VDP_WriteVRAM_128K(col, SPR_COL_LO + s * 16, 1, 16);
+		VDP_WriteVRAM_128K(col, SPR_COL_LO + 32 + s * 16, 1, 16);
 	}
 	for (r = 0; r < 16; r++) col[r] = COLOR_GRAY;
-	VDP_WriteVRAM_128K(col, SPR_COL_LO + 48, 1, 16);
-	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3
-	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
+	VDP_WriteVRAM_128K(col, SPR_COL_LO + 80, 1, 16);
 }
 
 // ---------------------------------------------------------------- movimento
@@ -197,8 +191,13 @@ void Building_Reset(void) __banked
 	SprInit();
 }
 
-void Building_Enter(void) __banked { VDP_EnableSprite(TRUE); SprWrite(); }
-void Building_Leave(void) __banked { VDP_EnableSprite(FALSE); }
+void Building_Enter(void) __banked { SprWrite(); }
+void Building_Leave(void) __banked        // esconde so os sprites do predio (o cursor do mouse continua)
+{
+	u8 hide[NSPR * 4], i;
+	for (i = 0; i < NSPR * 4; i += 4) { hide[i] = HIDE_Y; hide[i + 1] = 0; hide[i + 2] = 0; hide[i + 3] = 0; }
+	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, NSPR * 4);
+}
 
 void Building_Draw(void) __banked
 {
@@ -311,4 +310,30 @@ void Office_Input(u8 ev) __banked
 	if (g_Sel != old) MarkRows(old, g_Sel);
 	if (ev & IN_BACK) { Goto(SCR_HUB); return; }
 	if (ev & IN_OK) Goto(k_OfficeScr[g_Sel]);
+}
+
+// ---------------------------------------------------------------- mouse
+void Building_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 i;
+	for (i = 0; i < NROOMS; i++)
+	{
+		const Room* r = &k_Rooms[i];
+		u8 fy = FY(r->floor), dx = (x > r->x) ? (u8)(x - r->x) : (u8)(r->x - x);
+		if (dx <= 14 && y >= fy - 30 && y <= fy + 3)
+		{
+			if (i != g_BldSel) { u8 old = g_BldSel; g_BldSel = i; MarkRows(old, i); g_Dirty |= D_DET; }
+			if (btn) Building_Input(IN_OK);
+			return;
+		}
+	}
+}
+
+void Office_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 23), ROW_H, OFFICE_N);
+	(void)x;
+	if (r == 0xFF) return;
+	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); }
+	if (btn) Office_Input(IN_OK);
 }

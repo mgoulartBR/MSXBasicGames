@@ -64,3 +64,13 @@ void Building_Draw(void) __banked;  void Building_Input(u8 ev) __banked; void Bu
 void Building_Detail(void) __banked; void Building_Dyn(void) __banked;   u8 Building_Frame(void) __banked;
 void Office_Enter(void) __banked;   void Office_Draw(void) __banked;     void Office_Input(u8 ev) __banked;
 void Office_Row(u8 r) __banked;
+
+// mouse: x,y = posicao do cursor; btn = 0 (so passou por cima: seleciona/realca) ou 1 (clique esquerdo: seleciona e ativa).
+// Clique direito = voltar (tratado no laco principal como IN_BACK).
+u8   HitRow(u8 y, u8 y0, u8 h, u8 n);            // indice da linha sob y (0xFF = fora)
+u8   SelVisible(u8 row, u8 n);                   // seleciona o item (g_First + row) de uma lista; 0 se fora de n
+void Building_Mouse(u8 x, u8 y, u8 btn) __banked; void Office_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Grid_Mouse(u8 x, u8 y, u8 btn) __banked;     void Agency_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Ads_Mouse(u8 x, u8 y, u8 btn) __banked;      void News_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Archive_Mouse(u8 x, u8 y, u8 btn) __banked;  void Boss_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Save_Mouse(u8 x, u8 y, u8 btn) __banked;

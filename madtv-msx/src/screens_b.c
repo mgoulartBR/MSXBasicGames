@@ -192,3 +192,26 @@ void Archive_Input(u8 ev) __banked
 		g_Dirty |= D_CON | D_MSG | D_HDR;
 	}
 }
+
+// ---------------------------------------------------------------- mouse
+void News_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r, hit = 0xFF;
+	for (r = 0; r < NEWS_ROWS; r++) { u8 ry = NewsRowY(r); if (y >= ry - 1 && y < ry + 9) { hit = r; break; } }
+	if (hit == 0xFF) return;
+	if (hit == 0)
+	{
+		u8 col = (x < 86) ? 0 : (x < 170) ? 1 : 2;
+		if (col != s_NewsCol) { s_NewsCol = col; MarkRows(0, 0); }
+	}
+	if (hit != g_Sel) { u8 old = g_Sel; g_Sel = hit; MarkRows(old, hit); }
+	if (btn) News_Input(IN_OK);
+}
+
+void Archive_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, LIST_ROWS);
+	(void)x;
+	if (r == 0xFF || !SelVisible(r, s_OwnN)) return;
+	if (btn) Archive_Input(IN_OK);
+}

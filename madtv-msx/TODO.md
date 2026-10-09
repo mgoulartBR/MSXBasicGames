@@ -3,6 +3,8 @@
 ## Critical
 - DONE   0.1 pipeline: MSXgl v1.5.0 + SDCC 4.6.0 -> ROM 32K -> openMSX (C-BIOS MSX2) -> screenshot
 - TODO   Confirmar licenca do conteudo do banco TVTower antes de distribuir
+- DONE   0.5.1 mouse (cursor-sprite, hit-test em todas as telas, M liga/desliga, direito = voltar)
+- TODO   Validar mouse em hardware MSX real (sensibilidade, clique curto); opcao de sensibilidade
 - DONE   0.5 predio navegavel (5 andares, elevador, sprites do jogador/rivais, viagem ate as portas, escritorio como submenu)
 - DONE   0.4 noticias, arquivo (venda), chefe (credito), salvar/carregar por codigo, codigo banked (segmentos 5-8)
 - DONE   0.3 nucleo de gestao: relogio, grade, audiencia, Image, contratos, dinheiro, falencia, rivais heuristicos

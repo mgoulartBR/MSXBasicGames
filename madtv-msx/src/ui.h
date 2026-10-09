@@ -40,3 +40,19 @@ u8 Input_Poll(void);
 
 // Tecla digitada neste frame (borda): '0'-'9', 'A'-'Z' ou 8 (BS); 0 se nenhuma. Varre a matriz do teclado (so usar na tela de codigo).
 u8 Input_TypedChar(void);
+
+// ---- ponteiro (mouse). O MSX nao distingue "mouse" de "joystick" na porta: o modo e escolhido pelo jogador (tecla M).
+// Modo 0 = sem mouse (teclado/joystick 1); 1 = mouse na porta 1 (joystick passa a ser lido na porta 2); 2 = mouse na porta 2.
+#define PTR_MOVED  1
+#define PTR_LEFT   2     // botao esquerdo apertado agora (borda)
+#define PTR_RIGHT  4     // botao direito apertado agora (borda)
+extern u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject;
+extern u8 g_InExtra;           // bit 0 = tecla M apertada agora (borda); preenchido por Input_Poll
+u8   Pointer_Update(void);     // le o mouse (se ativo), move o cursor-sprite; retorna PTR_*
+void Pointer_Cycle(void);      // M: desligado -> porta 1 -> porta 2 -> desligado
+void Ui_SpriteSetup(void);     // tabelas/registradores de sprites + cursor (chamado por Ui_Init)
+// layout da tabela de atributos (4 bytes por sprite): 0 = seta branca, 1 = contorno, 2 = jogador, 3-4 = rivais, 5 = elevador
+#define SPR_PAT_LO  0xF000     // padroes em 1F000h (pagina 3 da VRAM)
+#define SPR_COL_LO  0xF800     // cores em 1F800h
+#define SPR_ATT_LO  0xFA00     // atributos em 1FA00h (R#5 = F7h: o VDP ignora os bits 8-7)
+#define SPR_HIDE_Y  224

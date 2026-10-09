@@ -57,6 +57,7 @@ void Ui_Init(void)
 		VDP_CommandLMMM(0, FONT_SRC_Y, 0, y, 252, FONT_H, VDP_OP_AND);
 	}
 	Ui_Fill(0, 0, 255, 212, UI_BG); // remove restos da carga da fonte na area visivel
+	Ui_SpriteSetup();
 	Ui_Color(UI_WHITE);
 }
 
@@ -162,7 +163,7 @@ void Ui_Bar(u8 x, u8 y, u8 w, u8 h, u8 pct, u8 col)
 
 u8 Input_Poll(void)
 {
-	u8 in = 0, joy = Joystick_Read(JOY_PORT_1), pushed;
+	u8 in = 0, joy = Joystick_Read(g_PtrMode == 1 ? JOY_PORT_2 : JOY_PORT_1), pushed;
 	if (Keyboard_IsKeyPressed(KEY_UP)    || !(joy & JOY_INPUT_DIR_UP))    in |= IN_UP;
 	if (Keyboard_IsKeyPressed(KEY_DOWN)  || !(joy & JOY_INPUT_DIR_DOWN))  in |= IN_DOWN;
 	if (Keyboard_IsKeyPressed(KEY_LEFT)  || !(joy & JOY_INPUT_DIR_LEFT))  in |= IN_LEFT;
@@ -171,6 +172,7 @@ u8 Input_Poll(void)
 	if (Keyboard_IsKeyPressed(KEY_ESC) || !(joy & JOY_INPUT_TRIGGER_B)) in |= IN_BACK;
 	if (Keyboard_IsKeyPressed(KEY_TAB)) in |= IN_SPEED;
 	if (Keyboard_IsKeyPressed(KEY_P))   in |= IN_PAUSE;
+	{ static u8 mHeld; u8 m = Keyboard_IsKeyPressed(KEY_M); g_InExtra = (m && !mHeld) ? 1 : 0; mHeld = m; }
 	pushed = in & ~s_PrevIn;
 	s_PrevIn = in;
 	return pushed;
@@ -191,5 +193,66 @@ u8 Input_TypedChar(void)
 		if (Keyboard_IsKeyPressed(k_TypeKeys[i])) { if (!(*h & mask)) { *h |= mask; if (!ret) ret = (i < 10) ? (u8)('0' + i) : (i < 36) ? (u8)('A' + i - 10) : 8; } }
 		else *h &= (u8)~mask;
 	}
+	return ret;
+}
+
+// ---------------------------------------------------------------- ponteiro (mouse) e sprites comuns
+u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_InExtra;
+static Mouse_State s_Mouse;
+static u8 s_PtrShown;
+
+// seta 16x16 (branca) e contorno (preto): arte propria. Hotspot = ponta da seta em (2,2) do sprite.
+static const u8 k_SprArrow[32] = { 0x00,0x00,0x20,0x30,0x38,0x3C,0x3E,0x3F,0x3F,0x3F,0x3E,0x36,0x23,0x03,0x01,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,0xC0,0x00,0x00,0x00,0x00,0x80,0x00 };
+static const u8 k_SprOutline[32] = { 0x00,0x70,0x78,0x7C,0x7E,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x77,0x07,0x03, 0x00,0x00,0x00,0x00,0x00,0x00,0x80,0xC0,0xE0,0xE0,0xE0,0x80,0x80,0xC0,0xC0,0xC0 };
+
+static void PtrDraw(void)
+{
+	u8 a[8], hide = (g_PtrMode == 0);
+	a[0] = hide ? SPR_HIDE_Y : (u8)(g_PtrY - 2); a[1] = (u8)(g_PtrX - 2); a[2] = 12; a[3] = 0;     // seta (padrao 12 = offset 96)
+	a[4] = a[0]; a[5] = a[1]; a[6] = 16; a[7] = 0;                                                    // contorno (padrao 16 = offset 128)
+	VDP_WriteVRAM_128K(a, SPR_ATT_LO, 1, 8);
+}
+
+void Ui_SpriteSetup(void)
+{
+	u8 col[16], i, hide[24];
+	VDP_WriteVRAM_128K(k_SprArrow, SPR_PAT_LO + 96, 1, 32);
+	VDP_WriteVRAM_128K(k_SprOutline, SPR_PAT_LO + 128, 1, 32);
+	for (i = 0; i < 16; i++) col[i] = COLOR_WHITE;
+	VDP_WriteVRAM_128K(col, SPR_COL_LO + 0, 1, 16);          // sprite 0 = seta branca
+	for (i = 0; i < 16; i++) col[i] = COLOR_BLACK;
+	VDP_WriteVRAM_128K(col, SPR_COL_LO + 16, 1, 16);         // sprite 1 = contorno preto
+	for (i = 0; i < 24; i += 4) { hide[i] = SPR_HIDE_Y; hide[i + 1] = 0; hide[i + 2] = 0; hide[i + 3] = 0; }
+	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 24);         // sprites do predio comecam escondidos
+	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3 da VRAM
+	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
+	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0;
+	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; s_Mouse.dX = 0; s_Mouse.dY = 0;
+	PtrDraw();
+	VDP_EnableSprite(TRUE);
+}
+
+void Pointer_Cycle(void)
+{
+	g_PtrMode = (g_PtrMode + 1) % 3;
+	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF;
+	PtrDraw();
+}
+
+u8 Pointer_Update(void)
+{
+	u8 ret = g_PtrInject;                 // gancho de teste: cliques injetados (g_PtrInject e zerado aqui)
+	i16 nx, ny;
+	g_PtrInject = 0;
+	if (g_PtrMode == 0) return ret;
+	Mouse_Read(g_PtrMode == 1 ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);
+	nx = (i16)g_PtrX + Mouse_GetOffsetX(&s_Mouse);
+	ny = (i16)g_PtrY + Mouse_GetOffsetY(&s_Mouse);
+	if (nx < 2) nx = 2; if (nx > 253) nx = 253;
+	if (ny < 2) ny = 2; if (ny > 209) ny = 209;
+	if ((u8)nx != g_PtrX || (u8)ny != g_PtrY) { g_PtrX = (u8)nx; g_PtrY = (u8)ny; ret |= PTR_MOVED; }
+	if (Mouse_IsButtonClick(&s_Mouse, MOUSE_BOUTON_LEFT)) ret |= PTR_LEFT;
+	if (Mouse_IsButtonClick(&s_Mouse, MOUSE_BOUTON_RIGHT)) ret |= PTR_RIGHT;
+	if (ret & PTR_MOVED) PtrDraw();
 	return ret;
 }
