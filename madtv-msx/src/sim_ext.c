@@ -198,6 +198,17 @@ u8 Sim_GiftEffect(u8 g) __banked
 	return (u >= 3) ? (u8)(k_GiftEff[g] / 10) : (u8)((u16)k_GiftEff[g] * (100 - 30 * u) / 100);
 }
 
+static const u16 k_TowerCost[TOWER_MAX] = { 1500, 3000, 5000, 8000 };
+u16 Sim_TowerCost(void) __banked { return g_Game.tower >= TOWER_MAX ? 0 : k_TowerCost[g_Game.tower]; }
+u8 Sim_BuyTower(void) __banked
+{
+	u16 c = Sim_TowerCost();
+	if (!c) return 2;
+	if (g_Game.money < (i32)c) return 1;
+	g_Game.money -= c; g_Game.day_cost += c; g_Game.tower++;
+	return 0;
+}
+
 u8 Sim_BuyGift(u8 g) __banked
 {
 	if (g_Game.gift_have[g] >= GIFT_MAX_STOCK) return 2;
@@ -268,7 +279,7 @@ void Sim_SaveCode(char* out) __banked
 	u8 bits = 0, o = 0;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
-	b[n++] = (u8)(6 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
+	b[n++] = (u8)(7 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
 	b[n++] = (u8)g_Game.day; b[n++] = (u8)(g_Game.day >> 8);
 	b[n++] = (u8)g_Game.t;   b[n++] = (u8)(g_Game.t >> 8);
 	b[n++] = (u8)g_Game.money; b[n++] = (u8)(g_Game.money >> 8); b[n++] = (u8)(g_Game.money >> 16); b[n++] = (u8)(g_Game.money >> 24);
@@ -293,6 +304,7 @@ void Sim_SaveCode(char* out) __banked
 		b[n + 3 + (i >> 2)] |= (u8)((g_Game.gift_uses[i] & 3) << ((i & 3) * 2));
 	}
 	n += 6;
+	b[n++] = g_Game.tower;                                                                         // torres (v7)
 	ck = Fletcher16(b, n);
 	b[n++] = (u8)ck; b[n++] = (u8)(ck >> 8);
 	for (i = 0; i < n; i++)                                           // base32
@@ -327,7 +339,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	if (n != SAVE_BYTES) return 1;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
-	if ((b[0] & 15) != 6 || (b[0] >> 4) >= NUM_DIFF) return 3;
+	if ((b[0] & 15) != 7 || (b[0] >> 4) >= NUM_DIFF) return 3;
 	// validacao semantica antes de aplicar
 	n = 12;
 	if (b[11] + b[12] > 100) return 3;
@@ -335,6 +347,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	for (i = 0; i < MAX_CONTRACTS; i++) { c = b[n + i * 2] & 31; if (c != 31 && c >= DB_NUM_ADS) return 3; }
 	n += MAX_CONTRACTS * 2;
 	for (s = 0; s < NUM_SLOTS; s++) { if (b[n + s * 2] != NONE && b[n + s * 2] >= DB_NUM_MOVIES) return 3; if (b[n + s * 2 + 1] != NONE && b[n + s * 2 + 1] >= MAX_CONTRACTS) return 3; }
+	if (b[n + NUM_SLOTS * 2 + 10] > TOWER_MAX) return 3;
 	day = (u16)(b[1] | (b[2] << 8));
 	if (day == 0 || (u16)(b[3] | (b[4] << 8)) >= DAY_MINUTES) return 3;
 	seed = (u16)(b[13 + OWNED_BYTES + 1] | (b[13 + OWNED_BYTES + 2] << 8));
@@ -375,6 +388,7 @@ u8 Sim_LoadCode(const char* code) __banked
 			g_Game.gift_uses[i] = (b[p + 7 + (i >> 2)] >> ((i & 3) * 2)) & 3;
 		}
 	}
+	g_Game.tower = b[(u8)(n + NUM_SLOTS * 2) + 10];
 	AiSchedule(1); AiSchedule(2);
 	NewOffers();
 	return 0;

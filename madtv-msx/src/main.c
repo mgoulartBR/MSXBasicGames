@@ -199,6 +199,7 @@ static void ScreenInput(u8 ev)
 	case SCR_SHOP:    Shop_Input(ev); break;
 	case SCR_BETTY:   Betty_Input(ev); break;
 	case SCR_PORTER:  Porter_Input(ev); break;
+	case SCR_REALTOR: Realtor_Input(ev); break;
 	case SCR_FUN: case SCR_SUN: Rival_Input(ev); break;
 	}
 }
@@ -219,6 +220,7 @@ static void ScreenDraw(void)
 	case SCR_SAVE:    Save_Draw(); break;
 	case SCR_SHOP:    Shop_Draw(); break;
 	case SCR_BETTY:   Betty_Draw(); break;
+	case SCR_REALTOR: Realtor_Draw(); break;
 	case SCR_PORTER:  Porter_Draw(); break;
 	case SCR_FUN: case SCR_SUN: Rival_Draw(); break;
 	}
@@ -292,6 +294,7 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	case SCR_SAVE:    Save_Mouse(x, y, btn); break;
 	case SCR_SHOP:    Shop_Mouse(x, y, btn); break;
 	case SCR_BETTY:   Betty_Mouse(x, y, btn); break;
+	case SCR_REALTOR: Realtor_Mouse(x, y, btn); break;
 	}
 }
 

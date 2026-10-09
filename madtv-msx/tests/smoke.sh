@@ -34,10 +34,10 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]]"
+  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]]"
   close $f
 }
-proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 112} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
+proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 114} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
 # matriz do teclado MSX: linha 0 = 0-7; 3 = C-J; 4 = K-R; 5 = S-Z; A,B na linha 2 (bits 6,7); 8,9 na linha 1
 set ::MATRIX {}
 foreach {row chars} {0 01234567 3 CDEFGHIJ 4 KLMNOPQR 5 STUVWXYZ} { set b 0; foreach c [split $chars ""] { dict set ::MATRIX $c [list $row [format 0x%02x [expr {1 << $b}]]]; incr b } }
@@ -142,6 +142,12 @@ back
 room 11
 at 0.5 { dump sun }
 back
+# --- Corretor (sala 8): construir a 1a torre
+room 8
+at 0.5 { dump realtor0 }
+key RET
+at 0.5 { shot 8f_realtor; dump realtor }
+back
 # --- Escritorio -> Save/Load: mostrar o codigo e guardar
 room 9
 key DOWN; key DOWN; key RET
@@ -160,7 +166,7 @@ key DOWN; key DOWN; key RET
 at 0.5 {}; key DOWN; key RET                        ;# Enter a code
 at 0.5 { shot 10_enter_empty }
 at 0.3 { typecode $::SAVED }
-at 22.0 { shot 11_enter_typed }
+at 23.0 { shot 11_enter_typed }
 key RET                                             ;# confirma
 at 1.0 { shot 12_loaded; dump loaded }
 # --- Final feliz: forca simpatia 100, rivais falidos e uma Dream trip; pedir em casamento
@@ -175,10 +181,9 @@ at 0.5 { shot 12b_win; dump win }
 key RET
 at 0.5 {}
 # --- simular dias em velocidade maxima
-key TAB
+at 0.2 { poke $::SPD 3 }
 at 0.1 { set throttle off }
-key TAB
-at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 12} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
+at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 18} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
 TCL
 timeout 290 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/madtv_smoke.tcl >/tmp/madtv_smoke.log 2>&1
 cat /tmp/madtv_state.txt 2>/dev/null
@@ -203,8 +208,9 @@ need(g('bought','scr')==3 and g('office','scr')==10 and g('placed','scr')==2 and
 need(g('shop','g0')==1 and g('shop','g1')==1 and g('shop','money')<g('sold','money'),'supermercado nao vendeu os presentes')
 need(g('gift','scr')==12 and g('gift','g0')==0 and g('gift','sym0')>0,'Betty: presente nao subiu a simpatia')
 need(g('porter','scr')==13 and g('fun','scr')==14 and g('sun','scr')==15,'Porteiro/escritorios dos rivais nao abriram')
+need(g('realtor0','scr')==16 and g('realtor0','tower')==0 and g('realtor','tower')==1 and g('realtor','money')<g('realtor0','money'),'Corretor nao vendeu a torre')
 need(g('refused','won')==0 and g('refused','scr')==12,'Betty: pedido sem condicoes foi aceito')
-need(g('win','won')==1 and g('win','scr')==16,'Betty: pedido com todas as condicoes nao levou ao final feliz')
+need(g('win','won')==1 and g('win','scr')==17,'Betty: pedido com todas as condicoes nao levou ao final feliz')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')
 need(g('placed','slot0movie')!=255,'filme nao entrou na grade')
 need(g('signed','contract0')!=255,'contrato nao assinado')
@@ -217,7 +223,7 @@ need(g('loaded','day')==g('saved','day'),'LOAD nao restaurou o dia')
 need(g('later','day')>=2,'jogo nao avancou para o dia 2')
 need(sum(map(int,S['later']['image'].split(',')))<=100,'Image invalido')
 d=open('/tmp/madtv_draw.txt').read().split()
-names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','over']
+names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','realtor','over']
 print('desenho completo por tela (jiffies, max):',dict(zip(names,map(int,d))))
 need(max(map(int,d))<=90,'alguma tela leva > 90 jiffies para desenhar')
 print('PASS')

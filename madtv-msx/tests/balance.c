@@ -205,6 +205,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 			if (g_Game.money < 600) Sim_Borrow(1500);
 			else if (g_Game.debt > 0 && g_Game.money > g_Game.debt + 2500) Sim_Repay(g_Game.debt);
 		}
+		if (pol == P_SMART && !getenv("NO_TOWERS") && Sim_TowerCost() && g_Game.money > (i32)Sim_TowerCost() + 3000) Sim_BuyTower();   // Corretor
 		if (pol == P_SMART) Gifts();
 		if (g_Game.game_over) break;
 		g_Smart = (pol == P_SMART);

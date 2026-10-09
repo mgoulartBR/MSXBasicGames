@@ -12,7 +12,7 @@ static void Churn(void)
 	int i, t;
 	for (i = 0; i < 6; i++) Sim_Buy((u8)(rand() % DB_NUM_MOVIES));
 	for (i = 0; i < 3; i++) Sim_SignAd((u8)i);
-	g_Game.sym[0] = 17; g_Game.sym[1] = 9; g_Game.sym[2] = 4; g_Game.alive[2] = 0; g_Game.gift_have[3] = 2; g_Game.gift_have[GIFT_DREAM] = 1; g_Game.gift_uses[1] = 2; g_Game.gift_uses[8] = 3;
+	g_Game.tower = 3; g_Game.sym[0] = 17; g_Game.sym[1] = 9; g_Game.sym[2] = 4; g_Game.alive[2] = 0; g_Game.gift_have[3] = 2; g_Game.gift_have[GIFT_DREAM] = 1; g_Game.gift_uses[1] = 2; g_Game.gift_uses[8] = 3;
 	for (i = 0; i < NUM_SLOTS; i += 2) { int m; for (m = 0; m < DB_NUM_MOVIES; m++) if (g_Game.owned[m]) { Sim_PlaceMovie((u8)i, (u8)m); break; } }
 	Sim_PlaceAd(1, 0);
 	Sim_NewsPick(0); Sim_NewsToggle(1);
@@ -158,6 +158,20 @@ int main(void)
 		g_Diff = 1; Sim_Init(31);
 		g_Game.image[0] = IMAGE_LOW - 1; CHECK(Sim_CreditLimit() == 0 && Sim_Borrow(100) == 1, "Image baixo: sem credito");
 		g_Game.image[0] = IMAGE_LOW;     CHECK(Sim_CreditLimit() > 0 && Sim_Borrow(100) == 0, "Image 20: credito aberto");
+	}
+	// 0.9: torres (Corretor)
+	g_Diff = 1; Sim_Init(41);
+	{
+		u8 r0 = Sim_Reach(0), i;
+		i32 m0;
+		g_Game.money = 20000; m0 = g_Game.money;
+		CHECK(Sim_TowerCost() == 1500 && Sim_BuyTower() == 0 && g_Game.tower == 1 && g_Game.money == m0 - 1500, "comprar torre 1");
+		CHECK(Sim_Reach(0) > r0, "torre aumenta o alcance");
+		for (i = 0; i < 10; i++) Sim_BuyTower();
+		CHECK(g_Game.tower == TOWER_MAX && Sim_TowerCost() == 0 && Sim_BuyTower() == 2, "nivel maximo de torres");
+		g_Game.money = 0; g_Game.tower = 0; CHECK(Sim_BuyTower() == 1 && g_Game.tower == 0, "torre sem dinheiro");
+		g_Game.tower = 2; g_Game.money = 5000;
+		{ i32 a = g_Game.money; u16 t; for (t = 0; t < DAY_MINUTES; t++) Sim_Tick(); CHECK(a - g_Game.money >= DAILY_UPKEEP + 2 * TOWER_UPKEEP - 200, "manutencao das torres"); }
 	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
