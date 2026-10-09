@@ -4,3 +4,4 @@ out/*
 !out/preview_enemy.png
 __pycache__/
 !out/tour.png
+private/
