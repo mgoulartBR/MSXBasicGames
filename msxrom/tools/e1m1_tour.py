@@ -7,7 +7,7 @@ from PIL import Image,ImageDraw
 M=make(); sym=symbols(); mem=M.m.memory
 def set16(n,v): mem[sym[n]:sym[n]+2]=(v&0xFFFF).to_bytes(2,'little')
 def shot(x,y,a):
-    set16('px',x); set16('py',y); mem[sym['yaw']]=int(((a-90)%360)/360*256)&255
+    set16('px',x); set16('py',y); mem[sym['yaw']]=int(((90-a)%360)/360*256)&255
     n=len(M.frames); M.run_frames(n+4); im=M.frames[-1].copy()
     ImageDraw.Draw(im).text((3,3),'%d,%d,%d'%(x,y,a),fill=(255,255,0)); return im
 M.run_frames(2)

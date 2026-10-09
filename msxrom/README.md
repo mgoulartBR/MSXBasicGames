@@ -109,7 +109,8 @@ python3 -I tools/e1m1_tour.py [x y angulo ...]              # folha de contato -
 
 O que vem do WAD: geometria (linedefs/sidedefs/sectors), alinhamento de texturas com as regras de peg do Doom, texturas de parede,
 sprites (zombieman, shotgun guy, imp, itens, decoração), HUD (STBAR, números, rosto), pistola, posição de todas as coisas do skill escolhido.
-Conversão: paredes → faces do Geo3D com o PVS por bloco de 128 unidades (visibilidade 2D em C; ~98% da área projetada cabe nos limites de 255
+Conversão: paredes → faces do Geo3D com o PVS por bloco de 128 unidades e por direção do olhar (4 conjuntos de 90°, cone de ±92°; ROM de 4 MiB), com peças distantes
+(>220 unidades) em uma face só com a textura esticada; `tools/e1m1_holes.py` mede a área de parede perdida contra o modelo sem limites (~3% em média, p90 ~9–10% em 80 amostras na simulação). Antes: (visibilidade 2D em C; ~98% da área projetada cabe nos limites de 255
 vértices/faces; o que sobra é descartado do mais distante/menor para o maior); texturas a 0,25–0,5 texel/unidade; paleta de 256 cores; raster de
 8 unidades para colisão, setor e altura de piso.
 

@@ -39,7 +39,7 @@ def render(L,vram,pal,px,py,ang_doom,cache={}):
     blk=(int(px//P.BLOCK),int(py//P.BLOCK))
     if blk not in cache: cache[blk]=P.build_block(L,*blk)
     b=cache[blk]
-    yaw=math.radians(ang_doom-90); s,c=math.sin(yaw),math.cos(yaw); q=lambda v:int(round(v*16384))
+    yaw=math.radians(90-ang_doom); s,c=math.sin(yaw),math.cos(yaw); q=lambda v:int(round(v*16384))
     M=[q(c),0,q(-s),0,16384,0,q(s),0,q(c)]; eye=floor_at(L,px,py)+41
     TX=-(c*px-s*py); TZ=-(s*px+c*py); TY=-eye
     cfg=M+[round(TX),round(TY),round(TZ)]+[170,128,89,2,256,178]

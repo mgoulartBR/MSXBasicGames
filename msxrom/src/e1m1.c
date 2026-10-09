@@ -139,7 +139,7 @@ static void geo_init(void){
   gi=0x60; gw(0); gw(TEXY_WALL); gd=255;      /* TSTRIDE e 8 bits: nivel 1 (sprites) le a linha 512+255+v = 767+v; o atlas de sprites comeca na linha 768 (v=1) */
 }
 static void geo_light(const s16 *l){ gi=0x5A; gw(l[0]); gw(l[1]); gw(l[2]); }
-static u8 cell_nv,cell_nf; static u16 cur_blk=0xFFFF;
+static u8 cell_nv,cell_nf,cur_h; static u16 cur_blk=0xFFFF;
 static void blk_load(u16 bi){
   const u8 *p; u8 nv,nf,bank; u16 off;
   BANK(META_BANK); p=DATA+META_BLK+3*bi; bank=p[0]; off=p[1]|((u16)p[2]<<8);
@@ -388,7 +388,11 @@ static void render(void){
   wait_ce();
   make_view();
   bx=(px>>7)-BX0; by=(py>>7)-BY0;
-  if(bx>=0&&by>=0&&bx<BNX&&by<BNY){ bi=grid[by*BNX+bx]; if(bi!=0xFFFF&&bi!=cur_blk) blk_load(bi); }
+  if(bx>=0&&by>=0&&bx<BNX&&by<BNY){ bi=grid[by*BNX+bx];
+    if(bi!=0xFFFF){ u8 h=cur_h,d=(u8)(yaw-(u8)(cur_h<<6));       /* 4 conjuntos por bloco (um por direcao de 90 graus), com histerese de ~5 graus */
+      if(d>=128)d=(u8)(256-d);
+      if(cur_blk==0xFFFF||d>36)h=(u8)(((u8)(yaw+32)>>6)&3);
+      bi=(bi<<2)|h; if(bi!=cur_blk){ blk_load(bi); cur_h=h; } } }
   /* sprites: os MAX_SPR mais proximos dentro do campo de visao e com linha de visao */
   for(i=0;i<NTHING;i++){
     s16 dx,dy,zc,xc,d; Th *m=&th[i];

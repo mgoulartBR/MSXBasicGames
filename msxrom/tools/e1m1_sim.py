@@ -15,7 +15,7 @@ if __name__=='__main__':
     if len(sys.argv)>5:
         x,y,a=int(sys.argv[3]),int(sys.argv[4]),float(sys.argv[5])
         for nm,v in (('px',x),('py',y)): mem[sym[nm]:sym[nm]+2]=(v&0xFFFF).to_bytes(2,'little')
-        mem[sym['yaw']]=int(((a-90)%360)/360*256)&255
+        mem[sym['yaw']]=int(((90-a)%360)/360*256)&255
     fr=M.run_frames(2+n)
     for i,f in enumerate(fr[1:]): f.resize((768,636),Image.NEAREST).save(f'{pre}_{i}.png')
     print('frames',len(fr),M.log)

@@ -202,25 +202,32 @@ def main():
     ex=[l for l in m.linedefs if l['special']==11][0]; (e1x,e1y),(e2x,e2y)=m.vertexes[ex['v1']],m.vertexes[ex['v2']]
     # --- blobs
     cur=bytearray(); blobbanks=[]; blk_tab={}
-    nblob=0; maxf=0
+    nblob=0; maxf=0; seen={}
     first_blob_bank=RAST_BANK0+nrb
     import time; t0=time.time(); res={}
     for i,(bx,by) in enumerate(bl):
-        r=P.build_block(L,bx,by)
-        if r is None: continue
-        res[(bx,by)]=r; maxf=max(maxf,len(r['faces']))
-        nv=len(r['verts']); nf=len(r['faces'])
-        blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])
-        for fidx in r['faces']: blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,0x80)
-        for uv in r['uvs']: blob+=bytes(uv)
-        if len(cur)+len(blob)>16384: blobbanks.append(bytes(cur).ljust(16384,b'\0')); cur=bytearray()
-        blk_tab[(bx,by)]=(first_blob_bank+len(blobbanks),len(cur)); cur+=blob; nblob+=1
-        if i%60==0: print('bloco',i,len(bl),'%.0fs'%(time.time()-t0),flush=True)
+        vps=P.block_viewpoints(L,bx,by)
+        if not vps: continue
+        allids=sorted(P.visible_subs(L,vps))
+        for hd in range(P.NHEAD):
+            ids=[j for j in allids if P.inview(L,j,bx,by,P.head_deg(hd),P.CONE)]
+            r=P.build_block(L,bx,by,ids=ids)
+            res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
+            nv=len(r['verts']); nf=len(r['faces'])
+            blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])
+            for fidx in r['faces']: blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,0x80)
+            for uv in r['uvs']: blob+=bytes(uv)
+            if blob in seen: blk_tab[(bx,by,hd)]=seen[blob]; continue
+            if len(cur)+len(blob)>16384: blobbanks.append(bytes(cur).ljust(16384,b'\0')); cur=bytearray()
+            blk_tab[(bx,by,hd)]=seen[blob]=(first_blob_bank+len(blobbanks),len(cur)); cur+=blob; nblob+=1
+        if i%20==0: print('bloco',i,len(bl),'%.0fs'%(time.time()-t0),flush=True)
     blobbanks.append(bytes(cur).ljust(16384,b'\0'))
     # indice de blocos
-    keys=sorted(blk_tab); kidx={k:i for i,k in enumerate(keys)}
+    keys=sorted(blk_tab)                                      # (bx,by,heading); indice = bloco*4 + direcao
+    blocks_=sorted(set((k[0],k[1]) for k in keys)); bidx={b:i for i,b in enumerate(blocks_)}
+    keys=[(b[0],b[1],hd) for b in blocks_ for hd in range(P.NHEAD)]
     grid=[0xFFFF]*(BNX*BNY)
-    for k,i in kidx.items(): grid[(k[1]-BY0)*BNX+(k[0]-BX0)]=i
+    for b,i in bidx.items(): grid[(b[1]-BY0)*BNX+(b[0]-BX0)]=i
     # --- meta: sin (512), setores (8 B cada), blocos (3 B cada), grade (2 B por celula), paleta (768)
     meta=bytearray()
     off={}
@@ -241,7 +248,7 @@ def main():
     h=['/* GERADO por tools/e1m1_build.py a partir do WAD do usuario - PRIVADO, nao versionar */']
     h+=['#define AREAB_BANK 2','#define VRAM_BANK0 3','#define NVRAM_BANKS 8','#define META_BANK %d'%meta_bank,'#define RAST_BANK0 %d'%RAST_BANK0,
         '#define RAST_W %d'%R.nx,'#define RAST_H %d'%R.ny,'#define RAST_ROWS %d'%ROWS,'#define RAST_X0 %d'%R.x0,'#define RAST_Y0 %d'%R.y0,
-        '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(keys),'#define NTHING %d'%len(things)]
+        '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things)]
     for k,v in off.items(): h.append('#define META_%s %d'%(k.upper(),v))
     h+=['#define START_X %d'%start['x'],'#define START_Y %d'%start['y'],'#define START_ANG %d'%start['angle'],'#define EXIT_X %d'%((e1x+e2x)//2),'#define EXIT_Y %d'%((e1y+e2y)//2)]
     mk=sum(1 for t in things if t[2]<=2)
