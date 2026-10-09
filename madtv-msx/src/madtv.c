@@ -4,7 +4,7 @@
 #include "sim.h"
 #include "data/db_data.h"
 
-#define VERSION_STR "0.3.3"
+#define VERSION_STR "0.3.4"
 #define CONTENT_Y   28
 #define ROW_H       10
 #define MSG_Y       201

@@ -8,7 +8,7 @@
 - DONE   Mapper ASCII8 (128 KB) + engine enxuto (-7,9 KB) + RAM nao zerada corrigida (0.3.3)
 - TODO   Acessores de dados com troca de segmento (quando catalogo > 8 KB / noticias)
 ## Gameplay
-- PARTIAL relogio/grade/audiencia/Image/financas/contratos feitos (0.3); balanceamento NAO validado (sem autoplay)
+- PARTIAL relogio/grade/audiencia/Image/financas/contratos feitos (0.3); balanceamento validado por autoplay (tests/balance.sh); revisar quando entrarem torres/juros/presentes
 - TODO   Betty e presentes, noticias, producao propria + estudios, Sammys, sabotagem, torres/satelites, credito, vender filmes, salvar/carregar, escolher emissora/dificuldade, grade de amanha
 ## Graphics
 - TODO   Fonte, UI Screen 5 (paleta), cenario do predio

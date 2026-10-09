@@ -72,8 +72,21 @@ por screenshot. Grade/lista de escolha usam o mesmo mecanismo mas nao foram medi
 - Image: a cada slot, maior taxa de audiencia tira 1 ponto da menor (regra do manual). Soma sempre 100.
 - Contratos de anuncio (dados do TVTower, min_audience lido em milhoes): cada exibicao com audiencia >= minima conta;
   ao zerar as repeticoes paga `profit`; expirado o prazo com repeticoes pendentes cobra `penalty`. Max 4 contratos.
-- Preco do filme (k$) = media(atributos) x price_mod/10 x blocos/2 + 50. Custo fixo diario 120k$. Falencia: caixa < -2000k$.
-- Rivais (FunTV/SunTV): grade preenchida por heuristica (melhor de 6 candidatos por slot), sem dinheiro/contratos.
+- Preco do filme (k$) = media(atributos) x price_mod/20 x blocos/2 + 50. Caixa inicial 2500k$. Custo fixo diario 100k$. Falencia: caixa < -2000k$.
+- Rivais (FunTV/SunTV): grade preenchida por heuristica (melhor de 6 candidatos por slot) **so entre os filmes da propria biblioteca**
+  (comeca com 5 e ganha 1 por dia, ordem aleatoria por partida); audiencia dos rivais x0,88 (dificuldade normal); sem contratos.
+
+## Balanceamento (autoplay: `tests/balance.sh [dias] [partidas]`, mesma `src/sim.c` compilada no PC)
+Politicas: *idle* (nao faz nada), *naive* (assina todos os contratos), *careful* (assina so se a qualidade maxima permite), *smart*
+(usa a audiencia real do dia anterior, so assina o que consegue cumprir, compra filmes ate acompanhar a biblioteca dos rivais).
+Achados que mudaram o jogo (primeira versao: **100% de falencia em todas as politicas**):
+1. rivais tinham o catalogo inteiro de graca -> Image do jogador ia a ~0 em poucos dias; agora tem biblioteca limitada (+1/dia) e x0,88.
+2. filmes caros (preco/10) e caixa inicial 1500k$ deixavam o jogador sem capital para uma grade completa; agora preco/20 e 2500k$.
+3. multas dos contratos sao maiores que o pagamento (dados do TVTower: ate 2500k$ vs 1583k$) - assinar sem conferir a audiencia e fatal.
+Resultado atual (500 partidas, 30 dias): *smart* **7% de falencia**, Image medio **32** (fatia justa = 33), caixa mediana ~10,4M k$;
+*naive* e *careful* **100%** de falencia (contratos assinados sem audiencia suficiente); *idle* termina o mes com -500k$.
+(60 dias, 300 partidas: smart 8% de falencia, Image 26.) **Limites:** as politicas sao heuristicas minhas, nao jogadores
+humanos; o caixa cresce muito para o jogador competente (sera drenado por torres/estudios/presentes/juros nos proximos milestones).
 
 ## Mapper: decisao (0.3.3)
 Por que ASCII8 e nao ASCII16: ASCII16 so tem 2 bancos de 16 KB - para ter uma janela de dados sem tirar codigo do ar seria
