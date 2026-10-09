@@ -11,7 +11,10 @@ Sprites         : so no predio (hub): figuras 16x16 do jogador e dos 2 rivais + 
                   cabeca / tronco na cor da emissora / pernas), tabelas na pagina 3 da VRAM (padroes 1F000h, cores 1F800h,
                   atributos 1FA00h), 4 sprites, nunca mais de 4 por linha.
 Audio strategy  : PSG (a definir; nenhuma implementacao ainda)
-Input strategy  : teclado (setas) + joystick 1, ambos simultaneos. Mouse original -> cursor por setas/botao.
+Input strategy  : teclado (setas) + joystick e **mouse** (0.5.1), todos simultaneos. O MSX nao distingue mouse de joystick na porta
+                  (sem mouse a linha le como direcao parada/lixo), por isso o mouse e ligado pelo jogador: tecla **M** cicla
+                  desligado -> mouse na porta 1 (joystick passa para a porta 2) -> mouse na porta 2. Esquerdo = selecionar/ativar
+                  ("dentro"), direito = voltar ("fora"), como no original; clique na velocidade do cabecalho troca a velocidade.
 Memory strategy : tabelas const em ROM geradas por tools/convert_db.py; RAM so para estado do jogo.
 ROM mapper      : ROM_ASCII8 (128 KB, 16 segmentos de 8 KB), 3 regioes: segmentos 0-1 = codigo FIXO (4000h-7FFFh, 16 KB);
                   banco 2 (8000h-9FFFh) = janela de CODIGO banked (segmentos 5-8, chamadas `__banked` por trampolim do MSXgl);
@@ -31,6 +34,18 @@ Features omitted   : Betty/presentes, producao propria, estudios, Sammys, sabota
 Known limitations  : textos so em ingles/ASCII; titulos com ${...} nao resolvidos sao descartados.
 Performance issues : texto resolvido com fonte em VRAM (ver Medicoes); ROM_32K quase cheia.
 ```
+
+## Mouse (0.5.1)
+Leitura por `Mouse_Read` do MSXgl (protocolo do PSG R#15/R#14). Cursor = 2 sprites (seta branca + contorno preto, arte propria),
+sempre ativos (indices 0-1; os do predio sao 2-5), 1 contagem do mouse = 1 pixel, cursor preso a [2..253]x[2..209].
+Cada tela tem `X_Mouse(x, y, btn)` (segmentos banked): passar por cima realca (move o cursor da tela, sem redesenho extra),
+clique esquerdo seleciona e ativa (chama o mesmo `X_Input(IN_OK)` do teclado - um unico caminho de logica). Areas clicaveis:
+portas do predio, linhas de todas as listas/menus, abas de genero (`<` `>`), agencias de noticias, caracteres do codigo de save.
+**Cuidado em listas de compra:** um clique na linha da Agencia de filmes compra o filme (como o original: clique = agir).
+Testes: `tests/smoke.sh` injeta posicao/clique em `g_PtrX/g_PtrY/g_PtrInject` (mesmo hit-test do mouse real);
+`tests/mouse_real.sh` usa mouse **emulado** do openMSX movido por xdotool (M, mover, passar sobre a porta, clicar, entrar).
+**Nao testado em mouse fisico MSX.** A sensibilidade (1:1) pode precisar de ajuste; um clique muito curto (< 1 quadro) pode nao ser lido.
+Fixo: 15 591 de 16 384 bytes - o proximo codigo novo deve ir para segmentos banked.
 
 ## O predio (0.5)
 Substitui o menu de texto como hub. Corte transversal do edificio com 5 andares, elevador central (x=128) e 14 portas

@@ -415,3 +415,39 @@ void Ads_Detail(void) __banked { DrawDetail_Ads(); }
 
 void Ratings_Dyn(void) __banked { RatingsDynLocal(); }
 void Ratings_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_OFFICE); }
+
+// ---------------------------------------------------------------- mouse
+void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	if (s_Pick == 0)
+	{
+		u8 r = HitRow(y, (u8)(CONTENT_Y + 12), 14, NUM_SLOTS), col = (x >= 152);
+		if (r == 0xFF) return;
+		if (r != s_Slot || col != s_GridCol) { u8 old = s_Slot; s_Slot = r; s_GridCol = col; MarkRows(old, r); }
+		if (btn) Grid_Input(IN_OK);
+	}
+	else
+	{
+		u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, LIST_ROWS);
+		if (r == 0xFF || !SelVisible(r, s_PickN)) return;
+		if (btn) Grid_Input(IN_OK);
+	}
+}
+
+void Agency_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r;
+	if (y >= CONTENT_Y - 1 && y < CONTENT_Y + 10) { if (btn) Agency_Input(x < 150 ? IN_LEFT : IN_RIGHT); return; }   // "< genero >"
+	r = HitRow(y, (u8)(CONTENT_Y + 11), ROW_H, AGENCY_ROWS);
+	if (r == 0xFF || !SelVisible(r, CatCount(s_Cat))) return;
+	if (btn) Agency_Input(IN_OK);
+}
+
+void Ads_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), 12, NUM_OFFERS);
+	(void)x;
+	if (r == 0xFF) return;
+	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); g_Dirty |= D_DET; }
+	if (btn) Ads_Input(IN_OK);
+}

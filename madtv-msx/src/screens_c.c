@@ -201,3 +201,31 @@ void Save_Input(u8 ev) __banked
 		else { Sim_Msg(r == 2 ? "Wrong code: checksum mismatch." : r == 1 ? "Invalid code." : "Corrupt save data."); g_Dirty |= D_MSG; }
 	}
 }
+
+// ---------------------------------------------------------------- mouse
+void Boss_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 97), ROW_H, BOSS_ROWS);
+	(void)x;
+	if (r == 0xFF) return;
+	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); }
+	if (btn) Boss_Input(IN_OK);
+}
+
+void Save_Mouse(u8 x, u8 y, u8 btn) __banked
+{
+	if (s_SaveMode == 0)
+	{
+		u8 r = HitRow(y, (u8)(CONTENT_Y + 23), ROW_H, 2);
+		if (r == 0xFF) return;
+		if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); }
+		if (btn) Save_Input(IN_OK);
+	}
+	else if (s_SaveMode == 2 && btn && x >= 8)                         // clique num caractere do codigo move o cursor de edicao
+	{
+		u8 l = HitRow(y, (u8)(CONTENT_Y + 26), 14, CODE_LINES), col = (u8)((u8)(x - 8) / 6), old = s_Pos;
+		if (l == 0xFF || col >= CODE_COLS || l * CODE_COLS + col >= SAVE_CHARS) return;
+		s_Pos = (u8)(l * CODE_COLS + col);
+		MarkRows(old / CODE_COLS, s_Pos / CODE_COLS);
+	}
+}

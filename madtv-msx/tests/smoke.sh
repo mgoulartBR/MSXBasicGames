@@ -8,7 +8,7 @@ ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode)
+DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode)
 [ -n "$G" ] && [ -n "$OFFS" ] && [ -n "$CODE" ] || { echo "FAIL: simbolos ausentes no mapa"; exit 1; }
 cat > /tmp/madtv_smoke.tcl <<TCL
 set G $G
@@ -16,6 +16,11 @@ set OFFS $OFFS
 set CODE $CODE
 set DM $DM
 set SCR $SCR
+set PX $PX
+set PY $PY
+set INJ $INJ
+set GSEL $GSEL
+set SPD $SPD
 set SEL $SEL
 set SHOTDIR $PWD/$OUT
 set ::env(SHOTS) ${SHOTS:-0}
@@ -29,7 +34,7 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]]"
+  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]]"
   close $f
 }
 proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 82} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
@@ -53,6 +58,7 @@ if {!$::env(SHOTS)} { set throttle off }     ;# modo rapido (so asserts); SHOTS=
 proc at {dt script} { global t; set t [expr {$t + $dt}]; after time $t $script }
 proc key {k} { at 0.3 "press {*}\$::$k" }
 proc room {i} { at 0.2 "poke $::SEL $i"; key RET; at 4.5 {} }              ;# escolhe a sala (indice) e viaja ate a porta (ate ~4 s)
+proc mouse {x y btn} { at 0.1 "poke $::PX $x; poke $::PY $y"; at 0.2 "poke $::INJ $btn"; at 0.3 {} }   ;# btn: 1 = so mover, 2 = clique esquerdo, 4 = direito
 proc back {} { key ESC; at 0.3 {} }
 at 0   { shot 1_title }
 key RET
@@ -62,6 +68,21 @@ key UP;    at 0.3 { dump navup }
 key DOWN;  at 0.3 { dump navdown }
 key RIGHT; at 0.3 { dump navright }
 key LEFT;  at 0.3 { dump navleft; shot 2b_cursor }
+# --- MOUSE (cursor injetado: o caminho de hit-test e o mesmo do mouse real)
+mouse 84 140 1                                      ;# passa por cima da ADS (sala 4): realca, sem viajar
+at 0.3 { dump mhover }
+mouse 220 5 2                                       ;# clique na velocidade do cabecalho: muda a velocidade
+at 0.3 { dump mspeed }
+mouse 220 5 2                                       ;# 2a vez: velocidade 3
+mouse 220 5 2                                       ;# 3a vez: volta a velocidade 1
+mouse 40 140 2                                      ;# clique na FILM (sala 3): viaja e entra na Agencia
+at 5.0 { dump mclick }
+mouse 100 70 1                                      ;# passa por cima da 4a linha da lista
+at 0.3 { dump mlist }
+mouse 100 70 2                                      ;# clique: compra o filme (Agencia: clique = comprar)
+at 0.5 { dump mbuy; shot 3m_mouse_buy }
+mouse 100 100 4                                     ;# botao direito = voltar ao predio
+at 0.5 { dump mback }
 # --- Film agency (sala 3): comprar os filmes 1 e 2 de Lovestory
 room 3
 key DOWN; key RET; key DOWN; key RET
@@ -139,6 +160,12 @@ need('later' in S,'script nao completou (estados ate: %s)'%list(S))
 need(g('start','money')==2500,'dinheiro inicial != 2500')
 need(g('start','scr')==1 and g('start','sel')==9,'inicio nao esta no predio com cursor no escritorio')
 need((g('navup','sel'),g('navdown','sel'),g('navright','sel'),g('navleft','sel'))==(12,9,10,9),'navegacao do cursor no predio (cima/baixo/direita/esquerda)')
+need(g('mhover','sel')==4 and g('mhover','scr')==1,'mouse: passar por cima da porta nao realcou/ nao deveria viajar')
+need(g('mspeed','spd')!=g('start','spd'),'mouse: clique na velocidade do cabecalho nao mudou a velocidade')
+need(g('mclick','scr')==3 and g('mclick','sel')==3,'mouse: clique na porta nao levou a Agencia')
+need(g('mlist','gsel')==3,'mouse: hover na lista nao moveu o cursor')
+need(g('mbuy','money')<g('mclick','money'),'mouse: clique na linha da Agencia nao comprou')
+need(g('mback','scr')==1,'mouse: botao direito nao voltou ao predio')
 need(g('bought','scr')==3 and g('office','scr')==10 and g('placed','scr')==2 and g('signed','scr')==4 and g('news','scr')==5 and g('borrowed','scr')==7 and g('sold','scr')==6 and g('saved','scr')==9,'viagem ate as salas nao abriu a tela esperada')
 need(g('closed','scr')==1,'sala fechada abriu uma tela')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')

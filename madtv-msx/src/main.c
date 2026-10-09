@@ -1,7 +1,7 @@
 // MadTV-MSX - nucleo fixo: laco principal, cabecalho, mensagens, hub e despacho para as telas (segmentos banked).
 #include "app.h"
 
-#define VERSION_STR "0.5"
+#define VERSION_STR "0.5.1"
 
 u8 g_Screen, g_Speed, g_Dirty, g_RowA, g_RowB, g_Sel, g_First;
 u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
@@ -122,6 +122,22 @@ u8 Nav(u8 ev, u8 n, u8 rows)
 	return 1;
 }
 
+u8 HitRow(u8 y, u8 y0, u8 h, u8 n)
+{
+	u8 r;
+	if (y < y0) return 0xFF;
+	r = (u8)((u8)(y - y0) / h);
+	return (r < n) ? r : 0xFF;
+}
+
+u8 SelVisible(u8 row, u8 n)
+{
+	u8 s = (u8)(g_First + row);
+	if (s >= n) return 0;
+	if (s != g_Sel) { u8 old = g_Sel; g_Sel = s; MarkRows((u8)(old - g_First), row); g_Dirty |= D_DET; }
+	return 1;
+}
+
 void NavApply(u8 r)
 {
 	if (r == 1) g_Dirty |= D_ROWS | D_DET;
@@ -129,6 +145,8 @@ void NavApply(u8 r)
 }
 
 // ---------------------------------------------------------------- telas especiais
+static const char* const k_MouseTxt[3] = { "Mouse: off (press M to use a mouse)", "Mouse: on, port 1 (joystick on port 2)", "Mouse: on, port 2" };
+
 static void Draw_Title(void)
 {
 	Ui_Clear();
@@ -142,6 +160,8 @@ static void Draw_Title(void)
 	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
 	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");
 	Ui_Color(UI_CYAN);   Ui_Text(36, 188, "Esc: load a game from a save code");
+	Ui_Fill(0, 166, 255, 10, UI_BG);
+	Ui_Color(g_PtrMode ? UI_GREEN : UI_GRAY); Ui_Text(14, 167, k_MouseTxt[g_PtrMode]);
 	Ui_Color(UI_GRAY);   Ui_Text(4, 202, "Data: TVTower (altered for MSX)");
 }
 
@@ -261,6 +281,22 @@ static void ScreenDetail(void)
 	}
 }
 
+static void ScreenMouse(u8 x, u8 y, u8 btn)
+{
+	switch (g_Screen)
+	{
+	case SCR_HUB:     Building_Mouse(x, y, btn); break;
+	case SCR_OFFICE:  Office_Mouse(x, y, btn); break;
+	case SCR_GRID:    Grid_Mouse(x, y, btn); break;
+	case SCR_AGENCY:  Agency_Mouse(x, y, btn); break;
+	case SCR_ADS:     Ads_Mouse(x, y, btn); break;
+	case SCR_NEWS:    News_Mouse(x, y, btn); break;
+	case SCR_ARCHIVE: Archive_Mouse(x, y, btn); break;
+	case SCR_BOSS:    Boss_Mouse(x, y, btn); break;
+	case SCR_SAVE:    Save_Mouse(x, y, btn); break;
+	}
+}
+
 static void StartGame(void)
 {
 	Sim_Init(*(volatile u16*)0xFC9E ^ 0x5A5A);   // semente: JIFFY do BIOS no momento do OK
@@ -285,6 +321,22 @@ void main()
 	{
 		Halt();
 		ev = Input_Poll();
+		if (g_InExtra && g_Screen != SCR_SAVE)                     // M: liga/desliga o mouse (na tela de codigo M e uma letra)
+		{
+			Pointer_Cycle();
+			if (g_Screen == SCR_TITLE) Draw_Title();
+			else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; }
+		}
+		{
+			u8 p = Pointer_Update();
+			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
+			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }
+			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
+			{
+				if ((p & PTR_LEFT) && g_PtrY < 14 && g_PtrX >= 200) ev |= IN_SPEED;      // clicar na velocidade do cabecalho
+				else ScreenMouse(g_PtrX, g_PtrY, (p & PTR_LEFT) ? 1 : 0);
+			}
+		}
 
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
