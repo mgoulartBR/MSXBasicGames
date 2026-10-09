@@ -112,7 +112,7 @@ def main():
         d=np.frombuffer(w.lump(name),np.uint8)[:4096].reshape(64,64); img=Image.fromarray(w.playpal(0)[d],'RGB').resize((16,16),Image.BOX)
         return np.dstack([np.array(img),np.full((16,16),255,np.uint8)])
     flat_tiles=[flat_tile(f) for f in fl_used]
-    BO=2+NF; NBASE=256-BO                                          # 0 transparente; 1 = quase-preto (teto); 2..1+NF = tons dos flats; BO.. = cores base (indices < 128 ficam para cores LISAS de faces)
+    wtex=sorted(L.tiles); BO=2+NF+len(wtex); NBASE=256-BO                                          # 0 transparente; 1 = quase-preto (teto); 2..1+NF = tons dos flats; BO.. = cores base (indices < 128 ficam para cores LISAS de faces)
     # --- paleta: amostras de todas as imagens
     samples=[];wts=[]
     def add(rgba,wt):
@@ -128,7 +128,8 @@ def main():
     base=median_cut(u.astype(float),ww,NBASE)                       # (NBASE,3)
     # indice 0 = transparente (preto); 1..NBASE = base; NBASE+1.. = cores de piso/teto
     pal=np.zeros((256,3),float); pal[1]=(2,2,4); pal[BO:BO+len(base)]=base
-    flat_idx={}
+    flat_idx={}; tex_idx={}
+    for i,k_ in enumerate(wtex): pal[2+NF+i]=L.tile_avg[k_]; tex_idx[k_]=2+NF+i
     for i,f in enumerate(used):
         c=np.array(flat_cols[f],float)
         for j,k in enumerate((0.8,1.0)):
@@ -223,7 +224,7 @@ def main():
             res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
             nv=len(r['verts']); nf=len(r['faces'])
             blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])
-            def fcol(fl): return 0x80 if fl is None else (1 if fl[0]=='C' else flat_idx[m.sectors[fl[1]]['ftex']][1])
+            def fcol(fl): return 0x80 if fl is None else (1 if fl[0]=='C' else tex_idx[fl[1]] if fl[0]=='W' else flat_idx[m.sectors[fl[1]]['ftex']][1])
             for fidx,fl in zip(r['faces'],r['flat']): blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,fcol(fl))
             for uv in r['uvs']: blob+=bytes(uv)
             if blob in seen: blk_tab[(bx,by,hd)]=blob; continue

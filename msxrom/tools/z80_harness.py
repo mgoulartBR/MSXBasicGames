@@ -126,6 +126,12 @@ class Machine:
         s.log['faces']+=draw; s.log['near_skipped']=s.log.get('near_skipped',0)+skip
         for c in cmds:
             if len(c)==19: s.lrmm(c)
+            else: s.line(c)
+    def line(s,c):
+        """LINE horizontal (vdp_command.v): NX+1 pixels de cor CLR a partir de (DX,DY); LOP bit3 = transparente quando a cor e 0."""
+        x=c[0]|(c[1]&1)<<8; y=(c[2]|c[3]<<8)&0x3FF; nx=c[4]|(c[5]&7)<<8; col=c[8]; lop=c[10]&15
+        if lop&8 and col==0: return
+        x1=min(255,x+nx); s.vram[y*256+x:y*256+x1+1]=col; s.log['line_px']=s.log.get('line_px',0)+(x1-x+1)
     def lrmm(s,c):
         """LRMM (vdp_command.v): texel de origem = (SX<<8 + i*VX, SY<<8 + i*VY) >> 8 na linha; a cada linha seguinte (NY>1) a origem avanca (-VY,+VX).
         Janela de origem R#51..58: fora dela vale a cor; o endereco da VRAM faz wrap (X modulo 256, Y modulo 1024). TIMP via func_lop."""

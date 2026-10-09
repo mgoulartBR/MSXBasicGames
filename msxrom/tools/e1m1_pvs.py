@@ -130,7 +130,7 @@ def strips(a,b,dmin_fn,k):
         else: out.append((a,b))
     rec(a,b); return out
 
-DFLAT=220                                  # pecas cujo ponto mais proximo do bloco esta alem disso viram UMA face de cor lisa (media da textura)
+DFLAT=260                                  # pecas cujo ponto mais proximo do bloco esta alem disso viram UMA face de cor lisa (media da textura)
 def model(L,sub_ids,bx,by,k,minlen=24,dflat=None,tiles=()):
     """tiras por distancia + preenchimento guloso por importancia (area projetada ~ comprimento*altura/(dist+48)^2) ate os limites do Geo3D.
     Devolve verts, faces, uvs, flat (None = texturizada; (r,g,b) = face lisa), fracao de importancia mantida."""
@@ -149,7 +149,10 @@ def model(L,sub_ids,bx,by,k,minlen=24,dflat=None,tiles=()):
             bands={}
             for si in sis: sub=L.subs[si]['s']; bands[(sub[2],sub[3],round(sub[6],3),round(sub[7],3))]=sub
             for (hb,ht,r0,r1),sub in bands.items():
-                area=Ln*(ht-hb); items.append((area/(dseg(ax,ay,ux,uy,0,Ln)+48)**2,'F',(p,ax,ay,ux,uy,Ln,hb,ht,r0,r1),0,0))
+                nch=max(1,math.ceil(Ln/256))                                   # pedacos de ate 256 unidades: limita a distorcao do mapeamento afim
+                for ci in range(nch):
+                    a_,b_=Ln*ci/nch,Ln*(ci+1)/nch; area=(b_-a_)*(ht-hb)
+                    items.append((area/(dseg(ax,ay,ux,uy,a_,b_)+48)**2,'F',(p,ax+ux*a_,ay+uy*a_,ux,uy,b_-a_,hb,ht,r0,r1),0,0))
             continue
         for si in sis:
             s=L.subs[si]; (d0,d1,hb,ht,u0,u1,r0,r1)=s['s']
@@ -198,7 +201,7 @@ def model(L,sub_ids,bx,by,k,minlen=24,dflat=None,tiles=()):
         faces.append([V(q) for q in q4]); uvs.append((uB,v1,uA,v1,uA,v0,uB,v0)); flat.append(None); kept+=imp
     return verts,faces,uvs,flat,kept/tot
 
-K_LIST=(1.0,1.5,2.2,3.2,4.5)
+K_LIST=(1.0,1.5,2.2)                # tiras mais longas distorcem a textura (mapeamento afim)
 NHEAD=4; CONE=92.0                       # 4 setores de direcao (90 graus cada); cone de +-92 graus: cobre o campo de visao (+-40) com histerese de 5 graus
 def inview(L,si,bx,by,hd_deg,half_deg):
     """o subquad tem algum ponto dentro do cone (azimute do bloco, alargado pelo tamanho do bloco)?"""
