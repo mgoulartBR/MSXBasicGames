@@ -23,7 +23,7 @@ long g_StatDone, g_StatFail, g_StatIncome, g_StatPenalty, g_StatMissed, g_StatSp
 char g_Msg[44];
 const u8 g_Reach[NUM_STATIONS] = { 120, 110, 100 };
 u8 g_Diff = 1;
-static const u8  k_RivalQ[NUM_DIFF] = { 65, RIVAL_Q, 82 };
+static const u8  k_RivalQ[NUM_DIFF] = { 55, RIVAL_Q, 74 };
 static const i16 k_StartMoney[NUM_DIFF] = { 3500, START_MONEY, 2000 };
 
 const char* const g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };

@@ -20,7 +20,7 @@
 #define PRICE_DIV     20         // preco do filme = media(atributos)*price_mod/PRICE_DIV * blocos/2 + 50
 #endif
 #ifndef RIVAL_Q
-#define RIVAL_Q       78         // % aplicado a audiencia dos rivais (dificuldade normal)
+#define RIVAL_Q       68         // % aplicado a audiencia dos rivais (dificuldade normal)
 #endif
 #ifndef DAILY_UPKEEP
 #define DAILY_UPKEEP  100        // k$/dia (torres/estudio - fixo ate existirem torres)

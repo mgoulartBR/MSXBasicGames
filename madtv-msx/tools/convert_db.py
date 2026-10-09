@@ -12,6 +12,7 @@ from pathlib import Path
 
 MOVIES_PER_CAT = 20
 MAX_TITLE = 26
+MAX_TITLE_CULTURE = 32   # Culture tem poucos titulos curtos; titulos longos sao cortados nas listas (TextN)
 MAX_ADS = 24
 NEWS_PER_AGENCY = 40     # 3 agencias x 40 = 120 noticias (segmento 4 do mapper)
 NEWS_TITLE = 40         # tamanho fixo do titulo (registro fixo => copia simples por acessor)
@@ -73,16 +74,16 @@ def pick_movies(root, lang):
         if p.get("product") != "1" or p.get("licence_type") != "1":
             continue
         d, r = p.find("data"), p.find("ratings")
-        if d is None or r is None or not d.get("year"):
+        if d is None or r is None or (not d.get("year") and int(d.get("maingenre") or 0) != 6):   # Culture (genero 6): quase nenhum tem ano no banco -> usa 1985
             continue
         g = int(d.get("maingenre") or 0)
         if g not in GENRE_TO_CAT:
             continue
         t = en_title(p, lang)
-        if not t or len(t) > MAX_TITLE or len(t) < 2:
+        if not t or len(t) > (MAX_TITLE_CULTURE if GENRE_TO_CAT[g] == 5 else MAX_TITLE) or len(t) < 2:
             continue
         by_cat[GENRE_TO_CAT[g]].append(dict(
-            guid=p.get("guid"), title=t, year=int(d.get("year")), cat=GENRE_TO_CAT[g],
+            guid=p.get("guid"), title=t, year=int(d.get("year") or 1985), cat=GENRE_TO_CAT[g],
             blocks=int(d.get("blocks") or 1),
             critics=int(r.get("critics") or 0), speed=int(r.get("speed") or 0), outcome=int(r.get("outcome") or 0),
             price=int(round(float(d.get("price_mod") or 1) * 100)),

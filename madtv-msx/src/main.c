@@ -198,6 +198,8 @@ static void ScreenInput(u8 ev)
 	case SCR_SAVE:    Save_Input(ev); break;
 	case SCR_SHOP:    Shop_Input(ev); break;
 	case SCR_BETTY:   Betty_Input(ev); break;
+	case SCR_PORTER:  Porter_Input(ev); break;
+	case SCR_FUN: case SCR_SUN: Rival_Input(ev); break;
 	}
 }
 
@@ -217,6 +219,8 @@ static void ScreenDraw(void)
 	case SCR_SAVE:    Save_Draw(); break;
 	case SCR_SHOP:    Shop_Draw(); break;
 	case SCR_BETTY:   Betty_Draw(); break;
+	case SCR_PORTER:  Porter_Draw(); break;
+	case SCR_FUN: case SCR_SUN: Rival_Draw(); break;
 	}
 }
 
@@ -228,6 +232,8 @@ static void ScreenDyn(void)
 	case SCR_GRID:    Grid_Dyn(); break;
 	case SCR_RATINGS: Ratings_Dyn(); break;
 	case SCR_NEWS:    News_Dyn(); break;
+	case SCR_PORTER:  Porter_Draw(); break;
+	case SCR_FUN: case SCR_SUN: Rival_Draw(); break;
 	case SCR_BOSS:    Boss_Draw(); break;
 	}
 }

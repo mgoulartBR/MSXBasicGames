@@ -37,9 +37,9 @@ void Shop_Draw(void) __banked
 	Ui_Begin();
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Supermarket");
-	Ui_Color(UI_GRAY);   Ui_Text(90, CONTENT_Y, "price / sympathy / stock (max 3)");
+	Ui_Color(UI_GRAY);   Ui_Text(90, CONTENT_Y, "price / gain / stock");
 	for (i = 0; i < NUM_GIFTS; i++) ShopRowBody(i);
-	Ui_Color(UI_GRAY); Ui_Text(4, (u8)(SHOP_Y(NUM_GIFTS) + 6), "Give gifts to Betty (floor 4). Repeats lose effect.");
+	Ui_Color(UI_GRAY); Ui_Text(4, (u8)(SHOP_Y(NUM_GIFTS) + 6), "Betty is on the top floor. Repeats weaken.");
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:buy  BACK:building");
 }
@@ -158,3 +158,74 @@ void Betty_Mouse(u8 x, u8 y, u8 btn) __banked
 	if (r == 0xFF || !SelVisible(r, BET_ROWS)) return;
 	if (btn) Betty_Input(IN_OK);
 }
+
+// ---------------------------------------------------------------- PORTEIRO (resumo do dia + dicas)
+void Porter_Draw(void) __banked
+{
+	u8 st, y = (u8)(CONTENT_Y + 52), empty = 0, nc = 0, s, x;
+	Ui_Begin();
+	ClearContent();
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Porter's desk");
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 12), "Income today");   Ui_Color(UI_GREEN); Money(100, (u8)(CONTENT_Y + 12), g_Game.day_income);
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 22), "Costs today");    Ui_Color(UI_RED);   Money(100, (u8)(CONTENT_Y + 22), g_Game.day_cost);
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 32), "Debt to Raffer"); Ui_Color(UI_WHITE); Money(100, (u8)(CONTENT_Y + 32), g_Game.debt);
+	Ui_Color(UI_GRAY);   Ui_Text(150, CONTENT_Y + 12, "Standings (Image)");
+	for (st = 0; st < NUM_STATIONS; st++)
+	{
+		u8 yy = (u8)(CONTENT_Y + 22 + st * 10);
+		Ui_Color(g_StationCol[st]); Ui_Text(150, yy, g_StationName[st]);
+		if (g_Game.alive[st]) Ui_Int(196, yy, g_Game.image[st]); else Ui_Text(196, yy, "out");
+	}
+	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(y - 2), "Tips from the porter");
+	y += 10;
+	for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == NONE) empty++;
+	for (s = 0; s < MAX_CONTRACTS; s++) if (g_Game.contract[s].ad != NONE) nc++;
+	Ui_Color(UI_WHITE);
+	if (empty) { x = Ui_Int(4, y, empty); Ui_Text(x, y, " programme slot(s) still empty."); y += 10; }
+	if (!nc) { Ui_Text(4, y, "No ad contracts: try the Ad agency."); y += 10; }
+	if (g_Game.image[0] < IMAGE_LOW) { Ui_Color(UI_RED); Ui_Text(4, y, "Image below 20: ads pay less, no credit!"); y += 10; Ui_Color(UI_WHITE); }
+	if (!g_Game.gift_today && g_Game.sym[0] < g_Game.image[0]) { Ui_Text(4, y, "Betty is waiting for a gift today."); y += 10; }
+	if (g_Game.money < 300) { Ui_Text(4, y, "The cash box is almost empty."); y += 10; }
+	if (y == (u8)(CONTENT_Y + 62)) Ui_Text(4, y, "All quiet. Keep an eye on the ratings.");
+	Ui_End(0, CONTENT_Y - 2, 255, 160);
+	Hint("BACK:building");
+}
+
+void Porter_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
+
+// ---------------------------------------------------------------- ESCRITORIO DOS RIVAIS (espionagem: grade e audiencias de hoje)
+void Rival_Draw(void) __banked
+{
+	u8 st = (u8)(g_Screen - SCR_FUN + 1), s, y;
+	char b[8];
+	Ui_Begin();
+	ClearContent();
+	Ui_Color(g_StationCol[st]); Ui_Text(4, CONTENT_Y, g_StationName[st]);
+	Ui_Color(UI_GRAY); Ui_Text(60, CONTENT_Y, "office - tonight's schedule");
+	if (!g_Game.alive[st]) { Ui_Color(UI_RED); Ui_Text(14, (u8)(CONTENT_Y + 20), "Bankrupt. The office is empty."); }
+	else
+	{
+		Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 12), "Image"); Ui_Int(40, (u8)(CONTENT_Y + 12), g_Game.image[st]);
+		Ui_Text(80, (u8)(CONTENT_Y + 12), "Betty likes them:"); Ui_Int(184, (u8)(CONTENT_Y + 12), g_Game.sym[st]);
+		for (s = 0; s < NUM_SLOTS; s++)
+		{
+			const Slot* sl = &g_Game.slot[st][s];
+			y = (u8)(CONTENT_Y + 26 + s * ROW_H);
+			ClockStr(b, (u16)(FIRST_SLOT_T + s * 60));
+			Ui_Color(UI_GRAY); Ui_Text(4, y, b);
+			Ui_Color(UI_WHITE);
+			if (sl->movie == NONE) { Ui_Color(UI_GRAY); Ui_Text(44, y, "-"); }
+			else
+			{
+				Ui_TextN(44, y, g_Movies[sl->movie].title, 20);
+				Ui_Color(UI_GRAY); Ui_Int(206, y, sl->part + 1); Ui_Text(214, y, "/"); Ui_Int(222, y, g_Movies[sl->movie].blocks);
+			}
+			if (g_Game.aud_done[s]) { Ui_Color(g_StationCol[st]); Ui_Dec1(236, y, g_Game.aud[st][s]); }
+		}
+		Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 26 + NUM_SLOTS * ROW_H + 4), "Audience (millions) once aired.");
+	}
+	Ui_End(0, CONTENT_Y - 2, 255, 160);
+	Hint("BACK:building");
+}
+
+void Rival_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }

@@ -13,7 +13,7 @@
 
 typedef struct { u8 floor; u8 x; u8 col; u8 scr; const char* lbl; const char* name; } Room;
 static const Room k_Rooms[NROOMS] = {
-	{ 0,  40, COLOR_GRAY,        CODE_STUB,  "PORT", "Porter's desk (not open yet)" },
+	{ 0,  40, COLOR_DARK_GREEN,  SCR_PORTER, "PORT", "Porter - daily summary and tips" },
 	{ 0,  84, COLOR_DARK_YELLOW, SCR_ARCHIVE, "ARCH", "Archive - sell movies" },
 	{ 0, 172, COLOR_LIGHT_BLUE,  SCR_SHOP,   "SHOP", "Supermarket - buy gifts" },
 	{ 1,  40, COLOR_MEDIUM_RED,  SCR_AGENCY, "FILM", "Film agency - buy movies" },
@@ -23,8 +23,8 @@ static const Room k_Rooms[NROOMS] = {
 	{ 2,  84, COLOR_GRAY,        CODE_STUB,  "STUD", "Studios (not open yet)" },
 	{ 2, 172, COLOR_GRAY,        CODE_STUB,  "REAL", "Realtor (not open yet)" },
 	{ 3,  84, COLOR_LIGHT_YELLOW, SCR_OFFICE, "OFFC", "Your office - grid, ratings, save" },
-	{ 3, 172, COLOR_GRAY,        CODE_LOCKED, "FUN",  "FunTV's office (locked)" },
-	{ 3, 216, COLOR_GRAY,        CODE_LOCKED, "SUN",  "SunTV's office (locked)" },
+	{ 3, 172, COLOR_MEDIUM_GREEN, SCR_FUN,   "FUN",  "FunTV office - spy on their schedule" },
+	{ 3, 216, COLOR_CYAN,      SCR_SUN,    "SUN",  "SunTV office - spy on their schedule" },
 	{ 4,  40, COLOR_DARK_RED,    SCR_BOSS,   "BOSS", "Mr. Raffer - credit" },
 	{ 4, 172, COLOR_MAGENTA,     SCR_BETTY,  "BETY", "Betty's office - gifts, marriage" },
 };
@@ -297,7 +297,7 @@ void Office_Draw(void) __banked
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Your office");
 	for (i = 0; i < OFFICE_N; i++) OfficeRowBody(i);
 	Ui_Color(UI_GRAY);
-	Ui_Text(4, (u8)(CONTENT_Y + 66), "Tower map and bank statement: not open yet.");
+	Ui_Text(4, (u8)(CONTENT_Y + 66), "Tower map & bank statement: not open yet.");
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:use  BACK:corridor");
 }
