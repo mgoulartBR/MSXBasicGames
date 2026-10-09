@@ -1,7 +1,7 @@
 // MadTV-MSX - nucleo fixo: laco principal, cabecalho, mensagens, hub e despacho para as telas (segmentos banked).
 #include "app.h"
 
-#define VERSION_STR "0.4"
+#define VERSION_STR "0.5"
 
 u8 g_Screen, g_Speed, g_Dirty, g_RowA, g_RowB, g_Sel, g_First;
 u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
@@ -128,71 +128,6 @@ void NavApply(u8 r)
 	else if (r == 2) g_Dirty |= D_LIST | D_DET;
 }
 
-// ---------------------------------------------------------------- HUB
-static const char* const k_Menu[] = { "Programme grid", "Film agency", "Ad agency", "News room", "Archive (sell movies)", "Boss office (credit)", "Ratings & image", "Save / Load" };
-static const u8 k_MenuScr[] = { SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE };
-#define MENU_N 8
-static u8 s_Menu;
-
-#define HY(n) ((u8)(CONTENT_Y + 98 + (n)))     // (u8) evita falso aviso de overflow do SDCC em constantes > 127
-static void Draw_HubDyn_Body(void)
-{
-	u8 i, n = 0, c = 0, a = 0;
-	Ui_Fill(0, HY(0), 255, 34, UI_BG);
-	Ui_Color(UI_GRAY);
-	for (i = 0; i < DB_NUM_MOVIES; i++) n += g_Game.owned[i];
-	for (i = 0; i < MAX_CONTRACTS; i++) c += (g_Game.contract[i].ad != NONE);
-	for (i = 0; i < DB_NUM_AGENCIES; i++) a += g_Game.news_sub[i];
-	Ui_Text(4, HY(2), "Movies"); Ui_Int(40, HY(2), n);
-	Ui_Text(70, HY(2), "Contracts"); Ui_Int(124, HY(2), c);
-	Ui_Text(150, HY(2), "Agencies"); Ui_Int(198, HY(2), a);
-	Ui_Color(g_Game.debt ? UI_RED : UI_GRAY);
-	Ui_Text(4, HY(14), "Debt"); Money(34, HY(14), g_Game.debt);
-	Ui_Color(UI_GRAY);
-	Ui_Text(110, HY(14), "Betty"); Ui_Text(146, HY(14), "(not yet)");
-	Ui_Text(4, HY(26), "Next newscast quality"); Ui_Int(136, HY(26), Sim_NewsQuality()); Ui_Text(154, HY(26), "%");
-}
-
-static void Draw_HubDyn(void)
-{
-	Ui_Begin();
-	Draw_HubDyn_Body();
-	Ui_End(0, HY(0), 255, 34);
-}
-
-static void DrawRow_Hub(u8 i)
-{
-	u8 y = CONTENT_Y + 14 + i * ROW_H;
-	if (i >= MENU_N) return;
-	Ui_Begin();
-	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
-	Ui_Color(i == s_Menu ? UI_YELLOW : UI_WHITE);
-	Ui_Text(4, y, i == s_Menu ? ">" : " ");
-	Ui_Text(16, y, k_Menu[i]);
-	Ui_End(0, (u8)(y - 1), 255, ROW_H);
-}
-
-static void Draw_Hub(void)
-{
-	u8 i;
-	Ui_Begin();
-	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Office");
-	for (i = 0; i < MENU_N; i++) DrawRow_Hub(i);
-	Draw_HubDyn_Body();
-	Ui_End(0, CONTENT_Y - 2, 255, 160);
-	Hint("OK:enter  TAB:speed  P:pause");
-}
-
-static void Hub_Input(u8 ev)
-{
-	u8 old = s_Menu;
-	if ((ev & IN_DOWN) && s_Menu + 1 < MENU_N) s_Menu++;
-	if ((ev & IN_UP) && s_Menu > 0) s_Menu--;
-	if (s_Menu != old) MarkRows(old, s_Menu);
-	if (ev & IN_OK) Goto(k_MenuScr[s_Menu]);
-}
-
 // ---------------------------------------------------------------- telas especiais
 static void Draw_Title(void)
 {
@@ -231,11 +166,14 @@ static void ScreenEnter(u8 scr)
 	case SCR_ARCHIVE: Archive_Enter(); break;
 	case SCR_BOSS:   Boss_Enter(); break;
 	case SCR_SAVE:   Save_Enter(); break;
+	case SCR_HUB:    Building_Enter(); break;
+	case SCR_OFFICE: Office_Enter(); break;
 	}
 }
 
 void Goto(u8 scr)
 {
+	if (g_Screen == SCR_HUB && scr != SCR_HUB) Building_Leave();
 	g_Screen = scr; g_Sel = 0; g_First = 0; g_Dirty |= D_CON;
 	ScreenEnter(scr);
 }
@@ -244,7 +182,8 @@ static void ScreenInput(u8 ev)
 {
 	switch (g_Screen)
 	{
-	case SCR_HUB:     Hub_Input(ev); break;
+	case SCR_HUB:     Building_Input(ev); break;
+	case SCR_OFFICE:  Office_Input(ev); break;
 	case SCR_GRID:    Grid_Input(ev); break;
 	case SCR_AGENCY:  Agency_Input(ev); break;
 	case SCR_ADS:     Ads_Input(ev); break;
@@ -260,7 +199,8 @@ static void ScreenDraw(void)
 {
 	switch (g_Screen)
 	{
-	case SCR_HUB:     Draw_Hub(); break;
+	case SCR_HUB:     Building_Draw(); break;
+	case SCR_OFFICE:  Office_Draw(); break;
 	case SCR_GRID:    Grid_Draw(); break;
 	case SCR_AGENCY:  Agency_Draw(); break;
 	case SCR_ADS:     Ads_Draw(); break;
@@ -276,7 +216,7 @@ static void ScreenDyn(void)
 {
 	switch (g_Screen)
 	{
-	case SCR_HUB:     Draw_HubDyn(); break;
+	case SCR_HUB:     Building_Dyn(); break;
 	case SCR_GRID:    Grid_Dyn(); break;
 	case SCR_RATINGS: Ratings_Dyn(); break;
 	case SCR_NEWS:    News_Dyn(); break;
@@ -298,7 +238,8 @@ static void ScreenRow(u8 r)
 {
 	switch (g_Screen)
 	{
-	case SCR_HUB:    DrawRow_Hub(r); break;
+	case SCR_HUB:    Building_Row(r); break;
+	case SCR_OFFICE: Office_Row(r); break;
 	case SCR_GRID:   Grid_Row(r); break;
 	case SCR_AGENCY: Agency_Row(r); break;
 	case SCR_ADS:    Ads_Row(r); break;
@@ -316,13 +257,15 @@ static void ScreenDetail(void)
 	case SCR_AGENCY: Agency_Detail(); break;
 	case SCR_ADS:    Ads_Detail(); break;
 	case SCR_NEWS:   News_Detail(); break;
+	case SCR_HUB:    Building_Detail(); break;
 	}
 }
 
 static void StartGame(void)
 {
 	Sim_Init(*(volatile u16*)0xFC9E ^ 0x5A5A);   // semente: JIFFY do BIOS no momento do OK
-	g_Speed = SPEED_1; s_Menu = 0;
+	g_Speed = SPEED_1;
+	Building_Reset();
 	Ui_Clear();
 	Header_Invalidate();
 	g_Screen = SCR_HUB;
@@ -334,7 +277,7 @@ void main()
 	u8 ev, e, hz, fc = 0, fpm;
 	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
 	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
-	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; s_Menu = 0; g_Speed = SPEED_1; g_Screen = SCR_TITLE;
+	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE;
 	Ui_Init();
 	Draw_Title();
 
@@ -371,6 +314,11 @@ void main()
 			if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); continue; }
 		}
 
+		if (g_Screen == SCR_HUB)                                // predio: movimento das figuras a cada frame
+		{
+			u8 r = Building_Frame();
+			if (r != 0xFF) Goto(r);
+		}
 		ScreenInput(ev);
 
 		if (g_Dirty & D_HDR) Draw_Header();

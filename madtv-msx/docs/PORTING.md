@@ -5,8 +5,11 @@ Original system : Mad TV (1991, Rainbow Arts) - DOS/Amiga/ST, simulacao de gesta
 Data source     : banco do remake open source TVTower (XML) - ver LICENSES.md
 MSX target      : MSX2 (V9938), 64 KB RAM minimo, cartucho ROM (nada testado em hardware real)
 
-Video strategy  : Screen 5 (256x212, 16 cores), texto bitmap do MSXgl + barras com VDP HMMV.
-                  Jogo de menus/telas estaticas: sem scroll; sprites de hardware so para cursor/personagens depois.
+Video strategy  : Screen 5 (256x212, 16 cores). Texto = fonte em VRAM copiada pelo VDP (LMMM); retangulos/barras com HMMV; telas
+                  montadas fora da tela (pagina 2) e copiadas de uma vez (sem cintilacao). Sem scroll.
+Sprites         : so no predio (hub): figuras 16x16 do jogador e dos 2 rivais + elevador, sprite mode 2 (uma cor por linha:
+                  cabeca / tronco na cor da emissora / pernas), tabelas na pagina 3 da VRAM (padroes 1F000h, cores 1F800h,
+                  atributos 1FA00h), 4 sprites, nunca mais de 4 por linha.
 Audio strategy  : PSG (a definir; nenhuma implementacao ainda)
 Input strategy  : teclado (setas) + joystick 1, ambos simultaneos. Mouse original -> cursor por setas/botao.
 Memory strategy : tabelas const em ROM geradas por tools/convert_db.py; RAM so para estado do jogo.
@@ -22,11 +25,26 @@ Features adapted   : catalogo do TVTower reduzido a subconjunto curado (88 filme
                      8 categorias (TVTower tem generos mais finos -> CATEGORIES em tools/convert_db.py);
                      preco de filme provisorio = media(criticas,ritmo,bilheteria) * price_mod (NAO e a formula do TVTower).
 Features omitted   : Betty/presentes, producao propria, estudios, Sammys, sabotagem, torres/satelites, audio, escolha da emissora,
-                     dificuldade, grade de "amanha", predio navegavel.
+                     dificuldade, grade de "amanha". Salas ainda FECHADAS no predio (porta existe, mostra aviso): porteiro, supermercado,
+                     roteiros, estudios, corretor, Betty; escritorios dos rivais (trancados).
 
 Known limitations  : textos so em ingles/ASCII; titulos com ${...} nao resolvidos sao descartados.
 Performance issues : texto resolvido com fonte em VRAM (ver Medicoes); ROM_32K quase cheia.
 ```
+
+## O predio (0.5)
+Substitui o menu de texto como hub. Corte transversal do edificio com 5 andares, elevador central (x=128) e 14 portas
+(`k_Rooms` em building.c). Andar 0: porteiro*, arquivo, supermercado*; 1: agencia de filmes, publicidade, noticias; 2: roteiros*,
+estudios*, corretor*; 3: seu escritorio, escritorios de FunTV/SunTV (trancados); 4: chefe, Betty*. (*fechada nesta versao.)
+Controles: setas movem o cursor entre portas (esq/dir = vizinha no andar, cima/baixo = andar acima/abaixo na porta mais proxima);
+OK = o personagem caminha ate o elevador, sobe/desce e caminha ate a porta, entao entra (como o clique do original, mas por teclado).
+O tempo do jogo continua correndo durante a viagem (~0,5 s por andar a 60 Hz). Ao sair de uma sala voce reaparece na porta dela.
+Rivais: decoracao - andam pelo andar, "entram" nas salas e reaparecem; ainda nao interagem com o jogo.
+Escritorio = submenu: grade de programacao, audiencias/Image, salvar/carregar (mapa de torres e extrato: ainda nao).
+**Arte:** o predio e desenhado proceduralmente (retangulos) e as figuras sao pixel art propria; **nenhum grafico do Mad TV original
+foi extraido ou reutilizado**.
+Armadilha encontrada: HMMV com largura de 1 pixel vira 0 bytes e preenche a linha inteira ate a borda (corrigido em `Ui_Fill`: w>=2).
+Armadilha 2: o VDP ignora os bits 8-7 do registrador 5 - a tabela de atributos de sprites efetiva fica em 1FA00h, nao 1FB80h.
 
 ## Medicoes (openMSX 19.1, C-BIOS MSX2, JIFFY = interrupcoes do VDP; build com `MADTV_PROF=1` no 0.2)
 | Operacao | antes (texto via Print RAM) | agora (fonte em VRAM + LMMM) |
@@ -113,13 +131,14 @@ Print inteiro (a fonte e desempacotada por `FontUnpack` em ui.c): -2 KB.
 **0.4: o codigo passou de 24 KB e foi dividido em segmentos banked** (BankedCall do MSXgl; o trampolim troca o banco 2 durante a chamada):
 | Segmento | Banco | Conteudo | Bytes (de 8192) |
 |---|---|---|---|
-| 0-1 (fixo) | 4000h | crt0, MSXgl, ui.c, main.c, sim.c (nucleo), db.c | 14 857 de 16 384 |
+| 0-1 (fixo) | 4000h | crt0, MSXgl, ui.c, main.c, sim.c (nucleo), db.c | 14 214 de 16 384 |
 | 3 | A000h | catalogo: 88 filmes, 24 anuncios | 3 073 |
 | 4 | A000h | noticias (115 registros fixos de 43 bytes) | 4 945 |
 | 5 | 8000h | telas Grade / Agencia de filmes / Publicidade / Audiencias | 5 051 |
 | 6 | 8000h | sim_ext: IA dos rivais, noticias, ofertas, salvar/carregar | 4 596 |
 | 7 | 8000h | telas Noticias + Arquivo | 2 218 |
 | 8 | 8000h | telas Chefe (credito) + Salvar/Carregar | 2 951 |
+| 9 | 8000h | predio (sprites, movimento) + escritorio | 4 068 |
 Regras: (1) o banco 3 fica no segmento 3; dados de outros segmentos so sao lidos dentro de `Db_News` (copia para RAM e restaura o
 banco); (2) funcoes banked recebem/retornam so valores ou ponteiros para RAM/ROM fixa; (3) literais de codigo banked ficam no
 proprio segmento (`--codeseg`); (4) estado compartilhado entre telas fica em RAM fixa (`app.h`) e e inicializado em `main()`.

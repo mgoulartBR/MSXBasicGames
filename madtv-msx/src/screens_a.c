@@ -125,7 +125,7 @@ void Grid_Input(u8 ev) __banked
 		if ((ev & IN_UP) && s_Slot > 0) s_Slot--;
 		if (s_Slot != old) MarkRows(old, s_Slot);
 		if (ev & (IN_LEFT | IN_RIGHT)) { s_GridCol ^= 1; MarkRows(s_Slot, s_Slot); }
-		if (ev & IN_BACK) { Goto(SCR_HUB); return; }
+		if (ev & IN_BACK) { Goto(SCR_OFFICE); return; }
 		if (ev & IN_OK)
 		{
 			if (g_Game.t >= FIRST_SLOT_T + (u16)s_Slot * 60 + 5) { Sim_Msg("That hour has already started."); g_Dirty |= D_MSG; return; }
@@ -414,4 +414,4 @@ void Ads_Row(u8 r) __banked { DrawRow_Ads(r); }
 void Ads_Detail(void) __banked { DrawDetail_Ads(); }
 
 void Ratings_Dyn(void) __banked { RatingsDynLocal(); }
-void Ratings_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
+void Ratings_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_OFFICE); }

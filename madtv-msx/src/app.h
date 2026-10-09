@@ -11,7 +11,7 @@
 #define MSG_Y       201
 #define LIST_ROWS   11
 
-enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OVER };
+enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OFFICE, SCR_OVER };
 enum { SPEED_PAUSE, SPEED_1, SPEED_2, SPEED_3, SPEED_COUNT };
 
 // bits de "sujo" (o que precisa ser redesenhado)
@@ -56,3 +56,11 @@ void Boss_Enter(void) __banked;    void Boss_Draw(void) __banked;    void Boss_I
 void Boss_Row(u8 r) __banked;
 void Save_Enter(void) __banked;    void Save_EnterLoad(void) __banked; void Save_Draw(void) __banked; void Save_Input(u8 ev) __banked;
 void Save_Row(u8 r) __banked;
+
+// predio (hub navegavel) e escritorio
+extern u8 g_BldSel;
+void Building_Reset(void) __banked; void Building_Enter(void) __banked;  void Building_Leave(void) __banked;
+void Building_Draw(void) __banked;  void Building_Input(u8 ev) __banked; void Building_Row(u8 r) __banked;
+void Building_Detail(void) __banked; void Building_Dyn(void) __banked;   u8 Building_Frame(void) __banked;
+void Office_Enter(void) __banked;   void Office_Draw(void) __banked;     void Office_Input(u8 ev) __banked;
+void Office_Row(u8 r) __banked;
