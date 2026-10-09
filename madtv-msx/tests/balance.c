@@ -161,7 +161,34 @@ static void SignAds(Policy pol)
 	}
 }
 
-typedef struct { int bankrupt, days; long money_end; int image_end; int contracts_done, contracts_failed; } Result;
+// Betty: compra o presente de melhor relacao efeito/custo que o caixa folgado permite e entrega; no fim, Dream trip + pedido
+static int g_Gifts = 1;  // NO_GIFTS=1 desliga
+static void Gifts(void)
+{
+	u8 g, best, st, tries;
+	if (!g_Gifts || getenv("NO_GIFTS")) return;
+	for (tries = 0; tries < 6 && g_Game.sym[0] < g_Game.image[0]; tries++)
+	{
+		best = NONE;
+		for (g = 0; g < GIFT_DREAM; g++)
+		{
+			if (!g_Game.gift_have[g] && g_Game.money - (i32)Sim_GiftCost(g) < 2500) continue;
+			if (Sim_GiftEffect(g) == 0) continue;
+			if (best == NONE || (u32)Sim_GiftEffect(g) * 1000 / (g_Game.gift_have[g] ? 1 : Sim_GiftCost(g)) > (u32)Sim_GiftEffect(best) * 1000 / (g_Game.gift_have[best] ? 1 : Sim_GiftCost(best))) best = g;
+		}
+		if (best == NONE) break;
+		if (!g_Game.gift_have[best]) Sim_BuyGift(best);
+		Sim_GiveGift(best);
+	}
+	for (st = 1; st < NUM_STATIONS; st++) if (g_Game.alive[st]) return;
+	if (g_Game.sym[0] >= 100)
+	{
+		if (!g_Game.gift_have[GIFT_DREAM]) Sim_BuyGift(GIFT_DREAM);
+		if (Sim_Propose() == 0) g_Game.game_over = 2;
+	}
+}
+
+typedef struct { int won, rivals_dead, bankrupt, days; long money_end; int image_end; int contracts_done, contracts_failed; } Result;
 
 static Result Play(Policy pol, u16 seed, int max_days)
 {
@@ -169,6 +196,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 	int day = 1, t;
 	memset(&r, 0, sizeof r);
 	memset(g_ExpAud, 0, sizeof g_ExpAud);
+	g_Diff = getenv("BAL_DIFF") ? (u8)atoi(getenv("BAL_DIFF")) : 1;
 	Sim_Init(seed);
 	while (!g_Game.game_over && g_Game.day <= max_days)
 	{
@@ -177,6 +205,8 @@ static Result Play(Policy pol, u16 seed, int max_days)
 			if (g_Game.money < 600) Sim_Borrow(1500);
 			else if (g_Game.debt > 0 && g_Game.money > g_Game.debt + 2500) Sim_Repay(g_Game.debt);
 		}
+		if (pol == P_SMART) Gifts();
+		if (g_Game.game_over) break;
 		g_Smart = (pol == P_SMART);
 		g_NewsOn = (pol == P_SMART) && !getenv("NO_NEWS");
 		BuyBest(pol == P_IDLE ? 1000000 : (pol == P_SMART ? 1000 : 500), pol == P_SMART ? (RIVAL_LIB_START + (int)g_Game.day / RIVAL_LIB_GROWTH_DAYS + 2) : 99);
@@ -215,7 +245,9 @@ static Result Play(Policy pol, u16 seed, int max_days)
 		}
 		day++;
 	}
-	r.bankrupt = g_Game.game_over;
+	r.won = g_Game.won;
+	r.rivals_dead = !g_Game.alive[1] + !g_Game.alive[2];
+	r.bankrupt = g_Game.game_over && !g_Game.won;
 	r.days = g_Game.day;
 	r.money_end = g_Game.money;
 	r.image_end = g_Game.image[0];
@@ -229,19 +261,20 @@ int main(int argc, char** argv)
 {
 	int days = argc > 1 ? atoi(argv[1]) : 30, runs = argc > 2 ? atoi(argv[2]) : 200, p, s;
 	if (argc > 3 && !strcmp(argv[3], "trace")) { g_Trace = 1; Play(argc > 4 ? (Policy)atoi(argv[4]) : P_SMART, 1000, days); return 0; }
-	printf("Autoplay: %d dias, %d partidas por politica (caixa inicial %dk, custo diario %dk)\n\n", days, runs, START_MONEY, DAILY_UPKEEP);
+	printf("Autoplay: %d dias, %d partidas por politica (dificuldade %s, custo diario %dk)\n\n", days, runs, getenv("BAL_DIFF") ? (atoi(getenv("BAL_DIFF"))==0 ? "easy" : "hard") : "normal", DAILY_UPKEEP);
 	for (p = P_IDLE; p <= P_SMART; p++)
 	{
 		long* m = malloc(sizeof(long) * runs);
-		int bk = 0; long img = 0;
+		int bk = 0, won = 0, rd = 0, wd = 0; long img = 0;
 		for (s = 0; s < runs; s++)
 		{
 			Result r = Play((Policy)p, (u16)(1000 + s * 37), days);
-			bk += r.bankrupt; m[s] = r.money_end; img += r.image_end;
+			bk += r.bankrupt; won += r.won; rd += r.rivals_dead; if (r.won) wd += r.days; m[s] = r.money_end; img += r.image_end;
 		}
 		qsort(m, runs, sizeof(long), cmp_l);
 		printf("%-30s falencia: %3d%%  caixa final (k$) p10=%6ld mediana=%6ld p90=%6ld  Image medio MadTV=%ld\n",
 			k_PolName[p], bk * 100 / runs, m[runs / 10], m[runs / 2], m[runs * 9 / 10], img / runs);
+		if (p == P_SMART) printf("   Betty: casou em %d%% das partidas (dia medio %d); rivais falidos em media %d.%02d\n", won * 100 / runs, won ? wd / won : 0, rd / runs, (rd * 100 / runs) % 100);
 		free(m);
 		printf("   contratos cumpridos=%ld falhos=%ld  exibicoes ok=%ld sem audiencia=%ld  receita=%ldk multas=%ldk\n", g_StatDone/runs, g_StatFail/runs, g_StatSpots/runs, g_StatMissed/runs, g_StatIncome/runs, g_StatPenalty/runs);
 		g_StatDone = g_StatFail = g_StatSpots = g_StatMissed = g_StatIncome = g_StatPenalty = 0;

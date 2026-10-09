@@ -250,7 +250,6 @@ void Sim_BettyDay(void) __banked
 // Sem SRAM no cartucho ASCII8: o estado essencial vira um codigo de SAVE_CHARS caracteres (alfabeto de 32). Nao salvos:
 // desgaste dos filmes (plays), noticias (pool/telejornal), ofertas do dia e a grade de hoje dos rivais - sao regerados.
 static const char k_B32[] = "0123456789ABCDEFGHJKLMNPQRSTUVWX";
-#define OWNED_BYTES ((DB_NUM_MOVIES + 7) / 8)
 
 static u16 Fletcher16(const u8* b, u8 n)
 {
@@ -269,7 +268,7 @@ void Sim_SaveCode(char* out) __banked
 	u8 bits = 0, o = 0;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
-	b[n++] = 5;                                                       // versao do formato
+	b[n++] = (u8)(6 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
 	b[n++] = (u8)g_Game.day; b[n++] = (u8)(g_Game.day >> 8);
 	b[n++] = (u8)g_Game.t;   b[n++] = (u8)(g_Game.t >> 8);
 	b[n++] = (u8)g_Game.money; b[n++] = (u8)(g_Game.money >> 8); b[n++] = (u8)(g_Game.money >> 16); b[n++] = (u8)(g_Game.money >> 24);
@@ -328,7 +327,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	if (n != SAVE_BYTES) return 1;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
-	if (b[0] != 5) return 3;
+	if ((b[0] & 15) != 6 || (b[0] >> 4) >= NUM_DIFF) return 3;
 	// validacao semantica antes de aplicar
 	n = 12;
 	if (b[11] + b[12] > 100) return 3;
@@ -340,6 +339,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	if (day == 0 || (u16)(b[3] | (b[4] << 8)) >= DAY_MINUTES) return 3;
 	seed = (u16)(b[13 + OWNED_BYTES + 1] | (b[13 + OWNED_BYTES + 2] << 8));
 	// aplica
+	g_Diff = (u8)(b[0] >> 4);
 	Sim_Init(seed);
 	g_Game.day = day;
 	g_Game.t = (u16)(b[3] | (b[4] << 8));

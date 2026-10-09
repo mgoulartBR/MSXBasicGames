@@ -79,6 +79,6 @@ void Shop_Mouse(u8 x, u8 y, u8 btn) __banked;      void Betty_Mouse(u8 x, u8 y, 
 // supermercado e escritorio da Betty (screens_d.c)
 void Shop_Enter(void) __banked;    void Shop_Draw(void) __banked;    void Shop_Input(u8 ev) __banked;    void Shop_Row(u8 r) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "0.6"
+#define VERSION_STR "0.7"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Over_Draw(void) __banked;

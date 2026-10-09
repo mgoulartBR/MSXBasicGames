@@ -180,3 +180,18 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 - Savegame v5: bloco da Betty anexado (sym, alive, estoque, usos); codigo de 98 caracteres.
 - Telas novas em src/screens_d.c (segmento 10); titulo e fim de jogo foram movidos para screens_c.c (segmento 8) para liberar o segmento fixo (agora 15.623 de 16.384 bytes).
 - Balanceamento (autoplay smart, sem presentes): 30 dias 3% de falencia, Image ~55; 150 dias 12% de falencia, Image ~89. O final feliz nao foi alcancado por autoplay; so testado forcando o estado.
+
+## 0.7: catalogo, dificuldade, Image baixo, autoplay com presentes
+- Catalogo: 144 filmes (20 por categoria; Culture so 4 por causa do filtro de titulo <= 26 letras). O segmento 3 (dados) ficou com ~4,6 KB de 8 KB, entao **nao foi preciso ASCII16 nem trocar de mapper**; filmes continuam acessiveis por ponteiro direto (indice u8 cabe ate 255). Codigo de save passou a 109 caracteres (bitmask de filmes possuidos = 18 bytes).
+- Dificuldade: tabelas em src/sim.c (`k_RivalQ` 65/78/82 e `k_StartMoney` 3500/2500/2000); guardada no nibble alto do byte de versao do savegame (v6).
+- Image < 20 (`IMAGE_LOW`): contratos pagam 80% e `Sim_CreditLimit()` = 0. Isso piorou o autoplay (sem a regra: 4% de falencia em 30 dias; com a regra: 17%), o que e o efeito desejado, mas o bot depende do credito do chefe como colchao.
+- Autoplay smart com presentes (`tests/balance.sh 200 100`, caixa folgado >= 2500k para comprar presente, Dream trip no fim; `BAL_DIFF=0|1|2`, `NO_GIFTS=1`):
+
+| Dificuldade | falencia | casou | dia medio do casamento |
+|---|---|---|---|
+| Easy | 15% | 85% | 48 |
+| Normal | 36% | 64% | 85 |
+| Hard (82%; com 85% ja so 3% casam, com 90% 100% perde) | 75% | 15% | 113 |
+
+- Esses numeros sao do bot heuristico (mesma sim.c compilada no PC), nao de jogadores humanos, e o balanceamento e extremamente sensivel a `k_RivalQ` (variar de 78 para 85 no Normal leva o casamento de 64% para quase 0%).
+- Com 144 filmes o Image medio do bot caiu em relacao a 88 filmes no mesmo cenario (~30 vs ~52 em 30 dias, sem presentes); suspeita: o bot compra por qualidade/preco e os filmes extras (ordenados por GUID, nao por qualidade) o atraem para filmes ruins. Nao investiguei mais.

@@ -37,7 +37,7 @@ proc dump {tag} {
   puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]]"
   close $f
 }
-proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 98} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
+proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 109} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
 # matriz do teclado MSX: linha 0 = 0-7; 3 = C-J; 4 = K-R; 5 = S-Z; A,B na linha 2 (bits 6,7); 8,9 na linha 1
 set ::MATRIX {}
 foreach {row chars} {0 01234567 3 CDEFGHIJ 4 KLMNOPQR 5 STUVWXYZ} { set b 0; foreach c [split $chars ""] { dict set ::MATRIX $c [list $row [format 0x%02x [expr {1 << $b}]]]; incr b } }
@@ -61,6 +61,8 @@ proc room {i} { at 0.2 "poke $::SEL $i"; key RET; at 4.5 {} }              ;# es
 proc mouse {x y btn} { at 0.1 "poke $::PX $x; poke $::PY $y"; at 0.2 "poke $::INJ $btn"; at 0.3 {} }   ;# btn: 1 = so mover, 2 = clique esquerdo, 4 = direito
 proc back {} { key ESC; at 0.3 {} }
 at 0   { shot 1_title }
+key RIGHT; at 0.3 { shot 1b_title_hard }
+key LEFT; at 0.3 {}
 key RET
 at 1.6 { shot 2_building; dump start }
 # --- navegacao do cursor no predio (teclas): UP -> BOSS(12), DOWN -> OFFC(9), RIGHT -> FUN(10), LEFT -> OFFC(9)
@@ -148,7 +150,7 @@ key DOWN; key DOWN; key RET
 at 0.5 {}; key DOWN; key RET                        ;# Enter a code
 at 0.5 { shot 10_enter_empty }
 at 0.3 { typecode $::SAVED }
-at 17.5 { shot 11_enter_typed }
+at 20.0 { shot 11_enter_typed }
 key RET                                             ;# confirma
 at 1.0 { shot 12_loaded; dump loaded }
 # --- Final feliz: forca simpatia 100, rivais falidos e uma Dream trip; pedir em casamento

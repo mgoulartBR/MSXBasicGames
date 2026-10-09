@@ -22,6 +22,10 @@ long g_StatDone, g_StatFail, g_StatIncome, g_StatPenalty, g_StatMissed, g_StatSp
 #endif
 char g_Msg[44];
 const u8 g_Reach[NUM_STATIONS] = { 120, 110, 100 };
+u8 g_Diff = 1;
+static const u8  k_RivalQ[NUM_DIFF] = { 65, RIVAL_Q, 82 };
+static const i16 k_StartMoney[NUM_DIFF] = { 3500, START_MONEY, 2000 };
+
 const char* const g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };
 
 // parcela do alcance que esta com a TV ligada em cada hora (%)
@@ -109,7 +113,7 @@ static u8 Audience(u8 st, u8 s)
 	}
 	a = a * (st ? NEWS_RIVAL_F : g_Game.news_f[s]) / 100;   // telejornal que antecede o programa
 	a = a * (90 + Sim_Rnd(21)) / 100;
-	if (st) a = a * RIVAL_Q / 100;
+	if (st) a = a * k_RivalQ[g_Diff] / 100;
 	return (u8)a;
 }
 
@@ -149,6 +153,7 @@ void Sim_PlaceAd(u8 s, u8 c)
 // ---------------------------------------------------------------- credito / arquivo
 i32 Sim_CreditLimit(void)
 {
+	if (g_Game.image[0] < IMAGE_LOW) return 0;                  // Image baixo: o chefe fecha o credito
 	return CREDIT_BASE + (i32)CREDIT_PER_IMAGE * g_Game.image[0];
 }
 
@@ -206,7 +211,7 @@ void Sim_Init(u16 seed)
 	DbgInit();
 	g_Rng = seed ? seed : 0xACE1;
 	for (n = 0; n < sizeof(Game); n++) ((u8*)&g_Game)[n] = 0;
-	g_Game.money = START_MONEY;
+	g_Game.money = k_StartMoney[g_Diff];
 	g_Game.image[0] = 34; g_Game.image[1] = 33; g_Game.image[2] = 33;
 	for (st = 0; st < NUM_STATIONS; st++) { g_Game.alive[st] = 1; g_Game.sym[st] = 5; }
 	for (st = 0; st < NUM_STATIONS; st++)
@@ -274,8 +279,11 @@ static void EndSlot(u8 s)
 			if (ct->reps_left == 0)
 			{
 				STAT(g_StatDone++); STAT(g_StatIncome += ad->profit);
-				g_Game.money += ad->profit; g_Game.day_income += ad->profit;
-				Sim_MsgNum("Contract done! +", ad->profit, "k");
+				{
+					u16 pr = g_Game.image[0] < IMAGE_LOW ? (u16)((u32)ad->profit * LOW_PROFIT_PCT / 100) : ad->profit;   // Image baixo: paga menos
+					g_Game.money += pr; g_Game.day_income += pr;
+					Sim_MsgNum("Contract done! +", pr, "k");
+				}
 				ct->ad = NONE;
 			}
 			else Sim_Msg("Spot aired OK");

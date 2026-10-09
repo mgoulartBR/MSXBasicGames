@@ -97,7 +97,7 @@ static void BettyStatusBody(void)
 	u8 st, x;
 	Ui_Fill(0, CONTENT_Y + 10, 255, 31, UI_BG);
 	Ui_Color(UI_WHITE); Ui_Text(4, (u8)(CONTENT_Y + 12), "You");
-	Ui_Bar(32, (u8)(CONTENT_Y + 12), 120, 7, g_Game.sym[0], UI_GREEN);
+	Ui_Bar(32, (u8)(CONTENT_Y + 12), 120, 7, g_Game.sym[0], COLOR_LIGHT_GREEN);
 	x = Ui_Int(158, (u8)(CONTENT_Y + 12), g_Game.sym[0]);
 	Ui_Color(UI_GRAY); Ui_Text(x, (u8)(CONTENT_Y + 12), "/100");
 	Ui_Text(196, (u8)(CONTENT_Y + 12), "cap"); Ui_Int(220, (u8)(CONTENT_Y + 12), g_Game.image[0]);
@@ -106,7 +106,7 @@ static void BettyStatusBody(void)
 		u8 y = (u8)(CONTENT_Y + 12 + st * 10);
 		Ui_Color(UI_GRAY); Ui_Text(4, y, st == 1 ? "FunTV" : "SunTV");
 		if (!g_Game.alive[st]) { Ui_Color(UI_RED); Ui_Text(52, y, "bankrupt"); continue; }
-		Ui_Bar(52, y, 100, 7, g_Game.sym[st], UI_RED);
+		Ui_Bar(52, y, 100, 7, g_Game.sym[st], COLOR_MEDIUM_RED);
 		Ui_Int(158, y, g_Game.sym[st]);
 	}
 }

@@ -147,6 +147,18 @@ int main(void)
 		for (t = 0; t < DAY_MINUTES && !g_Game.game_over; t++) Sim_Tick();
 		CHECK(g_Game.game_over, "jogador sem Image perde");
 	}
+	// 0.7: dificuldade vai no codigo; Image baixo fecha o credito
+	Sim_Init(31);
+	{
+		char c[SAVE_CHARS + 2];
+		g_Diff = 2; Sim_Init(31); Sim_SaveCode(c);
+		g_Diff = 0; CHECK(Sim_LoadCode(c) == 0 && g_Diff == 2, "dificuldade restaurada pelo codigo");
+		g_Diff = 0; Sim_Init(31); CHECK(g_Game.money == 3500, "easy: caixa 3500");
+		g_Diff = 2; Sim_Init(31); CHECK(g_Game.money == 2000, "hard: caixa 2000");
+		g_Diff = 1; Sim_Init(31);
+		g_Game.image[0] = IMAGE_LOW - 1; CHECK(Sim_CreditLimit() == 0 && Sim_Borrow(100) == 1, "Image baixo: sem credito");
+		g_Game.image[0] = IMAGE_LOW;     CHECK(Sim_CreditLimit() > 0 && Sim_Borrow(100) == 0, "Image 20: credito aberto");
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }

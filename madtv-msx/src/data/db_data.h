@@ -5,7 +5,7 @@
 #include "../game_types.h"
 
 #define DB_NUM_CATEGORIES 8
-#define DB_NUM_MOVIES 88
+#define DB_NUM_MOVIES 144
 #define DB_NUM_ADS 24
 #define DB_NUM_NEWS 115
 #define DB_NEWS_TITLE 40
