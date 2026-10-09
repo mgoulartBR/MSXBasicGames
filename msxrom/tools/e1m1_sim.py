@@ -11,7 +11,7 @@ def make(keys_fn=lambda r:0xFF):
     return Machine(keys_fn,rom=os.path.join(R,'private','e1m1.rom'))
 if __name__=='__main__':
     pre=sys.argv[1]; n=int(sys.argv[2]); M=make(); sym=symbols(); mem=M.m.memory
-    t=time.time(); fr=M.run_frames(2); print('boot ok %.0fs'%(time.time()-t),M.log)
+    t=time.time(); fr=M.run_frames(2); print('boot ok %.0fs'%(time.time()-t),M.log); mem[sym['tex_planes']]=int(os.environ.get('TEX','0'))
     if len(sys.argv)>5:
         x,y,a=int(sys.argv[3]),int(sys.argv[4]),float(sys.argv[5])
         for nm,v in (('px',x),('py',y)): mem[sym[nm]:sym[nm]+2]=(v&0xFFFF).to_bytes(2,'little')

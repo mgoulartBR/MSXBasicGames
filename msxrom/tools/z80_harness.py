@@ -127,20 +127,22 @@ class Machine:
         for c in cmds:
             if len(c)==19: s.lrmm(c)
     def lrmm(s,c):
-        """LRMM de uma linha: texel de origem = (SX<<8 + i*VX, SY<<8 + i*VY) >> 8 (vdp_command.v); TIMP via func_lop."""
+        """LRMM (vdp_command.v): texel de origem = (SX<<8 + i*VX, SY<<8 + i*VY) >> 8 na linha; a cada linha seguinte (NY>1) a origem avanca (-VY,+VX).
+        Janela de origem R#51..58: fora dela vale a cor; o endereco da VRAM faz wrap (X modulo 256, Y modulo 1024). TIMP via func_lop."""
         sx=c[0]|(c[1]&15)<<8; sy=c[2]|(c[3]&31)<<8; dx=c[4]|(c[5]&1)<<8; dy=(c[6]|c[7]<<8)&0x3FF
-        nx=c[8]|(c[9]&7)<<8; col=c[12]; lop=c[18]&15
+        nx=c[8]|(c[9]&7)<<8; ny=max(1,c[10]|(c[11]&7)<<8); col=c[12]; lop=c[18]&15
         du=c[14]|c[15]<<8; dv=c[16]|c[17]<<8
         du-=65536*(du>>15); dv-=65536*(dv>>15)
-        for i in range(nx):
-            x=((sx<<8)+i*du)>>8; y=((sy<<8)+i*dv)>>8
-            wex=s.vreg[55]|(s.vreg[56]&1)<<8; wey=s.vreg[57]|(s.vreg[58]&7)<<8      # janela de origem (R#51..58): fora dela vale a cor; o endereco faz wrap (X modulo 256, Y modulo 1024)
-            src=int(s.vram[(y&1023)*256+(x&255)]) if (0<=x<=wex and 0<=y<=wey) else col
-            d=dx+i
-            if d>255: break
-            if lop&8 and src==0: continue
-            s.vram[dy*256+d]=src
-        s.log['tex_pixels']+=nx
+        wex=s.vreg[55]|(s.vreg[56]&1)<<8; wey=s.vreg[57]|(s.vreg[58]&7)<<8
+        for j in range(ny):
+            for i in range(nx):
+                x=((sx<<8)-j*dv+i*du)>>8; y=((sy<<8)+j*du+i*dv)>>8
+                d=dx+i
+                if d>255: break
+                src=int(s.vram[(y&1023)*256+(x&255)]) if (0<=x<=wex and 0<=y<=wey) else col
+                if lop&8 and src==0: continue
+                s.vram[((dy+j)&1023)*256+d]=src
+        s.log['tex_pixels']+=nx*ny
     def run_frames(s,n,max_chunks=200000):
         for _ in range(max_chunks):
             s.m.ticks_to_stop=100000; s.m.run()

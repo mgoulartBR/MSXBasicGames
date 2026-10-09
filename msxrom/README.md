@@ -134,3 +134,7 @@ do mais longe ao mais perto. Aproximacao: o setor do centro vale para a linha in
 v6: leque de 8 raios (um por faixa de 32 colunas, passos de 32 unidades de profundidade) em vez de um raio central: cada faixa tem a propria sequencia de setores, e cada linha
 de tela pertence ao segmento mais proximo da faixa; faixas vizinhas do mesmo setor viram uma LRMM so. Inicio do mapeamento arredondado ((X+2)>>2). Limite que permanece: o inicio de
 cada linha so tem precisao de 1 texel (4 unidades) porque SX/SY da LRMM nao tem fracao, entao a textura pode tremer de leve ao andar. Banco de codigo: ~15,3 KB de 16 KB.
+
+v7 (desempenho): pisos/tetos TEXTURIZADOS agora sao opcionais, tecla TAB (padrao: desligado = cores lisas por setor, com 2 tons). Medido no Z80 emulado (so CPU, sem esperas de VDP/Geo3D):
+sem pisos ~0,5 M T-states/quadro; cores por setor ~0,74 M; texturizado ~1,4 M (antes 5,8 M). Z80 a 3,58 MHz fica lento de qualquer jeito; prefira a maquina R800. O modo texturizado usa blocos de 2/4 linhas por LRMM
+(NY>1: a linha seguinte avanca (-VY,+VX) no espaco da textura) e a camera de mapeamento encaixada na grade de texels, para o piso nao tremer linha a linha.
