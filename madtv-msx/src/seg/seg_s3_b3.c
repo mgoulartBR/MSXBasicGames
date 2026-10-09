@@ -1,7 +1,7 @@
 // GERADO por tools/convert_db.py - NAO EDITAR. Dados derivados do TVTower (c) 2002-2024 TVTower-Team,
 // adaptados/alterados para MSX (ver LICENSES.md).
 
-#include "db_data.h"
+#include "../data/db_data.h"
 
 const char* const g_CategoryName[DB_NUM_CATEGORIES] = { "Lovestory", "Action", "Monumental", "Comedy", "Crime", "Culture", "SciFi", "Other" };
 
@@ -125,29 +125,4 @@ const Ad g_Ads[DB_NUM_ADS] = {
 	{ "Rhinoceros farm Aschenbueh", 73, 5, 3, 438, 682 },
 };
 
-const News g_News[DB_NUM_NEWS] = {
-	{ "Stunt dog: Recovery in sight", 1, 10 },
-	{ "Great Crested Grebe is bird of the year", 4, 1 },
-	{ "Former Federal Chancellor was a Stasi informer", 0, 10 },
-	{ "Severe stock market crash", 0, 8 },
-	{ "Sigh of relief in Ricegate case", 4, 10 },
-	{ "Feminists boycotting beach volleyball", 2, 7 },
-	{ "Polish Minister: Helmets for all!", 0, 7 },
-	{ "Resistance to shuttle plans", 0, 10 },
-	{ "Nuthatch is bird of the year", 4, 1 },
-	{ "150 years of railroads in Germany", 3, 3 },
-	{ "Unleaded no-seller", 3, 8 },
-	{ "Not a terrorist attack after all", 0, 10 },
-	{ "40 Years of the GDR", 0, 8 },
-	{ "Grunge band founded", 1, 3 },
-	{ "Several gamer victims reach out", 3, 10 },
-	{ "Fans collect for Ron", 4, 10 },
-	{ "Bundespost abolishes the dial plate", 3, 10 },
-	{ "Tycoon games declared cultural heritage", 5, 10 },
-	{ "Queen: I feel good!", 4, 7 },
-	{ "Shuttles orbiting space station", 0, 10 },
-	{ "1.5 million ravers at the Victory Column", 1, 10 },
-	{ "Charcoal grills summer sales hit", 4, 11 },
-	{ "Tycoon games tax unconstitutional", 0, 10 },
-	{ "Montreal becomes a French province!", 0, 10 },
-};
+const char* const g_AgencyName[DB_NUM_AGENCIES] = { "Politics", "Showbiz", "Misc" };

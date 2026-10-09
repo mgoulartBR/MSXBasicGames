@@ -5,7 +5,7 @@
 #include <string.h>
 #include "sim.h"
 
-static int g_Trace, g_Smart;
+static int g_Trace, g_Smart, g_NewsOn;
 static u8 g_ExpAud[NUM_SLOTS];     // audiencia observada ontem por slot (0,1M); 0 no dia 1
 static u8 g_SnapAud[NUM_STATIONS][NUM_SLOTS];
 static Slot g_SnapSlot[NUM_STATIONS][NUM_SLOTS];
@@ -38,6 +38,31 @@ static void BuyBest(i32 reserve, int max_owned)
 	}
 }
 
+static int g_NewsEvery = 2;      // politica smart atualiza o telejornal a cada N horas
+static void RefreshNews(void)
+{
+	int i, k;
+	for (i = 0; i < NEWS_SLATE; i++) if (g_Game.news_slate[i].idx != NONE && g_Game.news_slate[i].age >= g_NewsEvery) Sim_NewsClear((u8)i);
+	for (k = 0; k < NEWS_SLATE; k++)
+	{
+		int best = -1, bestv = -1;
+		NewsRec r;
+		int free_ = 0;
+		for (i = 0; i < NEWS_SLATE; i++) if (g_Game.news_slate[i].idx == NONE) free_++;
+		if (!free_) return;
+		for (i = 0; i < NEWS_POOL; i++)
+		{
+			int v;
+			if (g_Game.news_pool[i].idx == NONE) continue;
+			Db_News(g_Game.news_pool[i].idx, &r);
+			v = r.quality * Sim_NewsFresh(g_Game.news_pool[i].age) / 100;
+			if (v > bestv) { bestv = v; best = i; }
+		}
+		if (best < 0 || g_Game.money < 800) return;
+		Sim_NewsPick((u8)best);
+	}
+}
+
 static void FillGrid(void)
 {
 	int k, i;
@@ -53,6 +78,7 @@ static void FillGrid(void)
 			for (j = 0; j < NUM_SLOTS; j++) if (g_Game.slot[0][j].movie == i) used = 1;
 			if (used || (g_Movies[i].fsk18 && s < 3)) continue;
 			if (s + g_Movies[i].blocks > NUM_SLOTS) continue;
+			{ int occ = 0; for (j = s; j < s + g_Movies[i].blocks; j++) if (g_Game.slot[0][j].movie != NONE) occ = 1; if (occ) continue; }   // nao sobrepor filmes ja colocados
 			q = Sim_Quality(i) - g_Game.plays[0][i] * 8;
 			if (q > bestq) { bestq = q; best = i; }
 		}
@@ -83,7 +109,7 @@ static void PlaceAds(void)
 static int FeasibleSlots(const Ad* a)
 {
 	int s, n = 0;
-	for (s = 0; s < NUM_SLOTS; s++) if (g_ExpAud[s] >= a->min_audience * 115 / 100) n++;
+	for (s = 0; s < NUM_SLOTS; s++) if (g_ExpAud[s] >= a->min_audience * 130 / 100) n++;
 	return n;
 }
 
@@ -146,7 +172,13 @@ static Result Play(Policy pol, u16 seed, int max_days)
 	Sim_Init(seed);
 	while (!g_Game.game_over && g_Game.day <= max_days)
 	{
+		if (pol == P_SMART)             // usa o credito do chefe como colchao: toma emprestimo se o caixa esta baixo, quita se sobrou
+		{
+			if (g_Game.money < 600) Sim_Borrow(1500);
+			else if (g_Game.debt > 0 && g_Game.money > g_Game.debt + 2500) Sim_Repay(g_Game.debt);
+		}
 		g_Smart = (pol == P_SMART);
+		g_NewsOn = (pol == P_SMART) && !getenv("NO_NEWS");
 		BuyBest(pol == P_IDLE ? 1000000 : (pol == P_SMART ? 1000 : 500), pol == P_SMART ? (RIVAL_LIB_START + (int)g_Game.day / RIVAL_LIB_GROWTH_DAYS + 2) : 99);
 		SignAds(pol);
 		FillGrid();
@@ -161,6 +193,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 		}
 		for (t = 0; t < DAY_MINUTES && !g_Game.game_over; t++)
 		{
+			if (g_NewsOn && (t % 60) == 59 && ((t / 60) % g_NewsEvery) == 0) RefreshNews();
 			if (t == DAY_MINUTES - 1) { int q; for (q = 0; q < NUM_SLOTS; q++) g_ExpAud[q] = g_Game.aud[0][q]; }
 			if (g_Trace && t == DAY_MINUTES - 1) memcpy(g_SnapAud, g_Game.aud, sizeof g_SnapAud), memcpy(g_SnapSlot, g_Game.slot, sizeof g_SnapSlot);
 			Sim_Tick();
@@ -175,7 +208,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 				int c;
 				printf("     minha audiencia por slot (0,1M):");
 				for (s2 = 0; s2 < NUM_SLOTS; s2++) printf(" %d(%s)", g_SnapAud[0][s2], g_SnapSlot[0][s2].movie == NONE ? "-" : g_Movies[g_SnapSlot[0][s2].movie].title);
-				printf("\n     rivais prime(slot3): FunTV=%d SunTV=%d\n     contratos:", g_SnapAud[1][3], g_SnapAud[2][3]);
+				printf("\n     news_f:"); for (s2 = 0; s2 < NUM_SLOTS; s2++) printf(" %d", g_Game.news_f[s2]); printf("  rivais aud por slot: Fun="); for (s2 = 0; s2 < NUM_SLOTS; s2++) printf("%d,", g_SnapAud[1][s2]); printf(" Sun="); for (s2 = 0; s2 < NUM_SLOTS; s2++) printf("%d,", g_SnapAud[2][s2]); printf("\n     contratos:");
 				for (c = 0; c < MAX_CONTRACTS; c++) if (g_Game.contract[c].ad != NONE) printf(" [%s min=%d reps=%d dias=%d pay=%d pen=%d]", g_Ads[g_Game.contract[c].ad].title, g_Ads[g_Game.contract[c].ad].min_audience, g_Game.contract[c].reps_left, g_Game.contract[c].days_left, g_Ads[g_Game.contract[c].ad].profit, g_Ads[g_Game.contract[c].ad].penalty);
 				printf("\n");
 			}

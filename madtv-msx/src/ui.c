@@ -16,6 +16,26 @@ static u8  s_Depth;
 static u16 s_FontY;
 static u8  s_PrevIn;             // NAO ha zeragem de BSS no crt0: todo estado e inicializado em Ui_Init/main              // base Y da variante de cor atual
 
+// formato (MSXimg): 4 bytes de cabecalho (tamanho dos dados, tamanho da fonte, 1o e ultimo caractere) + 8 bytes por glifo, bit 7 = pixel mais a esquerda
+static void FontUnpack(void)
+{
+	const u8* d = g_Font_MGL_Sample6 + 4;
+	u8 g, r, row[3];
+	for (g = 0; g < 192; g++)
+	{
+		u8 gx = (u8)((g % GLYPHS_ROW) * GLYPH_W);
+		u16 y0 = FONT_SRC_Y + (u16)(g / GLYPHS_ROW) * GLYPH_H;
+		for (r = 0; r < GLYPH_H; r++, d++)
+		{
+			u8 b = *d;
+			row[0] = (u8)(((b & 0x80) ? 0xF0 : 0) | ((b & 0x40) ? 0x0F : 0));
+			row[1] = (u8)(((b & 0x20) ? 0xF0 : 0) | ((b & 0x10) ? 0x0F : 0));
+			row[2] = (u8)(((b & 0x08) ? 0xF0 : 0) | ((b & 0x04) ? 0x0F : 0));
+			VDP_WriteVRAM_128K(row, (u16)((y0 + r) * 128 + gx / 2), 0, 3);
+		}
+	}
+}
+
 void Ui_Init(void)
 {
 	u8 i;
@@ -25,8 +45,8 @@ void Ui_Init(void)
 	VDP_EnableVBlank(TRUE);
 	VDP_EnableSprite(FALSE);   // tabelas de sprite (0x7400-0x7A00) coincidem com a area da fonte em VRAM
 	VDP_ClearVRAM();
-	// 1) o Print do MSXgl desempacota a fonte (branca) nas linhas 212.. (so aqui, uma vez)
-	Print_SetVRAMFont(g_Font_MGL_Sample6, FONT_SRC_Y, COLOR_WHITE, true);
+	// 1) desempacota a fonte (1 bit/pixel, glifos 6x8) em branco nas linhas 212.. (so aqui, uma vez; sem o modulo Print do MSXgl)
+	FontUnpack();
 	// 2) variantes de cor: preenche destino com a cor e aplica AND com a fonte branca (15 AND c = c; 0 AND c = 0)
 	for (i = 0; i < UI_NUM_COLORS; i++)
 	{

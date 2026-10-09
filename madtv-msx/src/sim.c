@@ -15,7 +15,7 @@ const char* const g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };
 // parcela do alcance que esta com a TV ligada em cada hora (%)
 static const u8 s_TimeShare[NUM_SLOTS] = { 40, 55, 75, 90, 85, 60, 30 };
 // afinidade categoria x hora (%) - projeto proprio guiado pelo manual (cultura = "matador de audiencia", etc.)
-static const u8 s_Fit[DB_NUM_CATEGORIES][NUM_SLOTS] = {
+const u8 g_Fit[DB_NUM_CATEGORIES][NUM_SLOTS] = {
 	{ 75, 90, 100, 90,  70, 50, 35 },  // Lovestory
 	{ 50, 60,  80, 100, 100, 85, 60 }, // Action
 	{ 40, 55,  85, 100, 90,  60, 35 }, // Monumental
@@ -26,11 +26,11 @@ static const u8 s_Fit[DB_NUM_CATEGORIES][NUM_SLOTS] = {
 	{ 55, 70,  85,  90, 80,  60, 40 }, // Other
 };
 
-static u16 s_Rng = 0xACE1;
-static u8 Rnd(u8 n)               // xorshift16, 0..n-1
+u16 g_Rng = 0xACE1;
+u8 Sim_Rnd(u8 n)                // xorshift16, 0..n-1
 {
-	s_Rng ^= s_Rng << 7; s_Rng ^= s_Rng >> 9; s_Rng ^= s_Rng << 8;
-	return (u8)((s_Rng >> 4) % n);
+	g_Rng ^= g_Rng << 7; g_Rng ^= g_Rng >> 9; g_Rng ^= g_Rng << 8;
+	return (u8)((g_Rng >> 4) % n);
 }
 
 void Sim_Msg(const char* s)
@@ -90,11 +90,12 @@ static u8 Audience(u8 st, u8 s)
 		u8 plays = g_Game.plays[st][sl->movie];
 		u8 wear = (plays >= 5) ? 40 : (u8)(100 - 12 * plays);
 		a = a * Sim_Quality(sl->movie) / 100;
-		a = a * s_Fit[mv->cat][s] / 100;
+		a = a * g_Fit[mv->cat][s] / 100;
 		a = a * wear / 100;
 		if (mv->fsk18 && s < 3) a = a * 40 / 100;          // FSK18 antes das 21h
 	}
-	a = a * (90 + Rnd(21)) / 100;
+	a = a * (st ? NEWS_RIVAL_F : g_Game.news_f[s]) / 100;   // telejornal que antecede o programa
+	a = a * (90 + Sim_Rnd(21)) / 100;
 	if (st) a = a * RIVAL_Q / 100;
 	return (u8)a;
 }
@@ -132,50 +133,46 @@ void Sim_PlaceAd(u8 s, u8 c)
 }
 
 // tamanho da biblioteca do rival: comeca pequeno e cresce com os dias (rivais tambem tem caixa limitado)
-static u8 RivalLib(void)
+// ---------------------------------------------------------------- credito / arquivo
+i32 Sim_CreditLimit(void)
 {
-	u16 n = RIVAL_LIB_START + g_Game.day / RIVAL_LIB_GROWTH_DAYS;
-	return (u8)(n > DB_NUM_MOVIES ? DB_NUM_MOVIES : n);
+	return CREDIT_BASE + (i32)CREDIT_PER_IMAGE * g_Game.image[0];
 }
 
-static void AiSchedule(u8 st)
+u8 Sim_Borrow(i32 k)
 {
-	Slot* sl = g_Game.slot[st];
-	u8 s = 0, k, best, bestv, m, v, tries;
-	for (k = 0; k < NUM_SLOTS; k++) { sl[k].movie = NONE; sl[k].part = 0; sl[k].ad = NONE; }
-	while (s < NUM_SLOTS)
-	{
-		best = NONE; bestv = 0;
-		for (tries = 0; tries < 6; tries++)
-		{
-			m = g_Game.rival_lib[st - 1][Rnd(RivalLib())];     // so filmes da biblioteca do rival
-			if (s + g_Movies[m].blocks > NUM_SLOTS) continue;
-			v = (u8)((u16)Sim_Quality(m) * s_Fit[g_Movies[m].cat][s] / 100);
-			if (g_Movies[m].fsk18 && s < 3) v = 0;
-			v = (u8)(v * (100 - (g_Game.plays[st][m] > 4 ? 60 : g_Game.plays[st][m] * 12)) / 100);
-			if (v >= bestv) { bestv = v; best = m; }
-		}
-		if (best == NONE) { s++; continue; }
-		for (k = 0; k < g_Movies[best].blocks; k++) { sl[s + k].movie = best; sl[s + k].part = k; }
-		s += g_Movies[best].blocks;
-	}
+	if (g_Game.debt + k > Sim_CreditLimit()) return 1;
+	g_Game.debt += k; g_Game.money += k;
+	return 0;
+}
+
+u8 Sim_Repay(i32 k)
+{
+	if (g_Game.debt <= 0) return 2;
+	if (k > g_Game.debt) k = g_Game.debt;
+	if (g_Game.money < k) return 1;
+	g_Game.debt -= k; g_Game.money -= k;
+	return 0;
+}
+
+u16 Sim_MovieValue(u8 idx)        // revenda = metade do preco, menos desgaste (min 20%)
+{
+	u8 wear = g_Game.plays[0][idx] >= 10 ? 20 : (u8)(100 - 8 * g_Game.plays[0][idx]);
+	if (wear < 20) wear = 20;
+	return (u16)((u32)Sim_MoviePrice(idx) / 2 * wear / 100);
+}
+
+u8 Sim_Sell(u8 idx)
+{
+	u8 s;
+	if (!g_Game.owned[idx]) return 1;
+	for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == idx) return 2;
+	g_Game.money += Sim_MovieValue(idx);
+	g_Game.owned[idx] = 0;
+	return 0;
 }
 
 // ---------------------------------------------------------------- dia
-static void NewOffers(void)
-{
-	u8 i, j, a, dup;
-	for (i = 0; i < NUM_OFFERS; i++)
-	{
-		do {
-			a = Rnd(DB_NUM_ADS); dup = 0;
-			for (j = 0; j < i; j++) if (g_Game.offer[j] == a) dup = 1;
-			for (j = 0; j < MAX_CONTRACTS; j++) if (g_Game.contract[j].ad == a) dup = 1;
-		} while (dup);
-		g_Game.offer[i] = a;
-	}
-}
-
 static void StartDay(void)
 {
 	u8 st, m;
@@ -185,26 +182,22 @@ static void StartDay(void)
 	for (st = 0; st < NUM_SLOTS; st++) g_Game.aud_done[st] = 0;
 	for (st = 0; st < NUM_STATIONS; st++)
 		for (m = 0; m < NUM_SLOTS; m++) g_Game.aud[st][m] = 0;
-	AiSchedule(1); AiSchedule(2);
-	NewOffers();
+	Sim_ExtNewDay();                                  // IA dos rivais + ofertas do dia (banked)
 }
 
 void Sim_Init(u16 seed)
 {
 	u16 n;
 	u8 i, st, s;
-	s_Rng = seed ? seed : 0xACE1;
+	g_Rng = seed ? seed : 0xACE1;
 	for (n = 0; n < sizeof(Game); n++) ((u8*)&g_Game)[n] = 0;
 	g_Game.money = START_MONEY;
 	g_Game.image[0] = 34; g_Game.image[1] = 33; g_Game.image[2] = 33;
 	for (st = 0; st < NUM_STATIONS; st++)
 		for (s = 0; s < NUM_SLOTS; s++) { g_Game.slot[st][s].movie = NONE; g_Game.slot[st][s].ad = NONE; }
+	g_Game.seed = g_Rng;
 	for (i = 0; i < MAX_CONTRACTS; i++) g_Game.contract[i].ad = NONE;
-	for (st = 0; st < 2; st++)                 // biblioteca de cada rival = permutacao embaralhada do catalogo
-	{
-		for (i = 0; i < DB_NUM_MOVIES; i++) g_Game.rival_lib[st][i] = i;
-		for (i = DB_NUM_MOVIES - 1; i > 0; i--) { u8 j = Rnd(i + 1), tmp = g_Game.rival_lib[st][i]; g_Game.rival_lib[st][i] = g_Game.rival_lib[st][j]; g_Game.rival_lib[st][j] = tmp; }
-	}
+	Sim_ExtInit();                             // noticias iniciais + bibliotecas dos rivais (banked)
 	g_Game.day = 0;
 	StartDay();
 	Sim_Msg("Welcome, program director!");
@@ -218,6 +211,11 @@ u8 Sim_Buy(u8 idx)
 	g_Game.money -= p; g_Game.day_cost += p;
 	g_Game.owned[idx] = 1;
 	return 0;
+}
+
+u16 Sim_Penalty(u8 ad)
+{
+	return (u16)((u32)g_Ads[ad].penalty * PENALTY_PCT / 100);
 }
 
 u8 Sim_SignAd(u8 o)
@@ -291,7 +289,7 @@ static void EndDay(void)
 		for (m = 0; m < DB_NUM_MOVIES; m++)
 		{
 			if (shown[m]) { if (g_Game.plays[st][m] < 250) g_Game.plays[st][m]++; }
-			else if (g_Game.plays[st][m] && Rnd(3) == 0) g_Game.plays[st][m]--;
+			else if (g_Game.plays[st][m] && Sim_Rnd(3) == 0) g_Game.plays[st][m]--;
 		}
 	}
 	// contratos
@@ -302,14 +300,19 @@ static void EndDay(void)
 		if (ct->days_left) ct->days_left--;
 		if (ct->days_left == 0 && ct->reps_left)
 		{
-			STAT(g_StatFail++); STAT(g_StatPenalty += g_Ads[ct->ad].penalty);
-			g_Game.money -= g_Ads[ct->ad].penalty; g_Game.day_cost += g_Ads[ct->ad].penalty;
-			Sim_MsgNum("Contract failed! -", g_Ads[ct->ad].penalty, "k");
+			{
+				u16 pen = Sim_Penalty(ct->ad);
+				STAT(g_StatFail++); STAT(g_StatPenalty += pen);
+				g_Game.money -= pen; g_Game.day_cost += pen;
+				Sim_MsgNum("Contract failed! -", pen, "k");
+			}
 			ct->ad = NONE;
 			for (st = 0; st < NUM_SLOTS; st++) if (g_Game.slot[0][st].ad == i) g_Game.slot[0][st].ad = NONE;
 		}
 	}
 	g_Game.money -= DAILY_UPKEEP; g_Game.day_cost += DAILY_UPKEEP;
+	for (i = 0; i < DB_NUM_AGENCIES; i++) if (g_Game.news_sub[i]) { g_Game.money -= NEWS_FEE; g_Game.day_cost += NEWS_FEE; }
+	if (g_Game.debt > 0) g_Game.debt += g_Game.debt * INTEREST_PCT / 100;     // juros do chefe
 	if (g_Game.money < BANKRUPT_AT) g_Game.game_over = 1;
 	StartDay();
 }
@@ -320,6 +323,10 @@ u8 Sim_Tick(void)
 	u16 rel;
 	if (g_Game.game_over) return EV_NONE;
 	g_Game.t++;
+	if ((g_Game.t % 60) == 0)                                   // hora cheia: telejornal + noticias novas
+	{
+		Sim_ExtHour();                                          // envelhece noticias, agencias entregam, mede telejornal (banked)
+	}
 	if (g_Game.t >= FIRST_SLOT_T)
 	{
 		rel = g_Game.t - FIRST_SLOT_T;           // minutos desde 18:00

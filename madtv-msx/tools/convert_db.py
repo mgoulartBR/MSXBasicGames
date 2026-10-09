@@ -1,7 +1,7 @@
 #!/usr/bin/env python3 -I
 """Converte um subconjunto do banco do TVTower (XML) em tabelas C compactas para o MSX.
 
-Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>  (gera tambem db_data_s3_b3.c = segmento 3 do mapper ASCII8)
+Uso: tools/convert_db.py <dir database/Default> <saida src/data/db_data.h>  (gera src/seg/seg_s3_b3.c e seg_s4_b3.c = segmentos 3 e 4 do mapper ASCII8)
 
 Fonte da verdade: os XML originais. Nada aqui e escrito a mao; rode de novo para regenerar.
 Mapeamentos TVTower -> categorias Mad TV estao em CATEGORIES (decisao de design documentada em docs/PORTING.md).
@@ -13,7 +13,10 @@ from pathlib import Path
 MOVIES_PER_CAT = 12
 MAX_TITLE = 26
 MAX_ADS = 24
-MAX_NEWS = 24
+NEWS_PER_AGENCY = 40     # 3 agencias x 40 = 120 noticias (segmento 4 do mapper)
+NEWS_TITLE = 40         # tamanho fixo do titulo (registro fixo => copia simples por acessor)
+AGENCIES = [("Politics", {0}), ("Showbiz", {1, 5}), ("Misc", {2, 3, 4})]
+GENRE_TO_AGENCY = {g: i for i, (_, gs) in enumerate(AGENCIES) for g in gs}
 
 # categorias Mad TV (indice) -> (nome, generos TVTower)
 CATEGORIES = [
@@ -110,15 +113,27 @@ def pick_ads(root, lang):
     return ads[::step][:MAX_ADS]
 
 def pick_news(root, lang):
-    out = []
+    """120 noticias (40 por agencia). Preco/qualidade vem do banco: price (x10 -> u8), qualidade = media(min,max).
+    Noticias com intervalo de ano restrito (year_range) sao preferidas fora (so 'atemporais' ou com -1)."""
+    by = {i: [] for i in range(len(AGENCIES))}
     for n in root.iter("news"):
         d = n.find("data")
         t = resolve(first_text(n, "title/en"), lang)
         if d is None or not t:
             continue
-        out.append(dict(guid=n.get("guid"), title=ascii_fold(t)[:MAX_TITLE * 2],
-                        genre=int(d.get("genre") or 0), price=int(round(float(d.get("price") or 1) * 10))))
-    return sorted(out, key=lambda x: x["guid"])[:MAX_NEWS]
+        g = int(d.get("genre") or 0)
+        if g not in GENRE_TO_AGENCY:
+            continue
+        title = ascii_fold(t)
+        if len(title) < 6 or len(title) >= NEWS_TITLE:
+            continue
+        q = (int(d.get("quality_min") or 50) + int(d.get("quality_max") or 70)) // 2
+        by[GENRE_TO_AGENCY[g]].append(dict(guid=n.get("guid"), title=title, agency=GENRE_TO_AGENCY[g],
+                                           price=min(255, int(round(float(d.get("price") or 0.5) * 100))), quality=min(100, q)))
+    out = []
+    for i in range(len(AGENCIES)):
+        out += sorted(by[i], key=lambda x: x["guid"])[:NEWS_PER_AGENCY]
+    return out
 
 def emit(movies, ads, news, out):
     """Gera <out>.h (declaracoes/contagens) e <out>.c (definicoes em ROM)."""
@@ -129,12 +144,15 @@ def emit(movies, ads, news, out):
     H.append("#define DB_NUM_MOVIES %d" % len(movies))
     H.append("#define DB_NUM_ADS %d" % len(ads))
     H.append("#define DB_NUM_NEWS %d" % len(news))
+    H.append("#define DB_NEWS_TITLE %d" % NEWS_TITLE)
+    H.append("#define DB_NUM_AGENCIES %d" % len(AGENCIES))
     H.append("")
     H.append("extern const char* const g_CategoryName[DB_NUM_CATEGORIES];")
     H.append("extern const Movie g_Movies[DB_NUM_MOVIES];")
     H.append("extern const Ad g_Ads[DB_NUM_ADS];")
-    H.append("extern const News g_News[DB_NUM_NEWS];")
-    L = [hdr, '#include "db_data.h"', ""]
+    H.append("extern const char* const g_AgencyName[DB_NUM_AGENCIES];")
+    H.append("extern const NewsRec g_NewsRec[DB_NUM_NEWS];     // SEGMENTO 4 (banco 3 so mapeado dentro de Db_News)")
+    L = [hdr, '#include "../data/db_data.h"', ""]
     L.append("const char* const g_CategoryName[DB_NUM_CATEGORIES] = { %s };" % ", ".join(c_str(n) for n, _ in CATEGORIES))
     L.append("")
     L.append("// year = ano-1850; price = price_mod*100 (preco real e calculado em runtime); fsk18 = flag X-rated do TVTower")
@@ -148,14 +166,17 @@ def emit(movies, ads, news, out):
     for a in ads:
         L.append("\t{ %s, %d, %d, %d, %d, %d }," % (c_str(a["title"]), int(round(a["min_audience"] * 10)), a["reps"], a["days"], a["profit"], a["penalty"]))
     L.append("};\n")
-    L.append("const News g_News[DB_NUM_NEWS] = {")
+    L.append("const char* const g_AgencyName[DB_NUM_AGENCIES] = { %s };" % ", ".join(c_str(n) for n, _ in AGENCIES))
+    N = [hdr, '#include "../game_types.h"', '#include "../data/db_data.h"', "",
+         "// price = k$ por item /1 ... ver sim.c; quality 0..100; agency 0..2", "const NewsRec g_NewsRec[DB_NUM_NEWS] = {"]
     for n in news:
-        L.append("\t{ %s, %d, %d }," % (c_str(n["title"]), n["genre"], n["price"]))
-    L.append("};")
+        N.append("\t{ %s, %d, %d, %d }," % (c_str(n["title"]), n["agency"], n["quality"], n["price"]))
+    N.append("};")
     base = Path(out).with_suffix("")
+    (base.parent.parent / "seg" / "seg_s4_b3.c").write_text("\n".join(N) + "\n", encoding="utf-8")
     base.with_suffix(".h").write_text("\n".join(H) + "\n", encoding="utf-8")
     # o arquivo .c vira o SEGMENTO 3 do mapper (banco 3, 0xA000): MSXgl compila *_s3_b3.c na area SEG3
-    Path(str(base) + "_s3_b3.c").write_text("\n".join(L) + "\n", encoding="utf-8")
+    (base.parent.parent / "seg" / "seg_s3_b3.c").write_text("\n".join(L) + "\n", encoding="utf-8")
 
 def main():
     src, out = Path(sys.argv[1]), sys.argv[2]
@@ -164,7 +185,7 @@ def main():
     ads = pick_ads(ET.parse(src / "database_ads.xml").getroot(), lang)
     news = pick_news(ET.parse(src / "database_news.xml").getroot(), lang)
     emit(movies, ads, news, out)
-    print("filmes=%d (por categoria: %s) anuncios=%d noticias=%d -> %s" % (
+    print("filmes=%d (por categoria: %s) anuncios=%d noticias=%d (segmento 4) -> %s" % (
         len(movies), [sum(1 for m in movies if m["cat"] == i) for i in range(len(CATEGORIES))], len(ads), len(news), out))
 
 if __name__ == "__main__":
