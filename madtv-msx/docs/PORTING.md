@@ -10,7 +10,8 @@ Video strategy  : Screen 5 (256x212, 16 cores), texto bitmap do MSXgl + barras c
 Audio strategy  : PSG (a definir; nenhuma implementacao ainda)
 Input strategy  : teclado (setas) + joystick 1, ambos simultaneos. Mouse original -> cursor por setas/botao.
 Memory strategy : tabelas const em ROM geradas por tools/convert_db.py; RAM so para estado do jogo.
-ROM mapper      : ROM_32K ate ~24 KB de dados; migrar para ROM_ASCII16 quando passar (previsto: lotes de filmes por banco).
+ROM mapper      : ROM_ASCII8 (128 KB, 16 segmentos de 8 KB). Segmentos 0-2 = codigo fixo (4000h-9FFFh, 24 KB); banco 3 (A000h-BFFFh)
+                  = janela de dados (segmento 3 = tabelas do catalogo; novos lotes = segmentos 4..15 via `db_data_s<N>_b3.c`).
 
 Features preserved : dia 17h-1h em tempo real, grade 18h-0h, categorias, atributos de filme (critica/ritmo/bilheteria, FSK18, blocos),
                      compra de filmes, contratos de publicidade (preco/multa/repeticoes/prazo/audiencia minima), audiencia por hora,
@@ -74,8 +75,26 @@ por screenshot. Grade/lista de escolha usam o mesmo mecanismo mas nao foram medi
 - Preco do filme (k$) = media(atributos) x price_mod/10 x blocos/2 + 50. Custo fixo diario 120k$. Falencia: caixa < -2000k$.
 - Rivais (FunTV/SunTV): grade preenchida por heuristica (melhor de 6 candidatos por slot), sem dinheiro/contratos.
 
-## Orcamento (0.3, ROM_32K)
-ROM: 30 144 / 32 768 bytes (92%) - **o proximo milestone exige mapper (ROM_ASCII16)**. RAM: struct `Game` ~480 bytes.
+## Mapper: decisao (0.3.3)
+Por que ASCII8 e nao ASCII16: ASCII16 so tem 2 bancos de 16 KB - para ter uma janela de dados sem tirar codigo do ar seria
+preciso que todo o codigo coubesse em 16 KB. Com ASCII8 o codigo fixo ocupa 3 bancos (24 KB) e sobra um banco de 8 KB para
+janela de dados/codigo. ASCII8 e suportado por openMSX, flash carts comuns e FPGA. Alternativas descartadas: ROM_48K/64K
+(dependem de a cartucho decodificar a pagina 0/3 - menos portavel) e Konami (sem vantagem aqui).
+Passo 1 (config): desligar recursos nao usados do MSXgl em `msxgl_config.h` (modos de video, sprites, Print FX/format/32 bits,
+BIOS sub/disk): **31 907 -> 24 037 bytes (-7,9 KB)** sem mudar o comportamento (verificado por teste + screenshot).
+Passo 2 (mapper): codigo fixo 20 170 bytes (4000h-8EC9h) de 24 576 disponiveis; dados no segmento 3: 3 895 de 8 192 bytes.
+Regra atual: o banco 3 fica sempre mapeado no segmento 3 (dados lidos por ponteiro direto). **Quando o catalogo passar de
+um segmento, introduzir acessores que mapeiam o segmento (SET_BANK_SEGMENT(3, n)) antes de ler** - previsto no 0.4 (noticias).
+
+### Bug latente encontrado na migracao: RAM nao zerada
+O crt0 do MSXgl nao zera o BSS; o codigo dependia de variaveis estaticas valerem 0 (o emulador mascarava). Ao mudar o layout o
+teste falhou (grade abriu na coluna de anuncios). Em hardware real a RAM contem lixo -> **todo estado e inicializado
+explicitamente em `main()`/`Ui_Init()`/`Sim_Init()`**. Regra do projeto: nunca confiar em zero-init.
+
+## Orcamento de memoria (0.3.3)
+ROM: 128 KB (cart); codigo fixo 20 170 / 24 576 B (82%); segmento de dados 3 895 / 8 192 B. RAM: `Game` ~480 B + UI/estado ~200 B.
+VRAM (Screen 5): pagina 0 = tela (linhas 0-211) + fonte branca (212-251); pagina 1 = 6 variantes de cor da fonte (256-495);
+pagina 2 = buffer de composicao (512-723).
 
 ## Mapeamento TVTower -> categorias Mad TV (tools/convert_db.py)
 Lovestory=Romance | Action=Acao,Aventura,Western | Monumental=Monumental,Historia | Comedy=Comedia |

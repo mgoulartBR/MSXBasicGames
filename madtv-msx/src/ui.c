@@ -13,11 +13,13 @@ static const u8 s_Col[UI_NUM_COLORS] = {
 #define BUF_Y 512                // pagina 2 = buffer de composicao fora da tela
 static u16 s_YOff;               // 0 = desenha na tela; BUF_Y = desenha no buffer
 static u8  s_Depth;
-static u16 s_FontY;              // base Y da variante de cor atual
+static u16 s_FontY;
+static u8  s_PrevIn;             // NAO ha zeragem de BSS no crt0: todo estado e inicializado em Ui_Init/main              // base Y da variante de cor atual
 
 void Ui_Init(void)
 {
 	u8 i;
+	s_YOff = 0; s_Depth = 0; s_PrevIn = 0; s_FontY = 0;
 	VDP_SetMode(VDP_MODE_SCREEN5);
 	VDP_SetColor(UI_BG);
 	VDP_EnableVBlank(TRUE);
@@ -134,7 +136,6 @@ void Ui_Bar(u8 x, u8 y, u8 w, u8 h, u8 pct, u8 col)
 	if (f) Ui_Fill(x, y, f, h, col);
 }
 
-static u8 s_PrevIn;
 u8 Input_Poll(void)
 {
 	u8 in = 0, joy = Joystick_Read(JOY_PORT_1), pushed;
