@@ -20,7 +20,7 @@
 #define PRICE_DIV     20         // preco do filme = media(atributos)*price_mod/PRICE_DIV * blocos/2 + 50
 #endif
 #ifndef RIVAL_Q
-#define RIVAL_Q       85         // % aplicado a audiencia dos rivais (dificuldade normal)
+#define RIVAL_Q       78         // % aplicado a audiencia dos rivais (dificuldade normal)
 #endif
 #ifndef DAILY_UPKEEP
 #define DAILY_UPKEEP  100        // k$/dia (torres/estudio - fixo ate existirem torres)
@@ -55,8 +55,14 @@
 #define GIFT_MAX_STOCK 3
 #define GIFT_DREAM    9          // "Dream trip": presente de casamento (nao conta como simpatia)
 #define CAT_CULTURE   5          // indice da categoria Culture em db_data
-#define SAVE_BYTES    61
-#define SAVE_CHARS    98         // ceil(SAVE_BYTES*8/5)
+#define OWNED_BYTES   ((DB_NUM_MOVIES + 7) / 8)
+#define SAVE_BYTES    (50 + OWNED_BYTES)
+#define SAVE_CHARS    ((SAVE_BYTES * 8 + 4) / 5)   // ceil(SAVE_BYTES*8/5)
+#ifndef IMAGE_LOW
+#define IMAGE_LOW     20         // Image abaixo disto: anunciantes pagam menos e o chefe fecha o credito
+#endif
+#define LOW_PROFIT_PCT 80
+#define NUM_DIFF      3          // 0 easy, 1 normal, 2 hard
 
 typedef struct { u8 movie; u8 part; u8 ad; } Slot;          // movie=NONE: vazio; part = bloco dentro do filme; ad = indice de contrato
 typedef struct { u8 ad; u8 reps_left; u8 days_left; } Contract;
@@ -93,6 +99,7 @@ typedef struct {
 } Game;
 
 extern Game g_Game;
+extern u8 g_Diff;                       // dificuldade (0..2): muda caixa inicial e forca dos rivais
 extern const u8 g_Reach[NUM_STATIONS];   // alcance maximo (0,1 milhao)
 extern char g_Msg[44];                  // ultima mensagem de evento
 extern const char* const g_StationName[NUM_STATIONS];

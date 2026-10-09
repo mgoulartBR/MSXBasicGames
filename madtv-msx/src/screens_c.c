@@ -240,6 +240,8 @@ void Title_Draw(void) __banked
 	Ui_Text(14, 100, "Run the station: buy movies, sign");
 	Ui_Text(14, 110, "ad contracts, fill the programme grid");
 	Ui_Text(14, 120, "and beat FunTV and SunTV in the ratings.");
+	Ui_Fill(0, 131, 255, 10, UI_BG);
+	Ui_Color(UI_YELLOW); Ui_Text(34, 132, g_Diff == 0 ? "< Difficulty: Easy >" : g_Diff == 1 ? "< Difficulty: Normal >" : "< Difficulty: Hard >");
 	Ui_Color(UI_GREEN);  Ui_Text(14, 146, "Arrows/joystick: move   OK(Enter/Space)");
 	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
 	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");

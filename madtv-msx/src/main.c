@@ -31,12 +31,12 @@ void MarkRows(u8 a, u8 b) { g_RowA = a; g_RowB = b; g_Dirty |= D_ROWS; }
 static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
 static i32 c_Money = 0x7FFFFFFF;
 static u8  c_Image[NUM_STATIONS] = { 255, 255, 255 };
-static u8  c_Speed = 255;
+static u8  c_Speed = 255, c_Sym = 255;
 
 void Header_Invalidate(void)
 {
 	u8 i;
-	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255;
+	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255; c_Sym = 255;
 	for (i = 0; i < NUM_STATIONS; i++) c_Image[i] = 255;
 	Ui_Fill(0, 0, 255, 24, UI_BG);
 	Ui_Fill(0, 23, 255, 1, COLOR_GRAY);
@@ -63,10 +63,17 @@ static void Draw_Header(void)
 	if (c_Money != g_Game.money)
 	{
 		c_Money = g_Game.money;
-		Ui_Begin(); Ui_Fill(118, 1, 72, 10, UI_BG);
+		Ui_Begin(); Ui_Fill(118, 1, 52, 10, UI_BG);
 		Ui_Color(g_Game.money < 0 ? UI_RED : UI_WHITE);
 		Money(120, 2, g_Game.money);
-		Ui_End(118, 1, 72, 10);
+		Ui_End(118, 1, 52, 10);
+	}
+	if (c_Sym != g_Game.sym[0])
+	{
+		c_Sym = g_Game.sym[0];                                // simpatia da Betty
+		Ui_Begin(); Ui_Fill(172, 1, 28, 10, UI_BG);
+		Ui_Color(UI_RED); Ui_Text(172, 2, "B"); Ui_Int(180, 2, g_Game.sym[0]);
+		Ui_End(172, 1, 28, 10);
 	}
 	if (c_Speed != g_Speed)
 	{
@@ -298,7 +305,7 @@ void main()
 	u8 ev, e, hz, fc = 0, fpm;
 	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
 	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
-	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE;
+	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1;
 	Ui_Init();
 	Draw_Title();
 
@@ -316,7 +323,7 @@ void main()
 			u8 p = Pointer_Update();
 			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Draw_Title(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
-			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }
+			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE && g_PtrY > 128 && g_PtrY < 142) ev |= IN_RIGHT; else if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }   // clique na linha de dificuldade = trocar
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
 			{
 				if ((p & PTR_LEFT) && g_PtrY < 14 && g_PtrX >= 200) ev |= IN_SPEED;      // clicar na velocidade do cabecalho
@@ -326,6 +333,7 @@ void main()
 
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
+			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Draw_Title(); continue; }
 			if (ev & IN_OK) StartGame();
 			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Goto(SCR_SAVE); Save_EnterLoad(); }   // Esc no titulo: carregar codigo
 			continue;

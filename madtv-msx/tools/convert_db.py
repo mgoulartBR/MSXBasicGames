@@ -10,7 +10,7 @@ Flags TVTower usadas: 64 = X-rated (-> FSK18). Confirmado empiricamente: 160/194
 import sys, re, unicodedata, xml.etree.ElementTree as ET
 from pathlib import Path
 
-MOVIES_PER_CAT = 12
+MOVIES_PER_CAT = 20
 MAX_TITLE = 26
 MAX_ADS = 24
 NEWS_PER_AGENCY = 40     # 3 agencias x 40 = 120 noticias (segmento 4 do mapper)

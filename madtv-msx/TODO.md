@@ -4,7 +4,9 @@
 - DONE   0.1 pipeline: MSXgl v1.5.0 + SDCC 4.6.0 -> ROM 32K -> openMSX (C-BIOS MSX2) -> screenshot
 - TODO   Confirmar licenca do conteudo do banco TVTower antes de distribuir
 - DONE   0.6 Betty e presentes: Supermercado (10 presentes), escritorio da Betty (simpatia <= Image, rivais cortejam, efeito cai 30%/uso), falencia de emissora (Image 0), pedido de casamento + tela final; savegame v5 (98 caracteres)
-- TODO   0.6: campo da Betty no cabecalho; autoplay ainda nao joga presentes (final feliz so verificado por teste forcado, nao por partida real)
+- DONE   0.7 campo da Betty (Bnn) no cabecalho; autoplay com presentes (casa em 64% das partidas no Normal, ver docs/PORTING.md); Image < 20 = anunciantes pagam 20% menos e o chefe fecha o credito; catalogo de 144 filmes; dificuldade Easy/Normal/Hard no titulo (setas ou clique); savegame v6 (109 caracteres)
+- TODO   Escolher a emissora do jogador (so a dificuldade foi feita; a emissora seria so cosmetica) ; autoplay ainda joga com heuristicas simples (um humano pode ir melhor ou pior)
+- TODO   Culture tem so 4 filmes no catalogo (filtro de titulo <= 26 letras do conversor)
 - DONE   0.5.2 mouse com autodeteccao (cursor sempre visivel; M cicla auto/porta1/porta2/off)
 - DONE   0.5.1 mouse (cursor-sprite, hit-test em todas as telas, M liga/desliga, direito = voltar)
 - TODO   Validar mouse em hardware MSX real (sensibilidade, clique curto); opcao de sensibilidade
