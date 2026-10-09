@@ -141,3 +141,7 @@ sem pisos ~0,5 M T-states/quadro; cores por setor ~0,74 M; texturizado ~1,4 M (a
 
 v8: teto = preto liso (o plano unico de teto vazava texturas de setores vizinhos); piso = cores do setor 96 unidades a frente (nao pula ao trocar de setor). TAB liga piso texturizado
 por setor (so piso). Padrao: ~0,50 M T-states/quadro de CPU (so o custo base); piso texturizado ~1,0 M. Suspeita de gargalo no openMSX: area preenchida por quadro (HMMV da tela toda + texels do Geo3D).
+
+v9: pisos e tetos como GEOMETRIA no PVS (retangulos de 32..320 unidades por setor, faces lisas do Geo3D): o teto de um setor baixo oculta o que esta alem/acima (antes a parede alta do salao vazava
+por cima do teto rebaixado) e pisos de outros setores (lago, degraus) ficam na altura certa. Tetos so para setores com vizinho mais alto; tiles que tocam o bloco do jogador sao omitidos (a faixa de cor cobre).
+Competem com as paredes pelo limite de 255 vertices/faces (peso: tetos 3x, pisos 0,25x). Paleta: indices < 128 reservados a cores lisas. ROM ainda de 4 MiB (empacotamento first-fit decrescente dos blobs).

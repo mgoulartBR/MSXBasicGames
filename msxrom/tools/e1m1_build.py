@@ -112,7 +112,7 @@ def main():
         d=np.frombuffer(w.lump(name),np.uint8)[:4096].reshape(64,64); img=Image.fromarray(w.playpal(0)[d],'RGB').resize((16,16),Image.BOX)
         return np.dstack([np.array(img),np.full((16,16),255,np.uint8)])
     flat_tiles=[flat_tile(f) for f in fl_used]
-    NBASE=255-NF
+    BO=2+NF; NBASE=256-BO                                          # 0 transparente; 1 = quase-preto (teto); 2..1+NF = tons dos flats; BO.. = cores base (indices < 128 ficam para cores LISAS de faces)
     # --- paleta: amostras de todas as imagens
     samples=[];wts=[]
     def add(rgba,wt):
@@ -127,19 +127,19 @@ def main():
     u,inv=np.unique(px,axis=0,return_inverse=True); ww=np.bincount(inv,weights=wt)
     base=median_cut(u.astype(float),ww,NBASE)                       # (NBASE,3)
     # indice 0 = transparente (preto); 1..NBASE = base; NBASE+1.. = cores de piso/teto
-    pal=np.zeros((256,3),float); pal[1:1+len(base)]=base
+    pal=np.zeros((256,3),float); pal[1]=(2,2,4); pal[BO:BO+len(base)]=base
     flat_idx={}
     for i,f in enumerate(used):
         c=np.array(flat_cols[f],float)
         for j,k in enumerate((0.8,1.0)):
-            pal[1+len(base)+2*i+j]=c*k
-        flat_idx[f]=(1+len(base)+2*i,1+len(base)+2*i+1)             # (longe, perto)
+            pal[2+2*i+j]=c*k
+        flat_idx[f]=(2+2*i,3+2*i)             # (longe, perto)
     def q(rgba,dither=False):
         h,wd=rgba.shape[:2]; out=np.zeros((h,wd),np.uint8); f=rgba[...,:3].astype(float); b=base
         for y in range(h):
             for x in range(wd):
                 if rgba[y,x,3]<128: continue
-                old=f[y,x]; i=int((((b-old)**2*WEIGHT).sum(1)).argmin()); out[y,x]=i+1
+                old=f[y,x]; i=int((((b-old)**2*WEIGHT).sum(1)).argmin()); out[y,x]=i+BO
                 if dither:
                     e=old-b[i]
                     for dx,dy,k in((1,0,7/16),(-1,1,3/16),(0,1,5/16),(1,1,1/16)):
@@ -210,26 +210,36 @@ def main():
     ex=[l for l in m.linedefs if l['special']==11][0]; (e1x,e1y),(e2x,e2y)=m.vertexes[ex['v1']],m.vertexes[ex['v2']]
     # --- blobs
     cur=bytearray(); blobbanks=[]; blk_tab={}
-    nblob=0; maxf=0; seen={}
+    nblob=0; maxf=0; seen={}; pend=[]
     first_blob_bank=RAST_BANK0+nrb
     import time; t0=time.time(); res={}
     for i,(bx,by) in enumerate(bl):
         vps=P.block_viewpoints(L,bx,by)
         if not vps: continue
-        allids=sorted(P.visible_subs(L,vps))
+        allids=sorted(P.visible_subs(L,vps)); allt=P.visible_tiles(L,vps,bx,by)
         for hd in range(P.NHEAD):
             ids=[j for j in allids if P.inview(L,j,bx,by,P.head_deg(hd),P.CONE)]
-            r=P.build_block(L,bx,by,ids=ids)
+            r=P.build_block(L,bx,by,ids=ids,tiles=[t for t in allt if P.tile_in_cone(L,t,bx,by,P.head_deg(hd),P.CONE)])
             res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
             nv=len(r['verts']); nf=len(r['faces'])
             blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])
-            for fidx in r['faces']: blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,0x80)
+            def fcol(fl): return 0x80 if fl is None else (1 if fl[0]=='C' else flat_idx[m.sectors[fl[1]]['ftex']][1])
+            for fidx,fl in zip(r['faces'],r['flat']): blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,fcol(fl))
             for uv in r['uvs']: blob+=bytes(uv)
-            if blob in seen: blk_tab[(bx,by,hd)]=seen[blob]; continue
-            if len(cur)+len(blob)>16384: blobbanks.append(bytes(cur).ljust(16384,b'\0')); cur=bytearray()
-            blk_tab[(bx,by,hd)]=seen[blob]=(first_blob_bank+len(blobbanks),len(cur)); cur+=blob; nblob+=1
+            if blob in seen: blk_tab[(bx,by,hd)]=blob; continue
+            seen[blob]=None; pend.append((blob,(bx,by,hd))); blk_tab[(bx,by,hd)]=blob
         if i%20==0: print('bloco',i,len(bl),'%.0fs'%(time.time()-t0),flush=True)
-    blobbanks.append(bytes(cur).ljust(16384,b'\0'))
+    # empacotamento first-fit decrescente (menos desperdicio nos bancos)
+    place={}; bank_used=[]; bank_data=[]
+    for blob in sorted(set(b for b,_ in pend),key=len,reverse=True):
+        for bi,u in enumerate(bank_used):
+            if u+len(blob)<=16384: place[blob]=(first_blob_bank+bi,u); bank_data[bi]+=blob; bank_used[bi]+=len(blob); break
+        else:
+            place[blob]=(first_blob_bank+len(bank_used),0); bank_used.append(len(blob)); bank_data.append(bytearray(blob))
+    for k_,b_ in list(blk_tab.items()): blk_tab[k_]=place[b_]
+    blobbanks=[bytes(b).ljust(16384,b'\0') for b in bank_data]
+    print('blobs (bancos de 16K):',len(blobbanks),'| bancos antes dos blobs:',first_blob_bank,'| total',first_blob_bank+len(blobbanks))
+    if first_blob_bank+len(blobbanks)>256: print('ERRO: ROM passaria de 256 bancos'); sys.exit(1)
     # indice de blocos
     keys=sorted(blk_tab)                                      # (bx,by,heading); indice = bloco*4 + direcao
     blocks_=sorted(set((k[0],k[1]) for k in keys)); bidx={b:i for i,b in enumerate(blocks_)}
@@ -250,6 +260,7 @@ def main():
     rb=[]
     for k in range(nrb):
         part=rast[k*ROWS:(k+1)*ROWS].tobytes(); rb.append(part.ljust(16384,b'\0'))
+    if first_blob_bank+len(blobbanks)>256: print('ERRO: ROM passaria de 256 bancos'); sys.exit(1)
     allb=banks+[meta_b]+rb+blobbanks
     open(os.path.join(PRIV,'e1m1_banks.bin'),'wb').write(b''.join(allb))
     # --- cabecalho C
@@ -270,8 +281,9 @@ def main():
     h.append('const unsigned int digit_tab[12][4]={'+','.join('{%d,%d,%d,%d}'%d for d in layout['digits'])+'};')
     h.append('const unsigned int face_tab[6][4]={'+','.join('{%d,%d,%d,%d}'%d for d in layout['faces'])+'};')
     h.append('const int gun_tab[5][6]={'+','.join('{%d,%d,%d,%d,%d,%d}'%g for g in layout['gun'])+'};')
-    for nm,col in (('WHITE',(255,255,255)),('RED',(255,48,48)),('PANEL',(28,24,40)),('BLACK',(0,0,0))):
-        h.append('#define C_%s %d'%(nm,int((((base-np.array(col))**2*WEIGHT).sum(1)).argmin())+1))
+    for nm,col in (('WHITE',(255,255,255)),('RED',(255,48,48)),('PANEL',(28,24,40))):
+        h.append('#define C_%s %d'%(nm,int((((base-np.array(col))**2*WEIGHT).sum(1)).argmin())+BO))
+    h.append('#define C_BLACK 1')
     h.append('#define FONT_CHARS "%s"'%chars)
     for n,v in layout['fonts'].items(): h.append('#define %s %d'%(n.upper(),v))
     open(os.path.join(PRIV,'e1m1_assets.h'),'w').write('\n'.join(h)+'\n')

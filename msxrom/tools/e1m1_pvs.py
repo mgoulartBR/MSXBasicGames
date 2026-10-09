@@ -47,11 +47,53 @@ def load(wadpath):
     for k,t in L.tiles.items():
         reg=L.rgb[t['y']:t['y']+t['h'],t['x']:t['x']+t['w']].reshape(-1,3).astype(float); L.tile_avg[k]=tuple(int(v) for v in reg.mean(0))
     L.R=e1m1_map.build(L.m); L.segs=blockers(L.m)
+    L.stiles=make_tiles(L)
     L.subs=[]                                                           # subquad: dict(p=piece, rng=(...), A,u (dir), L)
     for pi,p in enumerate(L.pcs):
         (ax,ay),(bx,by)=p['A'],p['B']; Ln=math.hypot(bx-ax,by-ay)
         for s in e1m1.split_piece(p): L.subs.append(dict(p=p,s=s,A=(ax,ay),u=((bx-ax)/Ln,(by-ay)/Ln)))
     return L
+
+TILE=32; TMAX=10
+def make_tiles(L):
+    """retangulos de piso/teto por setor: grade de 32 unidades (celula do setor = setor no centro), fundidos em retangulos de ate 6x6 celulas."""
+    R=L.R; m=L.m; taller=set()
+    for l in m.linedefs:
+        if l['left']<0: continue
+        a=m.sidedefs[l['right']]['sector']; b=m.sidedefs[l['left']]['sector']
+        if m.sectors[a]['ceil']<m.sectors[b]['ceil']: taller.add(a)
+        if m.sectors[b]['ceil']<m.sectors[a]['ceil']: taller.add(b)
+    cell={}
+    gx0=int(R.x0//TILE); gy0=int(R.y0//TILE)
+    for gx in range(gx0,gx0+R.nx*8//TILE+2):
+        for gy in range(gy0,gy0+R.ny*8//TILE+2):
+            x,y=gx*TILE+TILE//2,gy*TILE+TILE//2; cx,cy=int((x-R.x0)//8),int((y-R.y0)//8)
+            if 0<=cx<R.nx and 0<=cy<R.ny and R.open[cy,cx]: cell[(gx,gy)]=int(R.sec[cy,cx])
+    used=set(); tiles=[]
+    for (gx,gy) in sorted(cell):
+        if (gx,gy) in used: continue
+        sec=cell[(gx,gy)]; w=1
+        while w<TMAX and cell.get((gx+w,gy))==sec and (gx+w,gy) not in used: w+=1
+        h=1
+        while h<TMAX and all(cell.get((gx+i,gy+h))==sec and (gx+i,gy+h) not in used for i in range(w)): h+=1
+        for i in range(w):
+            for j in range(h): used.add((gx+i,gy+j))
+        sd=m.sectors[sec]
+        tiles.append(dict(sec=sec,x0=gx*TILE,y0=gy*TILE,x1=(gx+w)*TILE,y1=(gy+h)*TILE,floor=sd['floor'],ceil=sd['ceil'],ceil_ok=sec in taller,sky=sd['ctex']=='F_SKY1'))
+    return tiles
+
+def visible_tiles(L,vps,bx,by):
+    """tiles com algum ponto (centro ou 4 pontos internos) visivel de algum ponto de vista; exclui os que tocam o proprio bloco (a base cobre o piso sob o jogador)."""
+    x0,y0=bx*BLOCK-40,by*BLOCK-40; x1,y1=(bx+1)*BLOCK+40,(by+1)*BLOCK+40; out=[]; qs=[];meta=[]
+    for ti,t in enumerate(L.stiles):
+        if t['x0']<x1 and t['x1']>x0 and t['y0']<y1 and t['y1']>y0: continue
+        if t['x0']-x1>1800 or x0-t['x1']>1800 or t['y0']-y1>1800 or y0-t['y1']>1800: continue
+        w=t['x1']-t['x0'];h=t['y1']-t['y0']
+        for fx,fy in ((.5,.5),(.2,.2),(.8,.2),(.2,.8),(.8,.8)):
+            px,py=t['x0']+w*fx,t['y0']+h*fy
+            for vx,vy in vps: qs.append((vx,vy,px,py)); meta.append(ti)
+    if not qs: return []
+    ok=los(L.segs,qs); return sorted(set(np.array(meta)[ok].tolist()))
 
 def block_viewpoints(L,bx,by):
     R=L.R; pts=[]
@@ -89,7 +131,7 @@ def strips(a,b,dmin_fn,k):
     rec(a,b); return out
 
 DFLAT=220                                  # pecas cujo ponto mais proximo do bloco esta alem disso viram UMA face de cor lisa (media da textura)
-def model(L,sub_ids,bx,by,k,minlen=24,dflat=None):
+def model(L,sub_ids,bx,by,k,minlen=24,dflat=None,tiles=()):
     """tiras por distancia + preenchimento guloso por importancia (area projetada ~ comprimento*altura/(dist+48)^2) ate os limites do Geo3D.
     Devolve verts, faces, uvs, flat (None = texturizada; (r,g,b) = face lisa), fracao de importancia mantida."""
     dflat=DFLAT if dflat is None else dflat
@@ -117,6 +159,11 @@ def model(L,sub_ids,bx,by,k,minlen=24,dflat=None):
                 if n>t*1.01: m=(a+b)/2; rec(a,m); rec(m,b)
                 else: items.append((n*(ht-hb)/(dmin(a,b)+48)**2,'T',si,a,b))
             rec(d0,d1)
+    for ti in tiles:                                                   # pisos e tetos (faces lisas); importancia = area projetada, com peso 0.7
+        t=L.stiles[ti]; ddx=max(t['x0']-(cx+half),(cx-half)-t['x1'],0); ddy=max(t['y0']-(cy+half),(cy-half)-t['y1'],0); dm=math.hypot(ddx,ddy)
+        area=(t['x1']-t['x0'])*(t['y1']-t['y0']); imp=0.25*area*41/(dm+48)**3
+        items.append((imp,'P',(ti,0),0,0))
+        if t['ceil_ok'] and not t['sky']: items.append((3.0*area*max(20,t['ceil']-41)/(dm+48)**3,'P',(ti,1),0,0))
     items.sort(key=lambda e:-e[0])
     verts=[];vi={};faces=[];uvs=[];flat=[];tot=sum(e[0] for e in items) or 1;kept=0
     def V(pt):
@@ -124,6 +171,12 @@ def model(L,sub_ids,bx,by,k,minlen=24,dflat=None):
         return vi[pt]
     for it in items:
         imp,kind=it[0],it[1]
+        if kind=='P':
+            ti,isc=it[2]; t=L.stiles[ti]; hy=t['ceil'] if isc else t['floor']
+            xa,xb,ya,yb=t['x0'],t['x1'],t['y0'],t['y1']
+            q4=[(xa,hy,ya),(xb,hy,ya),(xb,hy,yb),(xa,hy,yb)] if not isc else [(xa,hy,ya),(xa,hy,yb),(xb,hy,yb),(xb,hy,ya)]
+            if len(faces)+1>MAX_FACES or len(verts)+len(set(q4)-set(vi))>MAX_VERTS: continue
+            faces.append([V(q) for q in q4]); uvs.append((0,)*8); flat.append(('C' if isc else 'F',t['sec'])); kept+=imp*0; continue
         if kind=='F':
             p,ax,ay,ux,uy,Ln,hb,ht,r0,r1=it[2]; xa,ya=round(ax),round(ay); xb,yb=round(ax+ux*Ln),round(ay+uy*Ln); tl=L.tiles[p['tex']]
             if (xa,ya)==(xb,yb): continue
@@ -157,16 +210,22 @@ def inview(L,si,bx,by,hd_deg,half_deg):
         da=abs((math.atan2(y,x)-hd+math.pi)%(2*math.pi)-math.pi)
         if da<half+math.asin(min(1,90/r)): return True
     return False
+def tile_in_cone(L,ti,bx,by,hd_deg,half_deg):
+    t=L.stiles[ti]; cx,cy=bx*BLOCK+BLOCK/2,by*BLOCK+BLOCK/2; hd=math.radians(hd_deg); half=math.radians(half_deg)
+    x,y=(t['x0']+t['x1'])/2-cx,(t['y0']+t['y1'])/2-cy; r=math.hypot(x,y); rad=math.hypot(t['x1']-t['x0'],t['y1']-t['y0'])/2+90
+    if r<=rad: return True
+    da=abs((math.atan2(y,x)-hd+math.pi)%(2*math.pi)-math.pi)
+    return da<half+math.asin(min(1,rad/r))
 def head_deg(h): return 90-h*90                 # yaw 0 = norte (Doom 90), yaw cresce no sentido horario
 
-def build_block(L,bx,by,ids=None,head=None):
+def build_block(L,bx,by,ids=None,head=None,tiles=()):
     vps=block_viewpoints(L,bx,by)
     if not vps: return None
     if ids is None: ids=sorted(visible_subs(L,vps))
     if head is not None: ids=[i for i in ids if inview(L,i,bx,by,head_deg(head),CONE)]
     best=None
     for k in K_LIST:                                                    # tiras mais longas (k maior) = menos vertices; escolhe o menor k que mantem quase tudo
-        v,f,u,fl,frac=model(L,ids,bx,by,k)
+        v,f,u,fl,frac=model(L,ids,bx,by,k,tiles=tiles)
         if best is None or frac>best[4]+1e-9: best=(v,f,u,fl,frac,k)
         if frac>=0.999: break
     v,f,u,fl,frac,k=best
