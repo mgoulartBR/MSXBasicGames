@@ -119,3 +119,8 @@ Fase 1 NÃO tem: portas funcionando (ficam abertas), elevadores, pisos/tetos tex
 projéteis do imp (ataque instantâneo), espingarda como arma (o item só dá munição), explosão de barris, itens/monstros em áreas só
 alcançáveis por segredos (os 4 itens do fechamento secreto sudeste são ignorados). Colisão é por raster de 8 unidades.
 Teclas: setas = mover/girar, ESPAÇO = atirar, ENTER = usar (sair da fase perto do interruptor).
+
+Pisos e ttetos (v3): uma LRMM por linha de tela (plano em perspectiva) com o flat do setor do jogador (tile 16x16 por 64 unidades, replicado pelo VDP em regioes
+256x64 da VRAM, linhas 640..767; janela de origem LRMM X 0..511 para o wrap). So ate ~120 unidades de profundidade (as linhas mais proximas); alem disso volta a
+faixa de cor do flat. Custo: o atlas de paredes caiu para 128 linhas (algumas texturas voltaram a 0,25 texel/unidade). Corrigido tambem o endereco do upload das
+fontes (antes ficavam fora da VRAM util).

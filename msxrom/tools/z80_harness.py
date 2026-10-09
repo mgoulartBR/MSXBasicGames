@@ -85,6 +85,8 @@ class Machine:
             for yy in range(y,min(y+h,1024)):
                 s.vram[yy*256+x:yy*256+min(x+w,256)]=r[44]
             s.log['lmmv']+=1
+        elif cmd==3:                                                 # LRMM (R#32..45, R#47..50, comando em R#46)
+            s.lrmm(list(r[32:46])+list(r[47:51])+[r[46]]); s.log['lrmm_cpu']=s.log.get('lrmm_cpu',0)+1
         elif cmd==9:                                                 # LMMM
             sx,sy,dx,dy,w,h=r[32]|(r[33]&1)<<8,g(34),r[36]|(r[37]&1)<<8,g(38),r[40]|(r[41]&1)<<8,g(42)
             for j in range(h):
@@ -132,7 +134,8 @@ class Machine:
         du-=65536*(du>>15); dv-=65536*(dv>>15)
         for i in range(nx):
             x=((sx<<8)+i*du)>>8; y=((sy<<8)+i*dv)>>8
-            src=int(s.vram[(y&1023)*256+(x&255)]) if (0<=x<=255 and 0<=y<=1023) else col
+            wex=s.vreg[55]|(s.vreg[56]&1)<<8; wey=s.vreg[57]|(s.vreg[58]&7)<<8      # janela de origem (R#51..58): fora dela vale a cor; o endereco faz wrap (X modulo 256, Y modulo 1024)
+            src=int(s.vram[(y&1023)*256+(x&255)]) if (0<=x<=wex and 0<=y<=wey) else col
             d=dx+i
             if d>255: break
             if lop&8 and src==0: continue

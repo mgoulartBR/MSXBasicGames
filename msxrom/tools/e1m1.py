@@ -81,20 +81,22 @@ def split_piece(p):
     return out
 
 # ----------------------------------------------------------------------------------------------- atlas de texturas
-ATLAS_W=256; BAND=64; NBANDS=4          # 4 faixas de 64 linhas = 256 linhas (VRAM 512..767)
+ATLAS_W=256; BAND=64; NBANDS=2          # 2 faixas de 64 linhas = 128 linhas (VRAM 512..639); 640..767 = regioes de piso e teto
 def tile_dims(tw,th,s): return max(1,round(tw*s)),max(1,round(th*s))
 
 def shelf_pack(items):
-    """items: [(nome,w,h)] com h<=64. Prateleiras = faixas de 64 linhas. Devolve {nome:(x,y)} ou None se nao couber."""
-    shelves=[[0]*1 for _ in range(NBANDS)]; pos={}
-    for nm,tw,th in sorted(items,key=lambda e:-e[1]):
-        for b in range(NBANDS):
-            if shelves[b][0]+tw<=ATLAS_W:
-                pos[nm]=(shelves[b][0],b*BAND); shelves[b][0]+=tw; break
-        else: return None
+    """prateleiras de altura variavel (itens por altura decrescente) dentro de ATLAS_W x (NBANDS*BAND). Devolve {nome:(x,y)} ou None."""
+    H=NBANDS*BAND; shelves=[]; pos={}                      # shelf = [y,h,xcursor]
+    for nm,tw,th in sorted(items,key=lambda e:(-e[2],-e[1])):
+        for sh in shelves:
+            if th<=sh[1] and sh[2]+tw<=ATLAS_W: pos[nm]=(sh[2],sh[0]); sh[2]+=tw; break
+        else:
+            y=sum(sh[1] for sh in shelves)
+            if y+th>H: return None
+            shelves.append([y,th,tw]); pos[nm]=(0,y)
     return pos
 
-def choose_scales(w,pieces,budget_px=56000):
+def choose_scales(w,pieces,budget_px=30000):
     """Escala 0,25 texel/unidade para tudo; sobe para 0,5 as texturas de maior area na tela enquanto couber."""
     info={}
     for p in pieces: info.setdefault(p['tex'],[p['tw'],p['th'],0.0]); info[p['tex']][2]+=math.hypot(p['B'][0]-p['A'][0],p['B'][1]-p['A'][1])*(p['ytop']-p['ybot'])

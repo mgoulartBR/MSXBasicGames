@@ -107,11 +107,17 @@ def main():
     flat_cols={}
     for f in used: flat_cols[f]=flat_color(w,f)
     NF=len(used)*2
+    fl_used=[f for f in used if f!='F_SKY1']; fl_id={f:i for i,f in enumerate(fl_used)}; assert len(fl_used)<=32
+    def flat_tile(name):
+        d=np.frombuffer(w.lump(name),np.uint8)[:4096].reshape(64,64); img=Image.fromarray(w.playpal(0)[d],'RGB').resize((16,16),Image.BOX)
+        return np.dstack([np.array(img),np.full((16,16),255,np.uint8)])
+    flat_tiles=[flat_tile(f) for f in fl_used]
     NBASE=255-NF
     # --- paleta: amostras de todas as imagens
     samples=[];wts=[]
     def add(rgba,wt):
         px=rgba.reshape(-1,4); px=px[px[:,3]>0][:,:3]; samples.append(px); wts.append(np.full(len(px),wt,np.float64))
+    for t_ in flat_tiles: add(t_,3.0)
     add(imgs['atlas'],1.0); add(imgs['sprites'],4.0); add(imgs['bar'],3.0); add(imgs['arms'],2.0)
     for d in imgs['digits']: add(d,3.0)
     for d in imgs['faces']: add(d,3.0)
@@ -142,7 +148,7 @@ def main():
         return out
     # --- VRAM: V = linhas 512..1023, B = linhas 468..491 (fontes)
     V=np.zeros((512,256),np.uint8)
-    at=q(imgs['atlas'],dither=True); at[(at==0)]=1; V[0:256]=at
+    at=q(imgs['atlas'],dither=True); at[(at==0)]=1; V[0:at.shape[0]]=at
     V[256:384,0:240]=q(imgs['sprites'])                                   # linhas 768..895
     bar=q(imgs['bar']); V[384:384+bar.shape[0],0:bar.shape[1]]=bar    # 896..
     layout={}
@@ -168,7 +174,9 @@ def main():
         qf=q(f); B[fyb-468:fyb-468+7,0:qf.shape[1]]=qf; fo[n]=fyb; fyb+=8
     layout['fonts']=fo
     # --- bancos
-    banks=[B.tobytes()]                                              # banco 2: area B
+    A=np.zeros((64,256),np.uint8)                                    # linhas 212..275: tiles de piso/teto 16x16 (16 por linha de tiles)
+    for k,t_ in enumerate(flat_tiles): qt=q(t_); qt[qt==0]=1; A[16*(k//16):16*(k//16)+16,16*(k%16):16*(k%16)+16]=qt
+    banks=[A.tobytes(),B.tobytes()]                                  # banco 2: area A (tiles); banco 3: area B (fontes)
     for i in range(8): banks.append(V[i*64:(i+1)*64].tobytes())      # bancos 3..10
     # --- paleta (5 bits/canal)
     pal5=np.clip(np.rint(pal/255*31),0,31).astype(np.uint8)
@@ -179,7 +187,7 @@ def main():
     for s in sec_ids:
         sd=m.sectors[s]; fi=flat_idx[sd['ftex']]; ci=flat_idx[sd['ctex']]
         sky=sd['ctex']=='F_SKY1'
-        sectors.append((sd['floor'],sd['ceil'],fi[0],fi[1],ci[0],ci[1],sd['special'],1 if sky else 0))
+        sectors.append((sd['floor'],sd['ceil'],fi[0],fi[1],ci[0],ci[1],sd['special'],1 if sky else 0,fl_id[sd['ftex']],255 if sky else fl_id[sd['ctex']]))
     # --- raster de setores (255 = bloqueado)
     R=L.R; rast=np.full((R.ny,R.nx),255,np.uint8)
     ys,xs=np.nonzero(R.open); 
@@ -233,7 +241,7 @@ def main():
     off={}
     off['sin']=len(meta); meta+=b''.join(struct.pack('<h',int(round(math.sin(i*2*math.pi/256)*16384))) for i in range(256))
     off['pal']=len(meta); meta+=bytes(pal5.reshape(-1).tolist())
-    off['sec']=len(meta); meta+=b''.join(struct.pack('<hhBBBBBB',*s) for s in sectors)
+    off['sec']=len(meta); meta+=b''.join(struct.pack('<hhBBBBBBBB',*s) for s in sectors)
     off['blk']=len(meta); meta+=b''.join(struct.pack('<BH',*blk_tab[k]) for k in keys)
     off['grid']=len(meta); meta+=b''.join(struct.pack('<H',g) for g in grid)
     off['thing']=len(meta); meta+=b''.join(struct.pack('<hhBh',*t) for t in things)
@@ -246,7 +254,7 @@ def main():
     open(os.path.join(PRIV,'e1m1_banks.bin'),'wb').write(b''.join(allb))
     # --- cabecalho C
     h=['/* GERADO por tools/e1m1_build.py a partir do WAD do usuario - PRIVADO, nao versionar */']
-    h+=['#define AREAB_BANK 2','#define VRAM_BANK0 3','#define NVRAM_BANKS 8','#define META_BANK %d'%meta_bank,'#define RAST_BANK0 %d'%RAST_BANK0,
+    h+=['#define AREAA_BANK 2','#define AREAB_BANK 3','#define VRAM_BANK0 4','#define FLAT_TILE_Y 212','#define FL_REG_Y 640','#define CE_REG_Y 704','#define NVRAM_BANKS 8','#define META_BANK %d'%meta_bank,'#define RAST_BANK0 %d'%RAST_BANK0,
         '#define RAST_W %d'%R.nx,'#define RAST_H %d'%R.ny,'#define RAST_ROWS %d'%ROWS,'#define RAST_X0 %d'%R.x0,'#define RAST_Y0 %d'%R.y0,
         '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things)]
     for k,v in off.items(): h.append('#define META_%s %d'%(k.upper(),v))

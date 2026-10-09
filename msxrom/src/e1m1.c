@@ -80,11 +80,20 @@ vt_blk:
     ret
   __endasm;
 }
+/* cpia simples (LMMM, sem pagina): monta as regioes de piso/teto 256x64 a partir do tile 16x16 do flat */
+static void copyv(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h){
+  wait_ce(); vr(17,32); vw(sx); vw(sy); vw(dx); vw(dy); vw(w); vw(h); vi=0; vi=0; vi=0x90;
+}
+static void build_region(u8 id,u16 ry){
+  u16 tx=(u16)(id&15)<<4, ty=FLAT_TILE_Y+((u16)(id>>4)<<4);
+  copyv(tx,ty,0,ry,16,16); copyv(0,ry,16,ry,16,16); copyv(0,ry,32,ry,32,16); copyv(0,ry,64,ry,64,16); copyv(0,ry,128,ry,128,16);
+  copyv(0,ry,0,ry+16,256,16); copyv(0,ry,0,ry+32,256,32);
+}
 static void set_vram_write(u8 blk,u16 addr){ vr(14,blk); vc=(u8)addr; vc=((u8)(addr>>8)&0x3F)|0x40; }
 s16 mulq14(s16 a,s16 b) __sdcccall(1);
 
 /* ---------------------------------------------------------------- tabelas em RAM (copiadas do banco META no boot) */
-typedef struct{ s16 floor,ceil; u8 f0,f1,c0,c1,special,sky; } Sec;
+typedef struct{ s16 floor,ceil; u8 f0,f1,c0,c1,special,sky,fid,cid; } Sec;
 typedef struct{ s16 x,y; u8 kind; s16 ang; } ThingRom;
 typedef struct{ s16 x,y,hp; u8 kind,st,t,on,vis; } Th;
 static s16 sin_tab[256];
@@ -379,11 +388,33 @@ static void overlay(void){
   text(60,88,FONT_GRAY,"ABATES"); { char b[8]; u8 n=0; s16 k=kills; if(k>=10)b[n++]='0'+k/10; b[n++]='0'+k%10; b[n++]='/'; b[n++]='0'+total_mon; b[n]=0; text(110,88,FONT_GRAY,b); }
   text(60,100,FONT_GRAY,"APERTE ESPACO");
 }
+/* Piso e teto texturizados: uma LRMM por linha de tela (mapeamento afim por linha = perspectiva correta de plano). Tile de 16x16 texels
+ * por 64 unidades; a regiao replicada (256x64) faz o wrap em X (modulo 256) e deixa a faixa de V caber sem cruzar o limite. So ate zr<=120 unidades. */
+static u8 cur_ff=255,cur_cf=255;
+static void plane_row(u8 y,s16 zr,u16 ry,s16 s,s16 c){
+  s16 Kq=(zr*51)>>3,du=mulq14(c,Kq)>>4,dv=mulq14(-s,Kq)>>4,hx=(zr*51)>>6;
+  s16 X=px+mulq14(s,zr)-mulq14(c,hx),Y=py+mulq14(c,zr)+mulq14(s,hx);
+  s16 u0=X>>2,v0=Y>>2; u16 sy=ry+(v0&15); if(dv<0)sy+=48;
+  wait_ce(); vr(17,32);
+  vw(256+(u0&127)); vw(sy); vw(0); vw(y+((u16)page<<8)); vw(256); vw(1); vi=0; vi=0;
+  vr(17,47); vw(du); vw(dv); vr(17,46); vi=0x30;
+}
+static void planes(const Sec *sc){
+  s16 s=isin(yaw),c=icos(yaw),H; u8 r,rmin;
+  if(sc->fid!=cur_ff){ build_region(sc->fid,FL_REG_Y); cur_ff=sc->fid; }
+  H=eye-sc->floor;
+  if(H>4){ rmin=(u8)((4*H+2)/3); for(r=rmin;r<VIEW_H-89;r++) plane_row(89+r,(160*H)/r,FL_REG_Y,s,c); }
+  if(sc->cid!=255){
+    if(sc->cid!=cur_cf){ build_region(sc->cid,CE_REG_Y); cur_cf=sc->cid; }
+    H=sc->ceil-eye;
+    if(H>4){ rmin=(u8)((4*H+2)/3); for(r=rmin;r<=89;r++) plane_row(89-r,(160*H)/r,CE_REG_Y,s,c); }
+  }
+}
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
   /* piso e teto: cores do setor do jogador */
-  if(s0!=255){ sc=&secs[s0]; fill(0,0,SCR_W,44,sc->c1); fill(0,44,SCR_W,45,sc->c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); }
+  if(s0!=255){ sc=&secs[s0]; fill(0,0,SCR_W,44,sc->c1); fill(0,44,SCR_W,45,sc->c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); planes(sc); }
   else { fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
   wait_ce();
   make_view();
@@ -441,11 +472,12 @@ void main(void){
   vp4=0;
   vr(0,14); vr(1,0); vr(2,31); vr(7,0); vr(8,10); vr(9,128);
   vr(21,0); vr(20,0x11);
-  vr(51,0);vr(52,0);vr(53,0);vr(54,0);vr(55,255);vr(56,0);vr(57,255);vr(58,3);
+  vr(51,0);vr(52,0);vr(53,0);vr(54,0);vr(55,255);vr(56,1);vr(57,255);vr(58,3);   /* janela de origem LRMM: X 0..511 (o endereco da VRAM faz wrap modulo 256), Y 0..1023 */
   vr(16,0);
   BANK(META_BANK); { const u8 *pp=DATA+META_PAL; for(n=0;n<768;n++)vp=pp[n]; }
   vr(15,2);
-  set_vram_write(1,0xD400); BANK(AREAB_BANK); vtransfer16k(DATA);          /* linhas 468..531 (fontes); as 512.. sao sobrescritas a seguir */
+  set_vram_write(3,0x1400); BANK(AREAA_BANK); vtransfer16k(DATA);          /* linhas 212..275: tiles dos flats (as 256.. sao limpas depois) */
+  set_vram_write(7,0x1400); BANK(AREAB_BANK); vtransfer16k(DATA);          /* linhas 468..531 (fontes); as 512.. sao sobrescritas a seguir */
   set_vram_write(8,0);
   for(i=0;i<NVRAM_BANKS;i++){ BANK(VRAM_BANK0+i); vtransfer16k(DATA); }
   load_meta(); new_game(); keys=old_keys=0;

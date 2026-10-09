@@ -58,7 +58,7 @@ if __name__=='__main__':
     pal[250]=(60,60,70); pal[251]=(90,80,70)
     ims=[]
     for i in range(0,len(pts),3):
-        vram=np.zeros((1024,256),np.uint8); vram[512:768]=idx
+        vram=np.zeros((1024,256),np.uint8); vram[512:512+len(idx)]=idx
         b,skip,draw=render(L,vram,pal,pts[i],pts[i+1],pts[i+2])
         print(pts[i:i+3],'faces',len(b['faces']),'verts',len(b['verts']),'mantido',round(b['kept'],3),'skip',skip,'draw',draw)
         ims.append(Image.fromarray(pal[vram[:178]],'RGB'))
