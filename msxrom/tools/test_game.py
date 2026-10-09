@@ -45,7 +45,7 @@ def find_pos(ex,ez):
 cx,cz=find_pos(ex_,ez_)
 mem[sym['px']:sym['px']+2]=(cx&0xFFFF).to_bytes(2,'little'); mem[sym['pz']:sym['pz']+2]=(cz&0xFFFF).to_bytes(2,'little')
 wr8('yaw',int(round(math.atan2(ex_-cx,ez_-cz)/(2*math.pi)*256))&255)
-frames(2); M.frames[-1].resize((768,636)).save(os.path.join(os.path.dirname(__file__),'..','out','preview_enemy.png'))
+frames(6); M.frames[-1].resize((768,636)).save(os.path.join(os.path.dirname(__file__),'..','out','preview_enemy.png'))
 hp0=rd16('hp'); n0=rd8('alive_count'); hits=0
 for k in range(3):
     held.add('fire'); frames(1); held.discard('fire'); frames(12)

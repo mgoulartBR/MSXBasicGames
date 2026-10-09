@@ -116,24 +116,22 @@ def main():
     # --- bancos de dados: 0=boot,1=código (preenchidos pelo mkrom); aqui 2..9 = VRAM, 10+ = nível
     banks=[V[i*64:(i+1)*64].tobytes() for i in range(8)]
     # --- nível texturizado
-    near=build_level(4); far=build_level(2); assert len(near)==len(far)==16
-    cur=bytearray(); levelbanks=[]; table=[]
-    for n_,f_ in zip(near,far):
-        blobs=[n_['v']+n_['f']+n_['t'],f_['v']+f_['f']+f_['t']]
-        if len(cur)+len(blobs[0])+len(blobs[1])>16384:levelbanks.append(bytes(cur).ljust(16384,b'\0'));cur=bytearray()
-        offs=[]
-        for b_ in blobs:offs.append(len(cur));cur+=b_
-        table.append((10+len(levelbanks),offs,n_,f_))
+    import pvs
+    cells=pvs.build_all()
+    cur=bytearray(); levelbanks=[]; cell_tab={}
+    for (cx,cz),c in sorted(cells.items(),key=lambda e:(e[0][1],e[0][0])):
+        blob=c['blob']
+        if len(cur)+len(blob)>16384:levelbanks.append(bytes(cur).ljust(16384,b'\0'));cur=bytearray()
+        cell_tab[(cz<<4)+cx]=(10+len(levelbanks),len(cur),len(c['verts']),len(c['faces'])); cur+=blob
     levelbanks.append(bytes(cur).ljust(16384,b'\0'))
-    chunks=near
     banks+=levelbanks
     open(os.path.join(ROOT,'out','data_banks.bin'),'wb').write(b''.join(banks))
     # --- assets.h
-    h=['/* GERADO por tools/make_assets.py - não editar */','#define NCHUNK %d'%len(table),'#define FIRST_VRAM_BANK 2','#define NVRAM_BANKS 8']
+    h=['/* GERADO por tools/make_assets.py - não editar */','#define NCELL 256','#define MAX_LV %d'%pvs.MAX_VERTS,'#define MAX_LF %d'%pvs.MAX_FACES,'#define FIRST_VRAM_BANK 2','#define NVRAM_BANKS 8']
     for n,i in FLAT_IDX.items():h.append('#define C_%s %d'%(n.upper(),i))
     h.append('#define C_WHITE 4')
-    h.append('typedef struct{unsigned char bank;unsigned int off_n,off_f;unsigned char nv_n,nf_n,nv_f,nf_f;int rad;}Chunk;   /* _n = perto (4 tiras), _f = longe (2 tiras) */')
-    h.append('const Chunk chunks[NCHUNK]={'+','.join('{%d,%d,%d,%d,%d,%d,%d,%d}'%(b,o[0],o[1],len(n['verts']),len(n['faces']),len(f['verts']),len(f['faces']),n['rad']) for b,o,n,f in table)+'};')
+    h.append('typedef struct{unsigned char bank;unsigned int off;unsigned char nv,nf;}Cell;   /* PVS da celula: vertices, faces e UVs */')
+    h.append('const Cell cells[NCELL]={'+','.join('{%d,%d,%d,%d}'%cell_tab.get(i,(0,0,0,0)) for i in range(256))+'};')
     pb=pal.reshape(-1).tolist(); h.append('const unsigned char palette[768]={'+','.join(map(str,pb))+'};')
     sin=[int(round(math.sin(i*2*math.pi/256)*16384)) for i in range(256)]
     h.append('const int sin_tab[256]={'+','.join(map(str,sin))+'};')
@@ -149,46 +147,6 @@ def main():
     os.makedirs(os.path.join(ROOT,'out'),exist_ok=True)
     rgb=lambda ix:np.array([[tuple(int(c)*255//31 for c in pal[i]) for i in row] for row in ix],np.uint8)
     Image.fromarray(rgb(V)).save(os.path.join(ROOT,'out','vram_512_1023.png'))
-    print('banks:',len(banks)+2,'(0=boot,1=código) | chunks',len(table),'| faces perto/longe',sum(len(c['faces']) for c in near),sum(len(c['faces']) for c in far),'| base',len(base))
-
-CHUNK=4
-def build_level(STRIPS):
-    T=level.T;H=level.H;M=level.MAP;out=[]
-    tile_of=lambda ch,x,z:3 if ch=='D' else 2 if ch=='L' else [0,0,1,2][(x*7+z*3)%4]
-    for cz in range(0,len(M),CHUNK):
-        for cx in range(0,len(M[0]),CHUNK):
-            verts=[];vi={};faces=[]
-            def V(p):
-                if p not in vi:vi[p]=len(verts);verts.append(p)
-                return vi[p]
-            for z in range(cz,cz+CHUNK):
-                for x in range(cx,cx+CHUNK):
-                    ch=M[z][x]
-                    if ch not in '#LD':continue
-                    x0,x1,z0,z1=x*T,x*T+T,z*T,z*T+T; tile=tile_of(ch,x,z)
-                    # (esquerda, direita) vistos de fora
-                    edges=[]
-                    if not level.solid(x,z-1):edges.append(((x0,z0),(x1,z0)))
-                    if not level.solid(x,z+1):edges.append(((x1,z1),(x0,z1)))
-                    if not level.solid(x-1,z):edges.append(((x0,z1),(x0,z0)))
-                    if not level.solid(x+1,z):edges.append(((x1,z0),(x1,z1)))
-                    for (lx,lz),(rx,rz) in edges:
-                        P=lambda s:(round(lx+(rx-lx)*s/STRIPS),round(lz+(rz-lz)*s/STRIPS))
-                        for i in range(STRIPS):
-                            (ax,az),(bx,bz)=P(i),P(i+1)
-                            BRv=(bx,0,bz);BLv=(ax,0,az);TLv=(ax,H,az);TRv=(bx,H,bz)
-                            a=[BLv[k]-BRv[k] for k in range(3)];b=[TLv[k]-BRv[k] for k in range(3)]
-                            n=(a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]); l=math.sqrt(sum(c*c for c in n))
-                            nq=tuple(max(-32768,min(32767,int(round(c/l*16384)))) for c in n)
-                            W=64//STRIPS;u0=tile*64+W*i;u1=tile*64+W*(i+1)-1
-                            faces.append(dict(i=[V(BRv),V(BLv),V(TLv),V(TRv)],n=nq,uv=[(u1,63),(u0,63),(u0,0),(u1,0)]))
-            if not faces:continue
-            assert len(verts)<=255 and len(faces)<=255,(len(verts),len(faces))
-            vb=b''.join(struct.pack('<hhh',*v) for v in verts)
-            fb=b''.join(struct.pack('<BBBBhhhB',*f['i'],*f['n'],0x80) for f in faces)
-            tb=b''.join(bytes([c for uv in f['uv'] for c in uv]) for f in faces)
-            ccx=(cx+CHUNK/2)*T;ccz=(cz+CHUNK/2)*T
-            out.append(dict(verts=verts,faces=faces,v=vb,f=fb,t=tb,cx=int(ccx),cz=int(ccz),rad=int(CHUNK*T*0.71)+8))
-    return out
+    print('banks:',len(banks)+2,'(0=boot,1=código) | celulas',len(cells),'| faces/celula max',max(len(c['faces']) for c in cells.values()),'| base',len(base))
 
 if __name__=='__main__':main()

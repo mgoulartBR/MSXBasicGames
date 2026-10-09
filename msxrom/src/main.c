@@ -92,14 +92,19 @@ static void geo_init(void){
   geo_tex(TEXY_WALL,64);
 }
 static void geo_light(const s16 *l){ gi=0x5A; gw(l[0]); gw(l[1]); gw(l[2]); }
-/* carrega um modelo texturizado: vértices, faces (11 B) e coordenadas de textura (8 B/face) */
-static void geo_model(const u8 *v,u8 nv,const u8 *f,u8 nf,const u8 *t,u8 lop){
-  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=lop;                    /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP (0=IMP paredes, 8=TIMP sprites) */
-  gi=0x50; gtransfer(v,(u16)nv*6);
+/* Célula atual no Geo3D: vértices, faces e UVs do conjunto visível (PVS) dali, enviados UMA vez ao entrar na célula.
+ * Por quadro vão só a matriz, a luz e as faces dos inimigos (anexadas depois das da célula). */
+static u8 cell_nv,cell_nf,cur_cell=255;
+static void cell_load(u8 cell){
+  const Cell *c=&cells[cell]; const u8 *p; u8 nv=c->nv,nf=c->nf;
+  BANK(c->bank); p=DATA+c->off;
+  gi=0x40; gd=0;gd=0;gd=nv;gd=0;gd=0;gd=8;                      /* VADDR,EADDR,NVERT,NEDGE,COLOR,LOP=TIMP (sprites; paredes não têm texel 0) */
+  gi=0x50; gtransfer(p,(u16)nv*6);
   gi=0x58; gd=0; gd=nf;                                          /* FADDR, NFACE */
-  gi=0x52; gtransfer(f,(u16)nf*11);
+  gi=0x52; gtransfer(p+(u16)nv*6,(u16)nf*11);
   gi=0x65; gd=0;                                                 /* TADDR */
-  gi=0x53; gtransfer(t,(u16)nf*8);
+  gi=0x53; gtransfer(p+(u16)nv*6+(u16)nf*11,(u16)nf*8);
+  cell_nv=nv; cell_nf=nf; cur_cell=cell;
 }
 /* espera o fim do RUN (status bit 0), com limite: nunca trava se o Geo3D não responder */
 static u8 geo_ok=1;
@@ -143,7 +148,7 @@ static void sound_tick(void){
 }
 
 static void new_game(void){
-  u8 i; px=START_X; pz=START_Z; yaw=32; hp=100; over=0; cool=flash=hurt=0; alive_count=NENEMY; kills=0; msg_id=0; msg_t=0;
+  u8 i; cur_cell=255; px=START_X; pz=START_Z; yaw=32; hp=100; over=0; cool=flash=hurt=0; alive_count=NENEMY; kills=0; msg_id=0; msg_t=0;
   for(i=0;i<NENEMY;i++){ en[i].x=enemy_start[i][0]; en[i].z=enemy_start[i][1]; en[i].hp=ENEMY_HP; en[i].t=i*5; en[i].atk=en[i].hurt=en[i].dying=0; }
 }
 static u8 los(s16 x0,s16 z0,s16 x1,s16 z1){
@@ -217,14 +222,12 @@ static void hud_update(void){
 /* ---------------------------------------------------------------- render */
 static s16 M[9]; static s16 TX,TY,TZ; static s16 LC[3];
 static const s16 LW[3]={-5734,11207,-10486};       /* luz no mundo: gera apenas os niveis 0,2,4 nas paredes */
-static const s16 IDENT[9]={16384,0,0,0,16384,0,0,0,16384};
 static void make_view(void){
   s16 s=isin(yaw),c=icos(yaw);
   M[0]=c; M[1]=0; M[2]=-s; M[3]=0; M[4]=16384; M[5]=0; M[6]=s; M[7]=0; M[8]=c;
   TX=-(mulq14(c,px)-mulq14(s,pz)); TY=-CAM_Y; TZ=-(mulq14(s,px)+mulq14(c,pz));
   LC[0]=mulq14(M[0],LW[0])+mulq14(M[2],LW[2]); LC[1]=mulq14(M[4],LW[1]); LC[2]=mulq14(M[6],LW[0])+mulq14(M[8],LW[2]);
 }
-static s16 dist1(s16 x,s16 z){ s16 dx=x-px,dz=z-pz; return (dx<0?-dx:dx)+(dz<0?-dz:dz); }   /* Manhattan: só para ordenar */
 static s16 s16abs(s16 v){ return v<0?-v:v; }
 
 static u8 enemy_sprite(u8 i){
@@ -234,53 +237,43 @@ static u8 enemy_sprite(u8 i){
   if(e->atk) return base+2;
   return base+((e->t>>3)&1);
 }
-static void draw_enemy(u8 i,s16 xc,s16 zc){
-  u8 k=enemy_sprite(i); u8 u=(k%10)*24,v=(k/10)*32; u8 tex[8];
-  static const u8 vtx0[24]={ 0xEB,0xFF, 24,0, 0,0,  21,0, 24,0, 0,0,  21,0, 0xE0,0xFF, 0,0,  0xEB,0xFF, 0xE0,0xFF, 0,0 };   /* (-21,24),(21,24),(21,-32),(-21,-32) */
-  tex[0]=u;tex[1]=v;tex[2]=u+23;tex[3]=v;tex[4]=u+23;tex[5]=v+31;tex[6]=u;tex[7]=v+31;
-  { static const u8 face[11]={0,1,2,3, 0,0, 0,0, 0x00,0xC0, 0x80};   /* normal (0,0,-16384) = para a câmera */
-    geo_model(vtx0,4,face,1,tex,8); }
-  geo_run(IDENT,xc,0,zc);
-}
-static void draw_chunk(u8 i,u8 near){
-  const Chunk *c=&chunks[i]; const u8 *p; u8 nv,nf;
-  BANK(c->bank);
-  if(near){ p=DATA+c->off_n; nv=c->nv_n; nf=c->nf_n; } else { p=DATA+c->off_f; nv=c->nv_f; nf=c->nf_f; }
-  geo_model(p,nv,p+(u16)nv*6,nf,p+(u16)nv*6+(u16)nf*11,0);
-  geo_run(M,TX,TY,TZ);
-}
+static void put16(u8 *p,s16 v){ p[0]=(u8)v; p[1]=(u8)((u16)v>>8); }
+static u8 vbuf[24*NENEMY],fbuf[11*NENEMY],tbuf[8*NENEMY];
+static u8 en_vis[NENEMY],fcnt;                                 /* linha de visão em cache: recalculada a cada 4 quadros por inimigo */
+/* normal do billboard = ~0,21 * luz: gera o nível de sombra 1, cuja cópia de textura (linhas 576..639) é o atlas de sprites */
+#define SPR_NX (-1204)
+#define SPR_NY 2353
+#define SPR_NZ (-2202)
 static void draw_gun(void){
   if(flash){ blit(64,832,96,114,64,64); blit(128,832,104,86,48,32); } else blit(0,832,96,114,64,64);
 }
 static void render(void){
-  u8 i,j,k,n=0,order[NCHUNK],dk[NCHUNK],vis=0; u8 vi_[NENEMY]; s16 vzc[NENEMY],vxc[NENEMY];
-  s16 dx0,dz0,zrow,xrow,stzi,stzj,stxi,stxj;
+  u8 i,k=0,cell; s16 rx,rz;
   for(i=0;i<6;i++) fill(0,i*15,SCR_W,i==5?(89-75):15,C_CEIL5-i);              /* teto: do topo (claro) ao horizonte (escuro) */
   for(i=0;i<8;i++) fill(0,89+i*11,SCR_W,i==7?(VIEW_H-166):11,C_FLOOR0+i);        /* chão: do horizonte (escuro) para perto (claro) */
   wait_ce();                                                      /* mesma ordem da demo do Geo3D: fundo pronto antes do RUN */
-  make_view(); geo_light(LC); geo_tex(TEXY_WALL,64);
-  /* visibilidade dos 16 chunks (grade 4x4, centros em 256*i+128 / 256*j+128): 4 multiplicações + somas */
-  dx0=128-px; dz0=128-pz;
-  zrow=mulq14(M[6],dx0)+mulq14(M[8],dz0); xrow=mulq14(M[0],dx0)+mulq14(M[2],dz0);
-  stzi=M[6]>>6; stzj=M[8]>>6; stxi=M[0]>>6; stxj=M[2]>>6;                      /* 256/16384 = 1/64 */
-  for(j=0;j<4;j++){ s16 zc=zrow,xc=xrow;
-    for(i=0;i<4;i++){ s16 v; k=(j<<2)|i; v=zc+chunks[k].rad;
-      dk[k]=(u8)((s16abs((s16)(i<<8)+dx0)+s16abs((s16)(j<<8)+dz0))>>4);        /* distância/16 (cabe em u8) */
-      if(v>=4 && s16abs(xc)-chunks[k].rad <= v-(v>>3)) order[n++]=k;          /* tan(meio campo) ~ 0.75 -> margem 0.875 */
-      zc+=stzi; xc+=stxi; }
-    zrow+=stzj; xrow+=stxj; }
-  for(i=1;i<n;i++){ u8 v=order[i]; j=i; while(j>0&&dk[order[j-1]]<dk[v]){order[j]=order[j-1];j--;} order[j]=v; }   /* longe -> perto */
-  for(i=0;i<n;i++) draw_chunk(order[i],dk[order[i]]<=20);                      /* 20*16 = 320 unidades: LOD perto/longe */
-  for(i=0;i<NENEMY;i++){ const Enemy *e=&en[i]; s16 dx,dz,zc,xc;
-    dx=e->x-px; dz=e->z-pz;
+  make_view(); fcnt++;
+  cell=(u8)(((pz>>6)<<4)+(px>>6)); if(cell!=cur_cell) cell_load(cell);
+  /* inimigos visíveis -> faces anexadas às da célula (coordenadas de mundo; o Geo3D ordena e oculta tudo num só RUN) */
+  rx=mulq14(M[0],21); rz=mulq14(M[2],21);                         /* meia largura do sprite (21) ao longo do eixo X da câmera */
+  for(i=0;i<NENEMY&&k<NENEMY;i++){ const Enemy *e=&en[i]; s16 dx=e->x-px,dz=e->z-pz,zc,xc; u8 *v=vbuf+24*k,*f=fbuf+11*k,*t=tbuf+8*k,sp,u,w,b;
     if(s16abs(dx)+s16abs(dz)>1400)continue;
     zc=mulq14(M[6],dx)+mulq14(M[8],dz); if(zc<12||zc>1500)continue;
     xc=mulq14(M[0],dx)+mulq14(M[2],dz); if(s16abs(xc)>zc+40)continue;           /* fora do campo de visão */
-    if(!los(px,pz,e->x,e->z))continue;                 /* sem Z-buffer entre RUNs: oculta inimigo atrás de parede */
-    vi_[vis]=i; vzc[vis]=zc; vxc[vis]=xc; vis++;
+    if(((fcnt+i)&3)==0) en_vis[i]=los(px,pz,e->x,e->z);
+    if(!en_vis[i])continue;                             /* atrás de parede: não envia (a ordenação do Geo3D é por face) */
+    put16(v,e->x-rx);put16(v+2,56);put16(v+4,e->z-rz);  put16(v+6,e->x+rx);put16(v+8,56);put16(v+10,e->z+rz);        /* TL, TR */
+    put16(v+12,e->x+rx);put16(v+14,0);put16(v+16,e->z+rz); put16(v+18,e->x-rx);put16(v+20,0);put16(v+22,e->z-rz);  /* BR, BL */
+    b=cell_nv+4*k; f[0]=b;f[1]=b+1;f[2]=b+2;f[3]=b+3; put16(f+4,SPR_NX);put16(f+6,SPR_NY);put16(f+8,SPR_NZ); f[10]=0x80;
+    sp=enemy_sprite(i); u=(sp%10)*24; w=(sp/10)*32;
+    t[0]=u;t[1]=w;t[2]=u+23;t[3]=w;t[4]=u+23;t[5]=w+31;t[6]=u;t[7]=w+31;
+    k++;
   }
-  for(i=1;i<vis;i++){ u8 v=vi_[i]; s16 z=vzc[i],x=vxc[i]; j=i; while(j>0&&vzc[j-1]<z){vi_[j]=vi_[j-1];vzc[j]=vzc[j-1];vxc[j]=vxc[j-1];j--;} vi_[j]=v;vzc[j]=z;vxc[j]=x; }   /* longe -> perto */
-  if(vis){ geo_tex(TEXY_SPR,0); for(i=0;i<vis;i++) draw_enemy(vi_[i],vxc[i],vzc[i]); }
+  geo_light(LC);
+  gi=0x40; gd=cell_nv; gd=0; gd=cell_nv+4*k;                      /* VADDR (onde entram os inimigos), EADDR, NVERT */
+  gi=0x58; gd=cell_nf; gd=cell_nf+k;                              /* FADDR, NFACE */
+  if(k){ gi=0x50; gtransfer(vbuf,(u16)24*k); gi=0x52; gtransfer(fbuf,(u16)11*k); gi=0x65; gd=cell_nf; gi=0x53; gtransfer(tbuf,(u16)8*k); }
+  geo_run(M,TX,TY,TZ);
   draw_gun();
   fill(124,88,5,1,C_WHITE); fill(132,88,5,1,C_WHITE); fill(130,81,1,5,C_WHITE); fill(130,91,1,5,C_WHITE);   /* mira */
   if(over){ fill(0,60,SCR_W,40,hp>0?C_BAR_RED:C_BAR_BG); }
