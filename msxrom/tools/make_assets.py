@@ -80,29 +80,28 @@ def epal(base):
     return np.clip(np.rint(pal/255*31),0,31).astype(np.uint8)         # 5 bits por canal
 
 def main():
-    names=['stone','stoneG','flesh','door']
+    names=['stone','stoneG','flesh','acid']
     tiles={n:load(n) for n in names}
     poses=['w0','w1','a','hurt','d0','d1']
     sprites=[(t,p) for t in('imp','zom') for p in poses]
     spr={f'{t}_{p}':load(f'{t}_{p}') for t,p in sprites}
     gun={n:load(n) for n in('gun_idle','gun_fire','flash')}
     fonts={n:load(n) for n in('font_gray','font_orange','font_red','font_red2')}
-    imgs=[(tiles[n],3) for n in names]+[(spr[k],5) for k in spr]+[(gun[k],3) for k in gun]
+    medkit=load('medkit')
+    imgs=[(tiles[n],3) for n in names]+[(medkit,5)]+[(spr[k],5) for k in spr]+[(gun[k],3) for k in gun]
     base=build_palette(imgs)
     pal=epal(base)
     # --- imagem de VRAM, linhas 512..1023
     V=np.zeros((512,256),np.uint8)
     atlas=np.zeros((64,256),np.uint8)
     for i,n in enumerate(names):atlas[:,i*64:(i+1)*64]=quantize(tiles[n],base,dither=True)
-    for br,off in BR:
-        copy=np.where(atlas>0,atlas.astype(int)+off,0).astype(np.uint8)
-        row={0:0,64:192,128:256-256}[off] if False else None
     # níveis: 0 -> escura (off 128), 2 -> média (off 64), 4 -> clara (off 0)
     for level_,off,row in((0,128,0),(2,64,128),(4,0,256)):
         V[row:row+64]=np.where(atlas>0,atlas.astype(int)+off,0).astype(np.uint8)
     sa=np.zeros((64,256),np.uint8)
     for k,(t,p) in enumerate(sprites):
         x,y=(k%10)*24,(k//10)*32; sa[y:y+32,x:x+24]=quantize(spr[f'{t}_{p}'],base)
+    sa[32:64,48:72]=quantize(medkit,base)                              # sprite 12 = kit médico
     V[64:128]=sa                                                       # linhas 576..639
     V[320:320+64,0:64]=quantize(gun['gun_idle'],base); V[320:384,64:128]=quantize(gun['gun_fire'],base)   # linhas 832..
     V[320:352,128:176]=quantize(gun['flash'],base)
@@ -117,29 +116,37 @@ def main():
     banks=[V[i*64:(i+1)*64].tobytes() for i in range(8)]
     # --- nível texturizado
     import pvs
-    cells=pvs.build_all()
-    cur=bytearray(); levelbanks=[]; cell_tab={}
-    for (cx,cz),c in sorted(cells.items(),key=lambda e:(e[0][1],e[0][0])):
+    blocks=pvs.build_all()
+    cur=bytearray(); levelbanks=[]; blk_tab={}
+    for (bx,bz),c in sorted(blocks.items(),key=lambda e:(e[0][1],e[0][0])):
         blob=c['blob']
         if len(cur)+len(blob)>16384:levelbanks.append(bytes(cur).ljust(16384,b'\0'));cur=bytearray()
-        cell_tab[(cz<<4)+cx]=(10+len(levelbanks),len(cur),len(c['verts']),len(c['faces'])); cur+=blob
+        blk_tab[bz*pvs.BW+bx]=(10+len(levelbanks),len(cur)); cur+=blob
     levelbanks.append(bytes(cur).ljust(16384,b'\0'))
     banks+=levelbanks
     open(os.path.join(ROOT,'out','data_banks.bin'),'wb').write(b''.join(banks))
     # --- assets.h
-    h=['/* GERADO por tools/make_assets.py - não editar */','#define NCELL 256','#define MAX_LV %d'%pvs.MAX_VERTS,'#define MAX_LF %d'%pvs.MAX_FACES,'#define FIRST_VRAM_BANK 2','#define NVRAM_BANKS 8']
+    h=['/* GERADO por tools/make_assets.py - não editar */','#define NBLOCK %d'%(pvs.BW*pvs.BH),'#define NBX %d'%pvs.BW,'#define MAX_LV %d'%pvs.MAX_VERTS,'#define MAX_LF %d'%pvs.MAX_FACES,'#define FIRST_VRAM_BANK 2','#define NVRAM_BANKS 8']
     for n,i in FLAT_IDX.items():h.append('#define C_%s %d'%(n.upper(),i))
     h.append('#define C_WHITE 4')
-    h.append('typedef struct{unsigned char bank;unsigned int off;unsigned char nv,nf;}Cell;   /* PVS da celula: vertices, faces e UVs */')
-    h.append('const Cell cells[NCELL]={'+','.join('{%d,%d,%d,%d}'%cell_tab.get(i,(0,0,0,0)) for i in range(256))+'};')
+    h.append('typedef struct{unsigned char bank;unsigned int off;}Block;   /* PVS do bloco 2x2: no blob, byte 0 = nv, byte 1 = nf, depois vertices, faces e UVs */')
+    h.append('const Block blocks[NBLOCK]={'+','.join('{%d,%d}'%blk_tab.get(i,(0,0)) for i in range(pvs.BW*pvs.BH))+'};')
     pb=pal.reshape(-1).tolist(); h.append('const unsigned char palette[768]={'+','.join(map(str,pb))+'};')
     sin=[int(round(math.sin(i*2*math.pi/256)*16384)) for i in range(256)]
     h.append('const int sin_tab[256]={'+','.join(map(str,sin))+'};')
-    P,E=level.entities()
-    h.append('#define START_X %d\n#define START_Z %d\n#define NENEMY %d'%(P[0],P[1],len(E)))
+    P,E,Hs,X=level.entities()
+    h.append('#define START_X %d\n#define START_Z %d\n#define NENEMY %d\n#define NPICK %d\n#define EXIT_CELL %d'%(P[0],P[1],len(E),len(Hs),(X[1]<<5)+X[0]))
     h.append('const int enemy_start[NENEMY][2]={'+','.join('{%d,%d}'%e for e in E)+'};')
-    h.append('#define MAPW %d\n#define MAPH %d'%(len(level.MAP[0]),len(level.MAP)))
-    h.append('const unsigned char map_solid[%d]={'%(len(level.MAP)*len(level.MAP[0]))+','.join('1' if level.solid(x,z) else '0' for z in range(len(level.MAP)) for x in range(len(level.MAP[0])))+'};')
+    h.append('const int pick_start[NPICK][2]={'+','.join('{%d,%d}'%e for e in Hs)+'};')
+    def bits(fn):
+        b=bytearray(128)
+        for z in range(level.HH):
+            for x in range(level.W):
+                if fn(x,z): i=(z<<5)+x; b[i>>3]|=1<<(i&7)
+        return b
+    h.append('#define MAPW %d\n#define MAPH %d'%(level.W,level.HH))
+    h.append('/* bit (cz<<5)+cx */\nconst unsigned char map_solid[128]={'+','.join(map(str,bits(level.solid)))+'};')
+    h.append('const unsigned char map_acid[128]={'+','.join(map(str,bits(level.acid)))+'};')
     # índices de glifo
     h.append('#define FONT_CHARS "%s"'%chars)
     open(os.path.join(ROOT,'src','assets.h'),'w').write('\n'.join(h)+'\n')
@@ -147,6 +154,6 @@ def main():
     os.makedirs(os.path.join(ROOT,'out'),exist_ok=True)
     rgb=lambda ix:np.array([[tuple(int(c)*255//31 for c in pal[i]) for i in row] for row in ix],np.uint8)
     Image.fromarray(rgb(V)).save(os.path.join(ROOT,'out','vram_512_1023.png'))
-    print('banks:',len(banks)+2,'(0=boot,1=código) | celulas',len(cells),'| faces/celula max',max(len(c['faces']) for c in cells.values()),'| base',len(base))
+    print('banks:',len(banks)+2,'(0=boot,1=codigo) | blocos',len(blocks),'| faces/bloco max',max(len(c['faces']) for c in blocks.values()),'| base',len(base))
 
 if __name__=='__main__':main()

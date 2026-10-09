@@ -3,3 +3,4 @@ out/*
 !out/preview_start.png
 !out/preview_enemy.png
 __pycache__/
+!out/tour.png

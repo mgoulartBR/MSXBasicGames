@@ -1,64 +1,64 @@
-"""Mapa do MSX DOOM -> chunks Geo3D (<=255 vértices e <=255 faces por RUN).
-Convenção (doc geo3d_engine.v): x direita, y cima, z para dentro; face visível
-quando cross(V1-V0, V2-V0) aponta para fora."""
+"""Fase ORIGINAL "HANGAR" (inspirada no espírito do E1M1: sala inicial, corredor, grande salão com poço de ácido
+e passarela, salas laterais e sala de saída). Nao copia a geometria de nenhum mapa da id Software.
+Legenda: '#' parede de pedra/metal, 'L' parede luminosa (rocha de carne), '.' piso, 'A' ácido (piso que fere), 'P' início,
+'E' inimigo, 'H' kit médico, 'X' saída."""
 import math
-MAP=["################","#P....#........#","#.....#..E.....#","#..##.D........#",
-"#..L#.#....##..#","#.E...#....L#..#","####D###.......#","#......#...E...#",
-"#..E...D.......#","#......#..##.E.#","#...##.#..L#...#","#...L#.D.....E.#",
-"#.....##########","#..E...........#","#...E......E...#","################"]
-T=64          # unidades por célula
-H=64          # altura da parede
-CHUNK=8       # células por lado de chunk (8x8 -> 4 RUNs)
-solid=lambda x,z: not(0<=z<len(MAP) and 0<=x<len(MAP[0])) or MAP[z][x] in "#LD"
-
-def q14(v): return max(-32768,min(32767,int(round(v*16384))))
-def build():
-    chunks=[]
-    for cz in range(0,len(MAP),CHUNK):
-        for cx in range(0,len(MAP[0]),CHUNK):
-            verts=[];vi={};faces=[]
-            def V(p):
-                if p not in vi: vi[p]=len(verts); verts.append(p)
-                return vi[p]
-            for z in range(cz,cz+CHUNK):
-                for x in range(cx,cx+CHUNK):
-                    if not solid(x,z): continue
-                    x0,x1,z0,z1=x*T,x*T+T,z*T,z*T+T
-                    quads=[]
-                    if not solid(x,z-1): quads.append([(x1,0,z0),(x0,0,z0),(x0,H,z0),(x1,H,z0)])
-                    if not solid(x,z+1): quads.append([(x0,0,z1),(x1,0,z1),(x1,H,z1),(x0,H,z1)])
-                    if not solid(x-1,z): quads.append([(x0,0,z0),(x0,0,z1),(x0,H,z1),(x0,H,z0)])
-                    if not solid(x+1,z): quads.append([(x1,0,z1),(x1,0,z0),(x1,H,z0),(x1,H,z1)])
-                    # normais para fora do sólido; ordem acima verificada pelo teste (cross)
-                    for q in quads:
-                        a=[q[1][i]-q[0][i] for i in range(3)]; b=[q[2][i]-q[0][i] for i in range(3)]
-                        n=(a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
-                        l=math.sqrt(sum(c*c for c in n))
-                        faces.append(([V(p) for p in q],tuple(q14(c/l) for c in n),1))
-            if faces:
-                assert len(verts)<=255 and len(faces)<=255,(len(verts),len(faces))
-                chunks.append(dict(cx=cx,cz=cz,verts=verts,faces=faces))
-    return chunks
+W=26; HH=26           # largura x altura do mapa em células (<= 32)
+T=64                  # unidades por célula
+H=64                  # altura da parede
+def _build():
+    g=[['#']*W for _ in range(HH)]
+    def carve(x0,z0,x1,z1,c='.'):
+        for z in range(z0,z1+1):
+            for x in range(x0,x1+1): g[z][x]=c
+    carve(1,19,7,24)                    # sala inicial (SO)
+    carve(3,12,4,18)                    # corredor norte (2 de largura)
+    carve(5,7,20,17)                    # grande salão
+    carve(9,10,16,14,'A')               # poço de ácido
+    carve(12,10,13,14)                  # passarela sobre o ácido
+    for x,z in [(7,9),(7,15),(18,9),(18,15),(11,8),(14,16)]: g[z][x]='#'        # pilares
+    carve(1,6,3,10)                     # ala oeste
+    carve(4,9,4,9)                      # passagem da ala oeste para o salão (entre x=4 e o salão)
+    carve(15,18,16,18)                  # porta sul do salão
+    carve(12,19,20,24)                  # sala sul
+    carve(21,15,21,16)                  # porta leste
+    carve(22,13,24,20)                  # sala leste
+    carve(21,8,22,12)                   # corredor para a sala de saída
+    carve(19,1,24,6)                    # sala de saída (NE)
+    for x,z in [(1,21),(1,22),(7,20),(12,22),(20,21),(24,16),(24,3),(19,3),(10,6),(15,6),(5,17),(20,10)]:
+        if g[z][x]=='#': g[z][x]='L'
+    for x,z in [(3,22)]: g[z][x]='P'
+    for x,z in [(6,11),(8,16),(19,12),(17,8),(14,22),(18,19),(23,17),(23,14),(21,4),(22,6)]: g[z][x]='E'
+    for x,z in [(2,7),(18,22),(24,19),(20,2)]: g[z][x]='H'
+    g[3][22]='X'
+    return [''.join(r) for r in g]
+MAP=_build()
+def solid(x,z): return not(0<=z<HH and 0<=x<W) or MAP[z][x] in '#L'
+def acid(x,z): return 0<=z<HH and 0<=x<W and MAP[z][x]=='A'
 def entities():
-    P=None;E=[]
+    P=None;E=[];Hs=[];X=None
     for z,row in enumerate(MAP):
         for x,c in enumerate(row):
-            if c=='P':P=(x*T+T//2,z*T+T//2)
-            if c=='E':E.append((x*T+T//2,z*T+T//2))
-    return P,E
-# Inimigo: octaedro achatado (6 vértices, 8 faces triangulares, 4º índice repetido)
-ENEMY_V=[(0,0,0),(0,0,0)]
-def enemy_model(r=20,h=44):
-    v=[(r,0,0),(0,0,r),(-r,0,0),(0,0,-r),(0,h,0),(0,0,0)]
-    f=[]
-    for i,(a,b) in enumerate([(0,1),(1,2),(2,3),(3,0)]):
-        # lados superiores (apex=4) e inferiores (apex=5)
-        f.append(([a,b,4,4],8)); f.append(([b,a,5,5],8))
-    out=[]
-    for idx,base in f:
-        p=[v[i] for i in idx]
-        a=[p[1][i]-p[0][i] for i in range(3)]; b=[p[2][i]-p[0][i] for i in range(3)]
-        n=(a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
-        l=math.sqrt(sum(c*c for c in n)) or 1
-        out.append((idx,tuple(q14(c/l) for c in n),base))
-    return v,out
+            ctr=(x*T+T//2,z*T+T//2)
+            if c=='P':P=ctr
+            elif c=='E':E.append(ctr)
+            elif c=='H':Hs.append(ctr)
+            elif c=='X':X=(x,z)
+    return P,E,Hs,X
+
+# --- verificacao: conectividade (BFS) e contagens
+def check():
+    P,E,Hs,X=entities(); start=(P[0]//T,P[1]//T); seen={start}; q=[start]
+    while q:
+        x,z=q.pop()
+        for dx,dz in((1,0),(-1,0),(0,1),(0,-1)):
+            n=(x+dx,z+dz)
+            if n not in seen and not solid(*n): seen.add(n); q.append(n)
+    opens=[(x,z) for z in range(HH) for x in range(W) if not solid(x,z)]
+    unreachable=[c for c in opens if c not in seen]
+    assert not unreachable,('celulas inalcancaveis',unreachable[:5])
+    assert X in seen
+    for e in E+Hs: assert (e[0]//T,e[1]//T) in seen
+    return len(opens),len(E),len(Hs)
+if __name__=='__main__':
+    print('\n'.join(MAP)); print(check())

@@ -1,10 +1,14 @@
 # MSX DOOM — ROM texturizada (turbo R + V9968 + Geo3D)
 
+**Fase "HANGAR"**: 26×26 células, original (inspirada no *espírito* do E1M1, sem copiar a geometria de nenhum mapa da id Software): sala inicial, corredor, grande salão com poço de ácido e passarela, salas laterais e sala de saída. Veja `out/tour.png`.
+
 ROM **ASCII16** de 1 MiB em C/SDCC: SCREEN 8 com paleta **EPAL de 256 cores**, paredes **texturizadas pelo Geo3D**
 (LRMM por linha), inimigos como billboards texturizados com transparência, arma/mira/HUD por blits de fonte.
 O protótipo web com a mesma arte está em [`../msxdoom`](../msxdoom).
 
 ![Cena](out/preview_start.png) ![Inimigo](out/preview_enemy.png)
+
+![Passeio pela fase](out/tour.png)
 
 ```sh
 ./build.sh                         # SDCC >= 4.2, Python 3, numpy, pillow  ->  out/msxdoom.rom
@@ -13,6 +17,8 @@ python3 tools/test_boot.py         # boot no Z80 emulado: VRAM, paleta, quadro e
 #   export GEO3D_SIM=<clone>/geo3d/sim   (padrão: /home/user/alexmoncks/v9968_cartridge/geo3d/sim)
 python3 tools/test_game.py         # 7 testes de lógica (andar, girar, colisão, tiro, fim de jogo, reinício)
 python3 tools/z80_harness.py 4     # renderiza quadros em out/harness_N.png
+python3 tools/tour.py              # passeio pela fase -> out/tour.png
+node tools/export_art.js           # reexporta a arte de ../msxdoom/sprites.js
 node tools/export_art.js           # (opcional) reexporta a arte de ../msxdoom/sprites.js para assets/*.png
 ```
 Rodar (**o tipo de ROM precisa ser ASCII16 explicitamente**):
@@ -67,7 +73,7 @@ Test status: BUILD OK + SIMULATED; EMULATOR: relato do usuario (v5, C-BIOS_R800_
 
 - **Por que só 3 cópias de sombra:** o Geo3D escolhe a linha-fonte por `TEXY + nível*TSTRIDE`. A luz é **fixa no mundo** (recalculada por quadro no espaço da câmera), então paredes alinhadas aos eixos só recebem os níveis 0, 2 e 4; os intervalos entre as cópias guardam sprites. Com `TSTRIDE=0` os sprites usam uma cópia só.
 - **Paleta (256):** 63 cores-base escolhidas por median-cut sobre as texturas, em 3 brilhos (índices 1–63 claro, 65–127 médio, 129–191 escuro; 0 = preto/transparente) + 14 rampas de teto/chão + cores do HUD.
-- **Geometria (PVS por célula):** `tools/pvs.py` calcula, para cada célula aberta do mapa, quais paredes podem ser vistas dali (visibilidade 2D com 9 pontos de vista × 3 amostras por parede). Cada parede vira 8/4/2/1 tiras conforme a distância (limita a distorção afim e o buraco do plano próximo): 66–106 faces e ≤218 vértices por célula (limite do Geo3D: 255; reservei 246/219 para os inimigos). **Ao entrar numa célula** a ROM envia esse conjunto ao Geo3D uma única vez (~2,5 KB); por quadro vão só a matriz, a luz, as faces dos inimigos e o RUN. Jogador com raio de colisão 14 e `ZNEAR=2`.
+- **Geometria (PVS por bloco 2×2):** `tools/pvs.py` calcula, para cada bloco de 2×2 células abertas, quais paredes e quais células de ácido podem ser vistas dali (visibilidade 2D, até 36 pontos de vista × 3 amostras por parede). Cada parede vira 8/4/2/1 tiras conforme a distância; paredes alinhadas e distantes são **fundidas** (2 ou 4 células num quadro, textura esticada) para caber nos vértices. 79–106 faces e ≤215 vértices por bloco (limite do Geo3D: 255; reservei 10 sprites). O ácido é piso texturizado (faces horizontais). **Ao entrar num bloco** a ROM envia esse conjunto ao Geo3D uma única vez (~3 KB); por quadro vão só a matriz, a luz, as faces dos sprites e o RUN. Se mesmo assim estourar o limite, o gerador sacrifica primeiro células de ácido distantes (433 no total, nenhuma parede). Jogador com raio de colisão 14 e `ZNEAR=2`.
 - **Inimigos:** cada inimigo visível vira um quad (billboard) em coordenadas de mundo, anexado às faces da célula **no mesmo RUN**; o Geo3D ordena (painter) paredes e sprites juntos. A normal do quad gera o nível de sombra 1, cuja cópia de textura (linhas 576–639) é o atlas de sprites; `LOP=8` (TIMP) dá a transparência. Só são enviados se estiverem no campo de visão e com linha de visão livre (recalculada a cada 4 quadros).
 - **Arma e HUD:** LMMM com TIMP a partir da VRAM; o painel (y ≥ 178) é desenhado nas duas páginas, e os valores só são redesenhados quando mudam.
 
@@ -84,8 +90,8 @@ Li o `geo3d_tex_demo.asm`, o jogo `geo3d/game/*.asm`, `geo3d_rom.asm` e o modelo
 
 ## Achados e limitações
 - **Bug do SDCC 4.2.0:** `(s32)a*b` com multiplicador negativo deu resultado errado; o jogo usa `mulq14()` (soma e deslocamento), validado contra Python em 600 pares.
-- **Desempenho (medido só em simulação; UNTESTED no openMSX):** `tools/profile.py` conta T-states de CPU por quadro. v1: ~1,21 M; v4: ~0,56 M; **atual: ~0,16 M (~22 fps de teto de CPU em Z80 de 3,58 MHz)**. O envio ao Geo3D caiu de ~11 KB para ~1,3 KB por quadro e de 16 RUNs para 1 por quadro. Ganhos desde a v1: `mulq14` em assembly (`src/math.s`), conjuntos visíveis por célula enviados só ao mudar de célula, `los()` sem divisão e em cache, HMMV nos preenchimentos, inimigos fora de vista filtrados e inimigos distantes parados. **Não medi** o tempo de VDP/Geo3D (LRMM, HMMV) no emulador, que pode dominar. Para referência, as demos de Geo3D texturizado do desenvolvedor rodam a 5–13 fps no openMSX dele. Ao mudar de célula há um pico (~2,5 KB a mais num quadro).
-- Sem Z-buffer por pixel: o Geo3D ordena por face (soma dos Z dos 4 vértices), então um sprite muito perto de uma parede oblíqua pode ordenar errado em casos extremos. Sem sombreado por distância. A ROM cresceu para 1 MiB porque guarda um conjunto visível por célula (~614 KB); cabe em ASCII16.
+- **Desempenho (medido só em simulação; UNTESTED no openMSX):** `tools/profile.py` conta T-states de CPU por quadro. v1: ~1,21 M; v4: ~0,56 M; **atual: ~0,15 M (~24 fps de teto de CPU em Z80 de 3,58 MHz)**. O envio ao Geo3D caiu de ~11 KB para ~1,3 KB por quadro e de 16 RUNs para 1 por quadro. Ganhos desde a v1: `mulq14` em assembly (`src/math.s`), conjuntos visíveis por célula enviados só ao mudar de célula, `los()` sem divisão e em cache, HMMV nos preenchimentos, inimigos fora de vista filtrados e inimigos distantes parados. **Não medi** o tempo de VDP/Geo3D (LRMM, HMMV) no emulador, que pode dominar. Para referência, as demos de Geo3D texturizado do desenvolvedor rodam a 5–13 fps no openMSX dele. Ao mudar de célula há um pico (~2,5 KB a mais num quadro).
+- Sem Z-buffer por pixel: o Geo3D ordena por face (soma dos Z dos 4 vértices), então um sprite muito perto de uma parede oblíqua pode ordenar errado em casos extremos. Sem sombreado por distância. A ROM tem 1 MiB porque guarda um conjunto visível por bloco 2×2 (~380 KB); cabe em ASCII16.
 - Sem mouse, sem portas que abrem, sem tela de título, sem texto de vitória/derrota (só uma faixa colorida).
 - **Diagnóstico na tela:** se o Geo3D não responder (porta `0x9D` lê `0xFF`), a ROM mostra "GEO3D NAO ENCONTRADO" em vez de travar; esperas pelo Geo3D têm limite de tempo. Quatro quadradinhos brancos no canto inferior direito do HUD marcam o progresso (1 boot/VRAM/paleta, 2 Geo3D detectado, 3 primeiro quadro desenhado, 4 primeiro quadro exibido); do 3º em diante ficam avermelhados se um RUN do Geo3D estourou o tempo. HUD aparecendo com a área 3D preta = o jogo parou esperando o Geo3D (use `-ext geo3d`).
 - **Se a imagem sair preta ou sem texturas**, verifique nesta ordem: ROM tipo ASCII16; extensão `geo3d` no openMSX; EPAL/`R#20`; janela do LRMM (`R#51–58`).

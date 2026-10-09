@@ -55,6 +55,20 @@ function tileFloor(){return image(64,64,(x,y)=>{let n=fbm(x,y,41),col=mix([62,46
 function tileCeil(){return image(64,64,(x,y)=>{let n=fbm(x,y,51),col=mix([46,32,28],[70,50,42],n);
   if(x%32<2||y%32<2)col=mix(col,[24,16,14],.8);return col;})[0];}
 
+// Ácido: verde borbulhante (piso que fere)
+function tileAcid(){
+  const r=rng(77),bub=[];for(let i=0;i<14;i++)bub.push([r()*64,r()*64,2+r()*4]);
+  return image(64,64,(x,y)=>{let n=fbm(x*1.3+7,y*1.3,61),col=mix([8,70,12],[70,210,50],n*1.15);
+    for(const [bx,by,br] of bub)for(const ox of[-64,0,64])for(const oy of[-64,0,64]){const d=Math.hypot(x-(bx+ox),y-(by+oy));
+      if(Math.abs(d-br)<.9)col=mix(col,[190,255,120],.75); else if(d<br-1)col=mix(col,[30,140,30],.25);}
+    if(((x+y*2)>>3)%7===0)col=mix(col,[4,40,8],.35);return col;})[0];}
+// Kit médico 24x32: caixa branca com cruz vermelha
+function spriteMedkit(){
+  const [c,g]=mk(24,32);
+  R(g,'#202028',2,17,20,13);R(g,'#b8bcc8',3,18,18,11);R(g,'#f2f4fa',3,18,18,9);R(g,'#dfe2ec',3,26,18,3);
+  R(g,'#a01010',10,19,4,9);R(g,'#a01010',7,22,10,3);R(g,'#e83030',10,19,4,8);R(g,'#e83030',7,22,10,2);
+  R(g,'#202028',9,16,6,2);R(g,'#8a8e9c',10,16,4,1);return c;}
+
 // ---------- Inimigos: 24x32 -> 48x64
 const PAL_IMP={skin:'#9a4a28',sh:'#64301c',lt:'#c8663a',dk:'#3c1a10',eye:'#ffe83c',bone:'#e6dccc',cl:'#f0e6d2'};
 const PAL_ZOM={skin:'#7a8c52',sh:'#4e5c34',lt:'#a0b46c',dk:'#242c16',eye:'#ff3030',bone:'#b8c0a0',cl:'#cfd6b8'};

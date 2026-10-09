@@ -11,7 +11,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'assets');
   const png=c=>c.toDataURL('image/png');
   const r={};
   r.stone=png(tileStone(1,[1,1,1],false)); r.stoneG=png(tileStone(2,[.82,1,.84],true));
-  r.flesh=png(tileFlesh(3,true)); r.lamp=png(tileFlesh(4,false)); r.door=png(tileDoor());
+  r.flesh=png(tileFlesh(3,true)); r.lamp=png(tileFlesh(4,false)); r.door=png(tileDoor()); r.acid=png(tileAcid()); r.medkit=png(spriteMedkit());
   for(const [name,P] of [['imp',PAL_IMP],['zom',PAL_ZOM]])
     for(const pose of ['w0','w1','a','d0','d1']) r[`${name}_${pose}`]=png(drawEnemy(P,pose,false));
   for(const [name,P] of [['imp',PAL_IMP],['zom',PAL_ZOM]]) r[`${name}_hurt`]=png(drawEnemy(P,'w0',true));
