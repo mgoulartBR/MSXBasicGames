@@ -195,6 +195,8 @@ def main():
     SPR_OF={0:'POSSA1',1:'SPOSA1',2:'TROOA1',3:'STIMA0',4:'MEDIA0',5:'BON1A0',6:'BON2A0',7:'ARM1A0',8:'ARM2A0',9:'CLIPA0',10:'AMMOA0',11:'SHELA0',12:'SBOXA0',13:'SHOTA0',14:'BAR1A0',15:'COLUA0',16:'ELECA0',17:'CBRAA0'}
     for t in m.things:
         if t['type'] not in KIND or not (t['flags']&SK) or (t['flags']&16): continue
+        cx,cy=int((t['x']-L.R.x0)//8),int((t['y']-L.R.y0)//8)
+        if not L.R.open[cy-1:cy+2,cx-1:cx+2].any(): print('ignorado (fora da area acessivel):',t); continue
         things.append((t['x'],t['y'],KIND[t['type']],t['angle']))
     start=[t for t in m.things if t['type']==1][0]
     ex=[l for l in m.linedefs if l['special']==11][0]; (e1x,e1y),(e2x,e2y)=m.vertexes[ex['v1']],m.vertexes[ex['v2']]

@@ -90,7 +90,7 @@ typedef struct{ s16 x,y,hp; u8 kind,st,t,on,vis; } Th;
 static s16 sin_tab[256];
 static Sec secs[NSEC];
 static u16 grid[BNX*BNY];
-static Th th[NTHING];
+Th th[NTHING];
 static void cpy(void *d,const u8 *s,u16 n){ u8 *q=(u8*)d; while(n--)*q++=*s++; }
 static void load_meta(void){
   BANK(META_BANK);

@@ -16,7 +16,7 @@ def build(m):
         solid=l['left']<0 or bool(l['flags']&1)
         if not solid:
             fs=m.sectors[m.sidedefs[l['right']]['sector']]; bs=m.sectors[m.sidedefs[l['left']]['sector']]
-            if l['special']==0 and (abs(fs['floor']-bs['floor'])>24 or min(fs['ceil'],bs['ceil'])-max(fs['floor'],bs['floor'])<56): solid=True   # linhas com acao (porta/elevador) ficam passaveis na inundacao
+            if l['special']==0 and min(fs['ceil'],bs['ceil'])-max(fs['floor'],bs['floor'])<56: solid=True   # sem altura livre (so isso bloqueia na grade; degraus sao tratados pelo motor: sobe ate 24, desce qualquer altura); linhas com acao ficam passaveis
         if solid:
             n=int(math.hypot(bx-ax,by-ay)/2)+2
             for i in range(n+1):

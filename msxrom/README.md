@@ -95,3 +95,26 @@ Li o `geo3d_tex_demo.asm`, o jogo `geo3d/game/*.asm`, `geo3d_rom.asm` e o modelo
 - Sem mouse, sem portas que abrem, sem tela de título, sem texto de vitória/derrota (só uma faixa colorida).
 - **Diagnóstico na tela:** se o Geo3D não responder (porta `0x9D` lê `0xFF`), a ROM mostra "GEO3D NAO ENCONTRADO" em vez de travar; esperas pelo Geo3D têm limite de tempo. Quatro quadradinhos brancos no canto inferior direito do HUD marcam o progresso (1 boot/VRAM/paleta, 2 Geo3D detectado, 3 primeiro quadro desenhado, 4 primeiro quadro exibido); do 3º em diante ficam avermelhados se um RUN do Geo3D estourou o tempo. HUD aparecendo com a área 3D preta = o jogo parou esperando o Geo3D (use `-ext geo3d`).
 - **Se a imagem sair preta ou sem texturas**, verifique nesta ordem: ROM tipo ASCII16; extensão `geo3d` no openMSX; EPAL/`R#20`; janela do LRMM (`R#51–58`).
+
+## E1M1 a partir do SEU doom1.wad (build privado)
+
+O mapa E1M1 original é convertido a partir de um `doom1.wad` que **você** fornece. O WAD, os dados convertidos e a ROM gerada
+**não ficam no repositório** (`private/` está no `.gitignore`); só o código do conversor/motor é versionado. Uso pessoal.
+
+```sh
+tools/build_e1m1.sh /caminho/doom1.wad [skill 1-5]     # padrão: skill 3 (Hurt Me Plenty) -> private/e1m1.rom (2 MiB, ASCII16)
+E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1.py   # testes de lógica no Z80 emulado
+python3 -I tools/e1m1_tour.py [x y angulo ...]              # folha de contato -> private/tour.png
+```
+
+O que vem do WAD: geometria (linedefs/sidedefs/sectors), alinhamento de texturas com as regras de peg do Doom, texturas de parede,
+sprites (zombieman, shotgun guy, imp, itens, decoração), HUD (STBAR, números, rosto), pistola, posição de todas as coisas do skill escolhido.
+Conversão: paredes → faces do Geo3D com o PVS por bloco de 128 unidades (visibilidade 2D em C; ~98% da área projetada cabe nos limites de 255
+vértices/faces; o que sobra é descartado do mais distante/menor para o maior); texturas a 0,25–0,5 texel/unidade; paleta de 256 cores; raster de
+8 unidades para colisão, setor e altura de piso.
+
+Estado desta fase (honesto): **BUILD OK + SIMULATED** (Z80 emulado + modelo de referência do Geo3D); **não testado em openMSX/FPGA/hardware**.
+Fase 1 NÃO tem: portas funcionando (ficam abertas), elevadores, pisos/tetos texturizados (faixas de cor do setor), iluminação por setor,
+projéteis do imp (ataque instantâneo), espingarda como arma (o item só dá munição), explosão de barris, itens/monstros em áreas só
+alcançáveis por segredos (os 4 itens do fechamento secreto sudeste são ignorados). Colisão é por raster de 8 unidades.
+Teclas: setas = mover/girar, ESPAÇO = atirar, ENTER = usar (sair da fase perto do interruptor).
