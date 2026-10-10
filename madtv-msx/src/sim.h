@@ -55,8 +55,10 @@
 #define GIFT_MAX_STOCK 3
 #define GIFT_DREAM    9          // "Dream trip": presente de casamento (nao conta como simpatia)
 #define CAT_CULTURE   5          // indice da categoria Culture em db_data
-#define OWNED_BYTES   ((DB_NUM_MOVIES + 7) / 8)
-#define SAVE_BYTES    (51 + OWNED_BYTES)
+#define NUM_OWN       4          // producoes proprias simultaneas na biblioteca (indices DB_NUM_MOVIES..NUM_ALL-1)
+#define NUM_ALL       (DB_NUM_MOVIES + NUM_OWN)
+#define OWNED_BYTES   ((NUM_ALL + 7) / 8)
+#define SAVE_BYTES    (51 + OWNED_BYTES + 15)
 #define TOWER_MAX     4          // niveis de torre do jogador (Corretor); rivais sobem 1 nivel a cada 30 dias
 #define TOWER_UPKEEP  40         // k$/dia por nivel
 #define SAVE_CHARS    ((SAVE_BYTES * 8 + 4) / 5)   // ceil(SAVE_BYTES*8/5)
@@ -66,6 +68,8 @@
 #define LOW_PROFIT_PCT 80
 #define NUM_DIFF      3          // 0 easy, 1 normal, 2 hard
 
+typedef struct { u8 used, cat, blocks, q, name; } OwnMovie;     // filme produzido (nome = 4 bits palavra A | 4 bits palavra B)
+typedef struct { u8 cat, blocks, name; } ScriptOffer;
 typedef struct { u8 movie; u8 part; u8 ad; } Slot;          // movie=NONE: vazio; part = bloco dentro do filme; ad = indice de contrato
 typedef struct { u8 ad; u8 reps_left; u8 days_left; } Contract;
 typedef struct { u8 idx; u8 age; } NewsItem;                    // idx = indice em g_NewsRec (NONE = vazio); age em horas // ad=NONE: livre
@@ -75,8 +79,8 @@ typedef struct {
 	u16 t;                              // minutos desde 17:00 do dia atual (0..479)
 	i32 money;                          // k$
 	u8  image[NUM_STATIONS];            // soma = 100
-	u8  owned[DB_NUM_MOVIES];
-	u8  plays[NUM_STATIONS][DB_NUM_MOVIES]; // exibicoes recentes (desgaste)
+	u8  owned[NUM_ALL];
+	u8  plays[NUM_STATIONS][NUM_ALL]; // exibicoes recentes (desgaste)
 	Slot slot[NUM_STATIONS][NUM_SLOTS];
 	u8  aud[NUM_STATIONS][NUM_SLOTS];   // audiencia medida hoje (0,1 milhao)
 	u8  aud_done[NUM_SLOTS];            // 1 = slot ja medido
@@ -90,6 +94,10 @@ typedef struct {
 	u8  gift_have[NUM_GIFTS];           // presentes comprados e ainda nao dados (max 3 de cada)
 	u8  gift_uses[NUM_GIFTS];           // quantas vezes cada presente ja foi dado a Betty (por qualquer pretendente): efeito cai
 	u8  gift_today;                     // jogador deu presente hoje (senao a simpatia diminui)
+	OwnMovie own[NUM_OWN];              // producoes proprias prontas
+	ScriptOffer soffer[3];              // roteiros a venda hoje (nao salvo: regenerado a cada dia)
+	u8  pstate;                         // 0 nada, 1 roteiro comprado, 2 em producao
+	u8  pcat, pblocks, pname, pdays, pbudget;
 	u8  tower;                          // nivel de torres do jogador (0..TOWER_MAX): alcance maior
 	u8  last_gain;                      // pontos do ultimo presente dado
 	u16 seed;                           // semente da partida (reconstroi as bibliotecas dos rivais ao carregar)
@@ -118,6 +126,7 @@ u8    Sim_SignAd(u8 offer);             // 0 ok, 1 sem espaco, 2 ja assinada
 u8    Sim_PlaceMovie(u8 slot, u8 movie);// 0 ok, 1 nao cabe
 void  Sim_ClearSlot(u8 slot);
 void  Sim_PlaceAd(u8 slot, u8 contract);
+const Movie* Mov(u8 idx);               // filme do catalogo (ROM) ou producao propria (RAM)
 u8    Sim_Reach(u8 station);            // alcance efetivo (0,1 milhao) com torres
 u8    Sim_Quota(u8 station, u8 slot);   // % de audiencia
 u8    Sim_Quality(u8 movie);            // 0..100
@@ -146,6 +155,15 @@ u8    Sim_Propose(void) __banked;           // 0 casou, 1 simpatia < 100, 2 aind
 void  Sim_BettyDay(void) __banked;          // fim do dia: decaimento, pretendentes rivais, recuperacao dos usos
 u16   Sim_TowerCost(void) __banked;         // k$ do proximo nivel (0 = nivel maximo)
 u8    Sim_BuyTower(void) __banked;          // 0 ok, 1 sem dinheiro, 2 nivel maximo
+// producao propria (studio.c)
+void  Sim_StudioDay(void) __banked;                  // inicio do dia: avanca a producao e renova os roteiros a venda
+u16   Sim_ScriptCost(u8 blocks) __banked;            // k$
+u16   Sim_BudgetCost(u8 b) __banked;                 // k$ (b = 0 low, 1 medium, 2 high)
+u8    Sim_BuyScript(u8 offer) __banked;              // 0 ok, 1 sem dinheiro, 2 ja tem roteiro/producao
+u8    Sim_StartProd(u8 budget) __banked;             // 0 ok, 1 sem dinheiro, 2 sem roteiro, 3 biblioteca cheia
+void  Sim_OwnFree(u8 idx) __banked;                  // libera o espaco de uma producao vendida
+void  Sim_OwnRebuild(void) __banked;                 // reconstroi as estruturas Movie das producoes (apos carregar)
+void  Sim_ScriptTitle(char* out, u8 name) __banked;  // "Golden Harbor"
 // credito / arquivo
 i32   Sim_CreditLimit(void);
 u8    Sim_Borrow(i32 k);                    // 0 ok, 1 acima do limite

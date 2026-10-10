@@ -11,7 +11,7 @@
 #define MSG_Y       201
 #define LIST_ROWS   11
 
-enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OFFICE, SCR_SHOP, SCR_BETTY, SCR_PORTER, SCR_FUN, SCR_SUN, SCR_REALTOR, SCR_OVER };
+enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OFFICE, SCR_SHOP, SCR_BETTY, SCR_PORTER, SCR_FUN, SCR_SUN, SCR_REALTOR, SCR_SCRIPTS, SCR_STUDIO, SCR_OVER };
 enum { SPEED_PAUSE, SPEED_1, SPEED_2, SPEED_3, SPEED_COUNT };
 
 // bits de "sujo" (o que precisa ser redesenhado)
@@ -80,7 +80,9 @@ void Shop_Mouse(u8 x, u8 y, u8 btn) __banked;      void Betty_Mouse(u8 x, u8 y, 
 void Shop_Enter(void) __banked;    void Shop_Draw(void) __banked;    void Shop_Input(u8 ev) __banked;    void Shop_Row(u8 r) __banked;
 void Porter_Draw(void) __banked;  void Porter_Input(u8 ev) __banked;  void Rival_Draw(void) __banked;  void Rival_Input(u8 ev) __banked;   // SCR_FUN/SCR_SUN usam a mesma tela
 void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realtor_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
+void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "0.9"
+#define VERSION_STR "1.0"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Over_Draw(void) __banked;

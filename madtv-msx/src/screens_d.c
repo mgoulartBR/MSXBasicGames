@@ -239,7 +239,7 @@ void Realtor_Draw(void) __banked
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Realtor - transmitter towers");
 	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 16), "Your tower level");  Ui_Color(UI_WHITE); Ui_Int(130, (u8)(CONTENT_Y + 16), g_Game.tower); Ui_Text(142, (u8)(CONTENT_Y + 16), "/"); Ui_Int(150, (u8)(CONTENT_Y + 16), TOWER_MAX);
-	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 26), "Audience reach");    Ui_Color(UI_WHITE); Ui_Dec1(130, (u8)(CONTENT_Y + 26), Sim_Reach(0)); Ui_Text(154, (u8)(CONTENT_Y + 26), "million");
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 26), "Audience reach");    Ui_Color(UI_WHITE); Ui_Dec1(130, (u8)(CONTENT_Y + 26), Sim_Reach(0)); Ui_Text(160, (u8)(CONTENT_Y + 26), "million");
 	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 36), "Tower upkeep");      Ui_Color(UI_WHITE); x = Ui_Int(130, (u8)(CONTENT_Y + 36), TOWER_UPKEEP * g_Game.tower); Ui_Text(x, (u8)(CONTENT_Y + 36), "k/day");
 	for (st = 1; st < NUM_STATIONS; st++)
 	{

@@ -279,13 +279,13 @@ void Sim_SaveCode(char* out) __banked
 	u8 bits = 0, o = 0;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
-	b[n++] = (u8)(7 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
+	b[n++] = (u8)(8 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
 	b[n++] = (u8)g_Game.day; b[n++] = (u8)(g_Game.day >> 8);
 	b[n++] = (u8)g_Game.t;   b[n++] = (u8)(g_Game.t >> 8);
 	b[n++] = (u8)g_Game.money; b[n++] = (u8)(g_Game.money >> 8); b[n++] = (u8)(g_Game.money >> 16); b[n++] = (u8)(g_Game.money >> 24);
 	b[n++] = (u8)debt; b[n++] = (u8)(debt >> 8);
 	b[n++] = g_Game.image[0]; b[n++] = g_Game.image[1];
-	for (i = 0; i < DB_NUM_MOVIES; i++) if (g_Game.owned[i]) b[n + (i >> 3)] |= (u8)(1 << (i & 7));
+	for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i]) b[n + (i >> 3)] |= (u8)(1 << (i & 7));
 	n += OWNED_BYTES;
 	b[n++] = (u8)(g_Game.news_sub[0] | (g_Game.news_sub[1] << 1) | (g_Game.news_sub[2] << 2));
 	b[n++] = (u8)g_Game.seed; b[n++] = (u8)(g_Game.seed >> 8);
@@ -305,6 +305,15 @@ void Sim_SaveCode(char* out) __banked
 	}
 	n += 6;
 	b[n++] = g_Game.tower;                                                                         // torres (v7)
+	b[n++] = (u8)(g_Game.pstate | (g_Game.pcat << 2) | ((g_Game.pblocks ? g_Game.pblocks - 1 : 0) << 5));   // producao propria (v8)
+	b[n++] = g_Game.pname;
+	b[n++] = (u8)(g_Game.pdays | (g_Game.pbudget << 3));
+	for (i = 0; i < NUM_OWN; i++)
+	{
+		const OwnMovie* o = &g_Game.own[i];
+		b[n++] = (u8)(o->used | (o->cat << 1) | ((o->blocks ? o->blocks - 1 : 0) << 4));
+		b[n++] = o->q; b[n++] = o->name;
+	}
 	ck = Fletcher16(b, n);
 	b[n++] = (u8)ck; b[n++] = (u8)(ck >> 8);
 	for (i = 0; i < n; i++)                                           // base32
@@ -339,15 +348,15 @@ u8 Sim_LoadCode(const char* code) __banked
 	if (n != SAVE_BYTES) return 1;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
-	if ((b[0] & 15) != 7 || (b[0] >> 4) >= NUM_DIFF) return 3;
+	if ((b[0] & 15) != 8 || (b[0] >> 4) >= NUM_DIFF) return 3;
 	// validacao semantica antes de aplicar
 	n = 12;
 	if (b[11] + b[12] > 100) return 3;
 	n = 13 + OWNED_BYTES + 1 + 2;                                     // inicio dos contratos
 	for (i = 0; i < MAX_CONTRACTS; i++) { c = b[n + i * 2] & 31; if (c != 31 && c >= DB_NUM_ADS) return 3; }
 	n += MAX_CONTRACTS * 2;
-	for (s = 0; s < NUM_SLOTS; s++) { if (b[n + s * 2] != NONE && b[n + s * 2] >= DB_NUM_MOVIES) return 3; if (b[n + s * 2 + 1] != NONE && b[n + s * 2 + 1] >= MAX_CONTRACTS) return 3; }
-	if (b[n + NUM_SLOTS * 2 + 10] > TOWER_MAX) return 3;
+	for (s = 0; s < NUM_SLOTS; s++) { if (b[n + s * 2] != NONE && b[n + s * 2] >= NUM_ALL) return 3; if (b[n + s * 2 + 1] != NONE && b[n + s * 2 + 1] >= MAX_CONTRACTS) return 3; }
+	if (b[n + NUM_SLOTS * 2 + 10] > TOWER_MAX || (b[n + NUM_SLOTS * 2 + 11] & 3) > 2 || (b[n + NUM_SLOTS * 2 + 13] >> 3) > 2) return 3;
 	day = (u16)(b[1] | (b[2] << 8));
 	if (day == 0 || (u16)(b[3] | (b[4] << 8)) >= DAY_MINUTES) return 3;
 	seed = (u16)(b[13 + OWNED_BYTES + 1] | (b[13 + OWNED_BYTES + 2] << 8));
@@ -359,7 +368,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	g_Game.money = (i32)((u32)b[5] | ((u32)b[6] << 8) | ((u32)b[7] << 16) | ((u32)b[8] << 24));
 	g_Game.debt = (u16)(b[9] | (b[10] << 8));
 	g_Game.image[0] = b[11]; g_Game.image[1] = b[12]; g_Game.image[2] = (u8)(100 - b[11] - b[12]);
-	for (i = 0; i < DB_NUM_MOVIES; i++) g_Game.owned[i] = (b[13 + (i >> 3)] >> (i & 7)) & 1;
+	for (i = 0; i < NUM_ALL; i++) g_Game.owned[i] = (b[13 + (i >> 3)] >> (i & 7)) & 1;
 	n = 13 + OWNED_BYTES;
 	for (i = 0; i < DB_NUM_AGENCIES; i++) g_Game.news_sub[i] = (b[n] >> i) & 1;
 	n += 3;
@@ -375,7 +384,7 @@ u8 Sim_LoadCode(const char* code) __banked
 	{
 		Slot* sl = &g_Game.slot[0][s];
 		sl->movie = b[n + s * 2]; sl->ad = b[n + s * 2 + 1];
-		sl->part = (s && sl->movie != NONE && g_Game.slot[0][s - 1].movie == sl->movie && g_Game.slot[0][s - 1].part + 1 < g_Movies[sl->movie].blocks)
+		sl->part = (s && sl->movie != NONE && g_Game.slot[0][s - 1].movie == sl->movie && g_Game.slot[0][s - 1].part + 1 < (*Mov(sl->movie)).blocks)
 			? (u8)(g_Game.slot[0][s - 1].part + 1) : 0;
 	}
 	{                                                                  // Betty (v5): comeca apos a grade (n aponta para o fim da grade)
@@ -388,7 +397,19 @@ u8 Sim_LoadCode(const char* code) __banked
 			g_Game.gift_uses[i] = (b[p + 7 + (i >> 2)] >> ((i & 3) * 2)) & 3;
 		}
 	}
-	g_Game.tower = b[(u8)(n + NUM_SLOTS * 2) + 10];
+	{                                                                  // torres (v7) + producao propria (v8)
+		u8 t = (u8)(n + NUM_SLOTS * 2 + 10);
+		g_Game.tower = b[t];
+		g_Game.pstate = b[t + 1] & 3; g_Game.pcat = (b[t + 1] >> 2) & 7; g_Game.pblocks = (u8)(((b[t + 1] >> 5) & 3) + 1);
+		g_Game.pname = b[t + 2]; g_Game.pdays = b[t + 3] & 7; g_Game.pbudget = (u8)(b[t + 3] >> 3);
+		for (i = 0; i < NUM_OWN; i++)
+		{
+			OwnMovie* o = &g_Game.own[i];
+			o->used = b[t + 4 + i * 3] & 1; o->cat = (b[t + 4 + i * 3] >> 1) & 7; o->blocks = (u8)(((b[t + 4 + i * 3] >> 4) & 3) + 1);
+			o->q = b[t + 5 + i * 3]; o->name = b[t + 6 + i * 3]; g_Game.owned[DB_NUM_MOVIES + i] = o->used;
+		}
+		Sim_OwnRebuild();
+	}
 	AiSchedule(1); AiSchedule(2);
 	NewOffers();
 	return 0;

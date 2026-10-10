@@ -173,6 +173,29 @@ int main(void)
 		g_Game.tower = 2; g_Game.money = 5000;
 		{ i32 a = g_Game.money; u16 t; for (t = 0; t < DAY_MINUTES; t++) Sim_Tick(); CHECK(a - g_Game.money >= DAILY_UPKEEP + 2 * TOWER_UPKEEP - 200, "manutencao das torres"); }
 	}
+	// 1.0: producao propria (Roteiros + Estudios)
+	g_Diff = 1; Sim_Init(51);
+	{
+		u16 d; u8 m; char c[SAVE_CHARS + 2];
+		g_Game.money = 20000;
+		CHECK(Sim_StartProd(1) == 2, "produzir sem roteiro");
+		CHECK(Sim_BuyScript(0) == 0 && g_Game.pstate == 1 && g_Game.money < 20000, "comprar roteiro");
+		CHECK(Sim_BuyScript(1) == 2, "so um roteiro por vez");
+		CHECK(Sim_StartProd(2) == 0 && g_Game.pstate == 2 && g_Game.pdays == 4, "iniciar producao (high = 4 dias)");
+		CHECK(Sim_BuyScript(1) == 2, "roteiro durante producao");
+		Sim_SaveCode(c); CHECK(Sim_LoadCode(c) == 0 && g_Game.pstate == 2 && g_Game.pdays == 4, "producao em andamento sobrevive ao save");
+		for (d = 0; d < 4 * DAY_MINUTES; d++) { if (g_Game.pstate == 0) break; Sim_Tick(); }
+		CHECK(g_Game.pstate == 0 && g_Game.own[0].used && g_Game.owned[DB_NUM_MOVIES], "producao termina e entra na biblioteca");
+		CHECK(g_Game.own[0].q >= 70 && g_Game.own[0].q <= 95, "qualidade high 70..95");
+		m = DB_NUM_MOVIES;
+		CHECK(Mov(m)->blocks == g_Game.own[0].blocks && Sim_Quality(m) >= 60, "Mov() devolve a producao");
+		CHECK(Sim_MoviePrice(m) > 0 && Sim_MovieValue(m) > 0, "producao tem preco e revenda");
+		Sim_SaveCode(c); g_Game.own[0].used = 0; g_Game.owned[m] = 0;
+		CHECK(Sim_LoadCode(c) == 0 && g_Game.own[0].used && g_Game.owned[m], "producao pronta sobrevive ao save");
+		CHECK(strlen(Mov(m)->title) > 3, "titulo da producao reconstruido");
+		Sim_OwnFree(m); CHECK(!g_Game.own[0].used && !g_Game.owned[m], "liberar producao");
+		{ u8 k; g_Game.money = 50000; for (k = 0; k < NUM_OWN; k++) { g_Game.own[k].used = 1; } g_Game.pstate = 1; CHECK(Sim_StartProd(0) == 3, "biblioteca cheia impede filmar"); }
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }
