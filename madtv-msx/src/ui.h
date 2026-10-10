@@ -47,7 +47,7 @@ u8 Input_TypedChar(void);
 #define PTR_MOVED  1
 #define PTR_LEFT   2     // botao esquerdo apertado agora (borda)
 #define PTR_RIGHT  4     // botao direito apertado agora (borda)
-extern u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_PtrFound;
+extern u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_PtrFound, g_PtrSpeed;   // g_PtrSpeed: 0 lento, 1 normal, 2 rapido, 3 muito rapido
 extern u8 g_InExtra;           // bit 0 = tecla M apertada agora (borda); preenchido por Input_Poll
 u8   Pointer_Update(void);     // le o mouse (se ativo), move o cursor-sprite; retorna PTR_*
 void Pointer_Cycle(void);      // M: desligado -> porta 1 -> porta 2 -> desligado

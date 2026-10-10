@@ -2,6 +2,9 @@
 // adaptados/alterados para MSX (ver LICENSES.md).
 
 #include "../data/db_data.h"
+#ifndef HOST_BUILD
+#include "font/font_mgl_sample6.h"          // fonte (usada so em Ui_Init)
+#endif
 
 const char* const g_CategoryName[DB_NUM_CATEGORIES] = { "Lovestory", "Action", "Monumental", "Comedy", "Crime", "Culture", "SciFi", "Other" };
 

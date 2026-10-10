@@ -4,6 +4,8 @@
 - DONE   0.1 pipeline: MSXgl v1.5.0 + SDCC 4.6.0 -> ROM 32K -> openMSX (C-BIOS MSX2) -> screenshot
 - TODO   Confirmar licenca do conteudo do banco TVTower antes de distribuir
 - DONE   0.6 Betty e presentes: Supermercado (10 presentes), escritorio da Betty (simpatia <= Image, rivais cortejam, efeito cai 30%/uso), falencia de emissora (Image 0), pedido de casamento + tela final; savegame v5 (98 caracteres)
+- DONE   1.1 polimento: audio PSG (musica original em loop + efeitos: mover, confirmar, erro, novo dia, conquista), tela Options (efeitos on/off, musica on/off, sensibilidade do mouse 4 niveis) no Escritorio; fonte movida para o segmento de dados (fixo 15.060/16.384); revisao de balanceamento (docs/PORTING.md)
+- TODO   Audio so verificado nos registros do PSG no openMSX (ninguem ouviu); tempo da musica depende de 50/60 Hz; opcoes nao sao salvas; musica/efeitos por tela
 - DONE   1.0 producao propria: Agencia de Roteiros (3 roteiros por dia, 1 em mao) + Estudios (orcamento low/medium/high = 150/250/400k, 2/3/4 dias, qualidade 30-55/50-75/70-95); ate 4 filmes proprios na biblioteca, exclusivos (+10% audiencia), vendaveis; savegame v8 (140 caracteres)
 - TODO   Producao: atores/diretores (database_people), roteiros do TVTower, filmes proprios vendaveis aos rivais; satelites/cabo; sabotagem e visitas dos rivais; polimento (PSG, arte, opcao de sensibilidade do mouse)
 - DONE   0.9 Corretor: 4 niveis de torres (alcance +12/25/40/55%, custo 1500/3000/5000/8000k, manutencao 40k/dia por nivel); rivais ganham 1 nivel a cada 30 dias; Image agora disputado por audiencia absoluta; savegame v7 (114 caracteres)

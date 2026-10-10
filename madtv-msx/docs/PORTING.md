@@ -236,3 +236,11 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 - Savegame v8: bitmask de filmes passou a cobrir 164 indices (21 bytes) + 15 bytes de producao -> 140 caracteres (digitar 140 caracteres e longo; a tela de salvar quebra em linhas).
 - Autoplay smart com producao (`NO_PROD=1` desliga, `PROD_BUDGET=0|1|2`), Normal, 200 dias, 60 partidas: sem producao 38% falencia / 61% casou; medio 31% / 60%; alto 38% / 56%. A producao ajuda pouco no bot (ele so a usa com folga de caixa) e as diferencas estao dentro do ruido (o RNG do dia mudou com os roteiros, entao nao comparar com os numeros da 0.9). Nao retunei a dificuldade.
 - Segmento fixo: 16.020 de 16.384 bytes (restam ~360). Codigo novo em src/studio.c (segmento 11).
+
+## 1.1: audio PSG, opcoes e revisao de balanceamento
+- `src/audio.c` (segmento 12): escrita direta no PSG (portas A0h/A1h). Canais A = melodia (32 passos, 9 quadros cada, envelope por quadro), B = baixo, C = efeitos (0 mover, 1 confirmar, 2 erro, 3 novo dia, 4 conquista). Registro 7 = B8h (como a BIOS: 3 tons ligados, ruido desligado); R14/R15 (joystick) nao sao tocados. Musica e efeitos sao originais do projeto.
+- Integracao no laco principal: `Audio_Tick()` a cada quadro (~50 bytes fixos); efeitos disparados por teclas de direcao, OK+mensagem (`Audio_Result` classifica a mensagem de recusa/sucesso por palavras-chave), novo dia, inicio do jogo e final feliz.
+- **Nao testado ao vivo**: o smoke so confere contadores (`g_SfxCount`, `g_MusicPos`), o mixer (R7 = B8h) e que desligar os efeitos funciona. Ninguem ouviu o resultado; em hardware real o tempo da musica varia com 50/60 Hz (passo fixo em quadros).
+- Mouse: sensibilidade com acumulador de resto, multiplicadores x0,5 / x1 / x2 / x3 (`g_PtrSpeed`).
+- Espaco: a fonte (1,5 KB) saiu do segmento fixo para o segmento 3 (dados, banco 3, sempre mapeado no boot e lido so em `Ui_Init`): fixo 15.060 de 16.384 bytes.
+- Revisao de balanceamento (autoplay, 100 partidas, 30 dias; smart): Easy 0% falencia (casou em 41% ate o dia ~26), Normal 2%, Hard 11%; politicas ingenuas/cuidadosas ~100% de falencia (como desejado: o jogo exige ler audiencias). Em 200 dias (60 partidas): Easy 71-88%, Normal ~50%, Hard ~15% de casamentos (ver tabelas de 0.8-1.0). Nao alterei parametros nesta versao; sao numeros de bot, nao de humanos.

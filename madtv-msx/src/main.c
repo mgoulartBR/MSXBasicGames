@@ -202,6 +202,7 @@ static void ScreenInput(u8 ev)
 	case SCR_REALTOR: Realtor_Input(ev); break;
 	case SCR_SCRIPTS: Scripts_Input(ev); break;
 	case SCR_STUDIO:  Studio_Input(ev); break;
+	case SCR_OPTIONS: Options_Input(ev); break;
 	case SCR_FUN: case SCR_SUN: Rival_Input(ev); break;
 	}
 }
@@ -223,6 +224,7 @@ static void ScreenDraw(void)
 	case SCR_SHOP:    Shop_Draw(); break;
 	case SCR_BETTY:   Betty_Draw(); break;
 	case SCR_SCRIPTS: Scripts_Draw(); break;
+	case SCR_OPTIONS: Options_Draw(); break;
 	case SCR_STUDIO:  Studio_Draw(); break;
 	case SCR_REALTOR: Realtor_Draw(); break;
 	case SCR_PORTER:  Porter_Draw(); break;
@@ -301,6 +303,7 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	case SCR_REALTOR: Realtor_Mouse(x, y, btn); break;
 	case SCR_SCRIPTS: Scripts_Mouse(x, y, btn); break;
 	case SCR_STUDIO:  Studio_Mouse(x, y, btn); break;
+	case SCR_OPTIONS: Options_Mouse(x, y, btn); break;
 	}
 }
 
@@ -317,17 +320,20 @@ static void StartGame(void)
 
 void main()
 {
-	u8 ev, e, hz, fc = 0, fpm;
+	u8 ev, e, hz, fc = 0, fpm, clk;
 	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
 	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
 	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1;
 	Ui_Init();
+	Audio_Init();
 	Draw_Title();
 
 	for (;;)
 	{
 		Halt();
-		ev = Input_Poll();
+		ev = Input_Poll(); clk = 0;
+		Audio_Tick();
+		if (ev & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT)) Audio_Sfx(0);
 		if (g_InExtra && g_Screen != SCR_SAVE)                     // M: liga/desliga o mouse (na tela de codigo M e uma letra)
 		{
 			Pointer_Cycle();
@@ -337,6 +343,7 @@ void main()
 		{
 			u8 p = Pointer_Update();
 			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Draw_Title(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
+			if (p & PTR_LEFT) clk = IN_OK;
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
 			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE && g_PtrY > 128 && g_PtrY < 142) ev |= IN_RIGHT; else if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }   // clique na linha de dificuldade = trocar
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
@@ -349,7 +356,7 @@ void main()
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
 			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Draw_Title(); continue; }
-			if (ev & IN_OK) StartGame();
+			if (ev & IN_OK) { Audio_Sfx(3); StartGame(); }
 			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Goto(SCR_SAVE); Save_EnterLoad(); }   // Esc no titulo: carregar codigo
 			continue;
 		}
@@ -365,6 +372,7 @@ void main()
 		{
 			fc = 0;
 			e = Sim_Tick();
+			if (e & EV_DAY) Audio_Sfx(3);
 			g_Dirty |= D_HDR;
 			if (e & EV_MSG) g_Dirty |= D_MSG;
 			if (e & (EV_SLOT | EV_DAY))
@@ -380,7 +388,8 @@ void main()
 			if (r != 0xFF) Goto(r);
 		}
 		ScreenInput(ev);
-		if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); continue; }
+		if (((ev | clk) & IN_OK) && (g_Dirty & D_MSG)) Audio_Result(g_Msg);
+		if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
 
 		if (g_Dirty & D_HDR) Draw_Header();
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
