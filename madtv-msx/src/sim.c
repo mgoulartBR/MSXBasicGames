@@ -4,14 +4,14 @@
 Game g_Game;
 // Ganchos de teste: offsets dos campos de Game conforme o compilador Z80, preenchidos em Sim_Init (os testes no openMSX leem
 // g_DbgOffsets pelo mapa de simbolos). Custa ~20 bytes de RAM e ~150 de ROM.
-u16 g_DbgOffsets[16];
+u16 g_DbgOffsets[18];
 #define OFF(f) ((u16)((u8*)&g_Game.f - (u8*)&g_Game))
 static void DbgInit(void)
 {
 	g_DbgOffsets[0] = OFF(day); g_DbgOffsets[1] = OFF(t); g_DbgOffsets[2] = OFF(money); g_DbgOffsets[3] = OFF(debt);
 	g_DbgOffsets[4] = OFF(image); g_DbgOffsets[5] = OFF(owned); g_DbgOffsets[6] = OFF(slot); g_DbgOffsets[7] = OFF(news_slate);
 	g_DbgOffsets[8] = OFF(news_sub); g_DbgOffsets[9] = OFF(contract);
-	g_DbgOffsets[10] = OFF(sym); g_DbgOffsets[11] = OFF(alive); g_DbgOffsets[12] = OFF(gift_have); g_DbgOffsets[13] = OFF(gift_uses); g_DbgOffsets[14] = OFF(won); g_DbgOffsets[15] = OFF(tower);
+	g_DbgOffsets[10] = OFF(sym); g_DbgOffsets[11] = OFF(alive); g_DbgOffsets[12] = OFF(gift_have); g_DbgOffsets[13] = OFF(gift_uses); g_DbgOffsets[14] = OFF(won); g_DbgOffsets[15] = OFF(tower); g_DbgOffsets[16] = OFF(pstate); g_DbgOffsets[17] = OFF(own);
 }
 
 #ifdef BALANCE_STATS
@@ -76,16 +76,19 @@ static void AppendInt(char* dst, i32 v)
 	dst[n] = 0;
 }
 
+Movie g_OwnMv[NUM_OWN];
+const Movie* Mov(u8 i) { return i < DB_NUM_MOVIES ? &g_Movies[i] : &g_OwnMv[i - DB_NUM_MOVIES]; }
+
 u8 Sim_Quality(u8 m)
 {
-	const Movie* mv = &g_Movies[m];
+	const Movie* mv = Mov(m);
 	return (u8)(((u16)mv->critics * 3 + (u16)mv->outcome * 4 + (u16)mv->speed * 3) / 10);
 }
 
 u16 Sim_MoviePrice(u8 idx)        // k$ (formula propria)
 {
-	u16 avg = (u16)(((u16)g_Movies[idx].critics + g_Movies[idx].speed + g_Movies[idx].outcome) / 3);
-	return (u16)((avg * g_Movies[idx].price) / PRICE_DIV * g_Movies[idx].blocks / 2 + 50);
+	u16 avg = (u16)(((u16)(*Mov(idx)).critics + (*Mov(idx)).speed + (*Mov(idx)).outcome) / 3);
+	return (u16)((avg * (*Mov(idx)).price) / PRICE_DIV * (*Mov(idx)).blocks / 2 + 50);
 }
 
 void Sim_MsgNum(const char* a, i32 v, const char* b)
@@ -103,12 +106,13 @@ static u8 Audience(u8 st, u8 s)
 		a = a * 5 / 100;                                   // programa de teste
 	else
 	{
-		const Movie* mv = &g_Movies[sl->movie];
+		const Movie* mv = Mov(sl->movie);
 		u8 plays = g_Game.plays[st][sl->movie];
 		u8 wear = (plays >= 5) ? 40 : (u8)(100 - 12 * plays);
 		a = a * Sim_Quality(sl->movie) / 100;
 		a = a * g_Fit[mv->cat][s] / 100;
 		a = a * wear / 100;
+		if (sl->movie >= DB_NUM_MOVIES) a = a * 110 / 100;   // producao propria: exclusiva (+10%)
 		if (mv->fsk18 && s < 3) a = a * 40 / 100;          // FSK18 antes das 21h
 	}
 	a = a * (st ? NEWS_RIVAL_F : g_Game.news_f[s]) / 100;   // telejornal que antecede o programa
@@ -138,14 +142,14 @@ void Sim_ClearSlot(u8 s)
 	if (sl[s].movie == NONE) return;
 	m = sl[s].movie;
 	start = s - sl[s].part;
-	n = g_Movies[m].blocks;
+	n = (*Mov(m)).blocks;
 	for (i = 0; i < n && start + i < NUM_SLOTS; i++) { sl[start + i].movie = NONE; sl[start + i].part = 0; }
 }
 
 u8 Sim_PlaceMovie(u8 s, u8 m)
 {
 	Slot* sl = g_Game.slot[0];
-	u8 n = g_Movies[m].blocks, i;
+	u8 n = (*Mov(m)).blocks, i;
 	if (s + n > NUM_SLOTS) return 1;
 	for (i = 0; i < n; i++) Sim_ClearSlot(s + i);
 	for (i = 0; i < n; i++) { sl[s + i].movie = m; sl[s + i].part = i; }
@@ -210,6 +214,7 @@ static void StartDay(void)
 	for (st = 0; st < NUM_STATIONS; st++)
 		for (m = 0; m < NUM_SLOTS; m++) g_Game.aud[st][m] = 0;
 	Sim_ExtNewDay();                                  // IA dos rivais + ofertas do dia (banked)
+	Sim_StudioDay();                                  // producao propria + roteiros do dia (banked)
 }
 
 void Sim_Init(u16 seed)
@@ -330,11 +335,11 @@ static void EndDay(void)
 	// desgaste: filmes exibidos hoje contam 1 exibicao; os demais "descansam"
 	for (st = 0; st < NUM_STATIONS; st++)
 	{
-		u8 shown[DB_NUM_MOVIES];
-		for (m = 0; m < DB_NUM_MOVIES; m++) shown[m] = 0;
+		u8 shown[NUM_ALL];
+		for (m = 0; m < NUM_ALL; m++) shown[m] = 0;
 		for (i = 0; i < NUM_SLOTS; i++)
 			if (g_Game.slot[st][i].movie != NONE && g_Game.slot[st][i].part == 0) shown[g_Game.slot[st][i].movie] = 1;
-		for (m = 0; m < DB_NUM_MOVIES; m++)
+		for (m = 0; m < NUM_ALL; m++)
 		{
 			if (shown[m]) { if (g_Game.plays[st][m] < 250) g_Game.plays[st][m]++; }
 			else if (g_Game.plays[st][m] && Sim_Rnd(3) == 0) g_Game.plays[st][m]--;

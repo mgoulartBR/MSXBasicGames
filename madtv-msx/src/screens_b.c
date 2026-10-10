@@ -124,14 +124,14 @@ void News_Input(u8 ev) __banked
 }
 
 // ---------------------------------------------------------------- ARQUIVO (venda de filmes)
-static u8 s_Own[DB_NUM_MOVIES];
+static u8 s_Own[NUM_ALL];
 static u8 s_OwnN;
 
 static void BuildOwn(void)
 {
 	u8 i;
 	s_OwnN = 0;
-	for (i = 0; i < DB_NUM_MOVIES; i++) if (g_Game.owned[i]) s_Own[s_OwnN++] = i;
+	for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i]) s_Own[s_OwnN++] = i;
 }
 
 static void ArchiveRowBody(u8 i)
@@ -142,9 +142,9 @@ static void ArchiveRowBody(u8 i)
 	m = s_Own[g_First + i];
 	Ui_Color(g_First + i == g_Sel ? UI_YELLOW : UI_WHITE);
 	Ui_Text(4, y, g_First + i == g_Sel ? ">" : " ");
-	Ui_TextN(14, y, g_Movies[m].title, 22);
+	Ui_TextN(14, y, (*Mov(m)).title, 22);
 	Ui_Color(UI_GRAY);
-	Ui_Int(160, y, g_Movies[m].blocks); Ui_Text(168, y, "bl");
+	Ui_Int(160, y, (*Mov(m)).blocks); Ui_Text(168, y, "bl");
 	Ui_Text(186, y, "x"); Ui_Int(194, y, g_Game.plays[0][m]);
 	Money(212, y, Sim_MovieValue(m));
 }
@@ -184,7 +184,7 @@ void Archive_Input(u8 ev) __banked
 		u8 m = s_Own[g_Sel], r;
 		u16 v = Sim_MovieValue(m);
 		r = Sim_Sell(m);
-		if (r == 0) { Sim_MsgNum("Sold for $", v, "k."); }
+		if (r == 0) { Sim_OwnFree(m); Sim_MsgNum("Sold for $", v, "k."); }
 		else Sim_Msg("It is in today's programme grid!");
 		BuildOwn();
 		if (g_Sel >= s_OwnN && g_Sel) g_Sel--;

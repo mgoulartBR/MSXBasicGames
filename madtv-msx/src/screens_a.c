@@ -5,7 +5,7 @@
 static u8 s_GridCol;        // 0 = programa, 1 = anuncio
 static u8 s_Slot;           // slot sob o cursor
 static u8 s_Pick;           // 0 = navegando a grade, 1 = escolhendo filme, 2 = escolhendo contrato
-static u8 s_PickList[DB_NUM_MOVIES + 1];
+static u8 s_PickList[NUM_ALL + 1];
 static u8 s_PickN;
 
 static void BuildPick(void)
@@ -13,7 +13,7 @@ static void BuildPick(void)
 	u8 i;
 	s_PickN = 0;
 	s_PickList[s_PickN++] = NONE;
-	if (s_Pick == 1) { for (i = 0; i < DB_NUM_MOVIES; i++) if (g_Game.owned[i]) s_PickList[s_PickN++] = i; }
+	if (s_Pick == 1) { for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i]) s_PickList[s_PickN++] = i; }
 	else             { for (i = 0; i < MAX_CONTRACTS; i++) if (g_Game.contract[i].ad != NONE) s_PickList[s_PickN++] = i; }
 }
 
@@ -31,7 +31,7 @@ static void DrawRow_Grid_Body(u8 s)
 	Ui_Text(4, y, s == s_Slot ? ">" : " "); Ui_Text(12, y, b);
 	if (sl->movie == NONE) { Ui_Color(UI_GRAY); Ui_Text(48, y, "- empty -"); }
 	else if (sl->part) { Ui_Color(UI_GRAY); Ui_Text(48, y, "  (cont.)"); }
-	else { Ui_Color((s == s_Slot && s_GridCol == 0) ? UI_YELLOW : UI_WHITE); Ui_TextN(48, y, g_Movies[sl->movie].title, 17); }
+	else { Ui_Color((s == s_Slot && s_GridCol == 0) ? UI_YELLOW : UI_WHITE); Ui_TextN(48, y, (*Mov(sl->movie)).title, 17); }
 	if (sl->ad == NONE) { Ui_Color(UI_GRAY); Ui_Text(156, y, "no ad"); }
 	else { Ui_Color((s == s_Slot && s_GridCol == 1) ? UI_YELLOW : UI_CYAN); Ui_TextN(156, y, g_Ads[g_Game.contract[sl->ad].ad].title, 16); }
 }
@@ -63,9 +63,9 @@ static void DrawRow_Pick_Body(u8 i)
 	if (v == NONE) { Ui_Text(14, y, "(none)"); return; }
 	if (s_Pick == 1)
 	{
-		Ui_TextN(14, y, g_Movies[v].title, 22);
+		Ui_TextN(14, y, (*Mov(v)).title, 22);
 		Ui_Color(UI_GRAY);
-		Ui_Int(170, y, g_Movies[v].blocks); Ui_Text(178, y, "bl");
+		Ui_Int(170, y, (*Mov(v)).blocks); Ui_Text(178, y, "bl");
 		Ui_Text(196, y, "Q"); Ui_Int(204, y, Sim_Quality(v));
 		Ui_Text(226, y, "x"); Ui_Int(234, y, g_Game.plays[0][v]);
 	}

@@ -227,3 +227,12 @@ Flag X-rated (64) do TVTower -> FSK18 (confirmado empiricamente: 160/194 filmes 
 
   Os parametros de dificuldade (55/68/74) nao foram alterados. De novo: numeros de um bot, nao de humanos; o bot gasta com torres e presentes e isso explica falencia maior no Easy.
 - Tela: `Realtor_*` em src/screens_d.c; segmento fixo 15.984 de 16.384 bytes.
+
+## 1.0: producao propria (modelo PROPRIO, nao e o do Mad TV nem o do TVTower)
+- Estado em `Game`: `own[4]` (filmes prontos: cat, blocks, q, name), `pstate` (0 nada / 1 roteiro comprado / 2 filmando) + `pcat/pblocks/pname/pdays/pbudget`, `soffer[3]` (roteiros a venda; regenerados todo dia, nao salvos).
+- Indices de filme: 0..159 catalogo (ROM), 160..163 producoes (RAM, `g_OwnMv[]` + titulos em buffer). Acesso uniforme por `Mov(idx)` (sim.c) - todas as leituras de `g_Movies[idx]` que podem ver uma producao passaram a usar `Mov`; o catalogo continua sendo lido direto onde so ha filmes do catalogo (agencia, IA dos rivais).
+- Titulo gerado = palavra A (16) + palavra B (16): "Golden Harbor". Genero/duracao (1-3 blocos) sorteados.
+- Custos: roteiro 40 + 40*blocos k$; filmagem 150/250/400 k$; dias 2/3/4; qualidade = 30/50/70 + 0..25. Se a biblioteca estiver cheia o filme espera pronto ate liberar espaco (vender no Archive). Producao propria: +10% de audiencia (exclusividade).
+- Savegame v8: bitmask de filmes passou a cobrir 164 indices (21 bytes) + 15 bytes de producao -> 140 caracteres (digitar 140 caracteres e longo; a tela de salvar quebra em linhas).
+- Autoplay smart com producao (`NO_PROD=1` desliga, `PROD_BUDGET=0|1|2`), Normal, 200 dias, 60 partidas: sem producao 38% falencia / 61% casou; medio 31% / 60%; alto 38% / 56%. A producao ajuda pouco no bot (ele so a usa com folga de caixa) e as diferencas estao dentro do ruido (o RNG do dia mudou com os roteiros, entao nao comparar com os numeros da 0.9). Nao retunei a dificuldade.
+- Segmento fixo: 16.020 de 16.384 bytes (restam ~360). Codigo novo em src/studio.c (segmento 11).

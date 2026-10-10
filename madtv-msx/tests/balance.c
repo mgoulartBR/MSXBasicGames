@@ -71,14 +71,14 @@ static void FillGrid(void)
 	{
 		int s = k_Prime[k], best = -1, bestq = -1;
 		if (g_Game.slot[0][s].movie != NONE) continue;
-		for (i = 0; i < DB_NUM_MOVIES; i++)
+		for (i = 0; i < NUM_ALL; i++)
 		{
 			int used = 0, j, q;
 			if (!g_Game.owned[i]) continue;
 			for (j = 0; j < NUM_SLOTS; j++) if (g_Game.slot[0][j].movie == i) used = 1;
-			if (used || (g_Movies[i].fsk18 && s < 3)) continue;
-			if (s + g_Movies[i].blocks > NUM_SLOTS) continue;
-			{ int occ = 0; for (j = s; j < s + g_Movies[i].blocks; j++) if (g_Game.slot[0][j].movie != NONE) occ = 1; if (occ) continue; }   // nao sobrepor filmes ja colocados
+			if (used || ((*Mov(i)).fsk18 && s < 3)) continue;
+			if (s + (*Mov(i)).blocks > NUM_SLOTS) continue;
+			{ int occ = 0; for (j = s; j < s + (*Mov(i)).blocks; j++) if (g_Game.slot[0][j].movie != NONE) occ = 1; if (occ) continue; }   // nao sobrepor filmes ja colocados
 			q = Sim_Quality(i) - g_Game.plays[0][i] * 8;
 			if (q > bestq) { bestq = q; best = i; }
 		}
@@ -152,7 +152,7 @@ static void SignAds(Policy pol)
 		{
 			// so assina se o filme de maior qualidade conhecido da chance de atingir a audiencia minima, e se cabem as exibicoes
 			int bestq = 0, i;
-			for (i = 0; i < DB_NUM_MOVIES; i++) if (g_Game.owned[i] && Sim_Quality(i) > bestq) bestq = Sim_Quality(i);
+			for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i] && Sim_Quality(i) > bestq) bestq = Sim_Quality(i);
 			if (bestq * 12 * 90 / 10000 * 10 / 10 < a->min_audience / 1) { /* aprox: audiencia ~ alcance*share*q */ }
 			if ((int)a->min_audience > bestq * 120 * 90 / 10000 * 8 / 10) continue;
 			if (a->reps > a->days * 3) continue;
@@ -162,6 +162,18 @@ static void SignAds(Policy pol)
 }
 
 // Betty: compra o presente de melhor relacao efeito/custo que o caixa folgado permite e entrega; no fim, Dream trip + pedido
+static void Produce(void)      // Roteiros + Estudios: compra o roteiro mais curto/barato e filma com o orcamento PROD_BUDGET (padrao 1 = medio)
+{
+	u8 i, b = getenv("PROD_BUDGET") ? (u8)atoi(getenv("PROD_BUDGET")) : 1;
+	if (getenv("NO_PROD")) return;
+	if (g_Game.pstate == 0 && g_Game.money > 2500 + (i32)Sim_BudgetCost(b))
+	{
+		u8 best = 0;
+		for (i = 1; i < 3; i++) if (g_Game.soffer[i].blocks < g_Game.soffer[best].blocks) best = i;
+		Sim_BuyScript(best);
+	}
+	if (g_Game.pstate == 1 && g_Game.money > 1500 + (i32)Sim_BudgetCost(b)) Sim_StartProd(b);
+}
 static int g_Gifts = 1;  // NO_GIFTS=1 desliga
 static void Gifts(void)
 {
@@ -206,6 +218,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 			else if (g_Game.debt > 0 && g_Game.money > g_Game.debt + 2500) Sim_Repay(g_Game.debt);
 		}
 		if (pol == P_SMART && !getenv("NO_TOWERS") && Sim_TowerCost() && g_Game.money > (i32)Sim_TowerCost() + 3000) Sim_BuyTower();   // Corretor
+		if (pol == P_SMART) Produce();
 		if (pol == P_SMART) Gifts();
 		if (g_Game.game_over) break;
 		g_Smart = (pol == P_SMART);
