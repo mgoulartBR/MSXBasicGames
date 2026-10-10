@@ -1,7 +1,7 @@
 # MadTV-MSX
 
 Port/reimplementacao do Mad TV (1991) para MSX2 em C + MSXgl, usando os dados do remake open source TVTower.
-Status: **1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
+Status: **1.1 - polimento (audio PSG, opcoes de som e sensibilidade do mouse); 1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
 
 - Alvo: MSX2 (V9938), ROM 128 KB com mapper ASCII8. Nao testado em hardware real.
 - Build: `scripts/setup.sh && scripts/build.sh` -> `dist/madtv-msx-<versao>.rom` (versao em `VERSION`)
@@ -16,6 +16,7 @@ Status: **1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes:
 - Como jogar: Film agency (comprar) -> Ad agency (assinar contrato) -> Programme grid (encaixar filmes e anuncios nos horarios) -> acompanhar em Ratings.
 - Docs: docs/PORTING.md, docs/TOOLCHAIN.md, docs/RULES.md, LICENSES.md, TODO.md
 - Material original do Mad TV e o banco do TVTower ficam em `original/` (nao versionado).
+- Opcoes (Escritorio > Options): efeitos e musica on/off, sensibilidade do mouse (slow/normal/fast/very fast). Valem ate desligar o MSX (nao sao salvas no codigo).
 - Producao propria (andar 2, esquerda): compre um roteiro na Script agency (3 ofertas novas por dia, um roteiro de cada vez) e filme nos Studios escolhendo o orcamento (mais caro = melhor qualidade e mais dias). O filme entra no Archive, e exclusivo (+10% de audiencia) e pode ser vendido; a biblioteca guarda ate 4 producoes.
 - Corretor (andar 2, direita): compre ate 4 niveis de torre para aumentar seu alcance de audiencia (custo e manutencao diaria). Rivais ampliam o alcance sozinhos com os dias. O Image agora e disputado por audiencia absoluta.
 - Porteiro (andar 0, esquerda): renda/custos do dia, ranking de Image e dicas. Escritorios FUN/SUN (andar 3): espiam a grade de hoje dos rivais e as audiencias ja medidas (nao ha sabotagem ainda).

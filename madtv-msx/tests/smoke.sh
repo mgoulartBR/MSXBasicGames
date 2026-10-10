@@ -8,12 +8,16 @@ ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode)
+DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
 [ -n "$G" ] && [ -n "$OFFS" ] && [ -n "$CODE" ] || { echo "FAIL: simbolos ausentes no mapa"; exit 1; }
 cat > /tmp/madtv_smoke.tcl <<TCL
 set G $G
 set OFFS $OFFS
 set CODE $CODE
+set SFXC $SFXC
+set MUSP $MUSP
+set PSPD $PSPD
+set SNDS $SNDS
 set DM $DM
 set SCR $SCR
 set PX $PX
@@ -34,7 +38,7 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]]"
+  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]] sfx=[peek $::SFXC] mus=[peek $::MUSP] pspd=[peek $::PSPD] snds=[peek $::SNDS] psg7=[debug read {PSG regs} 7]"
   close $f
 }
 proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 140} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
@@ -142,6 +146,18 @@ back
 room 11
 at 0.5 { dump sun }
 back
+# --- Opcoes (Escritorio, 4o item): desliga os efeitos e aumenta a velocidade do mouse
+room 9
+key DOWN; key DOWN; key DOWN; key RET
+at 0.5 { dump opt0 }
+key RET
+at 0.3 { dump opt1 }
+key DOWN; key DOWN; key RIGHT
+at 0.3 { dump opt2 }
+key LEFT
+at 0.3 { dump opt3 }
+back
+back
 # --- Corretor (sala 8): construir a 1a torre
 room 8
 at 0.5 { dump realtor0 }
@@ -193,7 +209,7 @@ at 0.5 {}
 # --- simular dias em velocidade maxima
 at 0.2 { poke $::SPD 3 }
 at 0.1 { set throttle off }
-at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 20} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
+at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 22} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
 TCL
 timeout 290 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/madtv_smoke.tcl >/tmp/madtv_smoke.log 2>&1
 cat /tmp/madtv_state.txt 2>/dev/null
@@ -220,8 +236,11 @@ need(g('gift','scr')==12 and g('gift','g0')==0 and g('gift','sym0')>0,'Betty: pr
 need(g('porter','scr')==13 and g('fun','scr')==14 and g('sun','scr')==15,'Porteiro/escritorios dos rivais nao abriram')
 need(g('realtor0','scr')==16 and g('realtor0','tower')==0 and g('realtor','tower')==1 and g('realtor','money')<g('realtor0','money'),'Corretor nao vendeu a torre')
 need(g('script','scr')==17 and g('script','pstate')==1 and g('studio','scr')==18 and g('studio','pstate')==2,'Roteiros/Estudios: compra do roteiro ou inicio da producao falhou')
+need(g('opt0','scr')==19 and g('opt0','snds')==1 and g('opt1','snds')==0 and g('opt0','pspd')==1 and g('opt2','pspd')==2 and g('opt3','pspd')==1,'Opcoes: som/velocidade do mouse nao mudaram')
+need(g('navup','sfx')>g('start','sfx') and g('opt0','sfx')>g('navup','sfx'),'efeitos sonoros nao dispararam (nav/OK)')
+need(len(set(g(t,'mus') for t in ['start','navup','navdown','navright','navleft','mhover']))>=3 and all(g(t,'psg7')==0xB8 for t in ['start','navup']),'musica nao avanca / mixer do PSG != B8h')
 need(g('refused','won')==0 and g('refused','scr')==12,'Betty: pedido sem condicoes foi aceito')
-need(g('win','won')==1 and g('win','scr')==19,'Betty: pedido com todas as condicoes nao levou ao final feliz')
+need(g('win','won')==1 and g('win','scr')==20,'Betty: pedido com todas as condicoes nao levou ao final feliz')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')
 need(g('placed','slot0movie')!=255,'filme nao entrou na grade')
 need(g('signed','contract0')!=255,'contrato nao assinado')
@@ -234,7 +253,7 @@ need(g('loaded','day')==g('saved','day'),'LOAD nao restaurou o dia')
 need(g('later','day')>=2,'jogo nao avancou para o dia 2')
 need(sum(map(int,S['later']['image'].split(',')))<=100,'Image invalido')
 d=open('/tmp/madtv_draw.txt').read().split()
-names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','realtor','scripts','studio','over']
+names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','realtor','scripts','studio','options','over']
 print('desenho completo por tela (jiffies, max):',dict(zip(names,map(int,d))))
 need(max(map(int,d))<=90,'alguma tela leva > 90 jiffies para desenhar')
 print('PASS')

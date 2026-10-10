@@ -269,9 +269,9 @@ u8 Building_Frame(void) __banked
 }
 
 // ---------------------------------------------------------------- ESCRITORIO (submenu: grade, audiencias, salvar/carregar)
-static const char* const k_OfficeItems[] = { "Programme grid (TV computer)", "Ratings & image (graphs)", "Save / Load (wall picture)" };
-static const u8 k_OfficeScr[] = { SCR_GRID, SCR_RATINGS, SCR_SAVE };
-#define OFFICE_N 3
+static const char* const k_OfficeItems[] = { "Programme grid (TV computer)", "Ratings & image (graphs)", "Save / Load (wall picture)", "Options (sound, mouse speed)" };
+static const u8 k_OfficeScr[] = { SCR_GRID, SCR_RATINGS, SCR_SAVE, SCR_OPTIONS };
+#define OFFICE_N 4
 
 static void OfficeRowBody(u8 i)
 {
@@ -297,7 +297,7 @@ void Office_Draw(void) __banked
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Your office");
 	for (i = 0; i < OFFICE_N; i++) OfficeRowBody(i);
 	Ui_Color(UI_GRAY);
-	Ui_Text(4, (u8)(CONTENT_Y + 66), "Tower map & bank statement: not open yet.");
+	Ui_Text(4, (u8)(CONTENT_Y + 74), "Tower map & bank statement: not open yet.");
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:use  BACK:corridor");
 }

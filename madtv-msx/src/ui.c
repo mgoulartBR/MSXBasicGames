@@ -1,5 +1,5 @@
 #include "ui.h"
-#include "font/font_mgl_sample6.h"
+extern const u8 g_Font_MGL_Sample6[];   // dados da fonte vivem no segmento 3 (banco 3: dados), liberando ~1,5 KB do codigo fixo
 
 #define FONT_SRC_Y  212          // fonte branca desempacotada em page 0, linhas invisiveis (212..251)
 #define FONT_Y0     256          // variantes coloridas na pagina 1 da VRAM
@@ -197,7 +197,8 @@ u8 Input_TypedChar(void)
 }
 
 // ---------------------------------------------------------------- ponteiro (mouse) e sprites comuns
-u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_InExtra;
+u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_InExtra, g_PtrSpeed;
+static i16 s_AccX, s_AccY;
 static Mouse_State s_Mouse;
 static u8 s_PtrShown, s_AutoIdle[2], s_AutoTurn;
 u8 g_PtrFound;                     // 1 = o modo automatico acabou de achar um mouse (a UI mostra um aviso e zera)
@@ -227,7 +228,7 @@ void Ui_SpriteSetup(void)
 	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 24);         // sprites do predio comecam escondidos
 	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3 da VRAM
 	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
-	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoTurn = 0;   // modo 3 = automatico
+	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrSpeed = 1; s_AccX = s_AccY = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoTurn = 0;   // modo 3 = automatico
 	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; s_Mouse.dX = 0; s_Mouse.dY = 0;
 	PtrDraw();
 	VDP_EnableSprite(TRUE);
@@ -257,8 +258,12 @@ u8 Pointer_Update(void)
 	}
 	Mouse_Read(g_PtrMode == 1 ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);
 	if (s_Mouse.dX == -1 && s_Mouse.dY == -1) { s_Mouse.dX = 0; s_Mouse.dY = 0; }   // linhas flutuando (sem mouse): ignora, evita deriva do cursor
-	nx = (i16)g_PtrX + Mouse_GetOffsetX(&s_Mouse);
-	ny = (i16)g_PtrY + Mouse_GetOffsetY(&s_Mouse);
+	{                                                                   // sensibilidade: multiplicador em meios (1, 2, 4, 6 = x0,5 x1 x2 x3) com resto acumulado
+		static const u8 k_Mul[4] = { 1, 2, 4, 6 };
+		s_AccX += (i16)Mouse_GetOffsetX(&s_Mouse) * k_Mul[g_PtrSpeed & 3]; s_AccY += (i16)Mouse_GetOffsetY(&s_Mouse) * k_Mul[g_PtrSpeed & 3];
+		nx = (i16)g_PtrX + s_AccX / 2; ny = (i16)g_PtrY + s_AccY / 2;
+		s_AccX -= (s_AccX / 2) * 2; s_AccY -= (s_AccY / 2) * 2;
+	}
 	if (nx < 2) nx = 2; if (nx > 253) nx = 253;
 	if (ny < 2) ny = 2; if (ny > 209) ny = 209;
 	if ((u8)nx != g_PtrX || (u8)ny != g_PtrY) { g_PtrX = (u8)nx; g_PtrY = (u8)ny; ret |= PTR_MOVED; }
