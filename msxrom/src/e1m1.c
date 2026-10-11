@@ -23,7 +23,7 @@ __sfr __at(0xA9) ppi_b;
 #define SCR_W 256
 #define VIEW_H 178
 #define HUD_Y 178
-#define BAR_DY 182
+#define BAR_DY 178
 #define PLAYER_R 14
 #define TEXY_WALL 512
 #define MAX_SPR 10
@@ -152,8 +152,7 @@ static void blk_load(u16 bi){
   gi=0x53; gtransfer(p+(u16)nv*6+(u16)nf*11,(u16)nf*8);
   cell_nv=nv; cell_nf=nf; cur_blk=bi;
 }
-static u8 geo_ok=1;
-static void geo_wait(void){ u16 t=50000; while((gi&1)&&--t); if(!t)geo_ok=0; }
+static void geo_wait(void){ u16 t=50000; while((gi&1)&&--t); }
 static u8 geo_present(void){ return gi!=0xFF; }
 static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
   u8 i; gi=0; for(i=0;i<9;i++)gw(m[i]); gw(tx); gw(ty); gw(tz);
@@ -220,7 +219,7 @@ static void new_game(void){
   BANK(META_BANK);
   for(i=0;i<NTHING;i++){
     cpy(&tr,DATA+META_THING+i*7,7);
-    th[i].x=tr.x; th[i].y=tr.y; th[i].kind=tr.kind; th[i].on=1; th[i].st=S_ASLEEP; th[i].t=i*3; th[i].vis=0; th[i].hp=tr.kind<3?mon_hp[tr.kind]:0;
+    th[i].x=tr.x; th[i].y=tr.y; th[i].kind=tr.kind; th[i].on=1; th[i].st=S_ASLEEP; th[i].t=i*3; th[i].vis=0; th[i].hp=tr.kind<3?mon_hp[tr.kind]:tr.kind==K_BARREL?20:0;
     if(tr.kind<3)total_mon++; else if(tr.kind>=K_STIM&&tr.kind<=K_SHOTGUN)total_items++;
   }
 }
@@ -231,19 +230,38 @@ static void damage_player(s16 d){
 static void wake_all(s16 range){
   u8 i; for(i=0;i<NTHING;i++) if(th[i].kind<3&&th[i].st==S_ASLEEP&&th[i].on){ s16 dx=th[i].x-px,dy=th[i].y-py; if(s16abs(dx)+s16abs(dy)<range) th[i].st=S_CHASE; }
 }
-static void kill_mon(u8 i){ th[i].st=S_DYING; th[i].t=10; kills++; sfx=60; }
+static void kill_mon(u8 i){ th[i].st=S_DYING; th[i].t=0; kills++; sfx=60; }
 static void hit_thing(u8 i,s16 d){
-  if(th[i].kind==K_BARREL) return;
   if(th[i].st>=S_DYING)return;
-  th[i].hp-=d; th[i].st=S_PAIN; th[i].t=6;
+  th[i].hp-=d;
+  if(th[i].kind==K_BARREL){ if(th[i].hp<=0){ th[i].st=S_DYING; th[i].t=0; } return; }
+  th[i].st=S_PAIN; th[i].t=6;
   if(th[i].hp<=0) kill_mon(i);
+}
+static s16 blast_damage(s16 x,s16 y,s16 ox,s16 oy){
+  s16 dx=s16abs(x-ox),dy=s16abs(y-oy),d=dx>dy?dx:dy;
+  return d<128&&los(ox,oy,x,y)?128-d:0;
+}
+static void explode(u8 i){
+  u8 j; s16 d,x=th[i].x,y=th[i].y;
+  if(hp>0){ d=blast_damage(px,py,x,y); if(d)damage_player(d); }
+  for(j=0;j<NTHING;j++){
+    if(j==i||!th[j].on||th[j].st>=S_DYING||(th[j].kind>=3&&th[j].kind!=K_BARREL))continue;
+    d=blast_damage(th[j].x,th[j].y,x,y); if(d)hit_thing(j,d);
+  }
+  wake_all(900); sfx=60;
+}
+static void death_tick(u8 i){
+  Th *m=&th[i];
+  if(++m->t==4&&m->kind==K_BARREL)explode(i);
+  if(m->t>=10){ m->st=S_DEAD; if(m->kind==K_BARREL)m->on=0; }
 }
 static void shoot(void){
   u8 i,best=255; s16 bz=32000,s=isin(yaw),c=icos(yaw);
   if(ammo<=0){ say("SEM MUNICAO!",40); return; }
   ammo--; cool=12; fire_t=8; sfx=30; wake_all(900);
   for(i=0;i<NTHING;i++){ s16 dx,dy,xc,zc;
-    if(th[i].kind>=3||!th[i].on||th[i].st>=S_DYING)continue;
+    if((th[i].kind>=3&&th[i].kind!=K_BARREL)||!th[i].on||th[i].st>=S_DYING)continue;
     dx=th[i].x-px; dy=th[i].y-py;
     xc=mulq14(dx,c)-mulq14(dy,s); zc=mulq14(dx,s)+mulq14(dy,c);        /* x lateral, z a frente */
     if(zc>8&&zc<bz&&xc>-20&&xc<20&&los(px,py,th[i].x,th[i].y)){bz=zc;best=i;}
@@ -279,11 +297,11 @@ static void mon_attack(u8 i){
 static void mon_update(u8 i){
   Th *m=&th[i]; s16 dx=px-m->x,dy=py-m->y,ad=s16abs(dx)+s16abs(dy),sx,sy,sp;
   if(m->st==S_DEAD)return;
-  if(m->st==S_DYING){ if(--m->t==0)m->st=S_DEAD; return; }
+  if(m->st==S_DYING){ death_tick(i); return; }
   if(ad>1800&&m->st==S_ASLEEP)return;
-  m->t++;
   if(m->st==S_ASLEEP){ if(ad<1100&&(((fcnt+i)&3)==0)&&los(px,py,m->x,m->y)) m->st=S_CHASE; return; }
   if(m->st==S_PAIN||m->st==S_ATTACK){ if(--m->t==0)m->st=S_CHASE; return; }
+  m->t++;
   sp=2;
   if(ad>56){
     sx=(s16abs(dx)>6)?(dx>0?sp:-sp):0; sy=(s16abs(dy)>6)?(dy>0?sp:-sp):0;
@@ -307,6 +325,7 @@ static void update(void){
   for(i=0;i<NTHING;i++){
     if(!th[i].on)continue;
     if(th[i].kind<3) mon_update(i);
+    else if(th[i].kind==K_BARREL){ if(th[i].st==S_DYING)death_tick(i); else th[i].t++; }
     else if(th[i].kind<=K_SHOTGUN){ s16 dx=px-th[i].x,dy=py-th[i].y; if(s16abs(dx)+s16abs(dy)<36) pickup(i); }
   }
   sc=rast(px,py);
@@ -339,7 +358,7 @@ static void number(s16 v,s16 xr,u8 pct){
   if(v<0)v=0; if(v>999)v=999;
   do{ d[n++]=v%10; v/=10; }while(v);
   x=xr; if(pct){ blit(digit_tab[10][0],digit_tab[10][1],x,BAR_DY+3,digit_tab[10][2],digit_tab[10][3]); }
-  for(i=0;i<n;i++){ x-=w; blit(digit_tab[d[i]][0],digit_tab[d[i]][1],x,BAR_DY+3,w,digit_tab[0][3]); }
+  for(i=0;i<n;i++){ x-=w; blit(digit_tab[d[i]][0],digit_tab[d[i]][1],x,BAR_DY+3,digit_tab[d[i]][2],digit_tab[d[i]][3]); }
 }
 static void hud_static(void){
   fill(0,HUD_Y,SCR_W,34,0); blit(BAR_X,BAR_Y,0,BAR_DY,BAR_W,BAR_H); blit(0,ARMS_Y,83,BAR_DY,ARMS_W,ARMS_H);
@@ -350,8 +369,8 @@ static void hud_dynamic(void){
   u8 f=face_idx();
   if(hp!=sh_hp){ blit(BAR_X+38,BAR_Y,38,BAR_DY,45,BAR_H); number(hp,72,1); }
   if(armor!=sh_ar){ blit(BAR_X+140,BAR_Y,140,BAR_DY,50,BAR_H); number(armor,177,1); }
-  if(ammo!=sh_am){ blit(BAR_X,BAR_Y,0,BAR_DY,40,BAR_H); number(ammo,35,0); }
-  if(f!=sh_face){ blit(BAR_X+115,BAR_Y,115,BAR_DY,24,BAR_H); blit(face_tab[f][0],face_tab[f][1],114,BAR_DY+1,face_tab[f][2],face_tab[f][3]); }
+  if(ammo!=sh_am){ blit(BAR_X,BAR_Y,0,BAR_DY,38,BAR_H); number(ammo,35,0); }
+  if(f!=sh_face){ blit(BAR_X+114,BAR_Y,114,BAR_DY,26,BAR_H); blit(face_tab[f][0],face_tab[f][1],face_tab[f][4],BAR_DY+face_tab[f][5],face_tab[f][2],face_tab[f][3]); }
 }
 static void hud_update(void){
   u8 p0=page;
@@ -375,12 +394,12 @@ static u8 vbuf[24*MAX_SPR],fbuf[11*MAX_SPR],tbuf[8*MAX_SPR];
 #define SPR_NY 2353
 #define SPR_NZ (-2202)
 static u8 mon_slot(const Th *m){
-  u8 base=m->kind*6;                                                 /* zombie 0, sargento 6, imp 12 */
-  if(m->st==S_DEAD)return base+5;
-  if(m->st==S_DYING)return base+4;
-  if(m->st==S_PAIN)return base+3;
-  if(m->st==S_ATTACK)return base+2;
-  return base+((m->t>>2)&1);
+  if(m->st==S_DEAD)return mon_death[m->kind][4];
+  if(m->st==S_DYING)return mon_death[m->kind][m->t>>1];
+  if(m->st==S_PAIN)return mon_pain[m->kind];
+  if(m->st==S_ATTACK)return mon_attack_frames[m->kind][m->t>5?0:m->t>2?1:2];
+  if(m->st==S_ASLEEP)return mon_walk[m->kind][0];
+  return mon_walk[m->kind][(m->t>>1)&3];
 }
 static void draw_gun(void){
   u8 f=0; const int *g;
@@ -423,16 +442,19 @@ static void render(void){
     else { u8 w=0; for(j=1;j<MAX_SPR;j++) if(cd[j]>cd[w])w=j; if(d<cd[w]){ cand[w]=i; cd[w]=d; } }
   }
   for(n=0;n<cn;n++){
-    Th *m=&th[cand[n]]; s16 hw,ht,hx,hy,fl; u8 u,w,b;
+    Th *m=&th[cand[n]]; s16 hx,hy,fl; u8 u,w,b,sw,sh;
     slot=(m->kind<3)?mon_slot(m):kind_spr[m->kind];
-    hw=(s16)spr_scale[slot]*3; ht=(s16)spr_scale[slot]*8;
-    hx=mulq14(M[0],hw); hy=mulq14(M[2],hw);
+    if(m->kind==K_BARREL)slot=m->st==S_DYING?SPR_BEXPA0+(m->t>>1):SPR_BAR1A0+((m->t>>2)&1);
     fl=floor_at(m->x,m->y); v=vbuf+24*k; f=fbuf+11*k; t=tbuf+8*k;
-    put16(v,m->x-hx);put16(v+2,fl+ht);put16(v+4,m->y-hy);  put16(v+6,m->x+hx);put16(v+8,fl+ht);put16(v+10,m->y+hy);
-    put16(v+12,m->x+hx);put16(v+14,fl);put16(v+16,m->y+hy); put16(v+18,m->x-hx);put16(v+20,fl);put16(v+22,m->y-hy);
+    hx=mulq14(M[0],spr_size[slot][0]); hy=mulq14(M[2],spr_size[slot][0]);
+    put16(v,m->x+hx);put16(v+2,fl+spr_size[slot][2]);put16(v+4,m->y+hy);
+    put16(v+18,m->x+hx);put16(v+20,fl+spr_size[slot][3]);put16(v+22,m->y+hy);
+    hx=mulq14(M[0],spr_size[slot][1]); hy=mulq14(M[2],spr_size[slot][1]);
+    put16(v+6,m->x+hx);put16(v+8,fl+spr_size[slot][2]);put16(v+10,m->y+hy);
+    put16(v+12,m->x+hx);put16(v+14,fl+spr_size[slot][3]);put16(v+16,m->y+hy);
     b=cell_nv+4*k; f[0]=b;f[1]=b+1;f[2]=b+2;f[3]=b+3; put16(f+4,SPR_NX);put16(f+6,SPR_NY);put16(f+8,SPR_NZ); f[10]=0x80;
-    u=(slot%SPR_COLS)*SPR_CW; w=(slot/SPR_COLS)*SPR_CH+1;                 /* +1: ver TSTRIDE */
-    t[0]=u;t[1]=w;t[2]=u+SPR_CW-1;t[3]=w;t[4]=u+SPR_CW-1;t[5]=w+SPR_CH-1;t[6]=u;t[7]=w+SPR_CH-1;
+    u=spr_rect[slot][0]; w=spr_rect[slot][1]; sw=spr_rect[slot][2]-1; sh=spr_rect[slot][3]-1;
+    t[0]=u;t[1]=w;t[2]=u+sw;t[3]=w;t[4]=u+sw;t[5]=w+sh;t[6]=u;t[7]=w+sh;
     k++;
   }
   geo_light(LC);
@@ -447,7 +469,6 @@ static void render(void){
   if(dbg) debug_text();
 }
 
-static void mark(u8 n){ u8 p0=page; for(page=0;page<2;page++) fill(228+n*6,205,4,4,(n>=2&&!geo_ok)?C_RED:C_WHITE); page=p0; }
 static void no_geo(void){
   page=0; fill(0,0,SCR_W,HUD_Y,C_PANEL);
   text(46,70,FONT_ORANGE,"GEO3D NAO ENCONTRADO"); text(46,86,FONT_GRAY,"USE EXT GEO3D NO OPENMSX"); text(46,102,FONT_GRAY,"TIPO DE ROM ASCII16");
@@ -470,19 +491,18 @@ void main(void){
   load_meta(); new_game(); keys=old_keys=dbg=0;
   for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
   vr(1,0x40);
-  mark(0);
   if(!geo_present()) no_geo();
-  mark(1); geo_init();
+  geo_init();
   page=0; sh_hp=-1; sh_ar=-1; sh_am=-1; sh_face=255; hud_update();
-  { u8 first=1;
   for(;;){
     read_keys();
     if((keys&K_TAB)&&!(old_keys&K_TAB))dbg^=1;
-    if(over){ if((keys&K_FIRE)&&!(old_keys&K_FIRE)){ new_game(); sh_hp=-1; sh_ar=-1; sh_am=-1; sh_face=255; } } else update();
+    if(over){
+      if((keys&K_FIRE)&&!(old_keys&K_FIRE)){ new_game(); sh_hp=-1; sh_ar=-1; sh_am=-1; sh_face=255; }
+      else for(i=0;i<NTHING;i++)if(th[i].on&&th[i].st==S_DYING)death_tick(i);
+    } else update();
     page^=1; render(); hud_update(); wait_ce();
-    if(first){ mark(2); }
     wait_vblank(); vr(2,0x1F|((u16)page<<5));
-    if(first){ mark(3); first=0; }
     sound_tick();
-  } }
+  }
 }

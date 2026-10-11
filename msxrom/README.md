@@ -1,5 +1,47 @@
 # MSX DOOM — ROM texturizada (turbo R + V9968 + Geo3D)
 
+## E1M1 — revisão de HUD e combate
+
+Esta revisão do E1M1 privado corrige os offsets do rosto e a largura individual dos números,
+evitando copiar pixels de glifos vizinhos. A limpeza da munição não invade o campo de saúde;
+os quatro marcadores de boot foram retirados da barra de status. A barra ocupa as 34 linhas
+disponíveis: escala horizontal 256/320 e vertical 34/32, para compensar a diferença de aspecto
+dos pixels. Rosto e números deixam de ficar achatados. Os patches usam nearest-neighbor.
+A pistola ocupa a antiga região livre de flats, linhas 640–767; o HUD fica em 896–1023.
+
+Os três tipos de inimigo usam todos os quadros **frontais** de caminhada, ataque, dor e morte.
+Cada um percorre cinco quadros de queda (dois quadros da engine por pose) e mantém o cadáver.
+O temporizador de ataque/dor agora termina corretamente. O atlas 256×128 empacota 58 patches;
+as billboards preservam proporções e offsets do WAD em vez de encaixar todas as poses numa célula fixa.
+As oito direções e mortes extremas alternativas ainda não estão implementadas.
+
+Barris têm 20 HP: recebem tiros, animam BEXPA0–BEXPE0 e explodem no terceiro quadro da sequência.
+Dano radial: `128 − max(abs(dx), abs(dy))`, até 128 unidades, condicionado à LOS rasterizada.
+A armadura absorve 1/3 do dano ao jogador; inimigos e outros barris também são atingidos.
+Barris em explosão não recebem novos tiros e são removidos ao terminar. A sequência continua
+se o jogador morrer; reiniciar restaura os barris. O tempo das animações segue os quadros da engine,
+não os tics de 35 Hz do Doom original.
+
+Regressões privadas (SDCC 4.2.0, `z80==1.2.0`, numpy/Pillow e modelo de referência Geo3D):
+```sh
+E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1.py
+E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1_gameplay.py
+python3 -I tools/test_e1m1_debug.py
+E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1_ceiling.py
+```
+`test_e1m1_openmsx.tcl` aceita `E1M1_GAMEPLAY=1` para conferir HUD, queda, tiro no barril,
+dano e reação em cadeia diretamente no fork. São cenários preparados pelo debugger, não uma
+partida completa. A contagem usa o latch do VDP para não tratar dados `0x82` como escrita do R#2,
+e executa as verificações na troca de página, sem avançar acidentalmente o estado seguinte.
+As medições históricas abaixo devem ser tratadas separadamente das novas medições corrigidas.
+Na comparação atual, ambas as ROMs deram 10,90 FPS no início e 9,59 com TAB, sem regressão
+mensurável nesses dois casos. Capturas `.vram` são o framebuffer lido diretamente do fork
+na troca de página; em execução acelerada, o screenshot SDL pode refletir um frame anterior.
+
+Não foram corrigidos nesta revisão PVS, near clipping, ordenação painter, portas abertas,
+elevadores ou os glitches do cenário. FPGA, BIOS Panasonic e hardware físico permanecem UNTESTED.
+WAD, ROM e dados derivados continuam privados e fora do Git.
+
 **Fase "HANGAR"**: 26×26 células, original (inspirada no *espírito* do E1M1, sem copiar a geometria de nenhum mapa da id Software): sala inicial, corredor, grande salão com poço de ácido e passarela, salas laterais e sala de saída. Veja `out/tour.png`.
 
 ROM **ASCII16** de 1 MiB em C/SDCC: SCREEN 8 com paleta **EPAL de 256 cores**, paredes **texturizadas pelo Geo3D**

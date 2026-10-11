@@ -43,13 +43,16 @@ x0,y0=rd16('px'),rd16('py'); held.add('up'); frames(10); held.clear(); x1,y1=rd1
 check('andar para frente (norte)',y1>y0+20 and abs(x1-x0)<5,f'({x0},{y0})->({x1},{y1})')
 y_=rd8('yaw'); held.add('right'); frames(5); held.clear(); check('girar',(rd8('yaw')-y_)&255==15,f"yaw {y_}->{rd8('yaw')}")
 # colisao: anda 400 quadros em varias direcoes; precisa permanecer em celulas abertas
+for mm in mons: mem[sym['th']+mm*TS+9]=0
 bad=0
 for yaw in (0,40,90,128,200):
     wr8('yaw',yaw); held.add('up'); 
     for _ in range(40):
         frames(5)
         if not free(rd16('px'),rd16('py')): bad+=1
+        wr16('hp',100); wr8('over',0)
     held.clear()
+for mm in mons: mem[sym['th']+mm*TS+9]=1
 check('colisao: jogador nunca entra em celula bloqueada',bad==0,f'violacoes={bad}')
 # tiro em monstro: zombie com linha de visao
 def place_facing(i,d=140):
@@ -61,7 +64,12 @@ def place_facing(i,d=140):
                 wr16('px',int(cx)); wr16('py',int(cy)); 
                 wr8('yaw',int(round(math.atan2(t['x']-cx,t['y']-cy)/(2*math.pi)*256))&255); return True
     return False
-m0=mons[0]; check('posicao com linha de visao ao monstro',place_facing(m0))
+m0=mons[0]
+isolated=[i for i in range(NT) if i!=m0 and (th(i)['kind']<3 or th(i)['kind']==14)]
+saved_on={i:th(i)['on'] for i in isolated}
+for i in isolated: mem[sym['th']+i*TS+9]=0
+wr16('hp',100); wr8('over',0); wr8('cool',0)
+check('posicao com linha de visao ao monstro',place_facing(m0))
 set_th(m0,hp=20); mem[sym['th']+m0*TS+7]=0                        # dormindo
 frames(4); n0=rd16('ammo'); k0=rd8('kills')
 for k in range(12):
@@ -69,6 +77,7 @@ for k in range(12):
     if th(m0)['st']>=4: break
 check('tiros abatem o monstro',th(m0)['st'] in (4,5) and rd8('kills')==k0+1,f"st={th(m0)['st']} abates={rd8('kills')} municao {n0}->{rd16('ammo')}")
 check('municao diminui por tiro',rd16('ammo')<n0)
+for i,on in saved_on.items(): mem[sym['th']+i*TS+9]=on
 # pickup
 it=[i for i in items if th(i)['kind']==3 or th(i)['kind']==4][0]; t=th(it)
 wr16('hp',50); wr16('px',t['x']); wr16('py',t['y']); frames(3)

@@ -3,6 +3,16 @@
 Documento de passagem de tarefa. Resume **tudo** o que foi pedido, decidido, construído, medido, quebrado e corrigido nesta conversa, o estado atual do código, as restrições do usuário e o que falta fazer. Escrito em português porque o usuário trabalha em português.
 
 > **Leia primeiro a seção 2 (restrições do usuário) e a seção 12 (o que está em aberto).**
+> **Retomada posterior — HUD/animações/barris:** o estado atual está na seção correspondente do README.
+> Rosto usa offsets Doom; números usam a própria largura; limpeza da munição não invade saúde.
+> HUD ocupa 256×34, escala X=0,8/Y=34/32; pistola realocada na região livre 640–767.
+> Atlas agora tem 58 patches em 256×128 com proporções/offsets preservados, incluindo caminhada,
+> ataque, dor, cinco poses de queda por inimigo e cinco de explosão. Barris de 20 HP recebem tiros,
+> aplicam dano radial com LOS/armadura, detonam outros barris e desaparecem. Cadáveres persistem.
+> As referências abaixo a seis poses, células fixas, barris indestrutíveis e marcadores de boot são históricas.
+> O teste openMSX foi corrigido para filtrar o latch do VDP e observar a troca de página sem polling tardio.
+> Não comparar seus FPS com os históricos sem repetir a medição de ambas as ROMs pelo contador corrigido.
+> Não há animação em oito direções, morte extrema ou correção nova de glitches geométricos.
 > **Retomada posterior — teto:** máscara preta pós-Geo3D removida após as capturas X508 Y-3230 A2, X1615 Y-2511 A2 e X1765 Y-2540 A320.
 > Fundo na cor do teto do setor atual; até quatro planos residentes na altura/cor dos setores, usando somente espaço livre do lote (nenhuma parede/piso/UV removido).
 > Os 1232 lotes passaram no teste de preservação, com 2146 planos adicionados. BUILD OK, 14/14 SIMULATED, TAB SIMULATED e OPENMSX TESTED passaram.

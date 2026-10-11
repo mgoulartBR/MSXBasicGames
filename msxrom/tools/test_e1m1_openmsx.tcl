@@ -20,11 +20,20 @@ if {[info exists env(E1M1_HEADER)]} {set header_path $env(E1M1_HEADER)}
 set f [open $header_path r]
 set header [read $f]
 close $f
+if {[info exists env(E1M1_GAMEPLAY)] && $env(E1M1_GAMEPLAY)} {
+    source [file join $root tools test_e1m1_gameplay_openmsx.tcl]
+}
 regexp {#define FONT_GRAY (\d+)} $header -> fontrow
 regexp {#define C_BLACK (\d+)} $header -> black
 regexp {#define FONT_CHARS "([^"]+)"} $header -> fontchars
 set flips 0
-debug set_watchpoint write_io 0x99 {$::wp_last_value == 0x82} {incr ::flips}
+debug set_watchpoint write_io 0x99 {$::wp_last_value == 0x82 && [debug read {VDP register latch status} 0]==0} {
+    incr ::flips
+    if {[info exists ::callback] && $::flips >= $::target} {
+        set command $::callback; unset ::callback
+        after time 0 [list checked_callback $command]
+    }
+}
 set throttle off
 set maxframeskip 0
 set power on
@@ -47,10 +56,12 @@ proc check {condition description} {
 proc await_frames {n callback} {
     set ::target [expr {$::flips+$n}]
     set ::callback $callback
-    after time 0.001 poll
 }
-proc poll {} {
-    if {$::flips >= $::target} {eval $::callback} else {after time 0.001 poll}
+proc checked_callback {command} {
+        if {[catch {eval $command} error options]} {
+            puts $::log "FAIL callback: [dict get $options -errorinfo]"
+            close $::log; exit
+        }
 }
 proc panel {} {
     set base [expr {(([debug read {VDP regs} 2]>>5)&3)*65536+12*256+2}]
@@ -130,7 +141,10 @@ proc coords_updated {} {
     next_cardinal
 }
 proc next_cardinal {} {
-    if {$::cardinal==4} {start_benchmark; return}
+    if {$::cardinal==4} {
+        if {[llength [info commands gameplay_start]]} {gameplay_start} else {start_benchmark}
+        return
+    }
     wr8 yaw [expr {$::cardinal*64}]
     await_frames 3 cardinal_test
 }

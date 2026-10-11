@@ -24,40 +24,47 @@ def scaled(rgba,s):
 def png(name): return np.array(Image.open(os.path.join(A,name+'.png')).convert('RGBA'),np.uint8)
 
 # ---------------------------------------------------------------------------------------------- sprites / hud
-SPRITES=['POSSA1','POSSB1','POSSE1','POSSG1','POSSI0','POSSL0',
-         'SPOSA1','SPOSB1','SPOSE1','SPOSG1','SPOSI0','SPOSL0',
-         'TROOA1','TROOB1','TROOF1','TROOH1','TROOJ0','TROOM0',
-         'STIMA0','MEDIA0','BON1A0','BON2A0','ARM1A0','CLIPA0','AMMOA0','SBOXA0','SHELA0','SHOTA0','BAR1A0','COLUA0','ELECA0','CBRAA0','BEXPA0','ARM2A0','SHEL_BOX']
-SPRITES=[s for s in SPRITES if s!='SHEL_BOX']+['SBOXA0']
-SPRITES=list(dict.fromkeys(SPRITES))
+MON_FRAMES=[
+    ['POSS'+f+'1' for f in 'ABCDEFG']+['POSS'+f+'0' for f in 'HIJKL'],
+    ['SPOS'+f+'1' for f in 'ABCDEFG']+['SPOS'+f+'0' for f in 'HIJKL'],
+    ['TROO'+f+'1' for f in 'ABCDEFGH']+['TROO'+f+'0' for f in 'IJKLM']]
+SPRITES=sum(MON_FRAMES,[])+['STIMA0','MEDIA0','BON1A0','BON2A0','ARM1A0','CLIPA0','AMMOA0','SBOXA0','SHELA0','SHOTA0','COLUA0','ELECA0','CBRAA0','ARM2A0','BAR1A0','BAR1B0']+['BEXP'+f+'0' for f in 'ABCDE']
 SLOT={n:i for i,n in enumerate(SPRITES)}
 CW,CH=24,32
 def build_sprite_cells(w,pal):
-    cells=np.zeros((4*CH,10*CW,4),np.uint8); info=[]
+    cells=np.zeros((128,256,4),np.uint8); info=[None]*len(SPRITES); frames=[]
     for i,n in enumerate(SPRITES):
         idx,lo,to=w.picture(n); rgba=to_rgba(w,idx,pal); h,wd=idx.shape
-        s=0.5 if n[:4] in ('POSS','SPOS','TROO','BEXP') else 1.0
-        s=min(s,(CH)/h,(CW-2)/wd) if True else s
-        if n[:4] in ('POSS','SPOS','TROO','BEXP'): s=min(0.5,s)
+        s=0.5 if n[:4] in ('POSS','SPOS','TROO','BEXP','BAR1') else min(1.0,CH/h,(CW-2)/wd)
         sc=scaled(rgba,s); sh,sw=sc.shape[:2]
-        x0=int(round(CW/2-lo*s)); x0=min(max(0,x0),CW-sw); y0=CH-sh
-        cx,cy=(i%10)*CW,(i//10)*CH; cells[cy+y0:cy+y0+sh,cx+x0:cx+x0+sw]=sc
-        info.append((1.0/s))                                          # unidades do mundo por texel
+        frames.append((i,sc,(-lo,round(sw/s)-lo,to,to-round(sh/s))))
+    heights=[0]*256
+    for i,sc,size in sorted(frames,key=lambda f:(-f[1].shape[0],-f[1].shape[1],f[0])):
+        sh,sw=sc.shape[:2]
+        cy,cx=min((max(heights[x:x+sw+1]),x) for x in range(256-sw))
+        assert cy+sh+1<=128,('atlas de sprites cheio',SPRITES[i],cy+sh+1)
+        cells[cy:cy+sh,cx:cx+sw]=sc
+        heights[cx:cx+sw+1]=[cy+sh+1]*(sw+1)
+        info[i]=((cx,cy+1,sw,sh),size)                                 # +1 compensa TSTRIDE=255
     return cells,info
 
 GUN=[('PISGA0',0.65),('PISGB0',0.65),('PISGC0',0.65),('PISGD0',0.65),('PISFA0',0.65)]
 FACES=['STFST00','STFST10','STFST20','STFST30','STFST40','STFDEAD0']
 DIGITS=['STTNUM%d'%i for i in range(10)]+['STTPRCNT','STTMINUS']
+HUD_SX,HUD_SY=0.8,34/32
+def hud_scaled(rgba):
+    h,w=rgba.shape[:2]
+    return np.array(Image.fromarray(rgba).resize((round(w*HUD_SX),round(h*HUD_SY)),Image.Resampling.NEAREST))
 
 def build_images(w,pal,sc,atlas_rgb,atlas_alpha):
     """devolve dict de RGBA (para a quantizacao) e posicoes."""
     imgs={}
     imgs['atlas']=np.dstack([atlas_rgb,np.where(atlas_alpha,255,0).astype(np.uint8)])
     cells,winfo=build_sprite_cells(w,pal); imgs['sprites']=cells
-    bar=to_rgba(w,w.picture('STBAR')[0],pal); imgs['bar']=scaled(bar,0.8)
-    arms=to_rgba(w,w.picture('STARMS')[0],pal); imgs['arms']=scaled(arms,0.8)
-    imgs['digits']=[scaled(to_rgba(w,w.picture(n)[0],pal),0.8) for n in DIGITS]
-    imgs['faces']=[scaled(to_rgba(w,w.picture(n)[0],pal),0.8) for n in FACES]
+    bar=to_rgba(w,w.picture('STBAR')[0],pal); imgs['bar']=hud_scaled(bar)
+    arms=to_rgba(w,w.picture('STARMS')[0],pal); imgs['arms']=hud_scaled(arms)
+    imgs['digits']=[hud_scaled(to_rgba(w,w.picture(n)[0],pal)) for n in DIGITS]
+    imgs['faces']=[hud_scaled(to_rgba(w,w.picture(n)[0],pal)) for n in FACES]
     imgs['gun']=[]
     for n,s in GUN:
         idx,lo,to=w.picture(n); x1=1-lo; ytop=32-to; h,wd=idx.shape
@@ -150,7 +157,7 @@ def main():
     # --- VRAM: V = linhas 512..1023, B = linhas 468..491 (fontes)
     V=np.zeros((512,256),np.uint8)
     at=q(imgs['atlas'],dither=True); at[(at==0)]=1; V[0:at.shape[0]]=at
-    V[256:384,0:240]=q(imgs['sprites'])                                   # linhas 768..895
+    V[256:384]=q(imgs['sprites'])                                        # linhas 768..895
     bar=q(imgs['bar']); V[384:384+bar.shape[0],0:bar.shape[1]]=bar    # 896..
     layout={}
     layout['bar']=(0,896,bar.shape[1],bar.shape[0])
@@ -159,12 +166,15 @@ def main():
     for d in imgs['digits']:
         qd=q(d); V[ay-512:ay-512+qd.shape[0],x:x+qd.shape[1]]=qd; dig.append((x,ay,qd.shape[1],qd.shape[0])); x+=qd.shape[1]
     layout['digits']=dig
-    fy=ay+14; x=40; fc=[]
-    for f in imgs['faces']:
-        qf=q(f); V[fy-512:fy-512+qf.shape[0],x:x+qf.shape[1]]=qf; fc.append((x,fy,qf.shape[1],qf.shape[0])); x+=qf.shape[1]+1
+    fy=ay+max(d.shape[0] for d in imgs['digits'])+1; x=40; fc=[]
+    for name,f in zip(FACES,imgs['faces']):
+        _,left,top=w.picture(name)
+        qf=q(f); V[fy-512:fy-512+qf.shape[0],x:x+qf.shape[1]]=qf; fc.append((x,fy,qf.shape[1],qf.shape[0],round((143-left)*HUD_SX),round(-top*HUD_SY))); x+=qf.shape[1]+1
     layout['faces']=fc
-    gy=max(fy+max(f.shape[0] for f in imgs['faces'])+1,ay+arms.shape[0]+1); x=0; gn=[]
-    assert gy+53<=1024,gy
+    assert fy+max(f.shape[0] for f in imgs['faces'])<=1024
+    assert at.shape[0]<=128
+    gy=640; x=0; gn=[]  # Regiao de flats antigos, hoje livre; HUD usa toda a altura disponivel.
+    assert gy+max(g.shape[0] for g,_,_ in imgs['gun'])<=768
     for g,dx,dy in imgs['gun']:
         qg=q(g); gh=qg.shape[0]; V[gy-512:gy-512+gh,x:x+qg.shape[1]]=qg; gn.append((x,gy,qg.shape[1],gh,dx,dy)); x+=qg.shape[1]+1
     assert x<=256,x
@@ -279,14 +289,20 @@ def main():
     h+=['#define START_X %d'%start['x'],'#define START_Y %d'%start['y'],'#define START_ANG %d'%start['angle'],'#define EXIT_X %d'%((e1x+e2x)//2),'#define EXIT_Y %d'%((e1y+e2y)//2)]
     mk=sum(1 for t in things if t[2]<=2)
     h.append('#define NMON %d'%mk)
-    h.append('#define SPR_COLS 10'); h.append('#define SPR_CW %d\n#define SPR_CH %d'%(CW,CH))
-    h.append('const unsigned char spr_scale[%d]={'%len(SPRITES)+','.join('%d'%round(s*4) for s in winfo)+'};   /* unidades por texel x4 */')
+    h.append('#define NSPR %d'%len(SPRITES))
+    h.append('const unsigned char spr_rect[NSPR][4]={'+','.join('{%d,%d,%d,%d}'%r for r,_ in winfo)+'};')
+    h.append('const int spr_size[NSPR][4]={'+','.join('{%d,%d,%d,%d}'%s for _,s in winfo)+'};')
+    h.append('const unsigned char mon_walk[3][4]={'+','.join('{'+','.join(str(SLOT[n]) for n in f[:4])+'}' for f in MON_FRAMES)+'};')
+    attacks=[f[4:6] for f in MON_FRAMES[:2]]+[MON_FRAMES[2][4:7]]
+    h.append('const unsigned char mon_attack_frames[3][3]={'+','.join('{'+','.join(str(SLOT[n]) for n in (f+[f[-1]])[:3])+'}' for f in attacks)+'};')
+    h.append('const unsigned char mon_pain[3]={'+','.join(str(SLOT[f[-6]]) for f in MON_FRAMES)+'};')
+    h.append('const unsigned char mon_death[3][5]={'+','.join('{'+','.join(str(SLOT[n]) for n in f[-5:])+'}' for f in MON_FRAMES)+'};')
     for n,i in SLOT.items(): h.append('#define SPR_%s %d'%(n,i))
     h.append('const unsigned char kind_spr[18]={'+','.join(str(SLOT[SPR_OF[k]]) for k in range(18))+'};')
     bx_,by_,bw,bh=layout['bar']; h.append('#define BAR_X %d\n#define BAR_Y %d\n#define BAR_W %d\n#define BAR_H %d'%layout['bar'])
     h.append('#define ARMS_Y %d\n#define ARMS_W %d\n#define ARMS_H %d'%(layout['arms'][1],layout['arms'][2],layout['arms'][3]))
     h.append('const unsigned int digit_tab[12][4]={'+','.join('{%d,%d,%d,%d}'%d for d in layout['digits'])+'};')
-    h.append('const unsigned int face_tab[6][4]={'+','.join('{%d,%d,%d,%d}'%d for d in layout['faces'])+'};')
+    h.append('const unsigned int face_tab[6][6]={'+','.join('{%d,%d,%d,%d,%d,%d}'%d for d in layout['faces'])+'};')
     h.append('const int gun_tab[5][6]={'+','.join('{%d,%d,%d,%d,%d,%d}'%g for g in layout['gun'])+'};')
     for nm,col in (('WHITE',(255,255,255)),('RED',(255,48,48)),('PANEL',(28,24,40))):
         h.append('#define C_%s %d'%(nm,int((((base-np.array(col))**2*WEIGHT).sum(1)).argmin())+BO))
