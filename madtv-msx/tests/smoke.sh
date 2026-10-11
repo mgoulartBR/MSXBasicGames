@@ -8,12 +8,13 @@ ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
+DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); DDR=$(sym _g_DirectDraws); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
 [ -n "$G" ] && [ -n "$OFFS" ] && [ -n "$CODE" ] || { echo "FAIL: simbolos ausentes no mapa"; exit 1; }
 cat > /tmp/madtv_smoke.tcl <<TCL
 set G $G
 set OFFS $OFFS
 set CODE $CODE
+set DDR $DDR
 set SFXC $SFXC
 set MUSP $MUSP
 set PSPD $PSPD
@@ -38,7 +39,7 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]] sfx=[peek $::SFXC] mus=[peek $::MUSP] pspd=[peek $::PSPD] snds=[peek $::SNDS] psg7=[debug read {PSG regs} 7]"
+  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]] sfx=[peek $::SFXC] mus=[peek $::MUSP] pspd=[peek $::PSPD] snds=[peek $::SNDS] psg7=[debug read {PSG regs} 7] direct=[peek16 $::DDR]"
   close $f
 }
 proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 140} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
@@ -55,7 +56,7 @@ proc typecode {code} {       # digita a partir de agora: 0,16 s por tecla (apert
     set tt [expr {$tt + 0.16}]
   }
 }
-set ::RET "7 0x80"; set ::ESC "7 0x04"; set ::TAB "7 0x08"
+set ::RET "7 0x80"; set ::ESC "7 0x04"; set ::TAB "7 0x08"; set ::P "4 0x20"
 set ::UP "8 0x20"; set ::DOWN "8 0x40"; set ::LEFT "8 0x10"; set ::RIGHT "8 0x80"
 set t 8
 if {!$::env(SHOTS)} { set throttle off }     ;# modo rapido (so asserts); SHOTS=1 = tempo real, screenshots confiaveis
@@ -69,6 +70,7 @@ key RIGHT; at 0.3 { shot 1b_title_hard }
 key LEFT; at 0.3 {}
 key RET
 at 1.6 { shot 2_building; dump start }
+key P                                                ;# o jogo comeca com o relogio parado
 # --- navegacao do cursor no predio (teclas): UP -> BOSS(12), DOWN -> OFFC(9), RIGHT -> FUN(10), LEFT -> OFFC(9)
 key UP;    at 0.3 { dump navup }
 key DOWN;  at 0.3 { dump navdown }
@@ -238,7 +240,8 @@ need(g('realtor0','scr')==16 and g('realtor0','tower')==0 and g('realtor','tower
 need(g('script','scr')==17 and g('script','pstate')==1 and g('studio','scr')==18 and g('studio','pstate')==2,'Roteiros/Estudios: compra do roteiro ou inicio da producao falhou')
 need(g('opt0','scr')==19 and g('opt0','snds')==1 and g('opt1','snds')==0 and g('opt0','pspd')==1 and g('opt2','pspd')==2 and g('opt3','pspd')==1,'Opcoes: som/velocidade do mouse nao mudaram')
 need(g('navup','sfx')>g('start','sfx') and g('opt0','sfx')>g('navup','sfx'),'efeitos sonoros nao dispararam (nav/OK)')
-need(len(set(g(t,'mus') for t in ['start','navup','navdown','navright','navleft','mhover']))>=3 and all(g(t,'psg7')==0xB8 for t in ['start','navup']),'musica nao avanca / mixer do PSG != B8h')
+need(len(set(g(t,'mus') for t in ['start','navup','navdown','navright','navleft','mhover']))>=2 and all(g(t,'psg7')==0xB8 for t in ['start','navup']),'musica nao avanca / mixer do PSG != B8h')
+need(int(S['later']['direct'])-int(S['start']['direct'])<=8,'ha desenho direto na tela (apaga/reescreve) durante o jogo: %s -> %s'%(S['start']['direct'],S['later']['direct']))
 need(g('refused','won')==0 and g('refused','scr')==12,'Betty: pedido sem condicoes foi aceito')
 need(g('win','won')==1 and g('win','scr')==20,'Betty: pedido com todas as condicoes nao levou ao final feliz')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')

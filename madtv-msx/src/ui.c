@@ -11,6 +11,7 @@ static const u8 s_Col[UI_NUM_COLORS] = {
 	COLOR_WHITE, COLOR_LIGHT_YELLOW, COLOR_LIGHT_RED, COLOR_GRAY, COLOR_LIGHT_GREEN, COLOR_CYAN
 };
 #define BUF_Y 512                // pagina 2 = buffer de composicao fora da tela
+u16 g_DirectDraws;               // gancho de teste: chamadas de Ui_Text/Ui_Fill direto na tela (fora de Ui_Begin) - devem ser ~0
 static u16 s_YOff;               // 0 = desenha na tela; BUF_Y = desenha no buffer
 static u8  s_Depth;
 static u16 s_FontY;
@@ -69,6 +70,7 @@ void Ui_Color(u8 c)
 void Ui_Text(u8 x, u8 y, const char* s)
 {
 	u8 c, row;
+	if (!s_YOff) g_DirectDraws++;
 	for (; (c = (u8)*s) != 0; s++, x += GLYPH_W)
 	{
 		if (c == ' ') continue;
@@ -119,6 +121,7 @@ void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col)
 {
 	// HMMV em Screen 5 conta bytes (2 pixels): w < 2 viraria 0 bytes = a linha inteira. Sempre use w >= 2.
 	if (w < 2) w = 2;
+	if (!s_YOff) g_DirectDraws++;
 	VDP_CommandHMMV(x, y + s_YOff, w, h, COLOR_MERGE2(col));
 }
 
@@ -136,16 +139,18 @@ void Ui_End(u8 x, u8 y, u8 w, u8 h)
 	VDP_CommandHMMM(x, y + BUF_Y, x, y, ((u16)w + 1) & 0xFFFE, h);   // HMMM trabalha em bytes (2 pixels): largura par
 }
 
-u16 Ui_DirectBegin(void)
+static u8 s_SavedDepth;
+u16 Ui_DirectBegin(void)          // sai de qualquer Ui_Begin em curso (um novo Begin/End aqui dentro e atomico por conta propria)
 {
 	u16 s = s_YOff;
-	s_YOff = 0;
+	s_SavedDepth = s_Depth;
+	s_YOff = 0; s_Depth = 0;
 	return s;
 }
 
 void Ui_DirectEnd(u16 saved)
 {
-	s_YOff = saved;
+	s_YOff = saved; s_Depth = s_SavedDepth;
 }
 
 void Ui_Clear(void)
@@ -164,6 +169,8 @@ void Ui_Bar(u8 x, u8 y, u8 w, u8 h, u8 pct, u8 col)
 u8 Input_Poll(void)
 {
 	u8 in = 0, joy = Joystick_Read(g_PtrMode == 1 ? JOY_PORT_2 : JOY_PORT_1), pushed;
+	static u8 boot;
+	if (g_PtrMode == 3 && boot < 90) { boot++; joy = 0xFF; }     // ate achar o mouse, a porta dele le como joystick "fantasma" (botoes/direcoes aleatorios): ignora ~1,5 s
 	if (Keyboard_IsKeyPressed(KEY_UP)    || !(joy & JOY_INPUT_DIR_UP))    in |= IN_UP;
 	if (Keyboard_IsKeyPressed(KEY_DOWN)  || !(joy & JOY_INPUT_DIR_DOWN))  in |= IN_DOWN;
 	if (Keyboard_IsKeyPressed(KEY_LEFT)  || !(joy & JOY_INPUT_DIR_LEFT))  in |= IN_LEFT;
@@ -199,6 +206,7 @@ u8 Input_TypedChar(void)
 // ---------------------------------------------------------------- ponteiro (mouse) e sprites comuns
 u8 g_PtrX, g_PtrY, g_PtrMode, g_PtrInject, g_InExtra, g_PtrSpeed;
 static i16 s_AccX, s_AccY;
+static u16 s_AutoSig[2] = { 0xFFFF, 0xFFFF };
 static Mouse_State s_Mouse;
 static u8 s_PtrShown, s_AutoIdle[2], s_AutoTurn;
 u8 g_PtrFound;                     // 1 = o modo automatico acabou de achar um mouse (a UI mostra um aviso e zera)
@@ -228,7 +236,7 @@ void Ui_SpriteSetup(void)
 	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 24);         // sprites do predio comecam escondidos
 	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3 da VRAM
 	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
-	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrSpeed = 1; s_AccX = s_AccY = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoTurn = 0;   // modo 3 = automatico
+	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrSpeed = 1; s_AccX = s_AccY = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoSig[0] = s_AutoSig[1] = 0xFFFF; s_AutoTurn = 0;   // modo 3 = automatico
 	s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; s_Mouse.dX = 0; s_Mouse.dY = 0;
 	PtrDraw();
 	VDP_EnableSprite(TRUE);
@@ -252,8 +260,15 @@ u8 Pointer_Update(void)
 	{
 		u8 p = s_AutoTurn ^= 1;                                   // alterna as portas a cada quadro
 		Mouse_Read(p ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);
-		if (s_Mouse.dX == 0 && s_Mouse.dY == 0) { if (++s_AutoIdle[p] >= 4) { g_PtrMode = p ? 1 : 2; g_PtrFound = 1; s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; } }
-		else s_AutoIdle[p] = 0;
+		{                                                         // mouse parado = (0,0) x4; mouse em movimento = deltas que VARIAM (joystick preso le sempre o mesmo valor)
+			u16 sig = (u16)((u8)s_Mouse.dX << 8 | (u8)s_Mouse.dY);
+			if (s_Mouse.dX == -1 && s_Mouse.dY == -1) s_AutoIdle[p] = 0;
+			else if (s_Mouse.dX == 0 && s_Mouse.dY == 0) s_AutoIdle[p]++;
+			else if (sig != s_AutoSig[p]) s_AutoIdle[p] += 2;
+			else s_AutoIdle[p] = 0;
+			s_AutoSig[p] = sig;
+			if (s_AutoIdle[p] >= 4) { g_PtrMode = p ? 1 : 2; g_PtrFound = 1; s_Mouse.Buttons = 0xFF; s_Mouse.PrevButtons = 0xFF; }
+		}
 		return ret;
 	}
 	Mouse_Read(g_PtrMode == 1 ? MOUSE_PORT_1 : MOUSE_PORT_2, &s_Mouse);

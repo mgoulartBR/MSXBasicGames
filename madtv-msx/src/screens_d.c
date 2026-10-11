@@ -181,6 +181,7 @@ void Porter_Draw(void) __banked
 	for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == NONE) empty++;
 	for (s = 0; s < MAX_CONTRACTS; s++) if (g_Game.contract[s].ad != NONE) nc++;
 	Ui_Color(UI_WHITE);
+	if (g_Speed == SPEED_PAUSE) { Ui_Color(UI_YELLOW); Ui_Text(4, y, "Clock paused: press P to run the day."); y += 10; Ui_Color(UI_WHITE); }
 	if (empty) { x = Ui_Int(4, y, empty); Ui_Text(x, y, " programme slot(s) still empty."); y += 10; }
 	if (!nc) { Ui_Text(4, y, "No ad contracts: try the Ad agency."); y += 10; }
 	if (g_Game.image[0] < IMAGE_LOW) { Ui_Color(UI_RED); Ui_Text(4, y, "Image below 20: ads pay less, no credit!"); y += 10; Ui_Color(UI_WHITE); }

@@ -106,10 +106,12 @@ static void Draw_Msg(void)
 
 void Hint(const char* s)
 {
-	u16 saved = Ui_DirectBegin();      // dica: direto na tela (pode ser chamada dentro de um desenho em buffer)
+	u16 saved = Ui_DirectBegin();      // dica: composta no buffer e copiada de uma vez (nunca aparece "apagada"), mesmo se chamada dentro de outro desenho
+	Ui_Begin();
 	Ui_Fill(0, 190, 255, 10, UI_BG);
 	Ui_Color(UI_GRAY);
 	Ui_Text(4, 191, s);
+	Ui_End(0, 190, 256, 10);
 	Ui_DirectEnd(saved);
 }
 
@@ -307,12 +309,13 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	}
 }
 
+static u8 s_Prev = SPEED_1;       // velocidade anterior a pausa
+
 static void StartGame(void)
 {
 	Sim_Init(*(volatile u16*)0xFC9E ^ 0x5A5A);   // semente: JIFFY do BIOS no momento do OK
-	g_Speed = SPEED_1;
+	g_Speed = SPEED_PAUSE; s_Prev = SPEED_1;      // comeca parado: o jogador monta a programacao antes do relogio andar
 	Building_Reset();
-	Ui_Clear();
 	Header_Invalidate();
 	g_Screen = SCR_HUB;
 	g_Dirty = D_HDR | D_CON | D_MSG;
@@ -337,12 +340,12 @@ void main()
 		if (g_InExtra && g_Screen != SCR_SAVE)                     // M: liga/desliga o mouse (na tela de codigo M e uma letra)
 		{
 			Pointer_Cycle();
-			if (g_Screen == SCR_TITLE) Draw_Title();
+			if (g_Screen == SCR_TITLE) Title_Opts();
 			else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; }
 		}
 		{
 			u8 p = Pointer_Update();
-			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Draw_Title(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
+			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Title_Opts(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
 			if (p & PTR_LEFT) clk = IN_OK;
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
 			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE && g_PtrY > 128 && g_PtrY < 142) ev |= IN_RIGHT; else if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }   // clique na linha de dificuldade = trocar
@@ -355,24 +358,24 @@ void main()
 
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
-			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Draw_Title(); continue; }
+			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Title_Opts(); continue; }
 			if (ev & IN_OK) { Audio_Sfx(3); StartGame(); }
 			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Goto(SCR_SAVE); Save_EnterLoad(); }   // Esc no titulo: carregar codigo
 			continue;
 		}
 
-		// velocidade (normalizada para 50/60 Hz): 1 min de jogo = 1/2, 1/5 ou 1/12 de segundo real
+		// velocidade (normalizada para 50/60 Hz): 1 min de jogo = 1, 1/2 ou 1/6 de segundo real (um dia = 8, 4 ou 1,3 minutos)
 		hz = VDP_GetFrequency() ? 50 : 60;
-		fpm = (g_Speed == SPEED_1) ? hz / 2 : (g_Speed == SPEED_2) ? hz / 5 : hz / 12;
+		fpm = (g_Speed == SPEED_1) ? hz : (g_Speed == SPEED_2) ? hz / 2 : hz / 6;
 		if (g_Screen == SCR_SAVE) ev &= (u8)~(IN_SPEED | IN_PAUSE);      // P/TAB sao letras do codigo na tela de salvar/carregar
-		if (ev & IN_SPEED) { g_Speed = (g_Speed % (SPEED_COUNT - 1)) + 1; g_Dirty |= D_HDR; }
-		if (ev & IN_PAUSE) { g_Speed = (g_Speed == SPEED_PAUSE) ? SPEED_1 : SPEED_PAUSE; g_Dirty |= D_HDR; }
+		if (ev & IN_SPEED) { g_Speed = (g_Speed % (SPEED_COUNT - 1)) + 1; s_Prev = g_Speed; g_Dirty |= D_HDR; }
+		if (ev & IN_PAUSE) { if (g_Speed == SPEED_PAUSE) g_Speed = s_Prev; else { s_Prev = g_Speed; g_Speed = SPEED_PAUSE; } g_Dirty |= D_HDR; }
 
 		if (g_Speed != SPEED_PAUSE && g_Screen != SCR_SAVE && ++fc >= fpm)    // tempo parado na tela Salvar/Carregar
 		{
 			fc = 0;
 			e = Sim_Tick();
-			if (e & EV_DAY) Audio_Sfx(3);
+			if (e & EV_DAY) { Audio_Sfx(3); if (g_Speed != SPEED_3) { s_Prev = g_Speed; g_Speed = SPEED_PAUSE; Sim_Msg("New day: time paused. Plan it, then press P."); g_Dirty |= D_MSG; } }
 			g_Dirty |= D_HDR;
 			if (e & EV_MSG) g_Dirty |= D_MSG;
 			if (e & (EV_SLOT | EV_DAY))

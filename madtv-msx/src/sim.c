@@ -234,7 +234,7 @@ void Sim_Init(u16 seed)
 	Sim_ExtInit();                             // noticias iniciais + bibliotecas dos rivais (banked)
 	g_Game.day = 0;
 	StartDay();
-	Sim_Msg("Welcome, program director!");
+	Sim_Msg("Welcome! Time is paused: press P to start.");
 }
 
 u8 Sim_Buy(u8 idx)

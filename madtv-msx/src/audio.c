@@ -7,18 +7,99 @@ __sfr __at(0xA0) PSG_ADDR;
 __sfr __at(0xA1) PSG_DATA;
 
 u8 g_SndSfx, g_SndMus, g_SfxCount, g_MusicPos;       // g_SfxCount / g_MusicPos: ganchos de teste (smoke.sh)
-static u8 s_Frame, s_SfxId, s_SfxStep, s_SfxLeft;
+static u8 s_SfxId, s_SfxStep, s_SfxLeft;
 
 static void Wr(u8 r, u8 v) { PSG_ADDR = r; PSG_DATA = v; }
 static void Tone(u8 ch, u16 period) { Wr((u8)(ch * 2), (u8)period); Wr((u8)(ch * 2 + 1), (u8)(period >> 8)); }
 
-static const u16 k_Base[12] = { 1710, 1614, 1523, 1437, 1357, 1280, 1208, 1140, 1076, 1016, 959, 905 };   // C2..B2 (periodo = 111861/Hz)
+static const u16 k_Base[12] = { 1710, 1614, 1523, 1437, 1357, 1280, 1208, 1140, 1076, 1016, 959, 905 };   // C2..B2 (periodo PSG = 111861/Hz)
 static u16 NotePeriod(u8 n) { return (u16)(k_Base[n % 12] >> (n / 12)); }
 
-#define STEP_FRAMES 9
-#define MEL_LEN 32
-static const u8 k_Lead[MEL_LEN] = { 28,31,36,31,28,31,36,40,  26,31,35,31,26,31,35,38,  24,28,33,28,24,28,33,36,  24,29,33,29,24,29,33,31 };
-static const u8 k_Bass[8] = { 12, 7, 9, 5, 12, 7, 9, 5 };   // fundamental de cada compasso (C G Am F), repetido
+// ---- composicao original (16 compassos, colcheia = 1 passo; A = 1-8, B = 9-16; Cmaj7 Am7 Dm7 G7 ... F Em A7 Dm G7). n = semitons acima de C2.
+static const u8 k_Lead[128] = { /* 253 = sustenta, 255 = pausa */
+	28, 253, 253, 31, 36, 253, 35, 253, 33, 253, 253, 31, 28, 253, 255, 255,
+	29, 253, 33, 253, 38, 253, 253, 36, 35, 253, 253, 38, 31, 253, 255, 255,
+	28, 253, 31, 253, 36, 253, 40, 253, 38, 253, 253, 36, 33, 253, 31, 253,
+	29, 253, 33, 253, 31, 253, 35, 253, 36, 253, 253, 253, 253, 253, 255, 255,
+	33, 253, 253, 36, 41, 253, 40, 253, 31, 253, 253, 35, 40, 253, 38, 253,
+	29, 253, 253, 33, 38, 253, 36, 253, 35, 253, 38, 253, 43, 253, 41, 253,
+	40, 253, 253, 36, 33, 253, 255, 255, 31, 253, 35, 253, 37, 253, 40, 253,
+	38, 253, 253, 41, 33, 253, 255, 255, 35, 253, 31, 253, 38, 253, 255, 255
+};
+static const u8 k_Root[32] = { 12, 12, 9, 9, 14, 14, 7, 7, 12, 12, 9, 9, 14, 7, 12, 12, 5, 5, 16, 16, 14, 14, 7, 7, 5, 5, 16, 9, 14, 14, 7, 7 };
+static const u8 k_Comp[32] = { 23, 23, 19, 19, 24, 24, 17, 17, 23, 23, 19, 19, 24, 17, 23, 23, 21, 21, 19, 19, 24, 24, 17, 17, 21, 21, 19, 21, 24, 24, 17, 17 };
+static const u8 k_PatA[4] = { 0, 7, 12, 7 }, k_PatB[4] = { 0, 12, 7, 12 };   // baixo: passos pares do compasso (fundamental/quinta/oitava)
+
+// ---- chip MSX-MUSIC (YM2413/OPLL), se existir: musica em FM nos canais 1-3; senao o PSG toca a musica. Efeitos sempre no PSG (canal C).
+__sfr __at(0x7C) FM_ADDR;
+__sfr __at(0x7D) FM_DATA;
+u8 g_MusicType;                                      // 0 = PSG, 1 = FM (gancho de teste)
+static const u16 k_FmF[12] = { 345, 366, 388, 411, 435, 461, 488, 259, 274, 290, 308, 326 };   // F-number (C..B, bloco ajustado)
+
+static void FmWr(u8 r, u8 v)
+{
+	FM_ADDR = r;
+	__asm
+		nop
+		nop
+		nop
+		nop
+	__endasm;
+	FM_DATA = v;
+	__asm
+		ld b, #8
+	00001$:
+		djnz 00001$
+	__endasm;
+}
+
+static void FmNote(u8 ch, u8 n, u8 on)
+{
+	u8 s = n % 12, blk = (u8)(n / 12 + 1 + (s >= 7 ? 1 : 0));
+	u16 f = k_FmF[s];
+	FmWr((u8)(0x20 + ch), 0);                              // key off (retrigger)
+	if (!on) return;
+	FmWr((u8)(0x10 + ch), (u8)f);
+	FmWr((u8)(0x20 + ch), (u8)(0x10 | (blk << 1) | (f >> 8)));
+}
+
+static u8 DetectFm(void)                                  // procura "APRLOPLL" em 4018h de algum slot (assinatura da BIOS MSX-MUSIC)
+{
+	static const char k_Sig[9] = "APRLOPLL";
+	u8 p, s, i, id;
+	for (p = 0; p < 4; p++)
+	{
+		u8 sec = (*(volatile u8*)(0xFCC1 + p) & 0x80) ? 4 : 1;
+		for (s = 0; s < sec; s++)
+		{
+			id = (u8)(p | (sec == 4 ? (0x80 | (s << 2)) : 0));
+			for (i = 0; i < 8; i++) if (BIOS_InterSlotRead(id, (u16)(0x4018 + i)) != (u8)k_Sig[i]) break;
+			if (i == 8) { BIOS_InterSlotWrite(id, 0x7FF6, 1); return 1; }     // habilita E/S (FM-PAC); no MSX-MUSIC interno e inofensivo
+		}
+	}
+	return 0;
+}
+
+static u8 s_Step, s_Sub, s_LAge, s_BAge, s_CAge, s_LOn, s_BOn, s_COn;
+
+void Audio_Init(void) __banked
+{
+	u8 r;
+	g_SndSfx = 1; g_SndMus = 1; g_SfxCount = 0; g_MusicPos = 0; s_Sub = 0; s_SfxLeft = 0; s_SfxId = 0xFF;
+	s_Step = VDP_GetFrequency() ? 15 : 18;                  // colcheia = ~0,3 s (96 BPM) nos dois sistemas de video
+	s_LOn = s_BOn = s_COn = 0; s_LAge = s_BAge = s_CAge = 0;
+	for (r = 0; r < 7; r++) Wr(r, 0);
+	Wr(7, 0xB8);
+	Wr(8, 0); Wr(9, 0); Wr(10, 0);
+	g_MusicType = DetectFm();
+	if (g_MusicType)
+	{
+		for (r = 0; r < 3; r++) FmWr((u8)(0x20 + r), 0);
+		FmWr(0x30, (u8)((4 << 4) | 3));                    // canal 1: melodia = Flute
+		FmWr(0x31, (u8)((14 << 4) | 2));                   // canal 2: baixo = Acoustic bass
+		FmWr(0x32, (u8)((2 << 4) | 6));                    // canal 3: acompanhamento = Guitar
+	}
+}
 
 // efeitos: ate 3 trechos {periodo, quadros}
 static const u16 k_Sfx[5][3][2] = {
@@ -28,15 +109,6 @@ static const u16 k_Sfx[5][3][2] = {
 	{ { 320, 4 }, { 254, 4 }, { 214, 7 } },                 // 3 novo dia
 	{ { 285, 3 }, { 214, 3 }, { 160, 6 } },                 // 4 conquista (casamento etc.)
 };
-
-void Audio_Init(void) __banked
-{
-	u8 r;
-	g_SndSfx = 1; g_SndMus = 1; g_SfxCount = 0; g_MusicPos = 0; s_Frame = 0; s_SfxLeft = 0;
-	for (r = 0; r < 7; r++) Wr(r, 0);
-	Wr(7, 0xB8);
-	Wr(8, 0); Wr(9, 0); Wr(10, 0);
-}
 
 void Audio_Sfx(u8 id) __banked
 {
@@ -59,24 +131,55 @@ void Audio_Result(const char* msg) __banked      // resultado de uma acao do jog
 	Audio_Sfx(1);
 }
 
+static void MusicOff(void)
+{
+	Wr(8, 0); Wr(9, 0);
+	if (g_MusicType) { FmWr(0x20, 0); FmWr(0x21, 0); FmWr(0x22, 0); }
+	s_LOn = s_BOn = s_COn = 0;
+}
+
+static void MusicStep(void)
+{
+	u8 pos = g_MusicPos, st = (u8)(pos & 7), v = k_Lead[pos];
+	if (v != 253)                                            // melodia: nova nota ou pausa
+	{
+		if (v == 255) { s_LOn = 0; if (g_MusicType) FmNote(0, 0, 0); }
+		else { s_LOn = 1; s_LAge = 0; if (g_MusicType) FmNote(0, v, 1); else { Wr(0, (u8)NotePeriod(v)); Wr(1, (u8)(NotePeriod(v) >> 8)); } }
+	}
+	if (!(st & 1))                                           // baixo nos passos pares
+	{
+		u8 n = (u8)(k_Root[pos >> 2] + (((pos >> 3) & 1) ? k_PatB : k_PatA)[st >> 1]);
+		s_BOn = 1; s_BAge = 0;
+		if (g_MusicType) FmNote(1, n, 1); else { Wr(2, (u8)NotePeriod(n)); Wr(3, (u8)(NotePeriod(n) >> 8)); }
+	}
+	if (st == 2 || st == 5)                                  // acorde sincopado (terca/setima)
+	{
+		u8 n = k_Comp[pos >> 2];
+		s_COn = 1; s_CAge = 0;
+		if (g_MusicType) FmNote(2, n, 1); else if (s_SfxId >= 5) { Wr(4, (u8)NotePeriod(n)); Wr(5, (u8)(NotePeriod(n) >> 8)); }
+	}
+}
+
 void Audio_Tick(void) __banked
 {
-	u8 step, sub, v;
 	if (g_SndMus)
 	{
-		sub = s_Frame;
-		if (sub == 0)
+		if (s_Sub == 0) MusicStep();
+		if (!g_MusicType)                                    // envelopes do PSG (a cada quadro): melodia sustenta e decai, baixo "beliscado", acorde curto
 		{
-			step = g_MusicPos;
-			Tone(0, NotePeriod(k_Lead[step]));
-			if ((step & 1) == 0) { Tone(1, NotePeriod((u8)(k_Bass[step >> 2] + ((step & 3) == 2 ? 7 : 0)))); }
+			u8 v;
+			v = (u8)(s_LOn ? (s_LAge < 3 ? 9 : (u8)(8 - (s_LAge >> 3))) : 0); if (s_LOn && v < 4) v = 4;
+			Wr(8, v);
+			v = (u8)(s_BOn ? (u8)(9 - (s_BAge >> 1)) : 0); if (s_BOn && (v > 9 || v < 3)) v = 3;
+			Wr(9, v);
+			if (s_SfxId >= 5) { v = (u8)(s_COn && s_CAge < 12 ? (u8)(6 - (s_CAge >> 2)) : 0); Wr(10, v); }
 		}
-		v = (u8)(11 - sub); if (v < 3) v = 3;
-		Wr(8, v);
-		Wr(9, (g_MusicPos & 1) ? 0 : 6);
-		if (++s_Frame >= STEP_FRAMES) { s_Frame = 0; g_MusicPos = (u8)((g_MusicPos + 1) % MEL_LEN); }
+		if (s_LAge < 250) s_LAge++;
+		if (s_BAge < 250) s_BAge++;
+		if (s_CAge < 250) s_CAge++;
+		if (++s_Sub >= s_Step) { s_Sub = 0; g_MusicPos = (u8)((g_MusicPos + 1) & 127); }
 	}
-	else { Wr(8, 0); Wr(9, 0); }
+	else MusicOff();
 	if (g_SndSfx && s_SfxId < 5)
 	{
 		if (s_SfxLeft == 0)
@@ -87,7 +190,7 @@ void Audio_Tick(void) __banked
 		}
 		if (s_SfxLeft) s_SfxLeft--;
 	}
-	else Wr(10, 0);
+	else if (!g_SndMus || g_MusicType) Wr(10, 0);
 }
 
 // ---------------------------------------------------------------- OPCOES (som e mouse)
