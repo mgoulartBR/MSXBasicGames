@@ -395,40 +395,12 @@ static void overlay(void){
   text(60,88,FONT_GRAY,"ABATES"); { char b[8]; u8 n=0; s16 k=kills; if(k>=10)b[n++]='0'+k/10; b[n++]='0'+k%10; b[n++]='/'; b[n++]='0'+total_mon; b[n]=0; text(110,88,FONT_GRAY,b); }
   text(60,100,FONT_GRAY,"APERTE ESPACO");
 }
-/* Piso e teto texturizados: uma LRMM por linha de tela (mapeamento afim por linha = perspectiva correta de plano). Tile de 16x16 texels
- * por 64 unidades; a regiao replicada (256x64) faz o wrap em X (modulo 256) e deixa a faixa de V caber sem cruzar o limite. So ate zr<=120 unidades. */
-/* Teto: preto solido. O Geo3D nao tem profundidade por pixel, entao paredes/objetos mais altos que o teto atras de uma abertura apareceriam por cima dele.
- * Depois do Geo3D, pintamos de preto tudo ACIMA da linha do teto: um leque de 8 raios (passos de 32 de profundidade) da, por faixa de colunas, o setor
- * em cada trecho; a linha de corte e a mais baixa entre as projecoes do teto de cada trecho no seu fim (z = 160*H/(linha)). Entre faixas, interpola. */
-static u8 ycut[8];
-static void ceil_probe(s16 s,s16 c){
-  u8 g,i,sc,last,yc; s16 x,y,d,dx,dy,t,H; u16 r;
-  for(g=0;g<8;g++){
-    t=16+32*g-128; dx=mulq14(s,32)+(mulq14(c,32)*t)/160; dy=mulq14(c,32)+(mulq14(-s,32)*t)/160;
-    x=px; y=py; d=0; last=255; yc=0;
-    for(i=0;i<12;i++){
-      sc=rast(x,y); if(sc==255)break;
-      if(sc!=last){ if(last!=255){ H=secs[last].ceil-eye; if(H>4){ r=(160u*H)/d; if(r<89){ r=89-r; if(r>yc)yc=(u8)r; } } } last=sc; }
-      x+=dx; y+=dy; d+=32;
-    }
-    if(last!=255){ H=secs[last].ceil-eye; if(H>4){ r=(160u*H)/(i<12?d:1500); if(r<89){ r=89-r; if(r>yc)yc=(u8)r; } } }
-    ycut[g]=yc;
-  }
-}
-static void ceil_fill(void){
-  u8 j,g,f,a,b; s16 y;
-  for(j=0;j<16;j++){ s16 x=8+16*j;
-    if(x<=16)y=ycut[0]; else if(x>=240)y=ycut[7];
-    else{ g=(u8)((x-16)>>5); f=(u8)((x-16)&31); a=ycut[g]; b=ycut[g+1];
-      y=((a>b?a-b:b-a)>24)?(a<b?a:b):(s16)a+(((s16)b-(s16)a)*(s16)f)/32; }
-    if(y>0)fill(j*16,0,16,y,C_BLACK); }
-}
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
-  /* Teto preto liso; piso com as cores do setor 96 unidades a frente. */
+  /* Fundo do teto do setor atual; planos residentes ordenados junto das paredes. */
   { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
-  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,C_BLACK); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); if(!(fcnt&1))ceil_probe(sn,cs); } }
+  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,secs[s0].c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); } }
   if(s0==255){ fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
   wait_ce();
   make_view();
@@ -468,7 +440,6 @@ static void render(void){
   gi=0x58; gd=cell_nf; gd=cell_nf+k;
   if(k){ gi=0x50; gtransfer(vbuf,(u16)24*k); gi=0x52; gtransfer(fbuf,(u16)11*k); gi=0x65; gd=cell_nf; gi=0x53; gtransfer(tbuf,(u16)8*k); }
   geo_run(M,TX,TY,TZ);
-  ceil_fill();
   draw_gun();
   if(msg) text(4,4,FONT_ORANGE,msg);
   if(hurt) { fill(0,0,SCR_W,2,C_RED); fill(0,VIEW_H-2,SCR_W,2,C_RED); }

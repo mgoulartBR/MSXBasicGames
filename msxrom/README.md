@@ -159,6 +159,29 @@ Medição direta no fork Geo3D `de29fb8`, R800 ROM, simulação do jogo ativa:
 Essas cenas são selecionadas pelo debugger, não um percurso completo. O fork não cobra tempo pela geometria do Geo3D e o timing do VDP é aproximado;
 os números **não preveem FPS em FPGA/hardware**. O TAB tem custo mensurável; deixe-o desligado ao avaliar desempenho normal.
 
+### Revisão visual do teto
+
+A máscara preta pós-renderização (`ceil_probe`/`ceil_fill`) foi removida: suas faixas de 16 pixels encobriam paredes e sprites.
+O fundo usa a cor média do teto do setor atual (céu nos setores F_SKY1). Até quatro planos de teto por lote são adicionados ao Geo3D,
+na altura e cor dos respectivos setores, ordenados junto das paredes e sprites. **Só usam vértices/faces livres**, sem substituir paredes ou pisos existentes.
+O teste `E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1_ceiling.py` confere os 1232 lotes, suas listas originais e limites de hardware.
+
+Isso é uma aproximação de teto liso, **não teto texturizado nem clipping/oclusão por pixel completos**. A cobertura dos planos é limitada;
+faces que cruzam o near continuam sujeitas ao descarte do Geo3D. O fundo de cor do setor cobre essas lacunas sem blocos pretos.
+Em lacunas ainda pode aparecer geometria distante que deveria estar oculta; a oclusão integral continua pendente.
+Portas abertas, pisos simplificados e limitações de geometria/PVS permanecem.
+
+Comparação controlada no mesmo fork/perfil R800, TAB desligado, 60 frames por cena:
+
+| Posição X, Y, ângulo Doom | Antes | Revisão |
+|---|---:|---:|
+| 1056, -3616, 90 | 9,22 FPS | 10,89 FPS |
+| 508, -3230, 2 | 8,88 FPS | 11,98 FPS |
+| 1615, -2511, 2 | 7,92 FPS | 10,27 FPS |
+| 1765, -2540, 320 | 9,22 FPS | 11,98 FPS |
+
+O script de teste aceita `E1M1_MAP`, `E1M1_HEADER` e `E1M1_SCENES` para comparar ROMs distintas com os respectivos símbolos/cabeçalho.
+
 Pisos e ttetos (v3): uma LRMM por linha de tela (plano em perspectiva) com o flat do setor do jogador (tile 16x16 por 64 unidades, replicado pelo VDP em regioes
 256x64 da VRAM, linhas 640..767; janela de origem LRMM X 0..511 para o wrap). So ate ~120 unidades de profundidade (as linhas mais proximas); alem disso volta a
 faixa de cor do flat. Custo: o atlas de paredes caiu para 128 linhas (algumas texturas voltaram a 0,25 texel/unidade). Corrigido tambem o endereco do upload das

@@ -3,6 +3,12 @@
 Documento de passagem de tarefa. Resume **tudo** o que foi pedido, decidido, construído, medido, quebrado e corrigido nesta conversa, o estado atual do código, as restrições do usuário e o que falta fazer. Escrito em português porque o usuário trabalha em português.
 
 > **Leia primeiro a seção 2 (restrições do usuário) e a seção 12 (o que está em aberto).**
+> **Retomada posterior — teto:** máscara preta pós-Geo3D removida após as capturas X508 Y-3230 A2, X1615 Y-2511 A2 e X1765 Y-2540 A320.
+> Fundo na cor do teto do setor atual; até quatro planos residentes na altura/cor dos setores, usando somente espaço livre do lote (nenhuma parede/piso/UV removido).
+> Os 1232 lotes passaram no teste de preservação, com 2146 planos adicionados. BUILD OK, 14/14 SIMULATED, TAB SIMULATED e OPENMSX TESTED passaram.
+> Comparação A/B no mesmo fork/perfil R800: início 9,22→10,89 FPS; posições das capturas 8,88→11,98, 7,92→10,27 e 9,22→11,98 (TAB desligado).
+> Teto **liso, aproximado e sem textura**: near/oclusão continuam incompletos; em lacunas pode aparecer geometria distante acima do teto. Não é uma solução integral de visplanes.
+> As descrições da máscara v11 abaixo são históricas; veja a seção “Revisão visual do teto” do README para o comportamento atual.
 > Rótulos de validação usados neste projeto: **BUILD OK** (compila), **SIMULATED** (rodou no Z80 emulado do nosso harness com o modelo de referência do Geo3D), **USER-REPORTED** (o usuário viu no openMSX e relatou), **UNTESTED** (nunca executado). Nada aqui foi testado em FPGA ou hardware real.
 
 ---

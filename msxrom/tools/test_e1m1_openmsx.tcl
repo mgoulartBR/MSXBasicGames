@@ -6,14 +6,18 @@ set output [file join $root private openmsx]
 if {[info exists env(E1M1_TEST_OUT)]} {set output $env(E1M1_TEST_OUT)}
 file mkdir $output
 set log [open [file join $output test.log] w]
-set f [open [file join $root out e1m1.map] r]
+set map_path [file join $root out e1m1.map]
+if {[info exists env(E1M1_MAP)]} {set map_path $env(E1M1_MAP)}
+set f [open $map_path r]
 foreach line [split [read $f] "\n"] {
     if {[regexp {^\s+([0-9A-F]{8})\s+_(\w+)\s} $line -> addr name]} {
         set e1m1_symbol($name) [expr 0x$addr]
     }
 }
 close $f
-set f [open [file join $root private e1m1_assets.h] r]
+set header_path [file join $root private e1m1_assets.h]
+if {[info exists env(E1M1_HEADER)]} {set header_path $env(E1M1_HEADER)}
+set f [open $header_path r]
 set header [read $f]
 close $f
 regexp {#define FONT_GRAY (\d+)} $header -> fontrow
@@ -139,6 +143,7 @@ proc start_benchmark {} {
     set ::results [open [file join $::output fps.tsv] w]
     puts $::results "scene\tx\ty\tyaw\tdbg\tframes\tseconds\tfps"
     set ::scenes {{start-tab-off 1056 -3616 0 0} {start-tab-on 1056 -3616 0 1} {start-east 1056 -3616 64 0} {start-south 1056 -3616 128 0} {start-west 1056 -3616 192 0} {doorway 1456 -2496 64 0} {combat 2192 -2432 64 0}}
+    if {[info exists ::env(E1M1_SCENES)]} {set ::scenes $::env(E1M1_SCENES)}
     set ::scene 0
     begin_scene
 }

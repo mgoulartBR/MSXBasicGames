@@ -221,10 +221,16 @@ def main():
         for hd in range(P.NHEAD):
             ids=[j for j in allids if P.inview(L,j,bx,by,P.head_deg(hd),P.CONE)]
             r=P.build_block(L,bx,by,ids=ids,tiles=[t for t in allt if P.tile_in_cone(L,t,bx,by,P.head_deg(hd),P.CONE)],lids=[i_ for i_ in alll if P.lid_in_cone(L,i_,bx,by,P.head_deg(hd),P.CONE)])
+            P.ceiling_faces(L,r,bx,by,allt,P.head_deg(hd))
             res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
             nv=len(r['verts']); nf=len(r['faces'])
             blob=bytes([nv,nf])+b''.join(struct.pack('<hhh',*v) for v in r['verts'])
-            def fcol(fl): return 0x80 if fl is None else (1 if fl[0]=='C' else tex_idx[fl[1]] if fl[0]=='W' else flat_idx[m.sectors[fl[1]]['ftex']][1])
+            def fcol(fl):
+                if fl is None: return 0x80
+                kind,idx=fl
+                if kind=='C': return 1 if idx<0 else flat_idx[m.sectors[idx]['ctex']][0]
+                if kind=='W': return tex_idx[idx]
+                return flat_idx[m.sectors[idx]['ftex']][1]
             for fidx,fl in zip(r['faces'],r['flat']): blob+=bytes(fidx)+struct.pack('<hhhB',0,-16384,0,fcol(fl))
             for uv in r['uvs']: blob+=bytes(uv)
             if blob in seen: blk_tab[(bx,by,hd)]=blob; continue

@@ -6,6 +6,7 @@ import e1m1,e1m1_map
 from wad import Wad
 BLOCK=128
 MAX_SPR=10; MAX_FACES=255-MAX_SPR; MAX_VERTS=255-4*MAX_SPR
+MAX_CEIL_FACES=4
 DOOR_SPECIALS=(1,26,27,28,31,32,33,34,117,118)
 _lib=None
 def lib():
@@ -120,6 +121,29 @@ def make_tiles(L):
         sd=m.sectors[sec]
         tiles.append(dict(sec=sec,x0=gx*TILE,y0=gy*TILE,x1=(gx+w)*TILE,y1=(gy+h)*TILE,floor=sd['floor'],ceil=sd['ceil'],ceil_ok=sec in taller,sky=sd['ctex']=='F_SKY1'))
     return tiles
+
+def ceiling_faces(L,model,bx,by,tiles,heading):
+    """Acrescenta tetos so no espaco livre do lote; nenhuma parede e removida."""
+    cx,cy=bx*BLOCK+BLOCK/2,by*BLOCK+BLOCK/2
+    verts=model['verts']; faces=model['faces']; uvs=model['uvs']; flat=model['flat']
+    vi={p:i for i,p in enumerate(verts)}
+    candidates=[]
+    for ti in tiles:
+        t=L.stiles[ti]
+        if t['sky'] or not tile_in_cone(L,ti,bx,by,heading,CONE): continue
+        dx=max(t['x0']-cx,cx-t['x1'],0); dy=max(t['y0']-cy,cy-t['y1'],0)
+        score=(t['x1']-t['x0'])*(t['y1']-t['y0'])/(math.hypot(dx,dy)+48)**3
+        candidates.append((-score,ti))
+    n=0
+    for _,ti in sorted(candidates):
+        t=L.stiles[ti]; h=t['ceil']
+        quad=[(t['x0'],h,t['y0']),(t['x0'],h,t['y1']),(t['x1'],h,t['y1']),(t['x1'],h,t['y0'])]
+        if len(verts)+len(set(quad)-set(vi))>MAX_VERTS: continue
+        if len(faces)==MAX_FACES or n==MAX_CEIL_FACES: break
+        for p in quad:
+            if p not in vi: vi[p]=len(verts); verts.append(p)
+        faces.append([vi[p] for p in quad]); uvs.append((0,)*8); flat.append(('C',t['sec'])); n+=1
+    return n
 
 def visible_tiles(L,vps,bx,by):
     """tiles com algum ponto (centro ou 4 pontos internos) visivel de algum ponto de vista; exclui os que tocam o proprio bloco (a base cobre o piso sob o jogador)."""
