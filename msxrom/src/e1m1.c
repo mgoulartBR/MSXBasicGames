@@ -164,7 +164,7 @@ static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
 
 /* ---------------------------------------------------------------- estado */
 s16 px,py,eye,hp,armor,ammo; u8 yaw,cool,fire_t,hurt,over,kills,items_got,tick,sfx,msg_t,face_t;
-static const char *msg;
+static const char *msg; u8 dbg;
 static u8 keys,old_keys,fcnt;
 #define K_LEFT 1
 #define K_RIGHT 2
@@ -302,6 +302,7 @@ static void update(void){
   if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R);
   if(cool)cool--; if(fire_t)fire_t--; if(hurt)hurt--; if(face_t)face_t--; if(msg_t&&!--msg_t)msg=0;
   if((keys&K_FIRE)&&!cool)shoot();
+  if((keys&K_TAB)&&!(old_keys&K_TAB))dbg^=1;                      /* TAB: mostra X, Y e angulo (Doom) */
   tgt=floor_at(px,py)+41; if(tgt>eye){ eye+=(tgt-eye+3)>>2; } else if(tgt<eye){ eye-=(eye-tgt+3)>>2; }
   for(i=0;i<NTHING;i++){
     if(!th[i].on)continue;
@@ -408,6 +409,13 @@ static void ceil_fill(void){
       y=((a>b?a-b:b-a)>24)?(a<b?a:b):(s16)a+(((s16)b-(s16)a)*(s16)f)/32; }
     if(y>0)fill(j*16,0,16,y,C_BLACK); }
 }
+static char dbuf[28];
+static u8 putnum(u8 n,s16 v){ char t[6]; u8 i=0; if(v<0){ dbuf[n++]='-'; v=-v; } do{ t[i++]='0'+v%10; v/=10; }while(v); while(i)dbuf[n++]=t[--i]; return n; }
+static void debug_text(void){
+  s16 a=90-(s16)(((u16)yaw*45)>>5); u8 n=0; if(a<0)a+=360;
+  dbuf[n++]='X'; n=putnum(n,px); dbuf[n++]=' '; dbuf[n++]='Y'; n=putnum(n,py); dbuf[n++]=' '; dbuf[n++]='A'; n=putnum(n,a); dbuf[n]=0;
+  text(4,14,FONT_GRAY,dbuf);
+}
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
@@ -457,6 +465,7 @@ static void render(void){
   ceil_fill();
   draw_gun();
   if(msg) text(4,4,FONT_ORANGE,msg);
+  if(dbg) debug_text();
   if(hurt) { fill(0,0,SCR_W,2,C_RED); fill(0,VIEW_H-2,SCR_W,2,C_RED); }
   if(over) overlay();
 }

@@ -196,11 +196,11 @@ python3 -I tools/e1m1_holes.py /caminho/doom1.wad 5 30
 
 ### 12.1 Estado do repositório
 - Último commit: `29c074f` (v11, teto preto sólido em tempo de execução). Testes: **14/14 SIMULATED** passam.
-- **Alteração local NÃO commitada em `msxrom/src/e1m1.c`**: tecla **TAB** alterna `dbg` e `debug_text()` mostra `X<px> Y<py> A<ângulo>` no topo da tela (fonte cinza, y=14). Foi aplicada ao arquivo mas **não foi compilada nem testada** (o build/teste foi interrompido pelo usuário). **Primeiro passo:** rodar `tools/build_e1m1.sh`, `tools/test_e1m1.py`, conferir uma imagem com `dbg=1` (símbolo `dbg` é global) e commitar. Cuidado: o ângulo deve sair em graus de Doom `90 − yaw·45/32` (módulo 360) e o texto só usa caracteres da fonte (`X`, `Y`, `A`, dígitos, `-`, espaço).
+- **Tecla de coordenadas (commitada, BUILD OK + SIMULATED, testes 14/14):** tecla **TAB** alterna `dbg` e `debug_text()` mostra `X<px> Y<py> A<ângulo>` no topo da tela (fonte cinza, y=14). Verificado na simulação (`X1300 Y-3150 A0` para yaw 64 = leste); **ainda não validada no openMSX pelo usuário**. Cuidado: o ângulo deve sair em graus de Doom `90 − yaw·45/32` (módulo 360) e o texto só usa caracteres da fonte (`X`, `Y`, `A`, dígitos, `-`, espaço).
 - A ROM mais recente enviada ao usuário foi a **v11** (zip `msxdoom_e1m1.zip`; a ROM gerada é 4 MiB).
 
 ### 12.2 Pendências em ordem de valor
-1. **Finalizar e entregar a tecla de coordenadas** (acima) — ainda não houve build/entrega.
+1. **Pedir ao usuário que valide a tecla TAB (coordenadas) no openMSX** e use-a para reportar pontos com problema.
 2. **Desempenho no openMSX**: medir de verdade. Ideias: reduzir a área preenchida por quadro (viewport menor, ex. 256×144; repintar só o que as paredes cobrem), reduzir faces/vertices por conjunto, alternar atualização de piso a cada 2 quadros, medir custo de HMMV vs LMMM no fork, checar se `R#20` bit0 (alta velocidade) é respeitado pelo fork. Pedir ao usuário um fps aproximado e o número de faces/quadro.
 3. **Fidelidade geométrica restante**: ~5% de área de parede perdida em média; salas grandes/janelas ainda perdem paredes distantes. Possíveis ganhos: melhorar fusão de strips, compartilhamento de vértices, dois RUNs por quadro (longe/perto), aumentar `MAX_VERTS` reduzindo `MAX_SPR`, trocar tamanhos de bloco.
 4. **Teto sólido**: avaliar casos de borda da pintura (pilares/blocos baixos no meio da sala, janelas, setores com teto variável dentro de uma faixa). A abordagem depende da geometria 2D do raster; pode precisar de mais raios ou de interpolação por parede.
@@ -238,6 +238,6 @@ python3 -I tools/e1m1_holes.py /caminho/doom1.wad 5 30
 
 1. Peça ao usuário o `doom1.wad` (ou use o que ele indicar) e coloque fora do repositório.
 2. Rode a seção 9, confirme que os 14 testes passam e que `private/e1m1.rom` é gerada.
-3. Termine/valide a tecla de coordenadas (12.1) e entregue um zip atualizado.
+3. Peça ao usuário posições (X, Y, A) via TAB dos pontos ruins e reproduza com `e1m1_tour.py`.
 4. Atacar desempenho no openMSX antes de acrescentar recursos de gameplay.
 5. Sempre informar BUILD OK / SIMULATED / USER-REPORTED / UNTESTED; nunca commitar WAD, dados convertidos ou ROM.
