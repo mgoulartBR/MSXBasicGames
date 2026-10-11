@@ -86,9 +86,9 @@ mouse 220 5 2                                       ;# 2a vez: velocidade 3
 mouse 220 5 2                                       ;# 3a vez: volta a velocidade 1
 mouse 40 140 2                                      ;# clique na FILM (sala 3): viaja e entra na Agencia
 at 5.0 { dump mclick }
-mouse 100 70 1                                      ;# passa por cima da 4a linha da lista
+mouse 180 78 1                                      ;# passa por cima da 4a linha da lista
 at 0.3 { dump mlist }
-mouse 100 70 2                                      ;# clique: compra o filme (Agencia: clique = comprar)
+mouse 180 78 2                                      ;# clique: compra o filme (Agencia: clique = comprar)
 at 0.5 { dump mbuy; shot 3m_mouse_buy }
 mouse 100 100 4                                     ;# botao direito = voltar ao predio
 at 0.5 { dump mback }

@@ -129,6 +129,48 @@ static void StatusBody(u8 y)
 	Ui_Color(UI_GRAY); Ui_Text(180, y, g_CategoryName[g_Game.pcat]);
 }
 
+#if ART_SCENES
+static void StatusPanel(u8 y)
+{
+	char t[24];
+	if (g_Game.pstate == 0) { Ui_Text(8, y, "No script in hand."); return; }
+	Sim_ScriptTitle(t, g_Game.pname);
+	Ui_Text(8, y, g_Game.pstate == 1 ? "Script ready:" : "Filming:");
+	Ui_Text(92, y, t);
+}
+
+void Scripts_Draw(void) __banked
+{
+	u8 i, y;
+	char t[24];
+	Ui_Begin();
+	Room_Frame(SCN_SCRIPT);
+	Ui_Color(UI_BLACK); Ui_Text(130, CONTENT_Y + 2, "Scripts on offer");
+	for (i = 0; i < 3; i++)
+	{
+		const ScriptOffer* o = &g_Game.soffer[i];
+		y = (u8)(CONTENT_Y + 18 + i * 14);
+		if (g_Sel == i) Chrome_Box(126, y - 2, 128, 13, 5, 0);
+		Ui_Color(UI_BLACK);
+		Sim_ScriptTitle(t, o->name);
+		Ui_TextN(130, y, t, 20);
+	}
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	{
+		const ScriptOffer* o = &g_Game.soffer[g_Sel];
+		Ui_Text(8, 141, g_CategoryName[o->cat]);
+		Ui_Int(100, 141, o->blocks); Ui_Text(112, 141, "blocks");
+		Ui_Color(g_Game.money >= (i32)Sim_ScriptCost(o->blocks) ? UI_BLACK : UI_RED);
+		Ui_Text(160, 141, "Price"); Money(196, 141, Sim_ScriptCost(o->blocks));
+		Ui_Color(UI_BLACK);
+	}
+	StatusPanel(154);
+	Ui_Text(8, 168, "Film it at the Studios.");
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:buy script  BACK:building");
+}
+#else
 void Scripts_Draw(void) __banked
 {
 	u8 i, y;
@@ -154,6 +196,8 @@ void Scripts_Draw(void) __banked
 	Hint("OK:buy script  BACK:building");
 }
 
+#endif
+
 void Scripts_Input(u8 ev) __banked
 {
 	u8 old = g_Sel;
@@ -171,13 +215,56 @@ void Scripts_Input(u8 ev) __banked
 
 void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 16), 14, 3);
+	if (x < 122) return;
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, 3);
 	(void)x;
+#endif
 	if (r == 0xFF) return;
 	if (r != g_Sel) { g_Sel = r; g_Dirty |= D_CON; }
 	if (btn) Scripts_Input(IN_OK);
 }
 
+#if ART_SCENES
+void Studio_Draw(void) __banked
+{
+	u8 i, y, n = 0;
+	Ui_Begin();
+	Room_Frame(SCN_STUDIO);
+	Ui_Color(UI_BLACK); Ui_Text(130, CONTENT_Y + 2, "Film budget");
+	if (g_Game.pstate == 1)
+	{
+		for (i = 0; i < 3; i++)
+		{
+			y = (u8)(CONTENT_Y + 18 + i * 14);
+			if (g_Sel == i) Chrome_Box(126, y - 2, 128, 13, 5, 0);
+			Ui_Color(g_Game.money >= (i32)k_Budget[i] ? UI_BLACK : UI_RED);
+			Ui_Text(130, y, k_BudgetName[i]); Money(204, y, k_Budget[i]);
+		}
+	}
+	else if (g_Game.pstate == 2) { Ui_Color(UI_BLACK); Ui_Text(130, CONTENT_Y + 18, "Filming in progress"); }
+	else { Ui_Color(UI_BLACK); Ui_Text(130, CONTENT_Y + 18, "Buy a script first"); Ui_Text(130, CONTENT_Y + 30, "(Script agency)"); }
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	StatusPanel(141);
+	if (g_Game.pstate == 2)
+	{
+		u8 x = Ui_Int(8, 154, g_Game.pdays);
+		Ui_Text(x, 154, " day(s) until the premiere.");
+	}
+	else if (g_Game.pstate == 1)
+	{
+		Ui_Text(8, 154, "Takes"); Ui_Int(50, 154, k_BudgetDays[g_Sel]); Ui_Text(62, 154, "day(s), quality");
+		Ui_Int(170, 154, k_BudgetQ[g_Sel]); Ui_Text(182, 154, "-"); Ui_Int(192, 154, k_BudgetQ[g_Sel] + 25);
+	}
+	for (i = 0; i < NUM_OWN; i++) if (g_Game.own[i].used) n++;
+	Ui_Text(8, 168, "Your productions"); Ui_Int(110, 168, n); Ui_Text(122, 168, "/"); Ui_Int(130, 168, NUM_OWN); Ui_Text(150, 168, "(+10% exclusive)");
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:start filming  BACK:building");
+}
+#else
 void Studio_Draw(void) __banked
 {
 	u8 i, y;
@@ -220,6 +307,8 @@ void Studio_Draw(void) __banked
 	Hint("OK:start filming  BACK:building");
 }
 
+#endif
+
 void Studio_Input(u8 ev) __banked
 {
 	u8 old = g_Sel;
@@ -237,8 +326,13 @@ void Studio_Input(u8 ev) __banked
 
 void Studio_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(CONTENT_Y + 16), 14, 3);
+	if (x < 122) return;
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 31), ROW_H, 3);
 	(void)x;
+#endif
 	if (r == 0xFF || g_Game.pstate != 1) return;
 	if (r != g_Sel) { g_Sel = r; g_Dirty |= D_CON; }
 	if (btn) Studio_Input(IN_OK);

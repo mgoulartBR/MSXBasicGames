@@ -6,6 +6,7 @@ u8 g_Screen, g_Speed, g_Dirty, g_RowA, g_RowB, g_Sel, g_First;
 u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
 // Medicao de desempenho: maior tempo (jiffies = interrupcoes do VDP) gasto no desenho completo de cada tela. Lido pelos testes.
 u8 g_DrawMax[SCR_OVER + 1];
+u8 g_BufScene = 0xFF;
 #define JIFFY (*(volatile u16*)0xFC9E)
 
 // ---------------------------------------------------------------- utilitarios
@@ -106,7 +107,7 @@ static void ScreenEnter(u8 scr)
 void Goto(u8 scr)
 {
 	if (g_Screen == SCR_HUB && scr != SCR_HUB) Building_Leave();
-	g_Screen = scr; g_Sel = 0; g_First = 0; g_Dirty |= D_CON;
+	g_Screen = scr; g_Sel = 0; g_First = 0; g_Dirty |= D_CON; g_BufScene = 0xFF;
 	ScreenEnter(scr);
 }
 

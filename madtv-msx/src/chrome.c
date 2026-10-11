@@ -59,6 +59,21 @@ void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` by
 void Scene_Draw(u8 id, u8 dx, u8 dy) __banked { (void)id; (void)dx; (void)dy; }
 #endif
 
+#if ART_SCENES
+void Room_Frame(u8 id) __banked                          // cena a esquerda + painel cinza a direita (lista) + painel inferior (detalhes)
+{
+	if (g_BufScene != id)                                  // a cena fica no buffer: so e repintada ao entrar na sala
+	{
+		ClearContent();
+		Scene_Draw(id, 0, CONTENT_Y - 2);
+		g_BufScene = id;
+	}
+	Chrome_Box(122, CONTENT_Y - 2, 134, 112, 14, 1);
+}
+#else
+void Room_Frame(u8 id) __banked { (void)id; }
+#endif
+
 // ---------------------------------------------------------------- HUD (cabecalho): so os campos que mudaram sao redesenhados
 static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
 static i32 c_Money = 0x7FFFFFFF;

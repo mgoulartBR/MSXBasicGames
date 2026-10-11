@@ -6,6 +6,53 @@ static const char* const k_GiftName[NUM_GIFTS] = {
 };
 
 // ---------------------------------------------------------------- SUPERMERCADO
+#if ART_SCENES
+#define SHOP_Y(i) ((u8)(CONTENT_Y + (i) * ROW_H))          // lista no painel a direita da cena; ganho/estoque no painel de baixo
+
+static void ShopDetailBody(void)
+{
+	u8 x;
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	Ui_TextN(8, 142, k_GiftName[g_Sel], 20);
+	if (g_Sel == GIFT_DREAM) Ui_Text(8, 154, "Needed for the wedding proposal.");
+	else { Ui_Text(8, 154, "Sympathy gain +"); Ui_Int(98, 154, Sim_GiftEffect(g_Sel)); }
+	Ui_Text(8, 166, "In stock"); x = Ui_Int(62, 166, g_Game.gift_have[g_Sel]); Ui_Text((u8)(x + 6), 166, "(max 3)");
+	Ui_Text(150, 142, "Price"); Money(186, 142, Sim_GiftCost(g_Sel));
+	Ui_Text(150, 166, "Betty is upstairs");
+}
+
+static void ShopRowBody(u8 i)
+{
+	u8 y = SHOP_Y(i);
+	Ui_Fill(126, y - 1, 128, ROW_H, 14);
+	if (g_Sel == i) Chrome_Box(126, y - 1, 128, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	Ui_Text(130, y, k_GiftName[i]);
+	Ui_Color(g_Game.money >= (i32)Sim_GiftCost(i) ? UI_BLACK : UI_RED);
+	Money(198, y, Sim_GiftCost(i));
+}
+
+static void ShopRow(u8 i)
+{
+	if (i >= NUM_GIFTS) return;
+	Ui_Begin(); ShopRowBody(i); Ui_End(126, (u8)(SHOP_Y(i) - 1), 128, ROW_H);
+	if (g_Sel == i) { Ui_Begin(); ShopDetailBody(); Ui_End(0, 138, 256, 48); }
+}
+
+void Shop_Enter(void) __banked { }
+
+void Shop_Draw(void) __banked
+{
+	u8 i;
+	Ui_Begin();
+	Room_Frame(SCN_SUPER);
+	for (i = 0; i < NUM_GIFTS; i++) ShopRowBody(i);
+	ShopDetailBody();
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:buy  BACK:building");
+}
+#else
 #define SHOP_Y(i) ((u8)(CONTENT_Y + 14 + (i) * ROW_H))
 
 static void ShopRowBody(u8 i)
@@ -44,6 +91,8 @@ void Shop_Draw(void) __banked
 	Hint("OK:buy  BACK:building");
 }
 
+#endif
+
 void Shop_Row(u8 r) __banked { ShopRow(r); }
 
 void Shop_Input(u8 ev) __banked
@@ -60,14 +109,75 @@ void Shop_Input(u8 ev) __banked
 
 void Shop_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(SHOP_Y(0) - 1), ROW_H, NUM_GIFTS);
+	if (x < 122) return;
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, NUM_GIFTS);
 	(void)x;
+#endif
 	if (r == 0xFF || !SelVisible(r, NUM_GIFTS)) return;
 	if (btn) Shop_Input(IN_OK);
 }
 
 // ---------------------------------------------------------------- ESCRITORIO DA BETTY
 // linhas: 0..9 = presentes em estoque (OK = dar), 10 = pedir em casamento
+#if ART_SCENES
+#define BET_ROWS (NUM_GIFTS + 1)
+#define BET_Y(i) ((u8)(CONTENT_Y + (i) * ROW_H))
+
+static void BettyStatusBody(void)
+{
+	u8 st, x;
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK); Ui_Text(8, 142, "Betty likes");
+	Ui_Text(8, 154, "You");
+	Ui_Bar(56, 154, 100, 7, g_Game.sym[0], COLOR_LIGHT_GREEN);
+	x = Ui_Int(162, 154, g_Game.sym[0]);
+	Ui_Text(x, 154, "/100");
+	Ui_Text(200, 154, "cap"); Ui_Int(224, 154, g_Game.image[0]);
+	for (st = 1; st < NUM_STATIONS; st++)
+	{
+		u8 y = (u8)(154 + st * 10);
+		Ui_Color(UI_BLACK); Ui_Text(8, y, st == 1 ? "FunTV" : "SunTV");
+		if (!g_Game.alive[st]) { Ui_Color(UI_RED); Ui_Text(56, y, "bankrupt"); continue; }
+		Ui_Bar(56, y, 100, 7, g_Game.sym[st], COLOR_MEDIUM_RED);
+		Ui_Int(162, y, g_Game.sym[st]);
+	}
+}
+
+static void BettyRowBody(u8 i)
+{
+	u8 y = BET_Y(i);
+	Ui_Fill(126, y - 1, 128, ROW_H, 14);
+	if (g_Sel == i) Chrome_Box(126, y - 1, 128, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	if (i == NUM_GIFTS) { Ui_Text(130, y, "Propose marriage!"); return; }
+	Ui_Color(g_Game.gift_have[i] ? UI_BLACK : UI_RED);
+	Ui_Text(130, y, k_GiftName[i]);
+	Ui_Text(212, y, "x"); Ui_Int(220, y, g_Game.gift_have[i]);
+	if (i != GIFT_DREAM) { Ui_Text(232, y, "+"); Ui_Int(240, y, Sim_GiftEffect(i)); }
+}
+
+static void BettyRow(u8 i)
+{
+	if (i >= BET_ROWS) return;
+	Ui_Begin(); BettyRowBody(i); Ui_End(126, (u8)(BET_Y(i) - 1), 128, ROW_H);
+}
+
+void Betty_Enter(void) __banked { }
+
+void Betty_Draw(void) __banked
+{
+	u8 i;
+	Ui_Begin();
+	Room_Frame(SCN_BETTY);
+	for (i = 0; i < BET_ROWS; i++) BettyRowBody(i);
+	BettyStatusBody();
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:give gift / propose  BACK:building");
+}
+#else
 #define BET_ROWS (NUM_GIFTS + 1)
 #define BET_Y(i) ((u8)(CONTENT_Y + 45 + (i) * ROW_H))
 
@@ -126,6 +236,8 @@ void Betty_Draw(void) __banked
 	Hint("OK:give gift / propose  BACK:building");
 }
 
+#endif
+
 void Betty_Row(u8 r) __banked { BettyRow(r); }
 
 void Betty_Input(u8 ev) __banked
@@ -153,13 +265,52 @@ void Betty_Input(u8 ev) __banked
 
 void Betty_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(BET_Y(0) - 1), ROW_H, BET_ROWS);
+	if (x < 122) return;
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 44), ROW_H, BET_ROWS);
 	(void)x;
+#endif
 	if (r == 0xFF || !SelVisible(r, BET_ROWS)) return;
 	if (btn) Betty_Input(IN_OK);
 }
 
 // ---------------------------------------------------------------- PORTEIRO (resumo do dia + dicas)
+#if ART_SCENES
+void Porter_Draw(void) __banked
+{
+	u8 st, y, empty = 0, nc = 0, s, x, n = 0;
+	Ui_Begin();
+	Room_Frame(SCN_PORTER);
+	Ui_Color(UI_BLACK);
+	Ui_Text(130, CONTENT_Y + 2, "Income");   Money(190, CONTENT_Y + 2, g_Game.day_income);
+	Ui_Text(130, CONTENT_Y + 14, "Costs");   Money(190, CONTENT_Y + 14, g_Game.day_cost);
+	Ui_Text(130, CONTENT_Y + 26, "Debt");    Money(190, CONTENT_Y + 26, g_Game.debt);
+	Ui_Text(130, CONTENT_Y + 46, "Image standings");
+	for (st = 0; st < NUM_STATIONS; st++)
+	{
+		u8 yy = (u8)(CONTENT_Y + 58 + st * 10);
+		Ui_Color(UI_BLACK); Ui_Text(130, yy, g_StationName[st]);
+		if (g_Game.alive[st]) Ui_Int(190, yy, g_Game.image[st]); else Ui_Text(190, yy, "out");
+	}
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	y = 141;
+	for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == NONE) empty++;
+	for (s = 0; s < MAX_CONTRACTS; s++) if (g_Game.contract[s].ad != NONE) nc++;
+	if (g_Speed == SPEED_PAUSE && n < 4) { Ui_Text(8, y, "Clock paused: press P to run the day."); y += 11; n++; }
+	if (g_Game.image[0] < IMAGE_LOW && n < 4) { Ui_Color(UI_RED); Ui_Text(8, y, "Image below 20: ads pay less, no credit!"); Ui_Color(UI_BLACK); y += 11; n++; }
+	if (empty && n < 4) { x = Ui_Int(8, y, empty); Ui_Text(x, y, " programme slot(s) still empty."); y += 11; n++; }
+	if (!nc && n < 4) { Ui_Text(8, y, "No ad contracts: try the Ad agency."); y += 11; n++; }
+	if (!g_Game.gift_today && g_Game.sym[0] < g_Game.image[0] && n < 4) { Ui_Text(8, y, "Betty is waiting for a gift today."); y += 11; n++; }
+	if (g_Game.money < 300 && n < 4) { Ui_Text(8, y, "The cash box is almost empty."); y += 11; n++; }
+	if (!n) Ui_Text(8, y, "All quiet. Keep an eye on the ratings.");
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("BACK:building");
+}
+
+#else
 void Porter_Draw(void) __banked
 {
 	u8 st, y = (u8)(CONTENT_Y + 52), empty = 0, nc = 0, s, x;
@@ -191,6 +342,8 @@ void Porter_Draw(void) __banked
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("BACK:building");
 }
+
+#endif
 
 void Porter_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
 
@@ -232,6 +385,34 @@ void Rival_Draw(void) __banked
 void Rival_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
 
 // ---------------------------------------------------------------- CORRETOR (torres de transmissao)
+#if ART_SCENES
+void Realtor_Draw(void) __banked
+{
+	u8 x, st;
+	u16 c = Sim_TowerCost();
+	Ui_Begin();
+	Room_Frame(SCN_REALTY);
+	Ui_Color(UI_BLACK);
+	Ui_Text(130, CONTENT_Y + 2, "Tower level"); Ui_Int(204, CONTENT_Y + 2, g_Game.tower); Ui_Text(212, CONTENT_Y + 2, "/"); Ui_Int(220, CONTENT_Y + 2, TOWER_MAX);
+	Ui_Text(130, CONTENT_Y + 14, "Reach"); Ui_Dec1(170, CONTENT_Y + 14, Sim_Reach(0)); Ui_Text(200, CONTENT_Y + 14, "million");
+	Ui_Text(130, CONTENT_Y + 26, "Upkeep"); x = Ui_Int(176, CONTENT_Y + 26, TOWER_UPKEEP * g_Game.tower); Ui_Text(x, CONTENT_Y + 26, "k/day");
+	Ui_Text(130, CONTENT_Y + 46, "Rival reach");
+	for (st = 1; st < NUM_STATIONS; st++)
+	{
+		u8 y = (u8)(CONTENT_Y + 48 + st * 10);
+		Ui_Color(UI_BLACK); Ui_Text(130, y, g_StationName[st]);
+		Ui_Dec1(190, y, Sim_Reach(st));
+	}
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (c) { Ui_Text(8, 142, "Build next tower:"); Money(116, 142, c); Ui_Text(8, 158, "Press OK to build."); }
+	else Ui_Text(8, 142, "Maximum coverage reached.");
+	Ui_Text(8, 172, "More reach = more audience and ads.");
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:build tower  BACK:building");
+}
+
+#else
 void Realtor_Draw(void) __banked
 {
 	u8 x, st;
@@ -256,6 +437,8 @@ void Realtor_Draw(void) __banked
 	Hint("OK:build tower  BACK:building");
 }
 
+#endif
+
 void Realtor_Input(u8 ev) __banked
 {
 	if (ev & IN_BACK) { Goto(SCR_HUB); return; }
@@ -270,5 +453,9 @@ void Realtor_Input(u8 ev) __banked
 void Realtor_Mouse(u8 x, u8 y, u8 btn) __banked
 {
 	(void)x;
+	#if ART_SCENES
+	if (btn && y >= 138) Realtor_Input(IN_OK);
+#else
 	if (btn && y >= CONTENT_Y + 82 && y < CONTENT_Y + 96) Realtor_Input(IN_OK);
+#endif
 }

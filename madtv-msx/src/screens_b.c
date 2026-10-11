@@ -126,6 +126,11 @@ void News_Input(u8 ev) __banked
 // ---------------------------------------------------------------- ARQUIVO (venda de filmes)
 static u8 s_Own[NUM_ALL];
 static u8 s_OwnN;
+#if ART_SCENES
+#define ARCH_ROWS 9
+#else
+#define ARCH_ROWS LIST_ROWS
+#endif
 
 static void BuildOwn(void)
 {
@@ -134,6 +139,58 @@ static void BuildOwn(void)
 	for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i]) s_Own[s_OwnN++] = i;
 }
 
+#if ART_SCENES
+#define AR_Y(i) ((u8)(CONTENT_Y + 14 + (i) * ROW_H))      // lista no painel cinza a direita da cena; detalhes embaixo
+#define AR_ROWS 9
+static void ArchiveRowBody(u8 i)
+{
+	u8 y = AR_Y(i);
+	Ui_Fill(126, y - 1, 128, ROW_H, 14);
+	if (g_First + i >= s_OwnN) return;
+	if (g_First + i == g_Sel) Chrome_Box(126, y - 1, 128, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	Ui_TextN(130, y, (*Mov(s_Own[g_First + i])).title, 20);
+}
+
+static void ArchiveDetailBody(void)
+{
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (!s_OwnN) { Ui_Text(8, 142, "No movies - buy them at the Film agency."); return; }
+	{
+		u8 m = s_Own[g_Sel], x;
+		Ui_TextN(8, 142, (*Mov(m)).title, 30);
+		Ui_Text(8, 156, "Blocks"); Ui_Int(50, 156, (*Mov(m)).blocks);
+		Ui_Text(80, 156, "Aired"); x = Ui_Int(116, 156, g_Game.plays[0][m]); Ui_Text(x, 156, "x");
+		Ui_Text(8, 168, "Resale value"); Money(86, 168, Sim_MovieValue(m));
+	}
+}
+
+static void ArchiveRow(u8 i)
+{
+	if (i >= AR_ROWS) return;
+	Ui_Begin();
+	ArchiveRowBody(i);
+	Ui_End(126, (u8)(AR_Y(i) - 1), 128, ROW_H);
+	if (g_First + i == g_Sel) { Ui_Begin(); ArchiveDetailBody(); Ui_End(0, 138, 256, 48); }
+}
+
+void Archive_Enter(void) __banked { BuildOwn(); }
+
+void Archive_Draw(void) __banked
+{
+	u8 i;
+	Ui_Begin();
+	Room_Frame(SCN_LIBRARY);
+	Ui_Color(UI_BLACK); Ui_Text(130, CONTENT_Y + 2, "Your archive");
+	for (i = 0; i < AR_ROWS; i++) ArchiveRowBody(i);
+	ArchiveDetailBody();
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:sell BACK:office");
+}
+
+void Archive_List(void) __banked { u8 i; for (i = 0; i < AR_ROWS; i++) ArchiveRow(i); }
+#else
 static void ArchiveRowBody(u8 i)
 {
 	u8 y = CONTENT_Y + 14 + i * ROW_H, m;
@@ -171,13 +228,14 @@ void Archive_Draw(void) __banked
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:sell BACK:office");
 }
+void Archive_List(void) __banked { u8 i; for (i = 0; i < LIST_ROWS; i++) ArchiveRow(i); }
+#endif
 
 void Archive_Row(u8 r) __banked { ArchiveRow(r); }
-void Archive_List(void) __banked { u8 i; for (i = 0; i < LIST_ROWS; i++) ArchiveRow(i); }
 
 void Archive_Input(u8 ev) __banked
 {
-	NavApply(Nav(ev, s_OwnN, LIST_ROWS));
+	NavApply(Nav(ev, s_OwnN, ARCH_ROWS));
 	if (ev & IN_BACK) { Goto(SCR_HUB); return; }
 	if ((ev & IN_OK) && s_OwnN)
 	{
@@ -210,8 +268,13 @@ void News_Mouse(u8 x, u8 y, u8 btn) __banked
 
 void Archive_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(AR_Y(0) - 1), ROW_H, AR_ROWS);
+	if (x < 122) return;
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, LIST_ROWS);
 	(void)x;
+#endif
 	if (r == 0xFF || !SelVisible(r, s_OwnN)) return;
 	if (btn) Archive_Input(IN_OK);
 }

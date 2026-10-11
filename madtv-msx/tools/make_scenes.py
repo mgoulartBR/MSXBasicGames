@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Gera as cenas das salas (chefe, escritorio, agencia de publicidade) a partir de capturas do Mad TV guardadas LOCALMENTE.
-Entradas: original/user/n4.png (chefe, 320x200), n3.png (escritorio, 320x200), 5.png (agencia de publicidade, versao Amiga 320x256).
+Entradas: capturas 320x200 do Mad TV em original/dos/*.png (DOSBox; ver SCENES).
 Saidas (NAO versionadas, ver .gitignore): src/data/art_scenes.h e src/seg/seg_s19..s23_b3.c. Sem elas o jogo usa as telas de texto (ART_SCENES 0).
-Uso: python3 -I tools/make_scenes.py original/user"""
+Uso: python3 -I tools/make_scenes.py original/dos"""
 import sys
 from PIL import Image
 
@@ -11,8 +11,11 @@ PAL = [tuple(round(c * 255 / 7) for c in p) for p in P3]
 def nearest(c): return min(range(16), key=lambda i: sum((a - b) ** 2 for a, b in zip(c, PAL[i])))
 
 H = 111
-# (nome, arquivo, caixa (x0,y0,x1,y1) na imagem nativa)
-SCENES = [("boss", "n4.png", (4, 4, 260, 4 + H)), ("office", "n3.png", (40, 4, 296, 4 + H)), ("ads", "5.png", (70, 20, 190, 20 + H))]
+# (nome, arquivo em original/dos, caixa (x0,y0,x1,y1) na captura nativa 320x200; o interior da cena fica em y=4..114)
+SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40, 4, 296, 4 + H)),
+          ("ads", "ads.png", (70, 4, 190, 4 + H)), ("movie", "movie.png", (0, 4, 120, 4 + H)), ("script", "script.png", (100, 4, 220, 4 + H)),
+          ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (110, 4, 230, 4 + H)), ("realty", "realestate.png", (160, 4, 280, 4 + H)),
+          ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H))]
 
 def main(d):
     first_seg = 19
@@ -42,9 +45,9 @@ def main(d):
         table.append((seg, stride, h, rps))
         seg += nseg
     with open("src/data/art_scenes.h", "w") as f:
-        f.write("// GERADO por tools/make_scenes.py - NAO versionar.\n#define ART_SCENES 1\n#define SCN_BOSS 0\n#define SCN_OFFICE 1\n#define SCN_ADS 2\n")
+        f.write("// GERADO por tools/make_scenes.py - NAO versionar.\n#define ART_SCENES 1\n")
+        for i, (name, _, _) in enumerate(SCENES): f.write("#define SCN_%s %d\n" % (name.upper(), i))
         f.write("#define SCN_INIT { %s }   // segmento, bytes por linha, linhas, linhas por segmento\n" % ", ".join("{%d, %d, %d, %d}" % t for t in table))
-        f.write("#define SCN_ADS_W 120\n")
     print("ok: segmentos %d..%d" % (first_seg, seg - 1))
 
 if __name__ == "__main__":

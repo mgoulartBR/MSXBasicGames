@@ -166,11 +166,29 @@ static void Index_Movies(void)
 static u8 CatCount(u8 c) { return (u8)(s_CatStart[c + 1] - s_CatStart[c]); }
 
 #define AGENCY_ROWS 9
+#if ART_SCENES
+#define AG_RY(i)   ((u8)(CONTENT_Y + 16 + (i) * ROW_H))
+#define AG_X       126
+#define AG_W       128
+#else
+#define AG_RY(i)   ((u8)(CONTENT_Y + 12 + (i) * ROW_H))
+#define AG_X       0
+#define AG_W       255
+#endif
 
 static void DrawRow_Agency_Body(u8 i)
 {
-	u8 idx, y = CONTENT_Y + 12 + i * ROW_H;
+	u8 idx, y = AG_RY(i);
 	if (i >= AGENCY_ROWS) return;
+#if ART_SCENES
+	Ui_Fill(126, y - 1, 128, ROW_H, 14);
+	if (g_First + i >= CatCount(s_Cat)) return;
+	idx = s_CatStart[s_Cat] + g_First + i;
+	if (g_First + i == g_Sel) Chrome_Box(126, y - 1, 128, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	Ui_TextN(130, y, g_Movies[idx].title, 16);
+	if (g_Game.owned[idx]) Ui_Text(230, y, "own");
+#else
 	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
 	if (g_First + i >= CatCount(s_Cat)) return;
 	idx = s_CatStart[s_Cat] + g_First + i;
@@ -178,6 +196,7 @@ static void DrawRow_Agency_Body(u8 i)
 	Ui_Text(4, y, g_First + i == g_Sel ? ">" : " ");
 	Ui_TextN(14, y, g_Movies[idx].title, 24);
 	if (g_Game.owned[idx]) { Ui_Color(UI_GRAY); Ui_Text(232, y, "own"); }
+#endif
 }
 
 static void DrawRow_Agency(u8 i)
@@ -185,7 +204,7 @@ static void DrawRow_Agency(u8 i)
 	if (i >= AGENCY_ROWS) return;
 	Ui_Begin();
 	DrawRow_Agency_Body(i);
-	Ui_End(0, (u8)(CONTENT_Y + 12 + i * ROW_H - 1), 255, ROW_H);
+	Ui_End(AG_X, (u8)(AG_RY(i) - 1), AG_W, ROW_H);
 }
 
 static void DrawList_Agency(void)
@@ -196,22 +215,45 @@ static void DrawList_Agency(void)
 
 static void DrawTitle_Agency_Body(void)
 {
+#if ART_SCENES
+	Ui_Fill(124, CONTENT_Y, 130, 10, 14);
+	Ui_Color(UI_BLACK); Ui_Text(128, CONTENT_Y + 2, "<"); Ui_Text(140, CONTENT_Y + 2, g_CategoryName[s_Cat]); Ui_Text(244, CONTENT_Y + 2, ">");
+#else
 	Ui_Fill(96, CONTENT_Y - 1, 120, 10, UI_BG);
 	Ui_Color(UI_WHITE);  Ui_Text(100, CONTENT_Y, "< "); Ui_Text(112, CONTENT_Y, g_CategoryName[s_Cat]);
 	Ui_Text((u8)(112 + 6 * 10 + 6), CONTENT_Y, ">");
+#endif
 }
 
 static void DrawTitle_Agency(void)
 {
 	Ui_Begin();
 	DrawTitle_Agency_Body();
+	#if ART_SCENES
+	Ui_End(124, CONTENT_Y, 130, 10);
+#else
 	Ui_End(96, CONTENT_Y - 1, 120, 10);
+#endif
 }
 
 static void DrawDetail_Agency_Body(void)
 {
 	u8 idx = s_CatStart[s_Cat] + g_Sel;
 	const Movie* m = &g_Movies[idx];
+#if ART_SCENES
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	Ui_Text(8, 141, "Year"); Ui_Int(38, 141, 1850 + m->year);
+	Ui_Text(80, 141, "Blocks"); Ui_Int(122, 141, m->blocks);
+	Ui_Text(144, 141, "Price"); Money(180, 141, Sim_MoviePrice(idx));
+	if (m->fsk18) { Ui_Color(UI_RED); Ui_Text(8, 174, "FSK18"); }
+	Ui_Color(UI_BLACK);
+	Ui_Text(8, 152, "Critics"); Ui_Bar(56, 153, 52, 5, m->critics, COLOR_LIGHT_GREEN);
+	Ui_Text(120, 152, "Speed"); Ui_Bar(156, 153, 52, 5, m->speed, COLOR_CYAN);
+	Ui_Text(8, 163, "Box off."); Ui_Bar(56, 164, 52, 5, m->outcome, COLOR_LIGHT_YELLOW);
+	Ui_Text(120, 163, "Quality"); Ui_Int(168, 163, Sim_Quality(idx));
+	return;
+#endif
 	Ui_Fill(0, 132, 255, 35, UI_BG);
 	Ui_Color(UI_WHITE);
 	Ui_Text(4, 134, "Year"); Ui_Int(34, 134, 1850 + m->year);
@@ -229,13 +271,21 @@ static void DrawDetail_Agency(void)
 {
 	Ui_Begin();
 	DrawDetail_Agency_Body();
+#if ART_SCENES
+	Ui_End(0, 138, 256, 48);
+#else
 	Ui_End(0, 132, 255, 35);
+#endif
 }
 
 static void Draw_Agency_Body(void)
 {
+#if ART_SCENES
+	Room_Frame(SCN_MOVIE);
+#else
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Film agency");
+#endif
 	DrawTitle_Agency();
 	DrawList_Agency();
 	DrawDetail_Agency();
@@ -495,8 +545,13 @@ void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
 void Agency_Mouse(u8 x, u8 y, u8 btn) __banked
 {
 	u8 r;
+#if ART_SCENES
+	if (x < 122) return;
+	if (y >= CONTENT_Y - 1 && y < CONTENT_Y + 14) { if (btn) Agency_Input(x < 190 ? IN_LEFT : IN_RIGHT); return; }
+#else
 	if (y >= CONTENT_Y - 1 && y < CONTENT_Y + 10) { if (btn) Agency_Input(x < 150 ? IN_LEFT : IN_RIGHT); return; }   // "< genero >"
-	r = HitRow(y, (u8)(CONTENT_Y + 11), ROW_H, AGENCY_ROWS);
+#endif
+	r = HitRow(y, (u8)(AG_RY(0) - 1), ROW_H, AGENCY_ROWS);
 	if (r == 0xFF || !SelVisible(r, CatCount(s_Cat))) return;
 	if (btn) Agency_Input(IN_OK);
 }

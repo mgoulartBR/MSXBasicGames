@@ -286,3 +286,10 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Custo: o desenho completo leva ~27-30 jiffies (~0,5 s: 14 KB por VDP direto + troca de segmento); por isso a tela do chefe deixou de ser redesenhada a cada hora (`ScreenDyn`).
 - A cena da agencia recortada da versao Amiga inclui o cursor de seta vermelho da captura; e as cores vem da paleta global (16 cores), entao tons de pele ficam salmao.
 - Verificado: build com e sem arte, unit, smoke (inclui travessia ate as salas), SRAM, FM, mouse.
+
+## 1.7: cenas em mais salas
+- `tools/make_scenes.py` agora le as capturas do DOS em `original/dos/*.png` (DOSBox, 320x200) e recorta 111 linhas (y=4..114) por sala: chefe, escritorio, publicidade, agencia de filmes, roteiros, estudios, biblioteca (arquivo), corretor, Betty, porteiro e supermercado; 13 segmentos (19-31), `SCN_*` em `art_scenes.h`. Tudo git-ignorado; o repositorio publico continua sem a arte.
+- `Room_Frame(id)` (chrome.c): limpa a area, desenha a cena (120 px) e o painel cinza direito (x=122). Cada tela desenha a lista dentro do painel e os detalhes num painel de 256x48 em y=138. Sem arte (`ART_SCENES 0`) cada tela mantem o layout de texto.
+- Cache da cena: ela fica no buffer (pagina 2); `g_BufScene` guarda o id e `Goto` o invalida. Sem isso, cada redesenho completo (D_CON) custava ~0,5 s e um aperto de tecla chegava a ser perdido (smoke: Estudios).
+- Como o DOS foi capturado: DOSBox sem janela real, ponteiro por movimentos relativos (calibracao 3x), clique no elevador ate aparecer o quadro de salas; Ctrl+F5 salva a captura.
+- Verificado so no emulador (openMSX, C-BIOS): build com e sem arte, unit, smoke (SHOTS=1 confere as telas), SRAM, FM, mouse. O teste `balance.sh` precisa de `CFLAGS_EXTRA=-DBALANCE_STATS`.
