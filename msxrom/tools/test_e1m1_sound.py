@@ -1,5 +1,6 @@
 """SIMULATED: private conversion and Z80 driver/protocol; not sound quality/timing."""
 import os
+import re
 import struct
 import sys
 import unittest
@@ -38,6 +39,12 @@ class Conversion(unittest.TestCase):
             self.assertEqual(65536 - end, loop + 16)
             self.assertEqual(data[start:start + loop], pcm)
             self.assertEqual(data[start + loop:start + loop + 16], bytes(16))
+        _, defines = S.build(wad, 242)
+        ticks = list(map(int, defines[-1].split('{')[1].split('}')[0].split(',')))
+        for duration, (_, name) in zip(ticks, S.SOUNDS):
+            seconds = (len(S.sample(wad.lump(name))) + 16) / S.RATE
+            self.assertGreater(duration * 3584 / 3579545, seconds)
+            self.assertLess(duration * 3584 / 3579545, seconds + .004)
         with self.assertRaises(ValueError):
             S.build(wad, 255)
 
@@ -47,14 +54,17 @@ class Conversion(unittest.TestCase):
         sym = symbols()
         regs = bytearray(256)
         ram = bytearray(S.RAM_SIZE)
-        state = {'reg': 0, 'addr': 0, 'fmreg': 0, 'new2': False}
+        state = {'reg': 0, 'addr': 0, 'fmreg': 0, 'new2': False, 'clock': 0}
         events = []
+        loads = []
         original_in, original_out = m.inp, m.out
 
         def inp(port):
             p = port & 255
             if p == 0xC4:
                 return 0
+            if p == 0xE7:
+                return state['clock']
             if p == 0x7F:
                 r = state['reg']
                 if r == 2:
@@ -88,6 +98,8 @@ class Conversion(unittest.TestCase):
                     state['addr'] += 1
                 if 0x68 <= r < 0x68 + 24 and value & 128:
                     events.append(r - 0x68)
+                if 8 <= r < 16:
+                    loads.append((r - 8, value - 128))
             else:
                 original_out(port, value)
 
@@ -96,7 +108,7 @@ class Conversion(unittest.TestCase):
         m.run_frames(2)
         self.assertEqual(m.m.memory[sym['audio_moon']], 1)
         self.assertEqual(regs[2], 0x10)
-        first = int(__import__('re').search(r'SFX_BANK0 (\d+)',
+        first = int(re.search(r'SFX_BANK0 (\d+)',
                     Path('private/e1m1_assets.h').read_text()).group(1))
         banks, _ = S.build(Wad(os.environ['E1M1_WAD']), first)
         self.assertEqual(ram[:len(banks) * 16384], b''.join(banks))
@@ -107,6 +119,24 @@ class Conversion(unittest.TestCase):
         self.assertEqual(regs[0x38 + events[0]], 0xF0)
         self.assertEqual(regs[0x50 + events[0]], 41)
         self.assertTrue(all(v < 8 for v in events))
+        count = int(re.search(r'NTHING (\d+)',
+                    Path('private/e1m1_assets.h').read_text()).group(1))
+        for i in range(count):
+            m.m.memory[sym['th']+11*i+9] = 0
+        # Free-running turbo R timer, including wrap. Real PCM timing is in openMSX.
+        m.keys_fn = lambda row: 255
+        for i in range(12):
+            state['clock'] = (state['clock'] + 180) & 255
+            m.run_frames(1)
+        self.assertTrue(all(regs[0x68 + i] & 128 == 0 for i in range(8)))
+        self.assertEqual(bytes(m.m.memory[sym['audio_left']:sym['audio_left']+16]), bytes(16))
+        # Holding fire in an empty room cycles through the eight cached pistol waves.
+        m.m.memory[sym['over']] = 0
+        events.clear(); loads.clear()
+        m.keys_fn = lambda row: 0xFE if row == 8 else 255
+        m.run_frames(220)
+        self.assertGreater(len(events), 16)
+        self.assertLessEqual(len(loads), 8)
 
 
 if __name__ == '__main__':

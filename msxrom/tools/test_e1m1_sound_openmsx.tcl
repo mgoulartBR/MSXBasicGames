@@ -61,6 +61,9 @@ proc audio_single_check {} {
     after time 2.5 [list checked_callback audio_next_single]
 }
 proc audio_next_single {} {
+    for {set i 0} {$i<8} {incr i} {
+        check [expr {([debug read $::wave [expr {0x68+$i}]]&0x80)==0}] "finished PCM voice $i released"
+    }
     record stop
     incr ::audio_id
     audio_single

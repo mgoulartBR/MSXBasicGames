@@ -29,9 +29,13 @@ def sample(lump):
 
 def build(wad, first_bank):
     data = bytearray(256)
+    durations = []
     for i, (_, lump) in enumerate(SOUNDS):
         pcm = sample(wad.lump(lump))
         length = len(pcm)
+        # E7 increments every 256 * 14 / 3579545 s; round up, plus two ticks.
+        durations.append(((length + 16) * 3579545 + RATE * 3584 - 1)
+                         // (RATE * 3584) + 2)
         if length + 16 >= 65536:
             raise ValueError('OPL4 wave exceeds 16-bit end offset')
         start = RAM_BASE + len(data)
@@ -50,4 +54,6 @@ def build(wad, first_bank):
     defines = [f'#define SFX_BANK0 {first_bank}', f'#define NSFX_BANKS {len(banks)}',
                f'#define NSFX {len(SOUNDS)}', f'#define SFX_RAM_BYTES {size}']
     defines += [f'#define SFX_{name} {i}' for i, (name, _) in enumerate(SOUNDS)]
+    defines += ['static const unsigned int sfx_ticks[NSFX] = {' +
+                ','.join(map(str, durations)) + '};']
     return banks, defines
