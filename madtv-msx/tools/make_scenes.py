@@ -15,13 +15,16 @@ H = 111
 SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40, 4, 296, 4 + H)),
           ("ads", "ads.png", (70, 4, 190, 4 + H)), ("movie", "movie.png", (0, 4, 120, 4 + H)), ("script", "script.png", (100, 4, 220, 4 + H)),
           ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (110, 4, 230, 4 + H)), ("realty", "realestate.png", (160, 4, 280, 4 + H)),
-          ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H))]
+          ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H)),
+          ("news", "news.png", (150, 4, 270, 4 + H))]
+FIXED_SEG = {"news": 15}     # segmento 15 estava livre: evita ROM de 512 KB
 
 def main(d):
     first_seg = 19
     seg = first_seg
     table = []
     for name, fn, box in SCENES:
+        if name in FIXED_SEG: seg_save, seg = seg, FIXED_SEG[name]
         im = Image.open(d + "/" + fn).convert("RGB").crop(box)
         w, h = im.size
         stride = w // 2
@@ -43,7 +46,7 @@ def main(d):
                 for i in range(0, 8192, 32): f.write("\t" + ", ".join(str(v) for v in data[i:i + 32]) + ",\n")
                 f.write("};\n")
         table.append((seg, stride, h, rps))
-        seg += nseg
+        seg = seg_save if name in FIXED_SEG else seg + nseg
     with open("src/data/art_scenes.h", "w") as f:
         f.write("// GERADO por tools/make_scenes.py - NAO versionar.\n#define ART_SCENES 1\n")
         for i, (name, _, _) in enumerate(SCENES): f.write("#define SCN_%s %d\n" % (name.upper(), i))

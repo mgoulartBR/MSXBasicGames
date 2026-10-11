@@ -14,3 +14,4 @@ src/data/art_hub.h
 src/seg/seg_s1[6-9]_b3.c
 src/seg/seg_s[2-3][0-9]_b3.c
 src/data/art_scenes.h
+src/seg/seg_s15_b3.c

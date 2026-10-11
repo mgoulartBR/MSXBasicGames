@@ -25,6 +25,21 @@ static void DrawRow_Grid_Body(u8 s)
 	if (s >= NUM_SLOTS) return;
 	sl = &g_Game.slot[0][s];
 	y = CONTENT_Y + 14 + s * 14;
+#if ART_SCENES
+	Ui_Fill(4, y - 2, 248, 13, 14);                      // painel cinza; hora, programa e anuncio em campos afundados (selecionado = azul)
+	ClockStr(b, FIRST_SLOT_T + s * 60);
+	Chrome_Box(6, y - 2, 40, 13, 14, 0);
+	Chrome_Box(50, y - 2, 104, 13, (s == s_Slot && s_GridCol == 0) ? 5 : 14, 0);
+	Chrome_Box(158, y - 2, 92, 13, (s == s_Slot && s_GridCol == 1) ? 5 : 14, 0);
+	Ui_Color(UI_BLACK);
+	Ui_Text(12, y, b);
+	if (sl->movie == NONE) Ui_Text(56, y, "- empty -");
+	else if (sl->part) Ui_Text(56, y, "  (cont.)");
+	else Ui_TextN(56, y, (*Mov(sl->movie)).title, 16);
+	if (sl->ad == NONE) Ui_Text(164, y, "no ad");
+	else Ui_TextN(164, y, g_Ads[g_Game.contract[sl->ad].ad].title, 14);
+	return;
+#endif
 	Ui_Fill(0, y - 2, 255, 13, UI_BG);
 	ClockStr(b, FIRST_SLOT_T + s * 60);
 	Ui_Color(s == s_Slot ? UI_YELLOW : UI_GRAY);
@@ -41,7 +56,11 @@ static void DrawRow_Grid(u8 s)
 	if (s >= NUM_SLOTS) return;
 	Ui_Begin();
 	DrawRow_Grid_Body(s);
+#if ART_SCENES
+	Ui_End(4, (u8)(CONTENT_Y + 14 + s * 14 - 2), 248, 13);
+#else
 	Ui_End(0, (u8)(CONTENT_Y + 14 + s * 14 - 2), 255, 13);
+#endif
 }
 
 static void Draw_GridRows(void)
@@ -55,6 +74,30 @@ static void DrawRow_Pick_Body(u8 i)
 	u8 v, y;
 	if (i >= LIST_ROWS) return;
 	y = CONTENT_Y + 14 + i * ROW_H;
+#if ART_SCENES
+	Ui_Fill(4, y - 1, 248, ROW_H, 14);
+	if (g_First + i >= s_PickN) return;
+	if (g_First + i == g_Sel) Chrome_Box(4, y - 1, 248, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	v = s_PickList[g_First + i];
+	if (v == NONE) { Ui_Text(10, y, "(none)"); return; }
+	if (s_Pick == 1)
+	{
+		Ui_TextN(10, y, (*Mov(v)).title, 22);
+		Ui_Int(170, y, (*Mov(v)).blocks); Ui_Text(178, y, "bl");
+		Ui_Text(196, y, "Q"); Ui_Int(204, y, Sim_Quality(v));
+		Ui_Text(226, y, "x"); Ui_Int(234, y, g_Game.plays[0][v]);
+	}
+	else
+	{
+		const Contract* c = &g_Game.contract[v];
+		Ui_TextN(10, y, g_Ads[c->ad].title, 18);
+		Ui_Text(128, y, "min "); Ui_Dec1(152, y, g_Ads[c->ad].min_audience);
+		Ui_Int(184, y, c->reps_left); Ui_Text(196, y, "x");
+		Ui_Int(208, y, c->days_left); Ui_Text(220, y, "d");
+	}
+	return;
+#endif
 	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
 	if (g_First + i >= s_PickN) return;
 	v = s_PickList[g_First + i];
@@ -85,7 +128,11 @@ static void DrawRow_Pick(u8 i)
 	if (i >= LIST_ROWS) return;
 	Ui_Begin();
 	DrawRow_Pick_Body(i);
+#if ART_SCENES
+	Ui_End(4, (u8)(CONTENT_Y + 14 + i * ROW_H - 1), 248, ROW_H);
+#else
 	Ui_End(0, (u8)(CONTENT_Y + 14 + i * ROW_H - 1), 255, ROW_H);
+#endif
 }
 
 static void DrawList_Pick(void)
@@ -96,6 +143,22 @@ static void DrawList_Pick(void)
 
 static void Draw_Grid_Body(void)
 {
+#if ART_SCENES
+	Ui_Fill(0, CONTENT_Y - 2, 0, 160, UI_BG);
+	Chrome_Box(0, CONTENT_Y - 2, 256, 160, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (s_Pick == 0)
+	{
+		Ui_Text(8, CONTENT_Y + 3, "Programme grid (today)");
+		Draw_GridRows();
+		Hint("L/R:column OK:edit BACK:office");
+		return;
+	}
+	Ui_Text(8, CONTENT_Y + 3, s_Pick == 1 ? "Choose programme" : "Choose ad contract");
+	DrawList_Pick();
+	Hint("OK:place BACK:cancel");
+	return;
+#endif
 	ClearContent();
 	if (s_Pick == 0)
 	{

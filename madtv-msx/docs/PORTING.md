@@ -293,3 +293,9 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Cache da cena: ela fica no buffer (pagina 2); `g_BufScene` guarda o id e `Goto` o invalida. Sem isso, cada redesenho completo (D_CON) custava ~0,5 s e um aperto de tecla chegava a ser perdido (smoke: Estudios).
 - Como o DOS foi capturado: DOSBox sem janela real, ponteiro por movimentos relativos (calibracao 3x), clique no elevador ate aparecer o quadro de salas; Ctrl+F5 salva a captura.
 - Verificado so no emulador (openMSX, C-BIOS): build com e sem arte, unit, smoke (SHOTS=1 confere as telas), SRAM, FM, mouse. O teste `balance.sh` precisa de `CFLAGS_EXTRA=-DBALANCE_STATS`.
+
+## 1.8: noticias e grade
+- `make_scenes.py`: `FIXED_SEG` coloca a cena `news` (crop 150..270 de `original/dos/news.png`) no segmento 15, livre no mapa (0-1 codigo, 2 e 15 sem uso): sem aumentar a ROM. `.gitignore` cobre `seg_s15_b3.c`.
+- Noticias: linha 0 do cursor (agencias) passou para o painel de baixo; as 11 linhas (3 do telejornal + 8 recebidas) ocupam o painel direito sem cabecalho; titulo completo, preco e frescor da linha selecionada ficam embaixo.
+- Grade e escolha de filme/contrato: painel cinza 256x160 com campos afundados (hora, programa, anuncio; selecionado em azul). E uma aproximacao: nao ha capturas da grade original no repositorio local.
+- Verificado so no emulador (openMSX, C-BIOS): build com e sem arte, unit, smoke (SHOTS=1), SRAM, mouse, FM.

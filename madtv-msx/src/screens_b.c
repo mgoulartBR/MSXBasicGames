@@ -6,6 +6,90 @@
 #define NEWS_ROWS (1 + NEWS_SLATE + NEWS_POOL)
 static u8 s_NewsCol;        // agencia sob o cursor na linha 0
 
+#if ART_SCENES
+// cena do estudio a esquerda; telejornal (3) + recebidas (8) num painel a direita; agencias e detalhes no painel de baixo
+static u8 NewsRowY(u8 r) { return r == 0 ? 141 : (u8)(CONTENT_Y + (r - 1) * ROW_H); }
+
+static const NewsItem* NewsIt(u8 r) { return r <= NEWS_SLATE ? &g_Game.news_slate[r - 1] : &g_Game.news_pool[r - 1 - NEWS_SLATE]; }
+
+static void NewsPanelBody(void)
+{
+	u8 i, x, q = Sim_NewsQuality();
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	for (i = 0; i < DB_NUM_AGENCIES; i++)
+	{
+		if (g_Sel == 0 && s_NewsCol == i) Chrome_Box((u8)(4 + i * 84), 140, 80, 11, 5, 0);
+		Ui_Color(UI_BLACK);
+		Ui_Text((u8)(8 + i * 84), 142, g_Game.news_sub[i] ? "[x]" : "[ ]");
+		Ui_Text((u8)(30 + i * 84), 142, g_AgencyName[i]);
+	}
+	Ui_Color(UI_BLACK);
+	if (g_Sel > 0)
+	{
+		const NewsItem* it = NewsIt(g_Sel);
+		if (it->idx != NONE)
+		{
+			NewsRec rec;
+			Db_News(it->idx, &rec);
+			Ui_TextN(8, 155, rec.title, 40);
+			if (g_Sel > NEWS_SLATE) { Ui_Text(8, 166, "Price"); Money(44, 166, Sim_NewsCost(it->idx)); }
+			Ui_Text(110, 166, "Fresh"); x = Ui_Int(146, 166, Sim_NewsFresh(it->age)); Ui_Text(x, 166, "%");
+		}
+	}
+	else Ui_Text(8, 155, "Agencies sell you news every day.");
+	Ui_Text(8, 176, "Newscast quality"); x = Ui_Int(110, 176, q); Ui_Text(x, 176, "%");
+	Ui_Text(150, 176, "audience x"); x = Ui_Int(212, 176, 70 + (u16)q * 30 / 100); Ui_Text(x, 176, "%");
+}
+
+static void NewsRowBody(u8 r)
+{
+	u8 y = NewsRowY(r), i;
+	NewsRec rec;
+	const NewsItem* it;
+	if (r == 0) return;
+	Ui_Fill(126, y - 1, 128, ROW_H, 14);
+	if (g_Sel == r) Chrome_Box(126, y - 1, 128, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	it = NewsIt(r);
+	i = (r <= NEWS_SLATE);
+	if (it->idx == NONE) { if (i) Ui_Text(130, y, "- empty -"); return; }
+	Db_News(it->idx, &rec);
+	Ui_TextN(130, y, rec.title, i ? 14 : 20);
+	if (i) { Ui_Int(220, y, Sim_NewsFresh(it->age)); Ui_Text(238, y, "%"); }
+}
+
+static void NewsRow(u8 r)
+{
+	if (r >= NEWS_ROWS) return;
+	if (r)
+	{
+		Ui_Begin();
+		NewsRowBody(r);
+		Ui_End(126, (u8)(NewsRowY(r) - 1), 128, ROW_H);
+	}
+	if (r == 0 || g_Sel == r)
+	{
+		Ui_Begin();
+		NewsPanelBody();
+		Ui_End(0, 138, 256, 48);
+	}
+}
+
+void News_Enter(void) __banked { s_NewsCol = 0; }
+
+void News_Draw(void) __banked
+{
+	u8 r;
+	Ui_Begin();
+	Room_Frame(SCN_NEWS);
+	for (r = 1; r < NEWS_ROWS; r++) NewsRowBody(r);
+	NewsPanelBody();
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:use/toggle  BACK:office");
+}
+
+void News_Detail(void) __banked { Ui_Begin(); NewsPanelBody(); Ui_End(0, 138, 256, 48); }
+#else
 static u8 NewsRowY(u8 r)
 {
 	if (r == 0) return CONTENT_Y + 11;
@@ -88,15 +172,16 @@ void News_Draw(void) __banked
 	Hint("OK:use/toggle  BACK:office");
 }
 
-void News_Row(u8 r) __banked { NewsRow(r); }
-void News_Dyn(void) __banked { News_Draw(); }
-
 void News_Detail(void) __banked
 {
 	Ui_Begin();
 	NewsHeaderBody();
 	Ui_End(0, CONTENT_Y + 22, 255, 11);
 }
+#endif
+
+void News_Row(u8 r) __banked { NewsRow(r); }
+void News_Dyn(void) __banked { News_Draw(); }
 
 void News_Input(u8 ev) __banked
 {
@@ -256,6 +341,9 @@ void News_Mouse(u8 x, u8 y, u8 btn) __banked
 {
 	u8 r, hit = 0xFF;
 	for (r = 0; r < NEWS_ROWS; r++) { u8 ry = NewsRowY(r); if (y >= ry - 1 && y < ry + 9) { hit = r; break; } }
+#if ART_SCENES
+	if (hit != 0xFF && hit > 0 && x < 122) return;
+#endif
 	if (hit == 0xFF) return;
 	if (hit == 0)
 	{
