@@ -28,7 +28,7 @@ No hardware é necessário MoonSound/compatível com mapeamento padrão e ≥128
 FPGA/hardware/BIOS Panasonic continuam UNTESTED.
 
 Testes privados adicionais: `tools/test_e1m1_sound.py` (com E1M1_WAD e GEO3D_SIM)
-e `E1M1_AUDIO=1 ... -script tools/test_e1m1_openmsx.tcl` no fork; sem extensão use
+e `E1M1_AUDIO_TEST=1 ... -script tools/test_e1m1_openmsx.tcl` no fork; sem extensão use
 também `E1M1_EXPECT_MOON=0`. O segundo confere RAM, teclado, pitch, ganho, vozes,
 reinício, gameplay e grava WAVs reais do emulador. As chamadas isoladas de samples
 são feitas via debugger preservando o contexto da CPU; não são uma partida manual.

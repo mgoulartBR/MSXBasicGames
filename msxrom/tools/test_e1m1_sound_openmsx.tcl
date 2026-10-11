@@ -1,4 +1,4 @@
-# Opt-in E1M1_AUDIO=1. Real fork audio output; samples are triggered by the Z80 driver.
+# Opt-in E1M1_AUDIO_TEST=1. Real fork output; samples are triggered by the Z80 driver.
 proc audio_start {} {
     set ::audio_expected 1
     if {[info exists ::env(E1M1_EXPECT_MOON)]} {set ::audio_expected $::env(E1M1_EXPECT_MOON)}

@@ -23,7 +23,7 @@ close $f
 if {[info exists env(E1M1_GAMEPLAY)] && $env(E1M1_GAMEPLAY)} {
     source [file join $root tools test_e1m1_gameplay_openmsx.tcl]
 }
-if {[info exists env(E1M1_AUDIO)] && $env(E1M1_AUDIO)} {
+if {[info exists env(E1M1_AUDIO_TEST)] && $env(E1M1_AUDIO_TEST)} {
     source [file join $root tools test_e1m1_gameplay_openmsx.tcl]
     source [file join $root tools test_e1m1_sound_openmsx.tcl]
 }

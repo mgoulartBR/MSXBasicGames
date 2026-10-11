@@ -7,7 +7,7 @@ header bank=4 em 0x200000, pitch OCT=−1/FN=0. Término em 16 amostras de zero.
 Detecção do ID OPL4 e probe de RAM no fim dos primeiros 128 KiB; BUSY/LD com timeout.
 PSG fallback máx. 6/15, três quadros; continua baseado no FPS. Reset amortece as vozes.
 `setup_e1m1_moonsound.py` instala XML RAM-only, sem ROM Yamaha redistribuída.
-Testes: `test_e1m1_sound.py` e `E1M1_AUDIO=1` no teste openMSX; ausência da expansão
+Testes: `test_e1m1_sound.py` e `E1M1_AUDIO_TEST=1` no teste openMSX; ausência da expansão
 com `E1M1_EXPECT_MOON=0`. WAVs são saída real do emulador. Não há música/posição
 estéreo, MSX-AUDIO ou streaming turbo R. FPGA/hardware seguem UNTESTED.
 
