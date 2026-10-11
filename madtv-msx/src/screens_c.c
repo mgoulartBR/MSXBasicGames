@@ -6,21 +6,38 @@
 #define BOSS_ROWS   3
 static const char* const k_BossItems[BOSS_ROWS] = { "Borrow $500k", "Repay $500k", "Repay all debt" };
 
+#if ART_SCENES
+#define BOSS_RY(i)  ((u8)(CONTENT_Y + 72 + (i) * ROW_H))    // linhas do menu dentro do painel cinza (a direita da cena)
 static void BossRowBody(u8 i)
 {
-	u8 y = CONTENT_Y + 98 + i * ROW_H;
+	u8 y = BOSS_RY(i), sel = (g_Sel == i);
+	Ui_Fill(114, y - 1, 136, ROW_H, 14);
+	if (sel) Chrome_Box(114, y - 1, 136, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	Ui_Text(120, y, k_BossItems[i]);
+}
+#else
+#define BOSS_RY(i)  ((u8)(CONTENT_Y + 98 + (i) * ROW_H))
+static void BossRowBody(u8 i)
+{
+	u8 y = BOSS_RY(i);
 	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
 	Ui_Color(i == g_Sel ? UI_YELLOW : UI_WHITE);
 	Ui_Text(4, y, i == g_Sel ? ">" : " ");
 	Ui_Text(14, y, k_BossItems[i]);
 }
+#endif
 
 static void BossRow(u8 i)
 {
 	if (i >= BOSS_ROWS) return;
 	Ui_Begin();
 	BossRowBody(i);
-	Ui_End(0, (u8)(CONTENT_Y + 98 + i * ROW_H - 1), 255, ROW_H);
+#if ART_SCENES
+	Ui_End(114, (u8)(BOSS_RY(i) - 1), 136, ROW_H);
+#else
+	Ui_End(0, (u8)(BOSS_RY(i) - 1), 255, ROW_H);
+#endif
 }
 
 void Boss_Enter(void) __banked { }
@@ -30,6 +47,24 @@ void Boss_Draw(void) __banked
 	u8 i;
 	i32 lim = Sim_CreditLimit();
 	Ui_Begin();
+#if ART_SCENES
+	Ui_Fill(0, 137, 0, 49, UI_BG);                        // abaixo da cena
+	Scene_Draw(SCN_BOSS, 0, CONTENT_Y - 2);
+	Chrome_Box(112, CONTENT_Y, 140, 106, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (g_Game.image[0] >= 40) { Ui_Text(120, CONTENT_Y + 6, "\"Not bad, kid. Keep"); Ui_Text(120, CONTENT_Y + 16, "the money coming.\""); }
+	else if (g_Game.image[0] < 20) { Ui_Text(120, CONTENT_Y + 6, "\"Your image is a"); Ui_Text(120, CONTENT_Y + 16, "DISGRACE! Raus hier!\""); }
+	else { Ui_Text(120, CONTENT_Y + 6, "\"Money, money, money."); Ui_Text(120, CONTENT_Y + 16, "That's all I ask.\""); }
+	Ui_Text(120, CONTENT_Y + 32, "Your cash");        Money(184, CONTENT_Y + 32, g_Game.money);
+	Ui_Text(120, CONTENT_Y + 42, "Debt");             Ui_Color(g_Game.debt ? UI_RED : UI_BLACK); Money(184, CONTENT_Y + 42, g_Game.debt);
+	Ui_Color(UI_BLACK);
+	Ui_Text(120, CONTENT_Y + 52, "Credit limit");     Money(196, CONTENT_Y + 52, lim);
+	Ui_Text(120, CONTENT_Y + 62, "Interest/day");     Ui_Int(196, CONTENT_Y + 62, INTEREST_PCT); Ui_Text(208, CONTENT_Y + 62, "%");
+	for (i = 0; i < BOSS_ROWS; i++) BossRowBody(i);
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:choose  BACK:office");
+	return;
+#endif
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Mr. Raffer's office");
 	Ui_Color(g_Game.image[0] >= 40 ? UI_GREEN : (g_Game.image[0] < 20 ? UI_RED : UI_WHITE));
@@ -205,7 +240,7 @@ void Save_Input(u8 ev) __banked
 // ---------------------------------------------------------------- mouse
 void Boss_Mouse(u8 x, u8 y, u8 btn) __banked
 {
-	u8 r = HitRow(y, (u8)(CONTENT_Y + 97), ROW_H, BOSS_ROWS);
+	u8 r = HitRow(y, (u8)(BOSS_RY(0) - 1), ROW_H, BOSS_ROWS);
 	(void)x;
 	if (r == 0xFF) return;
 	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); }

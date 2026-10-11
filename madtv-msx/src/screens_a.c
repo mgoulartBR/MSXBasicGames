@@ -272,6 +272,62 @@ void Agency_Input(u8 ev) __banked
 }
 
 // ---------------------------------------------------------------- AGENCIA DE PUBLICIDADE
+#if ART_SCENES
+#define ADS_RY(i)  ((u8)(CONTENT_Y + 16 + (i) * 12))      // lista num painel cinza a direita da cena; detalhes num painel embaixo
+static void DrawRow_Ads_Body(u8 i)
+{
+	u8 a, y = ADS_RY(i);
+	if (i >= NUM_OFFERS) return;
+	a = g_Game.offer[i];
+	Ui_Fill(126, y - 1, 128, 11, 14);
+	if (i == g_Sel) Chrome_Box(126, y - 1, 128, 11, 5, 0);
+	Ui_Color(UI_BLACK);
+	if (a == NONE) Ui_Text(132, y, "(signed)");
+	else Ui_TextN(132, y, g_Ads[a].title, 20);
+}
+
+static void DrawRow_Ads(u8 i)
+{
+	if (i >= NUM_OFFERS) return;
+	Ui_Begin();
+	DrawRow_Ads_Body(i);
+	Ui_End(126, (u8)(ADS_RY(i) - 1), 128, 11);
+}
+
+static void DrawDetail_Ads_Body(void)
+{
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (g_Game.offer[g_Sel] != NONE)
+	{
+		const Ad* ad = &g_Ads[g_Game.offer[g_Sel]];
+		Ui_Text(8, 142, "Min audience"); Ui_Dec1(92, 142, ad->min_audience); Ui_Text(116, 142, "M viewers");
+		Ui_Text(8, 154, "Spots"); Ui_Int(44, 154, ad->reps); Ui_Text(56, 154, "in"); Ui_Int(74, 154, ad->days); Ui_Text(86, 154, "day(s)");
+		Ui_Text(8, 166, "Pay"); Money(34, 166, ad->profit);
+		Ui_Text(104, 166, "Penalty"); Money(152, 166, Sim_Penalty(g_Game.offer[g_Sel]));
+	}
+}
+
+static void DrawDetail_Ads(void)
+{
+	Ui_Begin();
+	DrawDetail_Ads_Body();
+	Ui_End(0, 138, 256, 48);
+}
+
+void Ads_Draw(void) __banked
+{
+	u8 i;
+	Ui_Begin();
+	Scene_Draw(SCN_ADS, 0, CONTENT_Y - 2);
+	Chrome_Box(122, CONTENT_Y - 2, 134, 112, 14, 1);
+	Ui_Color(UI_BLACK); Ui_Text(128, CONTENT_Y + 2, "Today's offers");
+	for (i = 0; i < NUM_OFFERS; i++) DrawRow_Ads_Body(i);
+	DrawDetail_Ads_Body();
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:sign contract BACK:office");
+}
+#else
 static void DrawRow_Ads_Body(u8 i)
 {
 	u8 a, y = CONTENT_Y + 14 + i * 12;
@@ -329,6 +385,8 @@ void Ads_Draw(void) __banked
 	Draw_Ads_Body();
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 }
+
+#endif
 
 void Ads_Input(u8 ev) __banked
 {
@@ -445,8 +503,13 @@ void Agency_Mouse(u8 x, u8 y, u8 btn) __banked
 
 void Ads_Mouse(u8 x, u8 y, u8 btn) __banked
 {
+#if ART_SCENES
+	u8 r = HitRow(y, (u8)(ADS_RY(0) - 1), 12, NUM_OFFERS);
+	if (x < 122) return;                                   // sobre a cena: nada
+#else
 	u8 r = HitRow(y, (u8)(CONTENT_Y + 13), 12, NUM_OFFERS);
 	(void)x;
+#endif
 	if (r == 0xFF) return;
 	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); g_Dirty |= D_DET; }
 	if (btn) Ads_Input(IN_OK);

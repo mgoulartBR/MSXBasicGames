@@ -278,3 +278,11 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - O sprite do carro do elevador foi escondido quando ha arte (o fundo ja traz as portas); jogador e rivais continuam sprites.
 - Verificado: build com e sem arte, unit, smoke, SRAM (sbit 32 e sem SRAM), FM, mouse.
 - Limite: a arte foi recortada de UMA captura; o original rola verticalmente (13 andares) e tem o letreiro MAD TV no topo, o horizonte e a Betty; nao reproduzi isso.
+
+## 1.6: cenas das salas
+- `tools/make_scenes.py original/user` recorta 3 cenas de capturas do original (chefe n4.png, escritorio n3.png, agencia de publicidade 5.png - versao Amiga), quantiza para a paleta global e grava `src/seg/seg_s19..s23_b3.c` (linhas de `stride` bytes; `rps` linhas por segmento) + `src/data/art_scenes.h` (`ART_SCENES 1`, tabela `SCN_INIT`). Tudo no .gitignore; `scripts/build.sh` cria o cabecalho com `ART_SCENES 0` se faltar (telas de texto da 1.4/1.5).
+- `Scene_Draw(id, dx, dy)` (chrome.c, segmento 14) mapeia o segmento de dados no banco 3 por linha e usa `Ui_BlitRow` (VDP direto). A cena do chefe/escritorio tem 256x111, a da agencia 120x111.
+- Layouts: chefe = cena + painel cinza a direita (fala em 2 linhas, caixa, divida, limite, juros e o menu com a opcao selecionada num campo azul afundado); escritorio = cena + painel cinza embaixo com os 4 itens; agencia de publicidade = cena a esquerda (120 px), lista de ofertas no painel direito e detalhes (audiencia minima, spots, pagamento, multa) num painel embaixo. Clique do mouse sobre a cena nao faz nada.
+- Custo: o desenho completo leva ~27-30 jiffies (~0,5 s: 14 KB por VDP direto + troca de segmento); por isso a tela do chefe deixou de ser redesenhada a cada hora (`ScreenDyn`).
+- A cena da agencia recortada da versao Amiga inclui o cursor de seta vermelho da captura; e as cores vem da paleta global (16 cores), entao tons de pele ficam salmao.
+- Verificado: build com e sem arte, unit, smoke (inclui travessia ate as salas), SRAM, FM, mouse.

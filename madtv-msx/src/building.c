@@ -327,26 +327,47 @@ static const char* const k_OfficeItems[] = { "Programme grid (TV computer)", "Ra
 static const u8 k_OfficeScr[] = { SCR_GRID, SCR_RATINGS, SCR_SLOTS, SCR_OPTIONS };
 #define OFFICE_N 4
 
+#if ART_SCENES
+#define OFF_RY(i) ((u8)(142 + (i) * ROW_H))              // menu num painel cinza embaixo da cena do escritorio
 static void OfficeRowBody(u8 i)
 {
-	u8 y = CONTENT_Y + 24 + i * ROW_H;
+	u8 y = OFF_RY(i);
+	Ui_Fill(4, y - 1, 248, ROW_H, 14);
+	if (i == g_Sel) Chrome_Box(4, y - 1, 248, ROW_H, 5, 0);
+	Ui_Color(UI_BLACK);
+	Ui_Text(12, y, k_OfficeItems[i]);
+}
+#else
+#define OFF_RY(i) ((u8)(CONTENT_Y + 24 + (i) * ROW_H))
+static void OfficeRowBody(u8 i)
+{
+	u8 y = OFF_RY(i);
 	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
 	Ui_Color(i == g_Sel ? UI_YELLOW : UI_WHITE);
 	Ui_Text(4, y, i == g_Sel ? ">" : " ");
 	Ui_Text(14, y, k_OfficeItems[i]);
 }
+#endif
 
 void Office_Enter(void) __banked { }
 void Office_Row(u8 r) __banked
 {
 	if (r >= OFFICE_N) return;
-	Ui_Begin(); OfficeRowBody(r); Ui_End(0, (u8)(CONTENT_Y + 24 + r * ROW_H - 1), 255, ROW_H);
+	Ui_Begin(); OfficeRowBody(r); Ui_End(0, (u8)(OFF_RY(r) - 1), 255, ROW_H);
 }
 
 void Office_Draw(void) __banked
 {
 	u8 i;
 	Ui_Begin();
+#if ART_SCENES
+	Scene_Draw(SCN_OFFICE, 0, CONTENT_Y - 2);
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	for (i = 0; i < OFFICE_N; i++) OfficeRowBody(i);
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("OK:use  BACK:corridor");
+	return;
+#endif
 	ClearContent();
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Your office");
 	for (i = 0; i < OFFICE_N; i++) OfficeRowBody(i);
@@ -385,7 +406,7 @@ void Building_Mouse(u8 x, u8 y, u8 btn) __banked
 
 void Office_Mouse(u8 x, u8 y, u8 btn) __banked
 {
-	u8 r = HitRow(y, (u8)(CONTENT_Y + 23), ROW_H, OFFICE_N);
+	u8 r = HitRow(y, (u8)(OFF_RY(0) - 1), ROW_H, OFFICE_N);
 	(void)x;
 	if (r == 0xFF) return;
 	if (r != g_Sel) { u8 old = g_Sel; g_Sel = r; MarkRows(old, r); }

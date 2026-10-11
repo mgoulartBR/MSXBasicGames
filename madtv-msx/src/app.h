@@ -5,6 +5,7 @@
 #include "ui.h"
 #include "sim.h"
 #include "data/db_data.h"
+#include "data/art_scenes.h"                    // ART_SCENES: cenas das salas (chefe, escritorio, agencia de publicidade) com arte local; 0 = telas de texto
 
 #define CONTENT_Y   28
 #define ROW_H       10
@@ -83,7 +84,7 @@ void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realt
 void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "1.5"
+#define VERSION_STR "1.6"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Title_Opts(void) __banked; u8 Title_Click(u8 x, u8 y) __banked; void Over_Draw(void) __banked;
 
@@ -94,6 +95,7 @@ void Options_Draw(void) __banked; void Options_Input(u8 ev) __banked; void Optio
 
 // casca visual (chrome.c, segmento 14)
 void Chrome_Palette(void) __banked; void Chrome_Box(u8 x, u8 y, u8 w, u8 h, u8 face, u8 raised) __banked;
+void Scene_Draw(u8 id, u8 dx, u8 dy) __banked;   // blit de uma cena (so com ART_SCENES)
 void Hud_Reset(void) __banked; void Hud_Draw(void) __banked; void Chrome_Hint(const char* s) __banked; void Chrome_Msg(const char* s) __banked;
 // salvar/carregar em SRAM (slots.c, segmento 13)
 extern u8 g_SramBit;

@@ -40,6 +40,25 @@ static void Icon(const u8* d, u8 x, u8 y, u8 w, u8 h)       // bitmap 4 bpp dire
 }
 #endif
 
+#if ART_SCENES
+typedef struct { u8 seg, stride, h, rps; } SceneDef;
+static const SceneDef k_Scn[] = SCN_INIT;
+void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` bytes em segmentos de dados mapeados no banco 3 (rps linhas por segmento)
+{
+	const SceneDef* d = &k_Scn[id];
+	u8 r, seg = 0xFF, s, prev = GET_BANK_SEGMENT(3);
+	for (r = 0; r < d->h; r++)
+	{
+		s = (u8)(d->seg + r / d->rps);
+		if (s != seg) { SET_BANK_SEGMENT(3, s); seg = s; }
+		Ui_BlitRow((const u8*)(0xA000 + (u16)(r % d->rps) * d->stride), dx, (u8)(dy + r), d->stride);
+	}
+	SET_BANK_SEGMENT(3, prev);
+}
+#else
+void Scene_Draw(u8 id, u8 dx, u8 dy) __banked { (void)id; (void)dx; (void)dy; }
+#endif
+
 // ---------------------------------------------------------------- HUD (cabecalho): so os campos que mudaram sao redesenhados
 static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
 static i32 c_Money = 0x7FFFFFFF;

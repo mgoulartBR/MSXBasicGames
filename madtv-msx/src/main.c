@@ -172,7 +172,6 @@ static void ScreenDyn(void)
 	case SCR_NEWS:    News_Dyn(); break;
 	case SCR_PORTER:  Porter_Draw(); break;
 	case SCR_FUN: case SCR_SUN: Rival_Draw(); break;
-	case SCR_BOSS:    Boss_Draw(); break;
 	}
 }
 
