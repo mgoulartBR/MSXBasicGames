@@ -424,3 +424,40 @@ u8 Sim_LoadBytes(const u8* b) __banked                            // 0 ok, 2 che
 	NewOffers();
 	return 0;
 }
+
+// Sabotagem dos rivais (fim do dia): so quem esta na frente (Image maior que a sua) age; chance sobe com a dificuldade.
+// Efeitos: campanha de difamacao (-2 Image), telejornal envelhecido (+6 h nas noticias) ou contrato de anuncio roubado (sem multa).
+void Sim_RivalDay(void) __banked
+{
+	u8 st, i, k;
+	for (st = 1; st < NUM_STATIONS; st++)
+	{
+		if (!g_Game.alive[st] || g_Game.image[st] <= g_Game.image[0]) continue;
+		if (Sim_Rnd(100) >= (u8)(SABOTAGE_PCT + 6 * g_Diff)) continue;
+		k = Sim_Rnd(3);
+		if (k == 0)
+		{
+			g_Game.image[0] = (u8)(g_Game.image[0] > 2 ? g_Game.image[0] - 2 : 0);
+			Sim_Msg("Smear campaign! Your Image -2.");
+		}
+		else if (k == 1)
+		{
+			for (i = 0; i < NEWS_SLATE; i++) if (g_Game.news_slate[i].idx != NONE) g_Game.news_slate[i].age = (u8)(g_Game.news_slate[i].age < 244 ? g_Game.news_slate[i].age + 6 : 250);
+			Sim_Msg("Rival bribed your reporters: newscast stale!");
+		}
+		else
+		{
+			for (i = 0; i < MAX_CONTRACTS; i++)
+				if (g_Game.contract[i].ad != NONE)
+				{
+					u8 s;
+					g_Game.contract[i].ad = NONE;
+					for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].ad == i) g_Game.slot[0][s].ad = NONE;
+					Sim_Msg("A rival poached one of your ad contracts!");
+					break;
+				}
+			if (i == MAX_CONTRACTS) Sim_Msg("A rival spy was seen in the lobby.");
+		}
+		return;                                  // no maximo uma sabotagem por dia
+	}
+}

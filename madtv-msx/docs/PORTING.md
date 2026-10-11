@@ -299,3 +299,8 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Noticias: linha 0 do cursor (agencias) passou para o painel de baixo; as 11 linhas (3 do telejornal + 8 recebidas) ocupam o painel direito sem cabecalho; titulo completo, preco e frescor da linha selecionada ficam embaixo.
 - Grade e escolha de filme/contrato: painel cinza 256x160 com campos afundados (hora, programa, anuncio; selecionado em azul). E uma aproximacao: nao ha capturas da grade original no repositorio local.
 - Verificado so no emulador (openMSX, C-BIOS): build com e sem arte, unit, smoke (SHOTS=1), SRAM, mouse, FM.
+
+## 1.9: sabotagem e apagar slot
+- `Sim_RivalDay` (sim_ext.c, chamada em `EndDay`): cada rival vivo com Image > Image do jogador sorteia `SABOTAGE_PCT + 6*dificuldade` %; no maximo uma sabotagem por dia, escolhida entre difamacao (-2 Image), suborno dos reporteres (+6 h de idade nas noticias do telejornal) e roubo de um contrato de anuncio (sem multa, o slot fica sem anuncio). Sem estado novo: savegame inalterado. Efeito no bot "smart" (200 partidas, normal): falencia 1% -> 3%, caixa mediano 2526k -> 2572k (numeros de um bot, nao de humano). Para comparar sem sabotagem: `CFLAGS_EXTRA="-DBALANCE_STATS -DSABOTAGE_PCT=-6"`.
+- Slots: menu "Erase a slot"; o 1o OK arma o slot (mensagem pede confirmacao), o 2o apaga; mudar a selecao desarma. `tests/sram.sh` agora apaga o slot 1 e confere que Esc no titulo cai na tela do codigo.
+- Verificado so no emulador (openMSX, C-BIOS).

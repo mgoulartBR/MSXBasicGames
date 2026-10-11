@@ -85,7 +85,7 @@ void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realt
 void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "1.8"
+#define VERSION_STR "1.9"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Title_Opts(void) __banked; u8 Title_Click(u8 x, u8 y) __banked; void Over_Draw(void) __banked;
 

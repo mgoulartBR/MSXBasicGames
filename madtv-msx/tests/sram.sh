@@ -46,17 +46,38 @@ at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 7 0x80 }
 at 0.6 { set f [open /tmp/sram_c.txt w]; puts \$f "sbit=[peek $SB] scr=[peek $SCR]"; close \$f; exit }
 T
 } > /tmp/sram_c.tcl
+# --- A3: apaga o slot 1 (menu: Erase a slot > slot 1 > OK de novo para confirmar)
+{ hdr; cat <<T
+at 0 { press 7 0x80 }
+at 1.6 { poke $SEL 9 }
+at 0.2 { press 7 0x80 }
+at 4.5 {}
+at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 7 0x80 }
+at 0.4 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 7 0x80 }
+at 0.4 { press 7 0x80 }; at 0.4 { press 7 0x80 }
+at 0.5 { exit }
+T
+} > /tmp/sram_d.tcl
+# --- A4: Esc no titulo depois de apagar: nao ha slot usado, vai para a tela do codigo (scr=9)
+{ hdr; cat <<T
+at 0 { press 7 0x04 }
+at 1.5 { set f [open /tmp/sram_e.txt w]; puts \$f "sbit=[peek $SB] scr=[peek $SCR]"; close \$f; exit }
+T
+} > /tmp/sram_e.tcl
 rm -f /tmp/sram_?.txt
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_a.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_b.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/sram_c.tcl >/dev/null 2>&1
-cat /tmp/sram_a.txt /tmp/sram_b.txt /tmp/sram_c.txt
+timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_d.tcl >/dev/null 2>&1
+timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_e.tcl >/dev/null 2>&1
+cat /tmp/sram_a.txt /tmp/sram_b.txt /tmp/sram_c.txt /tmp/sram_e.txt
 python3 -I - <<'P'
 import sys
 def rd(f): return dict(kv.split('=') for kv in open(f).read().split())
 def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
-a,b,c=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt')
+a,b,c,e=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt'),rd('/tmp/sram_e.txt')
+need(e['scr']=='9','A3/A4: slot 1 nao foi apagado (Esc no titulo ainda abre os slots)')
 need(a['sbit']=='32' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
 need(b['sbit']=='32' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)
 need(c['sbit']=='0' and c['scr']=='9','B: sem SRAM deveria abrir direto a tela do codigo (%s)'%c)

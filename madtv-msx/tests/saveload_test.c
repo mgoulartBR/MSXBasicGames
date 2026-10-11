@@ -196,6 +196,20 @@ int main(void)
 		Sim_OwnFree(m); CHECK(!g_Game.own[0].used && !g_Game.owned[m], "liberar producao");
 		{ u8 k; g_Game.money = 50000; for (k = 0; k < NUM_OWN; k++) { g_Game.own[k].used = 1; } g_Game.pstate = 1; CHECK(Sim_StartProd(0) == 3, "biblioteca cheia impede filmar"); }
 	}
+	// sabotagem dos rivais: so quem esta na frente age; no maximo uma por dia
+	Sim_Init(31);
+	{
+		u16 d; u8 hit = 0, img0 = 50;
+		g_Diff = 2; g_Game.image[1] = 20; g_Game.image[2] = 20; g_Game.image[0] = img0;
+		for (d = 0; d < 300; d++) Sim_RivalDay();
+		CHECK(g_Game.image[0] == img0, "rival atras do jogador nao sabota");
+		g_Game.image[1] = 90; g_Game.news_slate[0].idx = 0; g_Game.news_slate[0].age = 0;
+		g_Game.contract[0].ad = 0; g_Game.contract[0].reps_left = 2; g_Game.contract[0].days_left = 3;
+		for (d = 0; d < 300; d++) Sim_RivalDay();
+		hit = (u8)(g_Game.image[0] < img0 || g_Game.news_slate[0].age > 0 || g_Game.contract[0].ad == NONE);
+		CHECK(hit, "rival na frente sabota (300 dias)");
+		g_Diff = 1;
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }

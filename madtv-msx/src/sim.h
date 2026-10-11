@@ -33,6 +33,9 @@
 #define RIVAL_LIB_GROWTH_DAYS 1  // +1 filme a cada N dias
 #endif
 
+#ifndef SABOTAGE_PCT
+#define SABOTAGE_PCT 8           // chance diaria base (%) de sabotagem de um rival na frente (+6 por nivel de dificuldade)
+#endif
 #define NEWS_POOL   8            // noticias recebidas (aguardando escolha)
 #define NEWS_SLATE  3            // itens por telejornal
 #define NEWS_MAX_AGE 10          // horas ate a noticia sumir do pool
@@ -152,6 +155,7 @@ u8    Sim_GiftEffect(u8 g) __banked;        // pontos de simpatia que o presente
 u8    Sim_BuyGift(u8 g) __banked;           // 0 ok, 1 sem dinheiro, 2 estoque cheio
 u8    Sim_GiveGift(u8 g) __banked;          // 0 ok (ganho em g_Game.last_gain), 1 sem estoque, 2 simpatia ja no teto (Image), 3 reservado p/ casamento
 u8    Sim_Propose(void) __banked;           // 0 casou, 1 simpatia < 100, 2 ainda ha rivais, 3 falta a Dream trip
+void  Sim_RivalDay(void) __banked;          // fim do dia: sabotagem dos rivais que estao na frente
 void  Sim_BettyDay(void) __banked;          // fim do dia: decaimento, pretendentes rivais, recuperacao dos usos
 u16   Sim_TowerCost(void) __banked;         // k$ do proximo nivel (0 = nivel maximo)
 u8    Sim_BuyTower(void) __banked;          // 0 ok, 1 sem dinheiro, 2 nivel maximo

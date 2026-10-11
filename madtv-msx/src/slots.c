@@ -7,6 +7,7 @@
 u8 g_SramBit;                       // 0 = sem SRAM (usa-se o codigo digitado)
 static u8 s_Mode;                   // 0 menu, 1 salvar, 2 carregar
 static u8 s_Prev;
+static u8 s_DelArm;                 // 0xFF = nada; senao slot aguardando a 2a confirmacao de apagar
 #define SR            ((volatile u8*)0xA000)
 #define BANK3_REG     ((volatile u8*)0x7800)
 #define NSLOTS        4
@@ -84,6 +85,13 @@ static void DoSave(u8 i)
 	Unmap();
 }
 
+static void DoDelete(u8 i)
+{
+	Map(); Magic();
+	SR[SLOT_OFS(i)] = 0;
+	Unmap();
+}
+
 static u8 DoLoad(u8 i)               // 0 ok, 1 slot vazio, 2/3 erro do Sim_LoadBytes
 {
 	u8 b[SAVE_BYTES], k;
@@ -97,7 +105,7 @@ static u8 DoLoad(u8 i)               // 0 ok, 1 slot vazio, 2/3 erro do Sim_Load
 #ifndef HOST_BUILD
 void Slots_Enter(void) __banked
 {
-	s_Mode = 0;
+	s_Mode = 0; s_DelArm = 0xFF;
 	if (!g_SramBit) Goto(SCR_SAVE);        // sem SRAM: direto para a tela do codigo
 }
 
@@ -107,16 +115,16 @@ void Load_Menu(void) __banked          // Esc no titulo: slots da SRAM (se houve
 	else { Goto(SCR_SAVE); Save_EnterLoad(); }
 }
 
-static u8 RowCount(void) { return s_Mode == 0 ? 3 : NSLOTS + 1; }
+static u8 RowCount(void) { return s_Mode == 0 ? 4 : NSLOTS + 1; }
 
 void Slots_Draw(void) __banked
 {
-	static const char* const k_Menu[3] = { "Save game to a slot", "Load game from a slot", "Save code (type it in)" };
+	static const char* const k_Menu[4] = { "Save game to a slot", "Load game from a slot", "Save code (type it in)", "Erase a slot" };
 	static const char* const k_Diff[3] = { "Easy", "Normal", "Hard" };
 	u8 i, y;
 	Ui_Begin();
 	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, s_Mode == 0 ? "Save / Load" : s_Mode == 1 ? "Save to which slot?" : "Load which slot?");
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, s_Mode == 0 ? "Save / Load" : s_Mode == 1 ? "Save to which slot?" : s_Mode == 2 ? "Load which slot?" : "Erase which slot?");
 	Ui_Color(UI_GRAY); Ui_Text(150, CONTENT_Y, "cartridge SRAM");
 	for (i = 0; i < RowCount(); i++)
 	{
@@ -141,7 +149,7 @@ void Slots_Draw(void) __banked
 			else { Ui_Color(UI_GRAY); Ui_Text(66, y, "- empty -"); }
 		}
 	}
-	if (s_Mode == 0) { Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 54), "4 slots survive switching the MSX off."); }
+	if (s_Mode == 0) { Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 62), "4 slots survive switching the MSX off."); }
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:select  BACK:back");
 }
@@ -151,7 +159,7 @@ void Slots_Input(u8 ev) __banked
 	u8 old = g_Sel;
 	if ((ev & IN_DOWN) && g_Sel + 1 < RowCount()) g_Sel++;
 	if ((ev & IN_UP) && g_Sel > 0) g_Sel--;
-	if (g_Sel != old) g_Dirty |= D_CON;
+	if (g_Sel != old) { g_Dirty |= D_CON; s_DelArm = 0xFF; }
 	if (ev & IN_BACK)
 	{
 		if (s_Mode == 0) Goto(SCR_OFFICE);
@@ -162,9 +170,17 @@ void Slots_Input(u8 ev) __banked
 	if (s_Mode == 0)
 	{
 		if (g_Sel == 2) { Goto(SCR_SAVE); return; }
-		s_Mode = (u8)(g_Sel + 1); g_Sel = 0; g_Dirty |= D_CON;
+		s_Mode = (u8)(g_Sel == 3 ? 3 : g_Sel + 1); g_Sel = 0; s_DelArm = 0xFF; g_Dirty |= D_CON;
 	}
 	else if (g_Sel == NSLOTS) { s_Mode = 0; g_Sel = 0; g_Dirty |= D_CON; }
+	else if (s_Mode == 3)
+	{
+		u16 d; i32 m; u8 f;
+		if (!SlotInfo(g_Sel, &d, &m, &f)) { Sim_Msg("That slot is already empty."); s_DelArm = 0xFF; }
+		else if (s_DelArm != g_Sel) { s_DelArm = g_Sel; Sim_MsgNum("Press OK again to erase slot ", g_Sel + 1, "."); }
+		else { DoDelete(g_Sel); s_DelArm = 0xFF; Sim_MsgNum("Slot ", g_Sel + 1, " erased."); }
+		g_Dirty |= D_CON | D_MSG;
+	}
 	else if (s_Mode == 1) { DoSave(g_Sel); Sim_MsgNum("Saved to slot ", g_Sel + 1, "."); g_Dirty |= D_CON | D_MSG; }
 	else
 	{

@@ -363,6 +363,7 @@ static void EndDay(void)
 			for (st = 0; st < NUM_SLOTS; st++) if (g_Game.slot[0][st].ad == i) g_Game.slot[0][st].ad = NONE;
 		}
 	}
+	Sim_RivalDay();
 	Sim_BettyDay();                                                           // pretendentes, decaimento (banked)
 	{ u8 up = (u8)(DAILY_UPKEEP + TOWER_UPKEEP * g_Game.tower); g_Game.money -= up; g_Game.day_cost += up; }
 	for (i = 0; i < DB_NUM_AGENCIES; i++) if (g_Game.news_sub[i]) { g_Game.money -= NEWS_FEE; g_Game.day_cost += NEWS_FEE; }
