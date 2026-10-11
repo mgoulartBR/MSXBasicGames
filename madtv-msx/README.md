@@ -1,7 +1,7 @@
 # MadTV-MSX
 
 Port/reimplementacao do Mad TV (1991) para MSX2 em C + MSXgl, usando os dados do remake open source TVTower.
-Status: **1.3 - salvar em SRAM (4 slots); 1.2 - correcoes do playtest (musica FM/PSG, ritmo do relogio, fim do piscar, titulo); 1.1 - polimento (audio PSG, opcoes de som e sensibilidade do mouse); 1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
+Status: **1.4 - interface: paleta e paineis no estilo do original; 1.3 - salvar em SRAM (4 slots); 1.2 - correcoes do playtest (musica FM/PSG, ritmo do relogio, fim do piscar, titulo); 1.1 - polimento (audio PSG, opcoes de som e sensibilidade do mouse); 1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
 
 - Alvo: MSX2 (V9938), ROM 128 KB com mapper ASCII8. Nao testado em hardware real.
 - Build: `scripts/setup.sh && scripts/build.sh` -> `dist/madtv-msx-<versao>.rom` (versao em `VERSION`)

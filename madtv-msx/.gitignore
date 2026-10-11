@@ -5,3 +5,5 @@ emul/
 lib/
 # Material original/terceiros: NAO versionar (licenca nao confirmada)
 original/
+capture/
+src/data/art_*.h

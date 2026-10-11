@@ -83,15 +83,18 @@ void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realt
 void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "1.3"
+#define VERSION_STR "1.4"
 extern const char* const k_MouseTxt[4];
-void Title_Draw(void) __banked; void Title_Opts(void) __banked; void Over_Draw(void) __banked;
+void Title_Draw(void) __banked; void Title_Opts(void) __banked; u8 Title_Click(u8 x, u8 y) __banked; void Over_Draw(void) __banked;
 
 // audio (PSG) e opcoes (audio.c, segmento 12)
 extern u8 g_SndSfx, g_SndMus, g_SfxCount, g_MusicPos;
 void Audio_Init(void) __banked;  void Audio_Tick(void) __banked;  void Audio_Sfx(u8 id) __banked;  void Audio_Result(const char* msg) __banked;
 void Options_Draw(void) __banked; void Options_Input(u8 ev) __banked; void Options_Mouse(u8 x, u8 y, u8 btn) __banked;
 
+// casca visual (chrome.c, segmento 14)
+void Chrome_Palette(void) __banked; void Chrome_Box(u8 x, u8 y, u8 w, u8 h, u8 face, u8 raised) __banked;
+void Hud_Reset(void) __banked; void Hud_Draw(void) __banked; void Chrome_Hint(const char* s) __banked; void Chrome_Msg(const char* s) __banked;
 // salvar/carregar em SRAM (slots.c, segmento 13)
 extern u8 g_SramBit;
 void Sram_Detect(void) __banked; void Load_Menu(void) __banked;

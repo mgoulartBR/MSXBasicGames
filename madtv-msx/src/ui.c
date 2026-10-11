@@ -8,8 +8,9 @@ extern const u8 g_Font_MGL_Sample6[];   // dados da fonte vivem no segmento 3 (b
 #define GLYPH_H     8
 #define GLYPHS_ROW  42           // 256 / GLYPH_W
 static const u8 s_Col[UI_NUM_COLORS] = {
-	COLOR_WHITE, COLOR_LIGHT_YELLOW, COLOR_LIGHT_RED, COLOR_GRAY, COLOR_LIGHT_GREEN, COLOR_CYAN
+	COLOR_WHITE, COLOR_LIGHT_YELLOW, COLOR_LIGHT_RED, COLOR_GRAY, COLOR_LIGHT_GREEN, COLOR_CYAN, COLOR_BLACK
 };
+static u16 FontRow(u8 i) { return i < 6 ? (u16)(FONT_Y0 + (u16)i * FONT_H) : 730; }   // 7a variante (preto) abaixo do buffer, antes da pagina 3
 #define BUF_Y 512                // pagina 2 = buffer de composicao fora da tela
 u16 g_DirectDraws;               // gancho de teste: chamadas de Ui_Text/Ui_Fill direto na tela (fora de Ui_Begin) - devem ser ~0
 static u16 s_YOff;               // 0 = desenha na tela; BUF_Y = desenha no buffer
@@ -53,7 +54,7 @@ void Ui_Init(void)
 	// 2) variantes de cor: preenche destino com a cor e aplica AND com a fonte branca (15 AND c = c; 0 AND c = 0)
 	for (i = 0; i < UI_NUM_COLORS; i++)
 	{
-		u16 y = FONT_Y0 + (u16)i * FONT_H;
+		u16 y = FontRow(i);
 		VDP_CommandHMMV(0, y, 252, FONT_H, COLOR_MERGE2(s_Col[i]));
 		VDP_CommandLMMM(0, FONT_SRC_Y, 0, y, 252, FONT_H, VDP_OP_AND);
 	}
@@ -64,7 +65,7 @@ void Ui_Init(void)
 
 void Ui_Color(u8 c)
 {
-	s_FontY = FONT_Y0 + (u16)c * FONT_H;
+	s_FontY = FontRow(c);
 }
 
 void Ui_Text(u8 x, u8 y, const char* s)
@@ -120,9 +121,16 @@ u8 Ui_Int(u8 x, u8 y, i16 v)
 void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col)
 {
 	// HMMV em Screen 5 conta bytes (2 pixels): w < 2 viraria 0 bytes = a linha inteira. Sempre use w >= 2.
-	if (w < 2) w = 2;
+	u16 ww = w ? w : 256;                    // w = 0 significa largura 256 (um u8 nao guarda 256)
+	if (ww < 2) ww = 2;
 	if (!s_YOff) g_DirectDraws++;
-	VDP_CommandHMMV(x, y + s_YOff, w, h, COLOR_MERGE2(col));
+	VDP_CommandHMMV(x, y + s_YOff, ww, h, COLOR_MERGE2(col));
+}
+
+void Ui_FillPx(u8 x, u8 y, u8 w, u8 h, u8 col)
+{
+	if (!s_YOff) g_DirectDraws++;
+	VDP_CommandLMMV(x, y + s_YOff, w ? w : 256, h, col, VDP_OP_IMP);
 }
 
 void Ui_Begin(void)

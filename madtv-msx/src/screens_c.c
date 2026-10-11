@@ -231,32 +231,58 @@ void Save_Mouse(u8 x, u8 y, u8 btn) __banked
 }
 
 // ---------------------------------------------------------------- titulo e fim de jogo (fora do nucleo fixo p/ poupar espaco)
-void Title_Opts(void) __banked                   // so as linhas de dificuldade e mouse (atomico, sem redesenhar o titulo todo)
+// geometria dos botoes do titulo (estilo da tela "Select a player" do original)
+#define TB_DIFF_Y  124
+#define TB_ACT_Y   148
+
+static void Btn(u8 x, u8 y, u8 w, u8 face, const char* t, u8 tx)
 {
+	Chrome_Box(x, y, w, 14, face, 1);
+	Ui_Color(UI_BLACK); Ui_Text((u8)(x + tx), (u8)(y + 3), t);
+}
+
+void Title_Opts(void) __banked                   // so os botoes de dificuldade e a linha do mouse (atomico, sem redesenhar o titulo todo)
+{
+	static const char* const k_D[3] = { "Easy", "Normal", "Hard" };
+	u8 i;
 	Ui_Begin();
-	Ui_Fill(0, 131, 255, 10, UI_BG);
-	Ui_Color(UI_YELLOW); Ui_Text(34, 132, g_Diff == 0 ? "< Difficulty: Easy >" : g_Diff == 1 ? "< Difficulty: Normal >" : "< Difficulty: Hard >");
-	Ui_Fill(0, 166, 255, 10, UI_BG);
-	Ui_Color(g_PtrMode == 3 ? UI_CYAN : g_PtrMode ? UI_GREEN : UI_GRAY); Ui_Text(14, 167, k_MouseTxt[g_PtrMode]);
-	Ui_End(0, 131, 256, 46);
+	Ui_Fill(12, TB_DIFF_Y - 2, 232, 18, 14);
+	for (i = 0; i < 3; i++) Btn((u8)(16 + i * 80), TB_DIFF_Y, 64, g_Diff == i ? 10 : 14, k_D[i], i == 1 ? 14 : 20);
+	Ui_Fill(12, 168, 232, 10, 14);
+	Ui_Color(UI_BLACK); Ui_Text(16, 169, k_MouseTxt[g_PtrMode]);
+	Ui_End(12, TB_DIFF_Y - 2, 232, 56);
+}
+
+u8 Title_Click(u8 x, u8 y) __banked              // 0 nada, 1 novo jogo, 2 carregar; os botoes de dificuldade mudam na hora
+{
+	u8 i;
+	if (y >= TB_ACT_Y && y < TB_ACT_Y + 14) { if (x >= 16 && x < 120) return 1; if (x >= 136 && x < 240) return 2; }
+	if (y >= TB_DIFF_Y && y < TB_DIFF_Y + 14)
+		for (i = 0; i < 3; i++) if (x >= 16 + i * 80 && x < 80 + i * 80) { if (g_Diff != i) { g_Diff = i; Title_Opts(); } break; }
+	return 0;
 }
 
 void Title_Draw(void) __banked
 {
-	Ui_Begin();                                  // tudo compos no buffer e copiado de uma vez: sem piscar
-	Ui_Clear();
-	Ui_Color(UI_YELLOW); Ui_Text(70, 50, "M A D   T V");
-	Ui_Color(UI_WHITE);  Ui_Text(52, 66, "MSX2 port - version " VERSION_STR);
-	Ui_Color(UI_GRAY);
-	Ui_Text(14, 100, "Run the station: buy movies, sign");
-	Ui_Text(14, 110, "ad contracts, fill the programme grid");
-	Ui_Text(14, 120, "and beat FunTV and SunTV in the ratings.");
-	Ui_Color(UI_GREEN);  Ui_Text(14, 146, "Arrows/joystick: move   OK(Enter/Space)");
-	Ui_Text(14, 156, "BACK(Esc): back   TAB: speed   P: pause");
-	Ui_Color(UI_YELLOW); Ui_Text(60, 176, "Press OK to start");
-	Ui_Color(UI_CYAN);   Ui_Text(36, 188, "Esc: load a game from a save code");
+	Ui_Begin();                                  // tudo composto no buffer e copiado de uma vez: sem piscar
+	Ui_Fill(0, 0, 256, 212, 12);                 // moldura de madeira
+	Ui_Fill(0, 0, 256, 2, 6); Ui_Fill(0, 210, 256, 2, 6);
+	Chrome_Box(6, 6, 244, 200, 14, 1);           // painel
+	Chrome_Box(12, 14, 232, 18, 5, 0);           // titulo (campo azul)
+	Ui_Color(UI_BLACK); Ui_Text(70, 19, "M A D   T V");
+	Ui_Text(74, 38, "MSX2 port - v" VERSION_STR);
+	Ui_Text(16, 48, "Run the station: buy movies, sign");
+	Ui_Text(16, 58, "ad contracts, fill the programme");
+	Ui_Text(16, 68, "grid and beat FunTV and SunTV in");
+	Ui_Text(16, 78, "the ratings.");
+	Ui_Text(16, 96, "Choose the difficulty:");
 	Title_Opts();
-	Ui_Color(UI_GRAY);   Ui_Text(4, 202, "Data: TVTower (altered for MSX)");
+	Btn(16, TB_ACT_Y, 104, 8, "New game (OK)", 8);
+	Btn(136, TB_ACT_Y, 104, 8, "Load game (Esc)", 4);
+	Ui_Color(UI_BLACK);
+	Ui_Text(16, 181, "Arrows: move   OK: Enter/Space");
+	Ui_Text(16, 189, "TAB: speed  P: pause  M: mouse");
+	Ui_Text(16, 197, "Data: TVTower (altered for MSX)");
 	Ui_End(0, 0, 256, 212);
 }
 
@@ -264,14 +290,15 @@ void Over_Draw(void) __banked
 {
 	Ui_Begin();
 	Ui_Clear();
-	if (g_Game.won) { Ui_Color(UI_GREEN); Ui_Text(60, 70, "BETTY SAID YES!"); Ui_Color(UI_WHITE); Ui_Text(28, 90, "You are the king of television."); }
+	Ui_Fill(0, 40, 256, 130, 12); Chrome_Box(24, 48, 208, 110, 14, 1);
+	if (g_Game.won) { Ui_Color(UI_BLACK); Ui_Text(60, 70, "BETTY SAID YES!"); Ui_Color(UI_BLACK); Ui_Text(28, 90, "You are the king of television."); }
 	else
 	{
-		Ui_Color(UI_RED);   Ui_Text(84, 70, "BANKRUPT!");
-		Ui_Color(UI_WHITE); Ui_Text(40, 90, g_Game.alive[0] ? "Mr. Raffer shows you the door." : "Nobody watches your station.");
+		Ui_Color(UI_BLACK);   Ui_Text(84, 70, "BANKRUPT!");
+		Ui_Color(UI_BLACK); Ui_Text(40, 90, g_Game.alive[0] ? "Mr. Raffer shows you the door." : "Nobody watches your station.");
 	}
-	Ui_Color(UI_GRAY);  Ui_Text(60, 110, "Survived "); Ui_Int(114, 110, g_Game.day); Ui_Text(132, 110, "day(s)");
-	Ui_Color(UI_YELLOW); Ui_Text(60, 150, "Press OK to restart");
+	Ui_Color(UI_BLACK);  Ui_Text(60, 110, "Survived "); Ui_Int(114, 110, g_Game.day); Ui_Text(132, 110, "day(s)");
+	Ui_Color(UI_BLACK); Ui_Text(60, 150, "Press OK to restart");
 	Ui_End(0, 0, 256, 212);
 }
 

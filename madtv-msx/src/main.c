@@ -27,95 +27,20 @@ void Money(u8 x, u8 y, i32 k)     // k$
 
 void MarkRows(u8 a, u8 b) { g_RowA = a; g_RowB = b; g_Dirty |= D_ROWS; }
 
-// Cabecalho incremental: cada campo so e redesenhado se mudou (evita apagar/redesenhar tudo a cada minuto de jogo)
-static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
-static i32 c_Money = 0x7FFFFFFF;
-static u8  c_Image[NUM_STATIONS] = { 255, 255, 255 };
-static u8  c_Speed = 255, c_Sym = 255;
+void Header_Invalidate(void) { Hud_Reset(); }                 // HUD e a casca visual vivem em chrome.c (segmento 14)
 
-void Header_Invalidate(void)
+static void Draw_Msg(void) { Chrome_Msg(g_Msg); }
+
+void Hint(const char* s)          // copia o texto para a RAM antes da chamada banked: o literal vive no segmento de quem chamou, que deixa de estar mapeado
 {
-	u8 i;
-	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255; c_Sym = 255;
-	for (i = 0; i < NUM_STATIONS; i++) c_Image[i] = 255;
-	Ui_Fill(0, 0, 255, 24, UI_BG);
-	Ui_Fill(0, 23, 255, 1, COLOR_GRAY);
+	char b[44];
+	u8 i = 0;
+	while (s[i] && i < 43) { b[i] = s[i]; i++; }
+	b[i] = 0;
+	Chrome_Hint(b);
 }
 
-static void Draw_Header(void)
-{
-	char b[8];
-	u8 st;
-	if (c_Day != g_Game.day)
-	{
-		c_Day = g_Game.day;
-		Ui_Begin(); Ui_Fill(0, 1, 60, 10, UI_BG);
-		Ui_Color(UI_YELLOW); Ui_Text(4, 2, "Day "); Ui_Int(28, 2, g_Game.day);
-		Ui_End(0, 1, 60, 10);
-	}
-	if (c_T != g_Game.t)
-	{
-		c_T = g_Game.t;
-		Ui_Begin(); Ui_Fill(62, 1, 34, 10, UI_BG);
-		Ui_Color(UI_YELLOW); ClockStr(b, g_Game.t); Ui_Text(64, 2, b);
-		Ui_End(62, 1, 34, 10);
-	}
-	if (c_Money != g_Game.money)
-	{
-		c_Money = g_Game.money;
-		Ui_Begin(); Ui_Fill(118, 1, 52, 10, UI_BG);
-		Ui_Color(g_Game.money < 0 ? UI_RED : UI_WHITE);
-		Money(120, 2, g_Game.money);
-		Ui_End(118, 1, 52, 10);
-	}
-	if (c_Sym != g_Game.sym[0])
-	{
-		c_Sym = g_Game.sym[0];                                // simpatia da Betty
-		Ui_Begin(); Ui_Fill(172, 1, 28, 10, UI_BG);
-		Ui_Color(UI_RED); Ui_Text(172, 2, "B"); Ui_Int(180, 2, g_Game.sym[0]);
-		Ui_End(172, 1, 28, 10);
-	}
-	if (c_Speed != g_Speed)
-	{
-		c_Speed = g_Speed;
-		Ui_Begin(); Ui_Fill(200, 1, 55, 10, UI_BG);
-		Ui_Color(UI_GRAY);
-		Ui_TextR(252, 2, g_Speed == SPEED_PAUSE ? "PAUSE" : g_Speed == SPEED_1 ? ">" : g_Speed == SPEED_2 ? ">>" : ">>>");
-		Ui_End(200, 1, 55, 10);
-	}
-	for (st = 0; st < NUM_STATIONS; st++)
-		if (c_Image[st] != g_Game.image[st])
-		{
-			c_Image[st] = g_Game.image[st];
-			Ui_Begin(); Ui_Fill(4 + st * 84, 12, 80, 10, UI_BG);
-			Ui_Color(g_StationCol[st]);
-			Ui_Text(4 + st * 84, 13, g_StationName[st]);
-			Ui_Int(40 + st * 84, 13, g_Game.image[st]);
-			Ui_End(4 + st * 84, 12, 80, 10);
-		}
-}
-
-static void Draw_Msg(void)
-{
-	Ui_Begin();
-	Ui_Fill(0, (u8)(MSG_Y - 1), 255, 11, UI_BG);
-	Ui_Color(UI_YELLOW);
-	Ui_Text(4, MSG_Y, g_Msg);
-	Ui_End(0, (u8)(MSG_Y - 1), 255, 11);
-}
-
-void Hint(const char* s)
-{
-	u16 saved = Ui_DirectBegin();      // dica: composta no buffer e copiada de uma vez (nunca aparece "apagada"), mesmo se chamada dentro de outro desenho
-	Ui_Begin();
-	Ui_Fill(0, 190, 255, 10, UI_BG);
-	Ui_Color(UI_GRAY);
-	Ui_Text(4, 191, s);
-	Ui_End(0, 190, 256, 10);
-	Ui_DirectEnd(saved);
-}
-
-void ClearContent(void) { Ui_Fill(0, CONTENT_Y - 2, 255, 160, UI_BG); }
+void ClearContent(void) { Ui_Fill(0, CONTENT_Y - 2, 0, 160, UI_BG); }   // w = 0 = largura 256
 
 
 // Navegacao vertical de lista com janela de `rows` linhas. Retorna 0 = nada, 1 = so linhas A/B mudaram, 2 = rolou.
@@ -332,6 +257,7 @@ void main()
 	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
 	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1;
 	Ui_Init();
+	Chrome_Palette();
 	Audio_Init();
 	Sram_Detect();
 	Draw_Title();
@@ -353,7 +279,11 @@ void main()
 			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Title_Opts(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
 			if (p & PTR_LEFT) clk = IN_OK;
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
-			if (p & PTR_LEFT) { if (g_Screen == SCR_TITLE && g_PtrY > 128 && g_PtrY < 142) ev |= IN_RIGHT; else if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER) ev |= IN_OK; }   // clique na linha de dificuldade = trocar
+			if (p & PTR_LEFT)
+			{
+				if (g_Screen == SCR_TITLE) { u8 r = Title_Click(g_PtrX, g_PtrY); if (r == 1) ev |= IN_OK; else if (r == 2) ev |= IN_BACK; }   // botoes do titulo
+				else if (g_Screen == SCR_OVER) ev |= IN_OK;
+			}
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
 			{
 				if ((p & PTR_LEFT) && g_PtrY < 14 && g_PtrX >= 200) ev |= IN_SPEED;      // clicar na velocidade do cabecalho
@@ -399,7 +329,7 @@ void main()
 		if (((ev | clk) & IN_OK) && (g_Dirty & D_MSG)) Audio_Result(g_Msg);
 		if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
 
-		if (g_Dirty & D_HDR) Draw_Header();
+		if (g_Dirty & D_HDR) Hud_Draw();
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
 		if (g_Dirty & D_CON)
 		{

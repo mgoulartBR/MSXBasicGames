@@ -3,7 +3,7 @@
 #include "msxgl.h"
 
 // Cores do texto = variantes da fonte pre-carregadas em VRAM (pagina 1)
-enum { UI_WHITE, UI_YELLOW, UI_RED, UI_GRAY, UI_GREEN, UI_CYAN, UI_NUM_COLORS };
+enum { UI_WHITE, UI_YELLOW, UI_RED, UI_GRAY, UI_GREEN, UI_CYAN, UI_BLACK, UI_NUM_COLORS };
 
 #define UI_BG        COLOR_BLACK
 #define UI_PANEL     COLOR_DARK_BLUE
@@ -16,6 +16,7 @@ void Ui_TextN(u8 x, u8 y, const char* s, u8 maxchars);
 void Ui_Dec1(u8 x, u8 y, u8 v10);       // v10 = valor x10 -> "d.d"
 void Ui_TextR(u8 x, u8 y, const char* s); // alinhado a direita em x
 void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col);
+void Ui_FillPx(u8 x, u8 y, u8 w, u8 h, u8 col);   // preenchimento com precisao de pixel (LMMV): linhas de 1 px para os relevos
 void Ui_Clear(void);
 
 // Desenho "atomico": entre Ui_Begin() e Ui_End() tudo e desenhado na pagina 2 da VRAM (fora da tela) e so entao
