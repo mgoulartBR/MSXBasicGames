@@ -1,7 +1,7 @@
 /* MSX DOOM E1M1 — motor para o mapa convertido do WAD do usuario (dados PRIVADOS gerados por tools/e1m1_build.py).
  * MSX turbo R / Z80 + V9968 + Geo3D (SDCC). Paredes texturizadas pelo Geo3D a partir de um PVS por bloco de 128 unidades,
  * monstros e itens como billboards do atlas de sprites, HUD da barra de status do Doom.
- * STATUS: BUILD OK + SIMULATED. Nunca executado em openMSX/FPGA/hardware (UNTESTED).
+ * STATUS: BUILD OK + SIMULATED + OPENMSX (perfil sintetico C-BIOS/R800 com script). FPGA/hardware UNTESTED.
  * Fase 1: portas abertas para sempre, pisos/tetos como faixas de cor, sem iluminacao por setor, sem elevadores. */
 #include "e1m1_assets.h"
 typedef unsigned char u8; typedef unsigned int u16; typedef int s16; typedef long s32;
@@ -164,7 +164,8 @@ static void geo_run(const s16 *m,s16 tx,s16 ty,s16 tz){
 
 /* ---------------------------------------------------------------- estado */
 s16 px,py,eye,hp,armor,ammo; u8 yaw,cool,fire_t,hurt,over,kills,items_got,tick,sfx,msg_t,face_t;
-static const char *msg; u8 dbg;
+u8 dbg;
+static const char *msg;
 static u8 keys,old_keys,fcnt;
 #define K_LEFT 1
 #define K_RIGHT 2
@@ -302,7 +303,6 @@ static void update(void){
   if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R);
   if(cool)cool--; if(fire_t)fire_t--; if(hurt)hurt--; if(face_t)face_t--; if(msg_t&&!--msg_t)msg=0;
   if((keys&K_FIRE)&&!cool)shoot();
-  if((keys&K_TAB)&&!(old_keys&K_TAB))dbg^=1;                      /* TAB: mostra X, Y e angulo (Doom) */
   tgt=floor_at(px,py)+41; if(tgt>eye){ eye+=(tgt-eye+3)>>2; } else if(tgt<eye){ eye-=(eye-tgt+3)>>2; }
   for(i=0;i<NTHING;i++){
     if(!th[i].on)continue;
@@ -320,6 +320,20 @@ static void update(void){
 static const char fontchars[]=FONT_CHARS;
 static u8 glyph(char ch){ u8 i; for(i=0;fontchars[i];i++) if(fontchars[i]==ch)return i; return 0; }
 static void text(u16 x,u16 y,u16 row,const char *s){ for(;*s;s++,x+=6) blit((u16)glyph(*s)*6,row,x,y,5,7); }
+static char *debug_number(char *p,s16 value){
+  char digits[5]; u8 n=0; u16 magnitude=(u16)value;
+  if(value<0){ *p++='-'; magnitude=0-magnitude; }
+  do{ digits[n++]='0'+magnitude%10; magnitude/=10; }while(magnitude);
+  while(n)*p++=digits[--n];
+  return p;
+}
+static void debug_text(void){
+  char line[24],*p=line; s16 angle=90-((u16)yaw*45)/32;
+  if(angle<0)angle+=360;
+  *p++='X'; p=debug_number(p,px); *p++=' '; *p++='Y'; p=debug_number(p,py);
+  *p++=' '; *p++='A'; p=debug_number(p,angle); *p=0;
+  fill(2,12,148,11,C_BLACK); text(4,14,FONT_GRAY,line);
+}
 static void number(s16 v,s16 xr,u8 pct){
   u8 d[4],n=0,i; s16 x; u16 w=digit_tab[0][2];
   if(v<0)v=0; if(v>999)v=999;
@@ -409,18 +423,10 @@ static void ceil_fill(void){
       y=((a>b?a-b:b-a)>24)?(a<b?a:b):(s16)a+(((s16)b-(s16)a)*(s16)f)/32; }
     if(y>0)fill(j*16,0,16,y,C_BLACK); }
 }
-static char dbuf[28];
-static u8 putnum(u8 n,s16 v){ char t[6]; u8 i=0; if(v<0){ dbuf[n++]='-'; v=-v; } do{ t[i++]='0'+v%10; v/=10; }while(v); while(i)dbuf[n++]=t[--i]; return n; }
-static void debug_text(void){
-  s16 a=90-(s16)(((u16)yaw*45)>>5); u8 n=0; if(a<0)a+=360;
-  dbuf[n++]='X'; n=putnum(n,px); dbuf[n++]=' '; dbuf[n++]='Y'; n=putnum(n,py); dbuf[n++]=' '; dbuf[n++]='A'; n=putnum(n,a); dbuf[n]=0;
-  text(4,14,FONT_GRAY,dbuf);
-}
 static void render(void){
   u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   const Sec *sc; u8 s0=rast(px,py);
-  /* teto: preto liso (um plano de teto por quadro vazava para os setores vizinhos). Piso: cores do setor 96 unidades a frente (nao pula ao trocar de setor);
-   * com TAB, piso texturizado por setor (leque de raios). */
+  /* Teto preto liso; piso com as cores do setor 96 unidades a frente. */
   { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
   if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,C_BLACK); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); if(!(fcnt&1))ceil_probe(sn,cs); } }
   if(s0==255){ fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
@@ -465,9 +471,9 @@ static void render(void){
   ceil_fill();
   draw_gun();
   if(msg) text(4,4,FONT_ORANGE,msg);
-  if(dbg) debug_text();
   if(hurt) { fill(0,0,SCR_W,2,C_RED); fill(0,VIEW_H-2,SCR_W,2,C_RED); }
   if(over) overlay();
+  if(dbg) debug_text();
 }
 
 static void mark(u8 n){ u8 p0=page; for(page=0;page<2;page++) fill(228+n*6,205,4,4,(n>=2&&!geo_ok)?C_RED:C_WHITE); page=p0; }
@@ -490,7 +496,7 @@ void main(void){
   set_vram_write(7,0x1400); BANK(AREAB_BANK); vtransfer16k(DATA);          /* linhas 468..531 (fontes); as 512.. sao sobrescritas a seguir */
   set_vram_write(8,0);
   for(i=0;i<NVRAM_BANKS;i++){ BANK(VRAM_BANK0+i); vtransfer16k(DATA); }
-  load_meta(); new_game(); keys=old_keys=0;
+  load_meta(); new_game(); keys=old_keys=dbg=0;
   for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
   vr(1,0x40);
   mark(0);
@@ -500,6 +506,7 @@ void main(void){
   { u8 first=1;
   for(;;){
     read_keys();
+    if((keys&K_TAB)&&!(old_keys&K_TAB))dbg^=1;
     if(over){ if((keys&K_FIRE)&&!(old_keys&K_FIRE)){ new_game(); sh_hp=-1; sh_ar=-1; sh_am=-1; sh_face=255; } } else update();
     page^=1; render(); hud_update(); wait_ce();
     if(first){ mark(2); }

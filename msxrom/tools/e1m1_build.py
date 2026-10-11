@@ -232,7 +232,7 @@ def main():
         if i%20==0: print('bloco',i,len(bl),'%.0fs'%(time.time()-t0),flush=True)
     # empacotamento first-fit decrescente (menos desperdicio nos bancos)
     place={}; bank_used=[]; bank_data=[]
-    for blob in sorted(set(b for b,_ in pend),key=len,reverse=True):
+    for blob in sorted(set(b for b,_ in pend),key=lambda b:(len(b),b),reverse=True):
         for bi,u in enumerate(bank_used):
             if u+len(blob)<=16384: place[blob]=(first_blob_bank+bi,u); bank_data[bi]+=blob; bank_used[bi]+=len(blob); break
         else:

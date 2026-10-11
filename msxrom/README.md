@@ -114,11 +114,50 @@ Conversão: paredes → faces do Geo3D com o PVS por bloco de 128 unidades e por
 vértices/faces; o que sobra é descartado do mais distante/menor para o maior); texturas a 0,25–0,5 texel/unidade; paleta de 256 cores; raster de
 8 unidades para colisão, setor e altura de piso.
 
-Estado desta fase (honesto): **BUILD OK + SIMULATED** (Z80 emulado + modelo de referência do Geo3D); **não testado em openMSX/FPGA/hardware**.
+Estado desta fase: **BUILD OK + SIMULATED + OPENMSX TESTED** (perfil sintético C-BIOS/R800/V9968/Geo3D, com ativação de R800 pelo debugger).
+**BIOS Panasonic, FPGA e hardware físico: UNTESTED.** O resultado do harness continua sendo apenas SIMULATED.
 Fase 1 NÃO tem: portas funcionando (ficam abertas), elevadores, pisos/tetos texturizados (faixas de cor do setor), iluminação por setor,
 projéteis do imp (ataque instantâneo), espingarda como arma (o item só dá munição), explosão de barris, itens/monstros em áreas só
 alcançáveis por segredos (os 4 itens do fechamento secreto sudeste são ignorados). Colisão é por raster de 8 unidades.
-Teclas: setas = mover/girar, ESPAÇO = atirar, ENTER = usar (sair da fase perto do interruptor).
+Teclas: setas = mover/girar, ESPAÇO = atirar, ENTER = usar (sair da fase perto do interruptor), **TAB = mostrar/ocultar X, Y e ângulo Doom**.
+
+### TAB e validação direta da retomada
+
+O painel inicia desligado. TAB alterna uma vez por pressionamento, inclusive no fim de jogo; segurá-lo não alterna repetidamente.
+O empacotador de bancos desempata blobs de mesmo tamanho pelo conteúdo, tornando o build independente de `PYTHONHASHSEED`.
+O formato é `X1056 Y-3616 A90`, em unidades do WAD e graus Doom: leste=0, norte=90, oeste=180, sul=270.
+Ao desligar, a renderização normal apaga o painel nas duas páginas. O painel fica em y=14 e não substitui as mensagens em y=4.
+
+```sh
+# Dependências do harness: z80==1.2.0, numpy, Pillow; GEO3D_SIM aponta para geo3d/sim do modelo de referência.
+python3 tools/test_e1m1_debug.py    # TAB, duas páginas, todos os 256 yaw e extremos de s16
+E1M1_WAD=/caminho/doom1.wad python3 tools/test_e1m1.py
+
+# Só no perfil sintético C-BIOS + S1990 (Geo3D já incluído na máquina):
+# Instale machines/C-BIOS_R800_V9968_Geo3D.xml em share/machines do fork, com as ROMs C-BIOS MSX2+.
+openmsx -machine C-BIOS_R800_V9968_Geo3D -cart private/e1m1.rom -romtype ASCII16 \
+  -script tools/enable_cbios_r800.tcl
+openmsx -machine C-BIOS_R800_V9968_Geo3D -cart private/e1m1.rom -romtype ASCII16 \
+  -script tools/test_e1m1_openmsx.tcl
+```
+
+O script de ativação resolve uma limitação do perfil de teste: sua C-BIOS MSX2+ informa `MSXVER=2` e não possui CHGCPU de turbo R.
+Ele seleciona R800 ROM no S1990 ao entrar no cartucho, sem modificar a ROM/BIOS. **Não é para um turbo R físico**, cuja BIOS é usada pelo boot da ROM.
+O teste automatizado exige esse perfil, confere S1990 R6=64, TAB por matriz de teclado, pixels do texto, limpeza, movimento e rotação;
+grava evidências em `private/openmsx/`, incluindo FPS por 60 trocas de página e tempo emulado. Não mede o refresh do monitor nem velocidade do PC.
+
+Medição direta no fork Geo3D `de29fb8`, R800 ROM, simulação do jogo ativa:
+
+| Cena | FPS |
+|---|---:|
+| Início olhando norte, TAB desligado | 9,22 |
+| Mesma posição e direção, TAB ligado | 7,99 |
+| Início olhando leste / sul / oeste | 12,62 / 13,32 / 9,22 |
+| Corredor da porta (já aberta) | 7,19 |
+| Posição preparada de combate | 10,90 |
+
+Essas cenas são selecionadas pelo debugger, não um percurso completo. O fork não cobra tempo pela geometria do Geo3D e o timing do VDP é aproximado;
+os números **não preveem FPS em FPGA/hardware**. O TAB tem custo mensurável; deixe-o desligado ao avaliar desempenho normal.
 
 Pisos e ttetos (v3): uma LRMM por linha de tela (plano em perspectiva) com o flat do setor do jogador (tile 16x16 por 64 unidades, replicado pelo VDP em regioes
 256x64 da VRAM, linhas 640..767; janela de origem LRMM X 0..511 para o wrap). So ate ~120 unidades de profundidade (as linhas mais proximas); alem disso volta a
