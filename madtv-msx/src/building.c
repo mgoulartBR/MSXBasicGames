@@ -2,6 +2,7 @@
 // Graficos: o predio e redesenhado proceduralmente (retangulos VDP) e as figuras sao sprites de hardware (arte propria 16x16,
 // uma cor por linha - sprite mode 2). Os rivais circulam como decoracao (ainda sem efeito de jogo).
 #include "app.h"
+#include "data/art_hub.h"                      // ART_HUB: fundo do predio com arte local (segmentos 16-18); 0 = procedural
 
 // ---------------------------------------------------------------- tabelas
 #define NFLOORS 5
@@ -50,6 +51,37 @@ static u8 s_Pending;                             // jogador a caminho de uma sal
 static u8 s_Spr[NSPR * 4];                       // atributos dos sprites (Y, X, padrao, 0)
 
 // ---------------------------------------------------------------- desenho estatico
+#if ART_HUB
+// copia um retangulo do fundo do predio (ROM, segmentos ART_HUB_SEG.., 64 linhas de 128 bytes por segmento) para a tela/buffer
+static void ArtRect(u8 sx, u8 sy, u8 w, u8 h, u8 dx, u8 dy)
+{
+	u8 r, row;
+	u8 prev = GET_BANK_SEGMENT(3);
+	for (r = 0; r < h; r++)
+	{
+		row = (u8)(sy + r);
+		SET_BANK_SEGMENT(3, (u8)(ART_HUB_SEG + (row >> 6)));
+		Ui_BlitRow((const u8*)(0xA000 + ((u16)(row & 63) << 7) + (sx >> 1)), dx, (u8)(dy + r), (u8)(w >> 1));
+	}
+	SET_BANK_SEGMENT(3, prev);
+}
+
+static void DoorBody(u8 i)
+{
+	const Room* r = &k_Rooms[i];
+	u8 fy = FY(r->floor), x = r->x;
+	ArtRect((u8)(x - 14), (u8)(fy - 56), 28, 31, (u8)(x - 14), (u8)(fy - 30));       // fundo (porta, parede) desta celula
+	if (i == g_BldSel)
+	{
+		Ui_Fill((u8)(x - 12), (u8)(fy - 29), 24, 8, COLOR_LIGHT_YELLOW);               // rotulo em destaque
+		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 22, 1, COLOR_LIGHT_YELLOW);             // moldura em volta da porta
+		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
+		Ui_FillPx((u8)(x + 10), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
+	}
+	Ui_Color(UI_BLACK);
+	Ui_Text((u8)(x - 12), (u8)(fy - 29), r->lbl);
+}
+#else
 static void DoorBody(u8 i)
 {
 	const Room* r = &k_Rooms[i];
@@ -66,6 +98,7 @@ static void DoorBody(u8 i)
 		Ui_Fill((u8)(x + 12), (u8)(fy - 24), 2, 25, COLOR_LIGHT_YELLOW);
 	}
 }
+#endif
 
 static void DoorRow(u8 i)
 {
@@ -80,6 +113,21 @@ static void DoorRow(u8 i)
 static void BodyAll(void)
 {
 	u8 k, i;
+#if ART_HUB
+	(void)k;
+	{
+		u8 r, row, prev = GET_BANK_SEGMENT(3);
+		for (r = 0; r < ART_HUB_ROWS; r++)                                    // fundo completo: 160 linhas x 128 bytes
+		{
+			row = r;
+			SET_BANK_SEGMENT(3, (u8)(ART_HUB_SEG + (row >> 6)));
+			Ui_BlitRow((const u8*)(0xA000 + ((u16)(row & 63) << 7)), 0, (u8)(CONTENT_Y - 2 + r), 128);
+		}
+		SET_BANK_SEGMENT(3, prev);
+	}
+	for (i = 0; i < NROOMS; i++) { const Room* rm = &k_Rooms[i]; Ui_Color(UI_BLACK); Ui_Text((u8)(rm->x - 12), (u8)(FY(rm->floor) - 29), rm->lbl); }
+	DoorBody(g_BldSel);
+#else
 	ClearContent();
 	Ui_Fill(6, 26, 244, 3, COLOR_GRAY);                                       // telhado
 	Ui_Fill(6, 29, 244, 157, COLOR_DARK_BLUE);                                // fachada
@@ -91,6 +139,7 @@ static void BodyAll(void)
 		Ui_Fill(138, (u8)(FY(k) + 1), 112, 3, COLOR_GRAY);
 	}
 	for (i = 0; i < NROOMS; i++) DoorBody(i);
+#endif
 }
 
 // ---------------------------------------------------------------- sprites
@@ -105,7 +154,12 @@ static void SprWrite(void)
 		s_Spr[i * 4 + 2] = s_M[i].frame ? 4 : 0;
 		s_Spr[i * 4 + 3] = 0;
 	}
-	s_Spr[12] = (u8)(s_CarY - 16); s_Spr[13] = (u8)(SHAFT_X - 8); s_Spr[14] = 8; s_Spr[15] = 0;
+#if ART_HUB
+	s_Spr[12] = HIDE_Y;                                           // o fundo ja tem as portas do elevador
+#else
+	s_Spr[12] = (u8)(s_CarY - 16);
+#endif
+	s_Spr[13] = (u8)(SHAFT_X - 8); s_Spr[14] = 8; s_Spr[15] = 0;
 	VDP_WriteVRAM_128K(s_Spr, SPR_ATT_LO + 8, 1, NSPR * 4);
 }
 

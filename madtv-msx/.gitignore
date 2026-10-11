@@ -10,3 +10,6 @@ src/data/art_*.h
 # ROMs com arte do original (icones locais) nao sao versionadas a partir da 1.4
 dist/madtv-msx-1.[4-9]*.rom
 dist/madtv-msx-[2-9].*.rom
+src/data/art_hub.h
+src/seg/seg_s1[6-9]_b3.c
+src/seg/seg_s[2-3][0-9]_b3.c

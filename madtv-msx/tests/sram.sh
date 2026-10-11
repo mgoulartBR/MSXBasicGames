@@ -57,8 +57,8 @@ def rd(f): return dict(kv.split('=') for kv in open(f).read().split())
 def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
 a,b,c=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt')
-need(a['sbit']=='16' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
-need(b['sbit']=='16' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)
+need(a['sbit']=='32' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
+need(b['sbit']=='32' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)
 need(c['sbit']=='0' and c['scr']=='9','B: sem SRAM deveria abrir direto a tela do codigo (%s)'%c)
 print('PASS')
 P

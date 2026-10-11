@@ -133,6 +133,12 @@ void Ui_FillPx(u8 x, u8 y, u8 w, u8 h, u8 col)
 	VDP_CommandLMMV(x, y + s_YOff, w ? w : 256, h, col, VDP_OP_IMP);
 }
 
+void Ui_BlitRow(const u8* src, u8 x, u8 y, u8 nbytes)       // copia nbytes (2 pixels cada) de src para a linha y (tela ou buffer, conforme o contexto)
+{
+	VDP_CommandWait();
+	VDP_WriteVRAM_128K(src, (u16)((u16)y * 128 + (x >> 1)), s_YOff ? 1 : 0, nbytes);
+}
+
 void Ui_Begin(void)
 {
 	s_Depth++;

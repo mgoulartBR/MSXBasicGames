@@ -15,6 +15,7 @@ u8   Ui_Int(u8 x, u8 y, i16 v);          // numero com sinal; retorna x logo apo
 void Ui_TextN(u8 x, u8 y, const char* s, u8 maxchars);
 void Ui_Dec1(u8 x, u8 y, u8 v10);       // v10 = valor x10 -> "d.d"
 void Ui_TextR(u8 x, u8 y, const char* s); // alinhado a direita em x
+void Ui_BlitRow(const u8* src, u8 x, u8 y, u8 nbytes);   // bitmap 4 bpp direto na VRAM (arte local)
 void Ui_Fill(u8 x, u8 y, u8 w, u8 h, u8 col);
 void Ui_FillPx(u8 x, u8 y, u8 w, u8 h, u8 col);   // preenchimento com precisao de pixel (LMMV): linhas de 1 px para os relevos
 void Ui_Clear(void);

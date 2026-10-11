@@ -2,6 +2,7 @@
 # Compila a ROM com MSXgl e copia para dist/.  Uso: scripts/build.sh [clean]
 set -e
 cd "$(dirname "$0")/.."
+[ -f src/data/art_hub.h ] || echo "#define ART_HUB 0" > src/data/art_hub.h         # sem arte local: predio procedural
 [ -f src/data/art_icons.h ] || echo "#define ART_ICONS 0" > src/data/art_icons.h   # sem arte local: HUD com simbolos de texto
 [ -d external/msxgl ] || scripts/setup.sh
 [ "$1" = clean ] && rm -rf out emul lib dist/*.rom
