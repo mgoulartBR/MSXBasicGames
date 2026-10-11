@@ -180,9 +180,7 @@ static void read_keys(void){
   ppi_c=(ppi_c&0xF0)|7; a=~ppi_b; if(a&0x80)keys|=K_USE; if(a&8)keys|=K_TAB;
 }
 static void psg(u8 r,u8 v){ psg_a=r; psg_d=v; }
-static void sound_tick(void){
-  if(sfx){ psg(6,15); psg(7,0xB7); psg(8,sfx>15?15:sfx); sfx-=2; if(sfx>200)sfx=0; } else psg(8,0);
-}
+#include "e1m1_sound.h"
 
 /* tipos: 0 zombie, 1 sargento, 2 imp, 3.. itens */
 #define K_ZOMBIE 0
@@ -214,6 +212,7 @@ static u8 total_mon,total_items;
 static void say(const char *m,u8 t){ msg=m; msg_t=t; }
 static void new_game(void){
   u8 i; ThingRom tr;
+  sound_reset();
   px=START_X; py=START_Y; yaw=0; hp=100; armor=0; ammo=50; over=0; cool=fire_t=hurt=0; kills=items_got=0; msg_t=0; tick=0; cur_blk=0xFFFF; face_t=0;
   eye=floor_at(px,py)+41; total_mon=total_items=0;
   BANK(META_BANK);
@@ -225,18 +224,18 @@ static void new_game(void){
 }
 static void damage_player(s16 d){
   if(armor>0){ s16 a=d/3; if(a>armor)a=armor; armor-=a; d-=a; }
-  hp-=d; hurt=6; sfx=40; face_t=12;
+  hp-=d; hurt=6; sound_play(hp<=0?SFX_PLAYER_DEATH:SFX_PAIN); face_t=12;
 }
 static void wake_all(s16 range){
   u8 i; for(i=0;i<NTHING;i++) if(th[i].kind<3&&th[i].st==S_ASLEEP&&th[i].on){ s16 dx=th[i].x-px,dy=th[i].y-py; if(s16abs(dx)+s16abs(dy)<range) th[i].st=S_CHASE; }
 }
-static void kill_mon(u8 i){ th[i].st=S_DYING; th[i].t=0; kills++; sfx=60; }
+static void kill_mon(u8 i){ th[i].st=S_DYING; th[i].t=0; kills++; sound_play(th[i].kind==K_IMP?SFX_IMP_DEATH:SFX_DEATH); }
 static void hit_thing(u8 i,s16 d){
   if(th[i].st>=S_DYING)return;
   th[i].hp-=d;
   if(th[i].kind==K_BARREL){ if(th[i].hp<=0){ th[i].st=S_DYING; th[i].t=0; } return; }
   th[i].st=S_PAIN; th[i].t=6;
-  if(th[i].hp<=0) kill_mon(i);
+  if(th[i].hp<=0) kill_mon(i); else sound_play(SFX_MON_PAIN);
 }
 static s16 blast_damage(s16 x,s16 y,s16 ox,s16 oy){
   s16 dx=s16abs(x-ox),dy=s16abs(y-oy),d=dx>dy?dx:dy;
@@ -249,7 +248,7 @@ static void explode(u8 i){
     if(j==i||!th[j].on||th[j].st>=S_DYING||(th[j].kind>=3&&th[j].kind!=K_BARREL))continue;
     d=blast_damage(th[j].x,th[j].y,x,y); if(d)hit_thing(j,d);
   }
-  wake_all(900); sfx=60;
+  wake_all(900); sound_play(SFX_BARREL);
 }
 static void death_tick(u8 i){
   Th *m=&th[i];
@@ -259,7 +258,7 @@ static void death_tick(u8 i){
 static void shoot(void){
   u8 i,best=255; s16 bz=32000,s=isin(yaw),c=icos(yaw);
   if(ammo<=0){ say("SEM MUNICAO!",40); return; }
-  ammo--; cool=12; fire_t=8; sfx=30; wake_all(900);
+  ammo--; cool=12; fire_t=8; sound_play(SFX_PISTOL); wake_all(900);
   for(i=0;i<NTHING;i++){ s16 dx,dy,xc,zc;
     if((th[i].kind>=3&&th[i].kind!=K_BARREL)||!th[i].on||th[i].st>=S_DYING)continue;
     dx=th[i].x-px; dy=th[i].y-py;
@@ -284,11 +283,11 @@ static void pickup(u8 i){
     case K_SHOTGUN: ammo+=8; say("PEGOU ESPINGARDA",60); break;
     default: return;
   }
-  if(ammo>200)ammo=200; th[i].on=0; items_got++; sfx=24;
+  if(ammo>200)ammo=200; th[i].on=0; items_got++; sound_play(SFX_ITEM);
 }
 static void mon_attack(u8 i){
   s16 dx=px-th[i].x,dy=py-th[i].y,d=s16abs(dx)+s16abs(dy); u8 k=th[i].kind,n=1,j; s16 chance,dm;
-  th[i].st=S_ATTACK; th[i].t=8; sfx=36;
+  th[i].st=S_ATTACK; th[i].t=8; sound_play(k==K_IMP?SFX_FIRE:k==K_SERGEANT?SFX_SHOTGUN:SFX_PISTOL);
   if(k==K_SERGEANT)n=3;
   chance=190-d/6; if(chance<60)chance=60;
   if(k==K_IMP&&d<110) chance=240;
@@ -488,7 +487,7 @@ void main(void){
   set_vram_write(7,0x1400); BANK(AREAB_BANK); vtransfer16k(DATA);          /* linhas 468..531 (fontes); as 512.. sao sobrescritas a seguir */
   set_vram_write(8,0);
   for(i=0;i<NVRAM_BANKS;i++){ BANK(VRAM_BANK0+i); vtransfer16k(DATA); }
-  load_meta(); new_game(); keys=old_keys=dbg=0;
+  sound_init(); load_meta(); new_game(); keys=old_keys=dbg=0;
   for(page=0;page<2;page++){ fill(0,0,SCR_W,212,0); hud_static(); }
   vr(1,0x40);
   if(!geo_present()) no_geo();

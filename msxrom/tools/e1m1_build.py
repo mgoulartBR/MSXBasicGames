@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 HERE=os.path.dirname(os.path.abspath(__file__)); ROOT=os.path.join(HERE,'..'); sys.path.insert(0,HERE)
 import e1m1,e1m1_map,e1m1_pvs as P
+import e1m1_sound
 from make_assets import median_cut,WEIGHT
 A=os.path.join(ROOT,'assets'); PRIV=os.path.join(ROOT,'private')
 SKILL=int(sys.argv[2]) if len(sys.argv)>2 else 3
@@ -279,9 +280,12 @@ def main():
         part=rast[k*ROWS:(k+1)*ROWS].tobytes(); rb.append(part.ljust(16384,b'\0'))
     if first_blob_bank+len(blobbanks)>256: print('ERRO: ROM passaria de 256 bancos'); sys.exit(1)
     allb=banks+[meta_b]+rb+blobbanks
+    sound_banks,sound_defines=e1m1_sound.build(L.w,2+len(allb))
+    allb+=sound_banks
     open(os.path.join(PRIV,'e1m1_banks.bin'),'wb').write(b''.join(allb))
     # --- cabecalho C
     h=['/* GERADO por tools/e1m1_build.py a partir do WAD do usuario - PRIVADO, nao versionar */']
+    h+=sound_defines
     h+=['#define AREAA_BANK 2','#define AREAB_BANK 3','#define VRAM_BANK0 4','#define FLAT_TILE_Y 212','#define FL_REG_Y 640','#define CE_REG_Y 704','#define NVRAM_BANKS 8','#define META_BANK %d'%meta_bank,'#define RAST_BANK0 %d'%RAST_BANK0,
         '#define RAST_W %d'%R.nx,'#define RAST_H %d'%R.ny,'#define RAST_ROWS %d'%ROWS,'#define RAST_X0 %d'%R.x0,'#define RAST_Y0 %d'%R.y0,
         '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things)]

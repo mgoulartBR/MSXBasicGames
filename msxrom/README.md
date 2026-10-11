@@ -1,5 +1,38 @@
 # MSX DOOM — ROM texturizada (turbo R + V9968 + Geo3D)
 
+## E1M1 — MoonSound opcional
+
+O driver detecta OPL4 e sample RAM em 0x7E/0x7F e 0xC4–0xC7. Carrega dez samples
+DMX PCM8/11025 Hz do WAD privado em 105.680 bytes de RAM; cabe no MoonSound de
+128 KiB. Não usa os instrumentos da YRW801. Conversão unsigned→signed, remoção
+das margens DMX, rampas curtas contra clicks e término em loop silencioso.
+São oito vozes simultâneas, alocação circular (a nona substitui a mais antiga),
+volume por voz −15 dB e mix PCM −6 dB. Pistola, ataques, dor, mortes, coleta e
+explosões têm samples distintos. A duração PCM independe dos quadros da engine;
+não há streaming pela CPU durante a partida, só carga no boot e comandos de evento.
+Reiniciar amortece todas as vozes. Não inclui música nem áudio posicional.
+
+Sem OPL4/RAM, usa ruído PSG limitado ao volume 6/15 e três atualizações da engine.
+O fallback NÃO reproduz os sons originais e sua duração ainda depende dos FPS.
+Esperas BUSY/LD têm timeout; nenhum driver MSX-AUDIO/PCM turbo R foi adicionado.
+
+Emulação opcional, sem baixar ROM Yamaha proprietária:
+```sh
+python3 tools/setup_e1m1_moonsound.py /caminho/openmsx/data
+# Acrescente -ext e1m1_moonsound à linha de execução do fork Geo3D.
+```
+O XML reserva uma ROM vazia de 2 MiB só para satisfazer o modelo de MoonSound;
+os efeitos estão integralmente na sample RAM. No pacote Linux, `./executar.sh`
+usa MoonSound; `E1M1_AUDIO=psg ./executar.sh` testa a mesma ROM sem a expansão.
+No hardware é necessário MoonSound/compatível com mapeamento padrão e ≥128 KiB RAM.
+FPGA/hardware/BIOS Panasonic continuam UNTESTED.
+
+Testes privados adicionais: `tools/test_e1m1_sound.py` (com E1M1_WAD e GEO3D_SIM)
+e `E1M1_AUDIO=1 ... -script tools/test_e1m1_openmsx.tcl` no fork; sem extensão use
+também `E1M1_EXPECT_MOON=0`. O segundo confere RAM, teclado, pitch, ganho, vozes,
+reinício, gameplay e grava WAVs reais do emulador. As chamadas isoladas de samples
+são feitas via debugger preservando o contexto da CPU; não são uma partida manual.
+
 ## E1M1 — revisão de HUD e combate
 
 Esta revisão do E1M1 privado corrige os offsets do rosto e a largura individual dos números,

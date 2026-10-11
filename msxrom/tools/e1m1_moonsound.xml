@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<!DOCTYPE msxconfig SYSTEM "msxconfig2.dtd">
+<msxconfig>
+  <info>
+    <name>E1M1 MoonSound RAM-only</name>
+    <description>OPL4 with minimum 128 KiB RAM; blank ROM, no YRW801 samples.</description>
+    <type>sound expansion</type>
+  </info>
+  <devices>
+    <MoonSound id="E1M1 MoonSound">
+      <io base="0x7e" num="2"/>
+      <io base="0xc4" num="4"/>
+      <rom><size>2048</size></rom>
+      <sound><volume>17000</volume></sound>
+      <sampleram>128</sampleram>
+    </MoonSound>
+  </devices>
+</msxconfig>

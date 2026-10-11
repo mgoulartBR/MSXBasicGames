@@ -23,6 +23,10 @@ close $f
 if {[info exists env(E1M1_GAMEPLAY)] && $env(E1M1_GAMEPLAY)} {
     source [file join $root tools test_e1m1_gameplay_openmsx.tcl]
 }
+if {[info exists env(E1M1_AUDIO)] && $env(E1M1_AUDIO)} {
+    source [file join $root tools test_e1m1_gameplay_openmsx.tcl]
+    source [file join $root tools test_e1m1_sound_openmsx.tcl]
+}
 regexp {#define FONT_GRAY (\d+)} $header -> fontrow
 regexp {#define C_BLACK (\d+)} $header -> black
 regexp {#define FONT_CHARS "([^"]+)"} $header -> fontchars
@@ -93,6 +97,9 @@ proc boot {} {
     check [expr {$::flips>3 && [rd16 hp]==100}] "boot e quadros completos"
     check [expr {[debug read {S1990 regs} 6]==64}] "modo R800 ROM"
     check [expr {[rd8 dbg]==0}] "TAB inicialmente desligado"
+    await_frames 4 boot_ready
+}
+proc boot_ready {} {
     screenshot -raw [file join $::output start.png]
     set ::baseline [panel]
     keymatrixdown 7 8
@@ -142,7 +149,7 @@ proc coords_updated {} {
 }
 proc next_cardinal {} {
     if {$::cardinal==4} {
-        if {[llength [info commands gameplay_start]]} {gameplay_start} else {start_benchmark}
+        if {[llength [info commands audio_start]]} {audio_start} elseif {[llength [info commands gameplay_start]]} {gameplay_start} else {start_benchmark}
         return
     }
     wr8 yaw [expr {$::cardinal*64}]
