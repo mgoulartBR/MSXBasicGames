@@ -270,7 +270,7 @@ u8 Building_Frame(void) __banked
 
 // ---------------------------------------------------------------- ESCRITORIO (submenu: grade, audiencias, salvar/carregar)
 static const char* const k_OfficeItems[] = { "Programme grid (TV computer)", "Ratings & image (graphs)", "Save / Load (wall picture)", "Options (sound, mouse speed)" };
-static const u8 k_OfficeScr[] = { SCR_GRID, SCR_RATINGS, SCR_SAVE, SCR_OPTIONS };
+static const u8 k_OfficeScr[] = { SCR_GRID, SCR_RATINGS, SCR_SLOTS, SCR_OPTIONS };
 #define OFFICE_N 4
 
 static void OfficeRowBody(u8 i)

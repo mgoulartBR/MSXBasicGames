@@ -270,13 +270,10 @@ static u16 Fletcher16(const u8* b, u8 n)
 	return (u16)((s2 << 8) | s1);
 }
 
-void Sim_SaveCode(char* out) __banked
+void Sim_SaveBytes(u8* b) __banked                                 // estado -> SAVE_BYTES bytes (inclui checksum); usado pelo codigo e pela SRAM
 {
-	u8 b[SAVE_BYTES];
 	u8 n = 0, i, s;
 	u16 ck;
-	u32 buf = 0;
-	u8 bits = 0, o = 0;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
 	b[n++] = (u8)(8 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
@@ -316,7 +313,14 @@ void Sim_SaveCode(char* out) __banked
 	}
 	ck = Fletcher16(b, n);
 	b[n++] = (u8)ck; b[n++] = (u8)(ck >> 8);
-	for (i = 0; i < n; i++)                                           // base32
+}
+
+void Sim_SaveCode(char* out) __banked
+{
+	u8 b[SAVE_BYTES], i, o = 0, bits = 0;
+	u32 buf = 0;
+	Sim_SaveBytes(b);
+	for (i = 0; i < SAVE_BYTES; i++)                                  // base32
 	{
 		buf = (buf << 8) | b[i]; bits += 8;
 		while (bits >= 5) { out[o++] = k_B32[(buf >> (bits - 5)) & 31]; bits -= 5; }
@@ -328,8 +332,7 @@ void Sim_SaveCode(char* out) __banked
 u8 Sim_LoadCode(const char* code) __banked
 {
 	u8 b[SAVE_BYTES + 2];
-	u8 n = 0, i, s, c, v, bits = 0;
-	u16 ck, day, seed;
+	u8 n = 0, i, c, v, bits = 0;
 	u32 buf = 0;
 	u8 len = 0;
 	while (code[len]) len++;
@@ -346,6 +349,13 @@ u8 Sim_LoadCode(const char* code) __banked
 		if (bits >= 8) { if (n < SAVE_BYTES) b[n++] = (u8)(buf >> (bits - 8)); bits -= 8; }
 	}
 	if (n != SAVE_BYTES) return 1;
+	return Sim_LoadBytes(b);
+}
+
+u8 Sim_LoadBytes(const u8* b) __banked                            // 0 ok, 2 checksum, 3 dados invalidos
+{
+	u8 n, i, s, c;
+	u16 ck, day, seed;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
 	if ((b[0] & 15) != 8 || (b[0] >> 4) >= NUM_DIFF) return 3;

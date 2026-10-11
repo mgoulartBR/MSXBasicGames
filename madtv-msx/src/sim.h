@@ -172,5 +172,7 @@ u16   Sim_MovieValue(u8 idx);               // valor de revenda (k$)
 u8    Sim_Sell(u8 idx);                     // 0 ok, 1 nao possui, 2 esta na grade
 // salvar/carregar por codigo (sem SRAM no cartucho ASCII8)
 void  Sim_SaveCode(char* out) __banked;              // SAVE_CHARS caracteres + '\0'
-u8    Sim_LoadCode(const char* code) __banked;       // 0 ok, 1 tamanho/caracter invalido, 2 checksum, 3 dados invalidos
+u8    Sim_LoadCode(const char* code) __banked;
+void  Sim_SaveBytes(u8* b) __banked;                 // SAVE_BYTES bytes (SRAM)
+u8    Sim_LoadBytes(const u8* b) __banked;           // 0 ok, 2 checksum, 3 invalido       // 0 ok, 1 tamanho/caracter invalido, 2 checksum, 3 dados invalidos
 void  Sim_MsgNum(const char* a, i32 v, const char* b);

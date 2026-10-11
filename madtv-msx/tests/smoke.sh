@@ -8,12 +8,13 @@ ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); DDR=$(sym _g_DirectDraws); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
+DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); SBIT=$(sym _g_SramBit); DDR=$(sym _g_DirectDraws); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
 [ -n "$G" ] && [ -n "$OFFS" ] && [ -n "$CODE" ] || { echo "FAIL: simbolos ausentes no mapa"; exit 1; }
 cat > /tmp/madtv_smoke.tcl <<TCL
 set G $G
 set OFFS $OFFS
 set CODE $CODE
+set SBIT $SBIT
 set DDR $DDR
 set SFXC $SFXC
 set MUSP $MUSP
@@ -39,7 +40,7 @@ proc dump {tag} {
   set f [open /tmp/madtv_state.txt a]
   set money [expr {[peek16 [expr {$G+[off 2]}]] + 65536*[peek16 [expr {$G+[off 2]+2}]]}]
   if {$money >= 2147483648} { set money [expr {$money - 4294967296}] }
-  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]] sfx=[peek $::SFXC] mus=[peek $::MUSP] pspd=[peek $::PSPD] snds=[peek $::SNDS] psg7=[debug read {PSG regs} 7] direct=[peek16 $::DDR]"
+  puts $f "$tag gsel=[peek $::GSEL] spd=[peek $::SPD] scr=[peek $::SCR] sel=[peek $::SEL] day=[peek16 $G] t=[peek16 [expr {$G+[off 1]}]] money=$money debt=[peek16 [expr {$G+[off 3]}]] image=[peek [expr {$G+[off 4]}]],[peek [expr {$G+[off 4]+1}]] slot0movie=[peek [expr {$G+[off 6]}]] slate0=[peek [expr {$G+[off 7]}]] sub0=[peek [expr {$G+[off 8]}]] contract0=[peek [expr {$G+[off 9]}]] owned1=[peek [expr {$G+[off 5]+1}]] owned2=[peek [expr {$G+[off 5]+2}]] sym0=[peek [expr {$G+[off 10]}]] g0=[peek [expr {$G+[off 12]}]] g1=[peek [expr {$G+[off 12]+1}]] g9=[peek [expr {$G+[off 12]+9}]] won=[peek [expr {$G+[off 14]}]] tower=[peek [expr {$G+[off 15]}]] pstate=[peek [expr {$G+[off 16]}]] sfx=[peek $::SFXC] mus=[peek $::MUSP] pspd=[peek $::PSPD] snds=[peek $::SNDS] psg7=[debug read {PSG regs} 7] direct=[peek16 $::DDR] sbit=[peek $::SBIT]"
   close $f
 }
 proc readcode {} { global CODE; set s ""; for {set i 0} {$i < 140} {incr i} { append s [format %c [peek [expr {$CODE+$i}]]] }; return $s }
@@ -176,9 +177,25 @@ room 7
 key DOWN; key RET
 at 0.5 { shot 8h_studio; dump studio }
 back
+# --- SRAM: salvar no slot 1, alterar o dinheiro, carregar o slot 1 e conferir
+room 9
+key DOWN; key DOWN; key RET
+at 0.4 {}; key RET; at 0.3 { shot 9b_slots }
+key RET
+at 0.4 { dump slotsave }
+back; back; back
+at 0.2 { poke [expr {$G+[off 2]}] 0x09; poke [expr {$G+[off 2]+1}] 0x03; poke [expr {$G+[off 2]+2}] 0; poke [expr {$G+[off 2]+3}] 0 }
+at 0.3 { dump slotmod }
+room 9
+key DOWN; key DOWN; key RET
+at 0.4 {}; key DOWN; key RET
+at 0.3 {}; key RET
+at 0.8 { dump slotload }
+at 0.5 {}
 # --- Escritorio -> Save/Load: mostrar o codigo e guardar
 room 9
 key DOWN; key DOWN; key RET
+at 0.4 { shot 9a_slots_menu }; key DOWN; key DOWN; key RET     ;# menu de slots -> Save code
 at 0.5 {}; key RET
 at 0.8 { shot 9_savecode; set ::SAVED [readcode]; dump saved; set f [open /tmp/madtv_code.txt w]; puts $f $::SAVED; close $f }
 back
@@ -191,6 +208,7 @@ at 0.5 { dump changed }
 back
 room 9
 key DOWN; key DOWN; key RET
+at 0.4 {}; key DOWN; key DOWN; key RET                ;# menu de slots -> Save code
 at 0.5 {}; key DOWN; key RET                        ;# Enter a code
 at 0.5 { shot 10_enter_empty }
 at 0.3 { typecode $::SAVED }
@@ -213,7 +231,7 @@ at 0.2 { poke $::SPD 3 }
 at 0.1 { set throttle off }
 at 95  { shot 13_later; dump later; set f [open /tmp/madtv_draw.txt w]; for {set i 0} {$i < 22} {incr i} { puts -nonewline $f "[peek [expr {$DM+$i}]] " }; close $f; exit }
 TCL
-timeout 290 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/madtv_smoke.tcl >/tmp/madtv_smoke.log 2>&1
+timeout 290 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/madtv_smoke.tcl >/tmp/madtv_smoke.log 2>&1
 cat /tmp/madtv_state.txt 2>/dev/null
 python3 -I - <<'P'
 import sys
@@ -242,8 +260,10 @@ need(g('opt0','scr')==19 and g('opt0','snds')==1 and g('opt1','snds')==0 and g('
 need(g('navup','sfx')>g('start','sfx') and g('opt0','sfx')>g('navup','sfx'),'efeitos sonoros nao dispararam (nav/OK)')
 need(len(set(g(t,'mus') for t in ['start','navup','navdown','navright','navleft','mhover']))>=2 and all(g(t,'psg7')==0xB8 for t in ['start','navup']),'musica nao avanca / mixer do PSG != B8h')
 need(int(S['later']['direct'])-int(S['start']['direct'])<=8,'ha desenho direto na tela (apaga/reescreve) durante o jogo: %s -> %s'%(S['start']['direct'],S['later']['direct']))
+need(g('start','sbit')==16,'SRAM nao detectada (esperado bit 10h no ASCII8SRAM8 de 128 KB): %s'%g('start','sbit'))
+need(g('slotmod','money')==777 and g('slotsave','money')!=777 and g('slotload','money')==g('slotsave','money') and g('slotload','scr')==1,'SRAM: salvar/carregar o slot 1 nao restaurou o estado')
 need(g('refused','won')==0 and g('refused','scr')==12,'Betty: pedido sem condicoes foi aceito')
-need(g('win','won')==1 and g('win','scr')==20,'Betty: pedido com todas as condicoes nao levou ao final feliz')
+need(g('win','won')==1 and g('win','scr')==21,'Betty: pedido com todas as condicoes nao levou ao final feliz')
 need(g('bought','money')<g('start','money'),'compra de filme nao debitou')
 need(g('placed','slot0movie')!=255,'filme nao entrou na grade')
 need(g('signed','contract0')!=255,'contrato nao assinado')
@@ -256,7 +276,7 @@ need(g('loaded','day')==g('saved','day'),'LOAD nao restaurou o dia')
 need(g('later','day')>=2,'jogo nao avancou para o dia 2')
 need(sum(map(int,S['later']['image'].split(',')))<=100,'Image invalido')
 d=open('/tmp/madtv_draw.txt').read().split()
-names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','realtor','scripts','studio','options','over']
+names=['title','building','grid','agency','ads','news','archive','boss','ratings','save','office','shop','betty','porter','fun','sun','realtor','scripts','studio','options','slots','over']
 print('desenho completo por tela (jiffies, max):',dict(zip(names,map(int,d))))
 need(max(map(int,d))<=90,'alguma tela leva > 90 jiffies para desenhar')
 print('PASS')

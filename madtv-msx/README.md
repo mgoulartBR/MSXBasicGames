@@ -1,7 +1,7 @@
 # MadTV-MSX
 
 Port/reimplementacao do Mad TV (1991) para MSX2 em C + MSXgl, usando os dados do remake open source TVTower.
-Status: **1.2 - correcoes do playtest (musica FM/PSG, ritmo do relogio, fim do piscar, titulo); 1.1 - polimento (audio PSG, opcoes de som e sensibilidade do mouse); 1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
+Status: **1.3 - salvar em SRAM (4 slots); 1.2 - correcoes do playtest (musica FM/PSG, ritmo do relogio, fim do piscar, titulo); 1.1 - polimento (audio PSG, opcoes de som e sensibilidade do mouse); 1.0 (conteudo) - producao propria: Roteiros e Estudios abertos; antes: 0.9 Corretor (torres de transmissao); Porteiro e escritorios dos rivais (sobre a 0.7: dificuldade, 160 filmes, Image baixo; 0.6: Betty e presentes).** Predio navegavel, gestao, noticias, credito, salvar por codigo, mouse e agora o Supermercado e a Betty (final feliz = casar). Sem audio ainda.
 
 - Alvo: MSX2 (V9938), ROM 128 KB com mapper ASCII8. Nao testado em hardware real.
 - Build: `scripts/setup.sh && scripts/build.sh` -> `dist/madtv-msx-<versao>.rom` (versao em `VERSION`)
@@ -16,6 +16,7 @@ Status: **1.2 - correcoes do playtest (musica FM/PSG, ritmo do relogio, fim do p
 - Como jogar: Film agency (comprar) -> Ad agency (assinar contrato) -> Programme grid (encaixar filmes e anuncios nos horarios) -> acompanhar em Ratings.
 - Docs: docs/PORTING.md, docs/TOOLCHAIN.md, docs/RULES.md, LICENSES.md, TODO.md
 - Material original do Mad TV e o banco do TVTower ficam em `original/` (nao versionado).
+- Salvar (1.3): Escritorio > Save/Load. Com SRAM no cartucho ha 4 slots (sobrevivem a desligar o MSX); sem SRAM usa-se o codigo de 140 caracteres. No openMSX a SRAM exige o tipo de ROM `ASCII8SRAM8` (`openmsx -romtype ASCII8SRAM8 -cart dist/madtv-msx-1.3.rom`; no Catapult, escolha o tipo da ROM); sem isso o jogo funciona normalmente e cai no codigo. Esc no titulo carrega do slot.
 - Relogio (1.2): o jogo e cada novo dia comecam PAUSADOS (planeje a grade e aperte P). 1 minuto de jogo = 1 s na velocidade 1 (dia = 8 min), 0,5 s na 2, 1/6 s na 3 (a 3 nao pausa a cada dia). TAB troca a velocidade, P pausa/retoma.
 - Musica (1.2): se o MSX tiver MSX-MUSIC (FM, YM2413) a musica toca em FM; senao no PSG. Efeitos sempre no PSG.
 - Opcoes (Escritorio > Options): efeitos e musica on/off, sensibilidade do mouse (slow/normal/fast/very fast). Valem ate desligar o MSX (nao sao salvas no codigo).

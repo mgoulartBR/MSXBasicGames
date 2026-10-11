@@ -170,6 +170,7 @@ static void ScreenEnter(u8 scr)
 	case SCR_ARCHIVE: Archive_Enter(); break;
 	case SCR_BOSS:   Boss_Enter(); break;
 	case SCR_SAVE:   Save_Enter(); break;
+	case SCR_SLOTS:  Slots_Enter(); break;
 	case SCR_HUB:    Building_Enter(); break;
 	case SCR_OFFICE: Office_Enter(); break;
 	case SCR_SHOP:   Shop_Enter(); break;
@@ -198,6 +199,7 @@ static void ScreenInput(u8 ev)
 	case SCR_ARCHIVE: Archive_Input(ev); break;
 	case SCR_BOSS:    Boss_Input(ev); break;
 	case SCR_SAVE:    Save_Input(ev); break;
+	case SCR_SLOTS:   Slots_Input(ev); break;
 	case SCR_SHOP:    Shop_Input(ev); break;
 	case SCR_BETTY:   Betty_Input(ev); break;
 	case SCR_PORTER:  Porter_Input(ev); break;
@@ -223,6 +225,7 @@ static void ScreenDraw(void)
 	case SCR_ARCHIVE: Archive_Draw(); break;
 	case SCR_BOSS:    Boss_Draw(); break;
 	case SCR_SAVE:    Save_Draw(); break;
+	case SCR_SLOTS:   Slots_Draw(); break;
 	case SCR_SHOP:    Shop_Draw(); break;
 	case SCR_BETTY:   Betty_Draw(); break;
 	case SCR_SCRIPTS: Scripts_Draw(); break;
@@ -300,6 +303,7 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	case SCR_ARCHIVE: Archive_Mouse(x, y, btn); break;
 	case SCR_BOSS:    Boss_Mouse(x, y, btn); break;
 	case SCR_SAVE:    Save_Mouse(x, y, btn); break;
+	case SCR_SLOTS:   Slots_Mouse(x, y, btn); break;
 	case SCR_SHOP:    Shop_Mouse(x, y, btn); break;
 	case SCR_BETTY:   Betty_Mouse(x, y, btn); break;
 	case SCR_REALTOR: Realtor_Mouse(x, y, btn); break;
@@ -329,6 +333,7 @@ void main()
 	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1;
 	Ui_Init();
 	Audio_Init();
+	Sram_Detect();
 	Draw_Title();
 
 	for (;;)
@@ -360,7 +365,7 @@ void main()
 		{
 			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Title_Opts(); continue; }
 			if (ev & IN_OK) { Audio_Sfx(3); StartGame(); }
-			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Goto(SCR_SAVE); Save_EnterLoad(); }   // Esc no titulo: carregar codigo
+			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Load_Menu(); }   // Esc no titulo: carregar (slots da SRAM ou codigo)
 			continue;
 		}
 
@@ -371,7 +376,7 @@ void main()
 		if (ev & IN_SPEED) { g_Speed = (g_Speed % (SPEED_COUNT - 1)) + 1; s_Prev = g_Speed; g_Dirty |= D_HDR; }
 		if (ev & IN_PAUSE) { if (g_Speed == SPEED_PAUSE) g_Speed = s_Prev; else { s_Prev = g_Speed; g_Speed = SPEED_PAUSE; } g_Dirty |= D_HDR; }
 
-		if (g_Speed != SPEED_PAUSE && g_Screen != SCR_SAVE && ++fc >= fpm)    // tempo parado na tela Salvar/Carregar
+		if (g_Speed != SPEED_PAUSE && g_Screen != SCR_SAVE && g_Screen != SCR_SLOTS && ++fc >= fpm)    // tempo parado na tela Salvar/Carregar
 		{
 			fc = 0;
 			e = Sim_Tick();

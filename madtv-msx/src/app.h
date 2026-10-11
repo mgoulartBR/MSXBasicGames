@@ -11,7 +11,7 @@
 #define MSG_Y       201
 #define LIST_ROWS   11
 
-enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OFFICE, SCR_SHOP, SCR_BETTY, SCR_PORTER, SCR_FUN, SCR_SUN, SCR_REALTOR, SCR_SCRIPTS, SCR_STUDIO, SCR_OPTIONS, SCR_OVER };
+enum { SCR_TITLE, SCR_HUB, SCR_GRID, SCR_AGENCY, SCR_ADS, SCR_NEWS, SCR_ARCHIVE, SCR_BOSS, SCR_RATINGS, SCR_SAVE, SCR_OFFICE, SCR_SHOP, SCR_BETTY, SCR_PORTER, SCR_FUN, SCR_SUN, SCR_REALTOR, SCR_SCRIPTS, SCR_STUDIO, SCR_OPTIONS, SCR_SLOTS, SCR_OVER };
 enum { SPEED_PAUSE, SPEED_1, SPEED_2, SPEED_3, SPEED_COUNT };
 
 // bits de "sujo" (o que precisa ser redesenhado)
@@ -83,7 +83,7 @@ void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realt
 void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "1.2"
+#define VERSION_STR "1.3"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Title_Opts(void) __banked; void Over_Draw(void) __banked;
 
@@ -91,3 +91,8 @@ void Title_Draw(void) __banked; void Title_Opts(void) __banked; void Over_Draw(v
 extern u8 g_SndSfx, g_SndMus, g_SfxCount, g_MusicPos;
 void Audio_Init(void) __banked;  void Audio_Tick(void) __banked;  void Audio_Sfx(u8 id) __banked;  void Audio_Result(const char* msg) __banked;
 void Options_Draw(void) __banked; void Options_Input(u8 ev) __banked; void Options_Mouse(u8 x, u8 y, u8 btn) __banked;
+
+// salvar/carregar em SRAM (slots.c, segmento 13)
+extern u8 g_SramBit;
+void Sram_Detect(void) __banked; void Load_Menu(void) __banked;
+void Slots_Enter(void) __banked; void Slots_Draw(void) __banked; void Slots_Input(u8 ev) __banked; void Slots_Mouse(u8 x, u8 y, u8 btn) __banked;
