@@ -71,6 +71,39 @@ void Room_Frame(u8 id) __banked                          // cena a esquerda + pa
 void Room_Frame(u8 id) __banked { (void)id; }
 #endif
 
+// ---------------------------------------------------------------- micro-fonte 3x5 (celula 4x6): A-Z, 0-9 e "/" (rotulos das portas, detalhes da grade)
+// Guardada em VRAM (pagina 1, linhas 500..505, livres) e copiada com LMMM/TIMP (cor 1 = preto; 0 = transparente).
+static const u8 k_Micro[37][5] = {
+	{2,5,7,5,5},{6,5,6,5,6},{3,4,4,4,3},{6,5,5,5,6},{7,4,6,4,7},{7,4,6,4,4},{3,4,5,5,3},{5,5,7,5,5},{7,2,2,2,7},{1,1,1,5,2},{5,5,6,5,5},{4,4,4,4,7},{5,7,7,5,5},
+	{6,5,5,5,5},{2,5,5,5,2},{6,5,6,4,4},{2,5,5,7,3},{6,5,6,5,5},{3,4,2,1,6},{7,2,2,2,2},{5,5,5,5,7},{5,5,5,5,2},{5,5,7,7,5},{5,5,2,5,5},{5,5,2,2,2},{7,1,2,4,7},
+	{7,5,5,5,7},{2,6,2,2,7},{6,1,2,4,7},{6,1,2,1,6},{5,5,7,1,1},{7,4,6,1,6},{3,4,7,5,7},{7,1,2,2,2},{7,5,7,5,7},{7,5,7,1,6},{1,1,2,4,4}
+};
+#define MICRO_ROW 500
+void Micro_Init(void) __banked
+{
+	u8 buf[74], r, g;
+	VDP_CommandWait();
+	for (r = 0; r < 6; r++)
+	{
+		for (g = 0; g < 37; g++)
+		{
+			u8 b = (r < 5) ? k_Micro[g][r] : 0;
+			buf[g * 2]     = (u8)(((b & 4) ? 0x10 : 0) | ((b & 2) ? 0x01 : 0));       // pixels 0 e 1
+			buf[g * 2 + 1] = (u8)((b & 1) ? 0x10 : 0);                                // pixel 2 (o 3o fica vazio: espaco entre letras)
+		}
+		VDP_WriteVRAM_128K(buf, (u16)(0x8000 + (u16)(MICRO_ROW - 256 + r) * 128), 0, 74);
+	}
+}
+
+void Chrome_Micro(u8 x, u8 y, const char* s) __banked                                // dentro de Ui_Begin (buffer na pagina 2); s tem de estar na RAM
+{
+	for (; *s; s++, x += 4)
+	{
+		u8 c = (u8)*s, g = (c >= 'A' && c <= 'Z') ? (u8)(c - 'A') : (c >= 'a' && c <= 'z') ? (u8)(c - 'a') : (c >= '0' && c <= '9') ? (u8)(26 + c - '0') : (c == '/') ? 36 : 0xFF;
+		if (g != 0xFF) VDP_CommandLMMM((u16)g * 4, MICRO_ROW, x, (u16)y + 512, 4, 6, VDP_OP_TIMP);
+	}
+}
+
 // ---------------------------------------------------------------- console inferior (2.3): HUD + dica + mensagem em y = 162..212 da tela
 // Desenhado no buffer (pagina 2) nas linhas 0..25 (livres: o conteudo usa 26..186 e a fonte preta fica em 218..) e copiado com Ui_EndTo.
 // Dica e mensagem usam as linhas 188..211 do buffer (mesmas da tela).
@@ -89,6 +122,7 @@ static void CText(u8 x, u8 y, const char* s) { Ui_Text(x, (u8)(y + CB), s); }
 
 void Hud_Reset(void) __banked
 {
+	Micro_Init();
 	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255; c_Sym = 255;
 	c_Image[0] = c_Image[1] = c_Image[2] = 255;
 	Ui_Begin();

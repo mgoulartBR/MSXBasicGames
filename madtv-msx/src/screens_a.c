@@ -19,10 +19,10 @@ static void BuildPick(void)
 
 #if ART_SCENES
 #define GR_Y(s)  ((u8)(30 + (s) * 16))                    // linhas da grade (7 x 16 px) a partir do topo do conteudo
-#define GR_TX    32                                       // coluna da hora
-#define GR_TW    32
-#define GR_PX    66                                       // coluna do programa
-#define GR_PW    102
+#define GR_TX    31                                       // coluna da hora
+#define GR_TW    35
+#define GR_PX    68                                       // coluna do programa
+#define GR_PW    100
 #define GR_AX    170                                      // coluna do anuncio
 #define GR_AW    62
 #endif
@@ -48,21 +48,21 @@ static void DrawRow_Grid_Body(u8 s)
 		Chrome_Box(GR_AX, y, GR_AW, 15, fa, 1);
 		Ui_Color(UI_BLACK);
 		ClockStr(b, FIRST_SLOT_T + s * 60);
-		Ui_Text(GR_TX + 4, (u8)(y + 4), b);
+		Ui_Text(GR_TX + 3, (u8)(y + 4), b);
 		if (mb != NONE)
 		{
-			if (cont) { Ui_Int(GR_PX + 6, (u8)(y + 4), sl->part + 1); Ui_Text(GR_PX + 18, (u8)(y + 4), "/"); Ui_Int(GR_PX + 26, (u8)(y + 4), (*Mov(mb)).blocks); }
-			else
-			{
-				Ui_TextN(GR_PX + 3, (u8)(y + 1), (*Mov(mb)).title, 16);
-				Ui_Text(GR_PX + 3, (u8)(y + 8), "block 1/"); Ui_Int(GR_PX + 51, (u8)(y + 8), (*Mov(mb)).blocks);
-			}
+			char t[8];
+			if (!cont) Ui_TextN(GR_PX + 3, (u8)(y + 1), (*Mov(mb)).title, 15);
+			t[0] = 'B'; t[1] = 'L'; t[2] = 'K'; t[3] = ' '; t[4] = (char)('1' + sl->part); t[5] = '/'; t[6] = (char)('0' + (*Mov(mb)).blocks); t[7] = 0;   // "BLK 1/2" em micro-fonte
+			Chrome_Micro(GR_PX + 3, (u8)(cont ? y + 5 : y + 9), t);
 		}
 		if (sl->ad != NONE)
 		{
 			const Contract* ct = &g_Game.contract[sl->ad];
-			Ui_TextN(GR_AX + 3, (u8)(y + 1), g_Ads[ct->ad].title, 10);
-			{ u8 x = Ui_Int(GR_AX + 3, (u8)(y + 8), ct->reps_left); Ui_Text(x, (u8)(y + 8), "x"); x = Ui_Int((u8)(x + 12), (u8)(y + 8), ct->days_left); Ui_Text(x, (u8)(y + 8), "d"); }
+			char t[8];
+			Ui_TextN(GR_AX + 3, (u8)(y + 1), g_Ads[ct->ad].title, 9);
+			t[0] = (char)('0' + ct->reps_left % 10); t[1] = 'X'; t[2] = ' '; t[3] = (char)('0' + ct->days_left % 10); t[4] = 'D'; t[5] = 0;                      // "3X 3D"
+			Chrome_Micro(GR_AX + 3, (u8)(y + 9), t);
 		}
 	}
 	return;

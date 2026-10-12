@@ -13,9 +13,9 @@ def nearest(c): return min(range(16), key=lambda i: sum((a - b) ** 2 for a, b in
 H = 111
 # (nome, arquivo em original/dos, caixa (x0,y0,x1,y1) na captura nativa 320x200; o interior da cena fica em y=4..114)
 SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40, 4, 296, 4 + H)),
-          ("ads", "ads.png", (70, 4, 190, 4 + H)), ("movie", "movie.png", (0, 4, 120, 4 + H)), ("script", "script.png", (100, 4, 220, 4 + H)),
-          ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (110, 4, 230, 4 + H)), ("realty", "realestate.png", (160, 4, 280, 4 + H)),
-          ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H)),
+          ("ads", "ads.png", (70, 4, 190, 4 + H)), ("movie", "movie.png", (0, 4, 120, 4 + H)), ("script", "script.png", (140, 4, 260, 4 + H)),
+          ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (190, 4, 310, 4 + H)), ("realty", "realestate.png", (200, 4, 320, 4 + H)),
+          ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (0, 4, 120, 4 + H)),
           ("news", "news.png", (150, 4, 270, 4 + H)),
           ("gridcol", "grid1.png", None),                      # colunas da grade (setas+lixeira a esquerda, 6 icones a direita) lado a lado: 28 + 20 = 48 px
           ("title", "../user/title.webp", (130, 10, 1456, 981))]   # tela de abertura (arte enviada pelo usuario, ampliada ~5x): reduzida para 256x196
