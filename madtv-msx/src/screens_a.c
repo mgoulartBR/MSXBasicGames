@@ -306,6 +306,7 @@ static void DrawRow_Agency_Body(u8 i)
 	Ui_Color(UI_BLACK);
 	Ui_TextN(130, y, g_Movies[idx].title, 16);
 	if (g_Game.owned[idx]) Ui_Text(230, y, "own");
+	else if (Sim_TakenBy(idx)) { Ui_Color(UI_RED); Ui_Text(230, y, Sim_TakenBy(idx) == 1 ? "Fun" : "Sun"); }
 #else
 	Ui_Fill(0, y - 1, 255, ROW_H, UI_BG);
 	if (g_First + i >= CatCount(s_Cat)) return;
@@ -314,6 +315,7 @@ static void DrawRow_Agency_Body(u8 i)
 	Ui_Text(4, y, g_First + i == g_Sel ? ">" : " ");
 	Ui_TextN(14, y, g_Movies[idx].title, 24);
 	if (g_Game.owned[idx]) { Ui_Color(UI_GRAY); Ui_Text(232, y, "own"); }
+	else if (Sim_TakenBy(idx)) { Ui_Color(UI_RED); Ui_Text(232, y, Sim_TakenBy(idx) == 1 ? "Fun" : "Sun"); }
 #endif
 }
 
@@ -433,6 +435,7 @@ void Agency_Input(u8 ev) __banked
 		u8 r = Sim_Buy(s_CatStart[s_Cat] + g_Sel);
 		if (r == 0) Sim_Msg("Movie bought - now in your archive.");
 		else if (r == 1) Sim_Msg("You already own this movie.");
+		else if (r == 3) Sim_Msg(Sim_TakenBy(s_CatStart[s_Cat] + g_Sel) == 1 ? "FunTV just signed that one!" : "SunTV just signed that one!");
 		else Sim_Msg("Not enough money!");
 		MarkRows(g_Sel - g_First, g_Sel - g_First);   // so a linha (marca "own"/cor)
 		g_Dirty |= D_MSG | D_HDR;

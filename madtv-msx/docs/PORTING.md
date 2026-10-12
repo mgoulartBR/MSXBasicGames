@@ -354,3 +354,9 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - `Chrome_CastLines(m)` desenha as 2 linhas de micro-fonte (y 173/180) nos paineis de detalhes; micro-fonte nao tem "." nem ",": pontuacao some.
 - Cache: `k_ScPin` = {filmes, anuncios, noticias, arquivo} nas vagas 0-3 (cada vaga 120x111 px: 2 por banda, bandas em 770 e 881; a fonte preta ocupa ate a linha 769). `Scene_PreStep` (chamada a cada quadro fora de titulo/final) carrega 12 linhas por vez; `Scene_Draw` usa HMMM da VRAM. Medicao (agencia): 20 -> 17 jiffies; a escrita da CPU na VRAM e a copia HMMM sao ambas limitadas (~100-130 KB/s no emulador), por isso o ganho e de ~15% so. `g_LastDraw` (main.c) e o gancho de teste.
 - Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.
+
+## 2.7: fechamento
+- `Sim_TakenBy(m)`: x = hash16(m, dia/TAKEN_WINDOW); levado se x%100 < TAKEN_BASE_PCT + estrelas*TAKEN_PER_STAR; quem leva = bit 9 de x (o outro se aquele faliu; nenhum se os dois faliram). `Sim_Buy` devolve 3. Bot do `balance.c` pula filmes levados.
+- Escritorios dos rivais: `make_scenes.py` ganhou `rival1`/`rival2` (office.png cols 180-300 e 20-140; `inpaint_cursor` apaga a seta vermelha do DOS que vinha na captura) nos segmentos 36 e 37.
+- Historico: `git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch madtv-msx/screenshots' main..HEAD` + force-push com `--force-with-lease`; `screenshots/` esta no .gitignore.
+- Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.

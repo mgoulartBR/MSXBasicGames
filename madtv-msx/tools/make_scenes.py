@@ -17,10 +17,24 @@ SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40
           ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (190, 4, 310, 4 + H)), ("realty", "realestate.png", (200, 4, 320, 4 + H)),
           ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (0, 4, 120, 4 + H)),
           ("news", "news.png", (150, 4, 270, 4 + H)),
+          ("rival1", "office.png", (180, 4, 300, 4 + H)), ("rival2", "office.png", (20, 4, 140, 4 + H)),   # escritorios dos rivais: recortes do escritorio do Archie (as salas deles estao trancadas no DOS)
           ("gridcol", "grid1.png", None),                      # colunas da grade (setas+lixeira a esquerda, 6 icones a direita) lado a lado: 28 + 20 = 48 px
           ("title", "../user/title.webp", (130, 10, 1456, 981))]   # tela de abertura (arte enviada pelo usuario, ampliada ~5x): reduzida para 256x196
 RESIZE = {"title": (256, 196)}
-FIXED_SEG = {"news": 15, "gridcol": 2, "title": 32}     # segmento 15 estava livre: evita ROM de 512 KB
+FIXED_SEG = {"news": 15, "gridcol": 2, "title": 32, "rival1": 36, "rival2": 37}     # segmento 15 estava livre: evita ROM de 512 KB
+
+def inpaint_cursor(im, box, bg):
+    """remove a seta vermelha do DOS (capturada junto): pixels da caixa que nao sao cor de fundo viram a cor de fundo mais comum entre os vizinhos"""
+    from collections import Counter
+    px = im.load()
+    x0, y0, x1, y1 = box
+    fix = []
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if px[x, y] in bg: continue
+            n = Counter(px[xx, yy] for yy in range(y - 2, y + 3) for xx in range(x - 2, x + 3) if px[xx, yy] in bg)
+            if n: fix.append((x, y, n.most_common(1)[0][0]))
+    for x, y, c in fix: px[x, y] = c
 
 def main(d):
     first_seg = 19
@@ -31,7 +45,10 @@ def main(d):
         if name == "gridcol":
             src = Image.open(d + "/" + fn).convert("RGB")
             im = Image.new("RGB", (48, 106)); im.paste(src.crop((6, 6, 34, 112)), (0, 0)); im.paste(src.crop((294, 6, 314, 112)), (28, 0))
-        else: im = Image.open(d + "/" + fn).convert("RGB").crop(box)
+        else:
+            im = Image.open(d + "/" + fn).convert("RGB")
+            if fn == "office.png": inpaint_cursor(im, (28, 71, 43, 86), {(190, 109, 85), (199, 109, 109)})
+            im = im.crop(box)
         if name == "title": im.paste((0, 0, 0), (270, 625, 870, 740))      # credito "MSX Port by BigFive" some: o jogo o escreve com a fonte propria (legivel a 256 px)
         if name in RESIZE: im = im.resize(RESIZE[name], Image.LANCZOS)
         w, h = im.size

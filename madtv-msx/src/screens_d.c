@@ -348,6 +348,40 @@ void Porter_Draw(void) __banked
 void Porter_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
 
 // ---------------------------------------------------------------- ESCRITORIO DOS RIVAIS (espionagem: grade e audiencias de hoje)
+#if ART_SCENES
+void Rival_Draw(void) __banked                              // escritorio do rival: cena (recorte do escritorio do Archie) + grade de hoje no painel + resumo embaixo
+{
+	u8 st = (u8)(g_Screen - SCR_FUN + 1), s, y;
+	char b[8];
+	Ui_Begin();
+	Room_Frame(st == 1 ? SCN_RIVAL1 : SCN_RIVAL2);
+	Ui_Color(UI_BLACK);
+	Ui_Text(130, CONTENT_Y + 2, g_StationName[st]); Ui_Text(172, CONTENT_Y + 2, "office");
+	Chrome_Box(0, 138, 256, 48, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (!g_Game.alive[st]) { Ui_Text(130, CONTENT_Y + 20, "Bankrupt."); Ui_Text(8, 142, "The office is empty. Nobody answers the phone."); }
+	else
+	{
+		for (s = 0; s < NUM_SLOTS; s++)
+		{
+			const Slot* sl = &g_Game.slot[st][s];
+			y = (u8)(CONTENT_Y + 14 + s * ROW_H);
+			ClockStr(b, (u16)(FIRST_SLOT_T + s * 60));
+			Ui_Text(128, y, b);
+			if (sl->movie == NONE) Ui_Text(162, y, "-");
+			else if (sl->part) Ui_Text(162, y, "(cont.)");
+			else Ui_TextN(162, y, g_Movies[sl->movie].title, 11);
+			if (g_Game.aud_done[s]) Ui_Dec1(232, y, g_Game.aud[st][s]);
+		}
+		Ui_Text(8, 142, "Image"); Ui_Int(48, 142, g_Game.image[st]);
+		Ui_Text(84, 142, "Betty likes them"); Ui_Int(184, 142, g_Game.sym[st]);
+		Ui_Text(8, 156, "Tonight's schedule (spying).");
+		Ui_Text(8, 168, "Audience in millions, once aired.");
+	}
+	Ui_End(0, CONTENT_Y - 2, 0, 160);
+	Hint("BACK:building");
+}
+#else
 void Rival_Draw(void) __banked
 {
 	u8 st = (u8)(g_Screen - SCR_FUN + 1), s, y;
@@ -381,6 +415,8 @@ void Rival_Draw(void) __banked
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("BACK:building");
 }
+
+#endif
 
 void Rival_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
 

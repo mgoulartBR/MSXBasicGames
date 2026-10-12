@@ -488,3 +488,18 @@ void Sim_SammyDay(void) __banked
 	}
 	else Sim_Msg("Nobody won the Sammy: your news were too weak.");
 }
+
+// Rivais disputam o catalogo (2.7): a cada TAKEN_WINDOW dias, uma fracao dos filmes e "levada" por FunTV ou SunTV e nao pode ser comprada.
+// Sem estado novo: e uma funcao deterministica do filme e da janela de dias (o savegame nao muda). Filmes de elenco forte sao mais disputados.
+u8 Sim_TakenBy(u8 m) __banked
+{
+	u16 x;
+	u8 who;
+	if (m >= DB_NUM_MOVIES || g_Game.owned[m]) return 0;
+	x = (u16)(m * 251u + (g_Game.day / TAKEN_WINDOW) * 97u + 13u);
+	x ^= (u16)(x >> 5); x = (u16)(x * 1231u); x ^= (u16)(x >> 7);
+	if ((u8)(x % 100) >= (u8)(TAKEN_BASE_PCT + Db_Stars(m) * TAKEN_PER_STAR)) return 0;
+	who = (u8)(1 + ((x >> 9) & 1));
+	if (!g_Game.alive[who]) who = (u8)(3 - who);
+	return g_Game.alive[who] ? who : 0;
+}

@@ -25,7 +25,7 @@ static void BuyBest(i32 reserve, int max_owned)
 		{
 			u16 p;
 			int v;
-			if (g_Game.owned[i]) continue;
+			if (g_Game.owned[i] || Sim_TakenBy((u8)i)) continue;
 			p = Sim_MoviePrice(i);
 			if (g_Game.money - (i32)p < reserve) continue;
 			v = Sim_Quality(i) * 100 / (p + 50);          // qualidade por preco

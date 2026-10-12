@@ -243,6 +243,7 @@ u8 Sim_Buy(u8 idx)
 {
 	u16 p = Sim_MoviePrice(idx);
 	if (g_Game.owned[idx]) return 1;
+	if (Sim_TakenBy(idx)) return 3;
 	if (g_Game.money < (i32)p) return 2;
 	g_Game.money -= p; g_Game.day_cost += p;
 	g_Game.owned[idx] = 1;

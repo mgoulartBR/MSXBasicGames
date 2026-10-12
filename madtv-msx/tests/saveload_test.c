@@ -253,6 +253,24 @@ int main(void)
 		Db_Cast(DB_NUM_MOVIES, &c); CHECK(!c.dir[0] && Db_Stars(DB_NUM_MOVIES) == 0, "filme proprio nao tem elenco");
 		{ const Movie* mv = Mov(hi); u16 base = (u16)(((u16)mv->critics * 3 + (u16)mv->outcome * 4 + (u16)mv->speed * 3) / 10); CHECK(Sim_Quality(hi) >= base && (Sim_Quality(hi) > base || base >= 100 - 2), "estrelas somam qualidade"); }
 	}
+	// 2.7: rivais levam filmes do catalogo (funcao de filme x janela de dias, sem estado)
+	g_Diff = 1; Sim_Init(91);
+	{
+		u8 m, taken = 0, free_ = NONE, tk = NONE, w1 = 0, w2 = 0;
+		for (m = 0; m < DB_NUM_MOVIES; m++) { if (Sim_TakenBy(m)) { taken++; if (tk == NONE) tk = m; } else if (free_ == NONE) free_ = m; }
+		CHECK(taken >= 5 && taken <= 60, "uma fracao razoavel do catalogo e levada pelos rivais");
+		CHECK(Sim_Buy(tk) == 3 && !g_Game.owned[tk], "filme levado por rival nao pode ser comprado");
+		g_Game.money = 50000;
+		CHECK(Sim_Buy(free_) == 0 && g_Game.owned[free_] && !Sim_TakenBy(free_), "filme livre compra normal e deixa de contar como levado");
+		g_Game.alive[1] = g_Game.alive[2] = 0;
+		for (m = 0; m < DB_NUM_MOVIES; m++) if (Sim_TakenBy(m)) w1++;
+		CHECK(w1 == 0, "sem rivais vivos nada e levado");
+		g_Game.alive[1] = g_Game.alive[2] = 1;
+		for (m = 0; m < DB_NUM_MOVIES; m++) if (Sim_TakenBy(m)) w1++;
+		g_Game.day += TAKEN_WINDOW;
+		for (m = 0; m < DB_NUM_MOVIES; m++) if (Sim_TakenBy(m)) w2++;
+		CHECK(w1 >= 5 && w2 >= 5, "a cada janela de dias o catalogo gira (outro conjunto)");
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }
