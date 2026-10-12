@@ -20,3 +20,4 @@ src/seg/seg_s2_b3.c
 
 # capturas dos testes mostram a arte do original em builds locais: nao versionar
 screenshots/
+dist/*.zip
