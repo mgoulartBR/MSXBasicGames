@@ -6,6 +6,7 @@
 cd "$(dirname "$0")/.."
 ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}
 MAP=out/madtv.map
+rm -rf "$HOME"/.openMSX/persistent/roms/madtv-* 2>/dev/null   # SRAM de execucoes anteriores (opcoes salvas) mudaria o estado inicial
 OUT=screenshots/test; mkdir -p $OUT; rm -f $OUT/*.png /tmp/madtv_state.txt
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
 DM=$(sym _g_DrawMax); SCR=$(sym _g_Screen); PX=$(sym _g_PtrX); PY=$(sym _g_PtrY); INJ=$(sym _g_PtrInject); GSEL=$(sym _g_Sel); SPD=$(sym _g_Speed); SEL=$(sym _g_BldSel); G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); CODE=$(sym _g_SaveCode); SBIT=$(sym _g_SramBit); DDR=$(sym _g_DirectDraws); SFXC=$(sym _g_SfxCount); MUSP=$(sym _g_MusicPos); PSPD=$(sym _g_PtrSpeed); SNDS=$(sym _g_SndSfx)
@@ -159,7 +160,7 @@ at 0.3 { dump opt1 }
 key DOWN; key DOWN; key RIGHT
 at 0.3 { dump opt2 }
 key LEFT
-at 0.3 { dump opt3 }
+at 0.3 { dump opt3; shot 8i_options }
 back
 back
 # --- Corretor (sala 8): construir a 1a torre

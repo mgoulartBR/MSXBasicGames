@@ -207,6 +207,11 @@ static void OptBody(u8 i)
 	else { Ui_Text(14, y, "Mouse speed"); Ui_Color(UI_CYAN); Ui_Text(160, y, k_SpeedName[g_PtrSpeed]); }
 }
 
+static void OptRow(u8 i)                  // so a linha mudada (o redesenho completo perdia teclas rapidas)
+{
+	Ui_Begin(); OptBody(i); Ui_End(0, (u8)(CONTENT_Y + 13 + i * ROW_H), 256, ROW_H);
+}
+
 void Options_Draw(void) __banked
 {
 	u8 i;
@@ -215,7 +220,14 @@ void Options_Draw(void) __banked
 	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Options");
 	for (i = 0; i < 3; i++) OptBody(i);
 	Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 54), "LEFT/RIGHT or OK change the value.");
-	Ui_Text(4, (u8)(CONTENT_Y + 64), "Settings last until you switch off.");
+	Ui_Text(4, (u8)(CONTENT_Y + 64), g_SramBit ? "Settings are kept in cartridge SRAM." : "Settings last until you switch off.");
+	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 84), "This MSX (for bug reports)");       // diagnostico para teste em hardware real
+	Ui_Color(UI_WHITE);
+	Ui_Text(4, (u8)(CONTENT_Y + 96), VDP_GetFrequency() ? "Video: 50 Hz" : "Video: 60 Hz");
+	Ui_Text(4, (u8)(CONTENT_Y + 106), g_MusicType ? "Music: FM (MSX-MUSIC)" : "Music: PSG only");
+	{ Ui_Text(4, (u8)(CONTENT_Y + 116), "SRAM:"); Ui_Text(40, (u8)(CONTENT_Y + 116), g_SramBit == 0x10 ? "bit 10h" : g_SramBit == 0x20 ? "bit 20h" : g_SramBit == 0x40 ? "bit 40h" : g_SramBit == 0x80 ? "bit 80h" : "none (use codes)"); }
+	Ui_Text(4, (u8)(CONTENT_Y + 126), k_MouseTxt[g_PtrMode]);
+	Ui_Text(4, (u8)(CONTENT_Y + 136), "Version " VERSION_STR);
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:change  BACK:office");
 }
@@ -225,7 +237,7 @@ void Options_Input(u8 ev) __banked
 	u8 old = g_Sel;
 	if ((ev & IN_DOWN) && g_Sel < 2) g_Sel++;
 	if ((ev & IN_UP) && g_Sel > 0) g_Sel--;
-	if (g_Sel != old) g_Dirty |= D_CON;
+	if (g_Sel != old) { OptRow(old); OptRow(g_Sel); }
 	if (ev & IN_BACK) { Goto(SCR_OFFICE); return; }
 	if (ev & (IN_OK | IN_LEFT | IN_RIGHT))
 	{
@@ -233,7 +245,8 @@ void Options_Input(u8 ev) __banked
 		else if (g_Sel == 1) g_SndMus ^= 1;
 		else if (ev & IN_LEFT) g_PtrSpeed = (u8)((g_PtrSpeed + 3) & 3);
 		else g_PtrSpeed = (u8)((g_PtrSpeed + 1) & 3);
-		g_Dirty |= D_CON;
+		OptRow(g_Sel);
+		Options_Save();
 		if (g_SndSfx) Audio_Sfx(1);
 	}
 }

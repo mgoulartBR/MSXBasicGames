@@ -4,8 +4,8 @@
 cd "$(dirname "$0")/.."
 ROM=${1:-dist/madtv-msx-$(cat VERSION).rom}; MAP=out/madtv.map
 sym() { awk -v s="$1" '$2==s{print "0x"$1}' $MAP | head -1; }
-G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); SB=$(sym _g_SramBit); SCR=$(sym _g_Screen); SEL=$(sym _g_BldSel)
-PERS=$HOME/.openMSX/persistent; rm -rf "$PERS"/*madtv* 2>/dev/null
+G=$(sym _g_Game); OFFS=$(sym _g_DbgOffsets); SB=$(sym _g_SramBit); SCR=$(sym _g_Screen); SEL=$(sym _g_BldSel); SS=$(sym _g_SndSfx); PS=$(sym _g_PtrSpeed)
+PERS=$HOME/.openMSX/persistent; rm -rf "$PERS"/roms/madtv-* 2>/dev/null
 hdr() { cat <<T
 set G $G
 set OFFS $OFFS
@@ -69,19 +69,39 @@ at 0.6 { press 7 0x04 }
 at 1.5 { set f [open /tmp/sram_e.txt w]; puts \$f "sbit=[peek $SB] scr=[peek $SCR]"; close \$f; exit }
 T
 } > /tmp/sram_e.tcl
+# --- F1: Options > efeitos sonoros desligados (grava na SRAM); F2: nova execucao ja le g_SndSfx = 0 e a velocidade do mouse
+{ hdr; cat <<T
+at 0 { press 7 0x04 }
+at 0.6 { press 7 0x80 }
+at 1.6 { poke $SEL 9 }
+at 0.2 { press 7 0x80 }
+at 4.5 {}
+at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 7 0x80 }
+at 0.4 { press 7 0x80 }
+at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x40 }; at 0.3 { press 8 0x80 }
+at 0.5 { exit }
+T
+} > /tmp/sram_f.tcl
+{ hdr; cat <<T
+at 1.5 { set f [open /tmp/sram_g.txt w]; puts \$f "sfx=[peek $SS] pspd=[peek $PS]"; close \$f; exit }
+T
+} > /tmp/sram_g.tcl
 rm -f /tmp/sram_?.txt
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_a.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_b.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/sram_c.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_d.tcl >/dev/null 2>&1
 timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_e.tcl >/dev/null 2>&1
-cat /tmp/sram_a.txt /tmp/sram_b.txt /tmp/sram_c.txt /tmp/sram_e.txt
+timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_f.tcl >/dev/null 2>&1
+timeout 60 xvfb-run -a openmsx -machine C-BIOS_MSX2 -cart "$ROM" -romtype ASCII8SRAM8 -script /tmp/sram_g.tcl >/dev/null 2>&1
+cat /tmp/sram_a.txt /tmp/sram_b.txt /tmp/sram_c.txt /tmp/sram_e.txt /tmp/sram_g.txt
 python3 -I - <<'P'
 import sys
 def rd(f): return dict(kv.split('=') for kv in open(f).read().split())
 def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
-a,b,c,e=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt'),rd('/tmp/sram_e.txt')
+a,b,c,e,g=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt'),rd('/tmp/sram_e.txt'),rd('/tmp/sram_g.txt')
+need(g['sfx']=='0' and g['pspd']=='2','F: opcoes (sem efeitos, mouse rapido) nao voltaram da SRAM: %s'%g)
 need(e['scr']=='9','A3/A4: slot 1 nao foi apagado (Esc no titulo ainda abre os slots)')
 need(a['sbit']=='64' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
 need(b['sbit']=='64' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)

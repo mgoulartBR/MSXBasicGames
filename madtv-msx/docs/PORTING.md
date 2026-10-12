@@ -316,3 +316,9 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - ROM de 512 KB (`ROMSize` 512): bit de SRAM 40h, achado pela sondagem; testes passaram a esperar 64. Sem a arte o espaco extra fica vazio (a ROM publica continua com 512 KB).
 - Fluxo: `g_Splash = 1` no boot; enquanto ligado, so um toque (tecla ou clique) e aceito e apenas desenha o titulo. Titulo, Esc-carregar e novo jogo ficam como antes. Testes: smoke, sram e mouse_real mandam um Esc antes de tudo para dispensar a abertura.
 - Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada (abertura em texto). Em 128 KB/256 KB reais o flash cart precisa suportar 512 KB.
+
+## 2.2: opcoes na SRAM e diagnostico
+- Cabecalho da SRAM (8 bytes): magic "MTVS" [0-3], versao [4], opcoes [5-7]: `0xA5` valido, valor = sfx | musica<<1 | velocidade do mouse<<2, e valor^5Ah como checagem. `Options_Save/Load` em slots.c; `Options_Load` roda no boot depois de `Sram_Detect`; sem SRAM nada muda.
+- Options redesenha so a linha mudada (`OptRow`): com o redesenho completo (agora com o bloco "This MSX") a 2a tecla de uma sequencia rapida era perdida.
+- Testes: `sram.sh` ganhou F1/F2 (desliga efeitos + mouse rapido, reinicia, confere). Descoberta: o openMSX guarda a SRAM em `~/.openMSX/persistent/roms/<nome da rom>/`, entao a limpeza antiga (`persistent/*madtv*`) nunca apagava nada e as execucoes herdavam estado; smoke.sh e sram.sh agora limpam `persistent/roms/madtv-*`.
+- `tests/HARDWARE.md`: roteiro de 10 testes para MSX2 real. Continua nao testado em hardware.

@@ -85,6 +85,28 @@ static void DoSave(u8 i)
 	Unmap();
 }
 
+// opcoes (som, musica, velocidade do mouse) no cabecalho da SRAM: [5] = 0xA5 (valido), [6] = valor, [7] = [6] ^ 5Ah
+void Options_Save(void) __banked
+{
+	u8 v;
+	if (!g_SramBit) return;
+	v = (u8)(g_SndSfx | (g_SndMus << 1) | (g_PtrSpeed << 2));
+	Map(); Magic();
+	SR[6] = v; SR[7] = (u8)(v ^ 0x5A); SR[5] = 0xA5;
+	Unmap();
+}
+
+void Options_Load(void) __banked
+{
+	u8 v = 0, ok = 0;
+	if (!g_SramBit) return;
+	Map(); Magic();
+	if (SR[5] == 0xA5 && (u8)(SR[6] ^ 0x5A) == SR[7]) { v = SR[6]; ok = 1; }
+	Unmap();
+	if (!ok || v > 15) return;
+	g_SndSfx = (u8)(v & 1); g_SndMus = (u8)((v >> 1) & 1); g_PtrSpeed = (u8)(v >> 2);
+}
+
 static void DoDelete(u8 i)
 {
 	Map(); Magic();

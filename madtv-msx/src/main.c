@@ -261,6 +261,7 @@ void main()
 	Chrome_Palette();
 	Audio_Init();
 	Sram_Detect();
+	Options_Load();
 	g_Splash = 1;
 	Splash_Draw();
 
