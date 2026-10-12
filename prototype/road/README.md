@@ -51,3 +51,51 @@ leva ~3 s para iniciar). Para screenshots use `set frameskip 0` e capture após 
   da pista (ex.: 80–96 linhas).
 - Alvo realista: 30 fps em retas e 15–20 fps copiando em curvas, ou 30 fps
   constante com o esquema paleta + zonas.
+
+
+---
+
+# Versão 2: paleta + zonas R#27 (`road_zones.asm`)
+
+![screenshot](screenshot_zones.png)
+
+Resolve o gargalo medido acima: **nenhum comando de VDP por quadro**.
+
+- **Textura estática**: a pista é desenhada uma só vez no boot.
+- **Listras por ciclo de paleta**: 4 subfaixas por período; as entradas 4–15 da
+  paleta (asfalto, zebra, faixa central) giram em 4 fases, reescritas no VBlank
+  (24 bytes via `OTIR`). As listras avançam em direção à câmera.
+- **Curva por zonas**: 17 zonas (4, 8 e 16 linhas; mais finas perto do horizonte).
+  Uma interrupção de linha (R#19) por zona escreve **R#26/R#27** (scroll
+  horizontal); `R#27 = s & 7`, `R#26 = ((7 - s) >> 3) & 31`. O scroll com
+  *wrap* mostra grama dos dois lados, então a emenda é invisível. O fino
+  scroll mascara à esquerda com a cor de fundo (R#7), por isso R#7 = grama.
+- **IM2** (tabela de 257 bytes iguais + stub `JP` em RAM): trata VBlank e
+  interrupção de linha sem passar pela BIOS (que não conhece o flag de linha).
+
+```sh
+./build_zones.sh 0x00A0 0 0 -1 zones.rom     # velocidade paldir forcecurve iladj saida
+openmsx -machine C-BIOS_MSX2+ -cart zones.rom
+openmsx -machine C-BIOS_MSX2+ -cart zones.rom -script zbench.tcl   # fps e folga de CPU
+```
+
+## Resultados (openMSX 19.1, C-BIOS MSX2+; **emulador, não hardware real**)
+
+| Versão | fps | CPU livre |
+|---|---|---|
+| 1: 56 bandas com `HMMM` | 11,8 | — |
+| 2: paleta + zonas R#27 | **60** (travado no VBlank) | **≈ 61 %** |
+
+A folga é medida por um contador de voltas ociosas no laço principal, depois de
+descontar interrupções e o cálculo por quadro (17 multiplicações + escrita das zonas).
+
+## Limitações conhecidas / próximos passos
+- Curva "em degraus" (visível perto do horizonte); dá para afinar com mais zonas
+  (cada interrupção custa ~170 T).
+- A animação das listras tem só 4 fases (8 exigiria mais entradas de paleta).
+- Faixas mais finas que 1 linha (longe) usam um padrão `r % 4` (aspecto de névoa).
+- **Relevo (subidas/descidas) ainda não implementado**: exigiria deslocar o horizonte
+  e/ou escolher outra linha da textura por zona.
+- Sprites (carros), HUD e colisão ainda não existem; o HUD pode ocupar linhas
+  sem zonas.
+- Falta validar em hardware real (tempo exato das interrupções de linha e IM2).

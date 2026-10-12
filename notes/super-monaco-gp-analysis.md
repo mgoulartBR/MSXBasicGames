@@ -150,10 +150,20 @@ curva por zonas (R#27 + interrupção de linha), copiando só quando necessário
 Detalhes e números em `prototype/road/README.md`. Medição em emulador; falta
 validar em hardware real.
 
+## 10. Protótipo v2: paleta + zonas R#27 (resultado)
+
+`prototype/road/road_zones.asm`: textura estática, listras por ciclo de paleta e
+curva por zonas (17 interrupções de linha escrevendo R#26/R#27, IM2).
+Em openMSX (C-BIOS MSX2+): **60 fps travados no VBlank com ~61 % de CPU livre**
+(versão v1 por `HMMM`: 11,8 fps). Isso reproduz, no V9958, a ideia do original
+(deslocamento horizontal por linha; aqui por zona) sem consumir banda de VRAM.
+Falta: relevo, sprites, HUD e validação em hardware real.
+
 ## 8. Pendências
 
 - [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
 - [ ] Valor do campo `flag` do segmento de curvatura (bits além do 6) e fórmula exata de `$87A`.
 - [ ] Preenchimento de `$9500` e tabela V (`a6` em `$6C20`).
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
-- [x] Protótipo Z80/V9958 da pista (ver §9). Próximo: paleta + zonas R#27.
+- [x] Protótipo Z80/V9958 da pista (§9) e versão paleta + zonas R#27 (§10).
+- [ ] Relevo (subidas/descidas) no renderizador MSX; sprites dos carros; HUD.
