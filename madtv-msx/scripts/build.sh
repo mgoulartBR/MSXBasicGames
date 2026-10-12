@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 [ -f src/data/art_scenes.h ] || echo "#define ART_SCENES 0" > src/data/art_scenes.h   # sem arte local: telas de texto
 [ -f src/data/art_hub.h ] || echo "#define ART_HUB 0" > src/data/art_hub.h         # sem arte local: predio procedural
 [ -f src/data/art_icons.h ] || echo "#define ART_ICONS 0" > src/data/art_icons.h   # sem arte local: HUD com simbolos de texto
+[ -f src/data/sprites_art.h ] || echo "#define SPR_ART 0" > src/data/sprites_art.h   # sem a folha de sprites local: bonecos desenhados a mao (src/sprites_fig.h)
 [ -d external/msxgl ] || scripts/setup.sh
 [ "$1" = clean ] && rm -rf out emul lib dist/*.rom
 node external/msxgl/engine/script/js/build.js target=ROM_ASCII8 2>&1 | tail -n 25

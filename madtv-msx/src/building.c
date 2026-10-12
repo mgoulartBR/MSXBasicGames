@@ -32,11 +32,14 @@ static const Room k_Rooms[NROOMS] = {
 #define ROOM_OFFICE 9
 
 // sprites (16x16, 2 bytes... formato MSX: 16 bytes coluna esquerda + 16 bytes coluna direita)
-#include "sprites_fig.h"                     // k_SprFill / k_SprEdge / k_FigCol (tools/make_sprites.py)
+#include "data/sprites_art.h"                  // SPR_ART 1 = bonecos a partir da folha do usuario (local, ignorado pelo git); 0 = os desenhados a mao
+#if !SPR_ART
+#include "sprites_fig.h"                       // k_SprPat / k_FigShape / k_FigCol (tools/make_sprites.py)
+#endif
 static const u8 k_SprCar[32] = {
 	0xFF,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0xFF, 0xFF,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0xFF };
 
-#define NSPR 7                                   // planos 2-4 = preenchimento do jogador/rivais, 5 = elevador, 6-8 = contornos; 0-1 = cursor do mouse (ui.c)
+#define NSPR 13                                   // planos 2-13 = 3 bonecos x (preench. cima, preench. baixo, contorno cima, contorno baixo), 14 = elevador; 0-1 = cursor do mouse (ui.c)
 #define HIDE_Y SPR_HIDE_Y
 
 // ---------------------------------------------------------------- estado (RAM fixa, inicializado em Building_Reset)
@@ -45,7 +48,8 @@ static Mover s_M[3];                             // 0 = jogador, 1 e 2 = rivais
 static u8 s_CarY;                                // pes do elevador (linha)
 u8 g_BldSel;                                     // sala sob o cursor (global p/ testes)
 static u8 s_Pending;                             // jogador a caminho de uma sala (entra ao chegar)
-static u8 s_Spr[NSPR * 4];                       // atributos dos sprites (Y, X, padrao, 0)
+static u8 s_Spr[NSPR * 4];
+static u8 s_PrevX[3], s_Dir[3];                       // atributos dos sprites (Y, X, padrao, 0)
 
 // ---------------------------------------------------------------- desenho estatico
 #if ART_HUB
@@ -146,32 +150,43 @@ static void SprWrite(void)
 	// jogador/rivais: Y = pes-16 (atributo = linha visivel - 1); invisivel -> fora da tela
 	for (i = 0; i < 3; i++)
 	{
-		u8 y = s_M[i].vis ? (u8)(s_M[i].y - 16 - YSHIFT) : HIDE_Y, x = (u8)(s_M[i].x - 8);
-		s_Spr[i * 4]     = y; s_Spr[i * 4 + 1] = x; s_Spr[i * 4 + 2] = s_M[i].frame ? 4 : 0; s_Spr[i * 4 + 3] = 0;       // preenchimento
-		s_Spr[16 + i * 4] = y; s_Spr[17 + i * 4] = x; s_Spr[18 + i * 4] = s_M[i].frame ? 24 : 20; s_Spr[19 + i * 4] = 0;   // contorno (plano 6 + i)
+		u8 y = s_M[i].vis ? (u8)(s_M[i].y - 23 - YSHIFT) : HIDE_Y, x = (u8)(s_M[i].x - 8), k, pn, *a = &s_Spr[i * 16];
+		if (x > s_PrevX[i]) s_Dir[i] = 0; else if (x < s_PrevX[i]) s_Dir[i] = 1;          // direcao da ultima caminhada (0 = direita)
+		s_PrevX[i] = x;
+		pn = (u8)(8 + (((k_FigShape[i] * 2 + s_Dir[i]) * 2 + (s_M[i].frame ? 1 : 0)) * 4));  // 1o padrao (16x16: numero = 4 x posicao) do boneco
+		for (k = 0; k < 4; k++)                                                          // 0 preench. cima, 1 preench. baixo, 2 contorno cima, 3 contorno baixo
+		{
+			a[k * 4]     = (y == HIDE_Y) ? HIDE_Y : (u8)(y + ((k & 1) ? 16 : 0));
+			a[k * 4 + 1] = x; a[k * 4 + 2] = (u8)((pn + k) * 4); a[k * 4 + 3] = 0;
+		}
 	}
 #if ART_HUB
-	s_Spr[12] = HIDE_Y;                                           // o fundo ja tem as portas do elevador
+	s_Spr[48] = HIDE_Y;                                           // o fundo ja tem as portas do elevador
 #else
-	s_Spr[12] = (u8)(s_CarY - 16 - YSHIFT);
+	s_Spr[48] = (u8)(s_CarY - 16 - YSHIFT);
 #endif
-	s_Spr[13] = (u8)(SHAFT_X - 8); s_Spr[14] = 8; s_Spr[15] = 0;
+	s_Spr[49] = (u8)(SHAFT_X - 8); s_Spr[50] = 8; s_Spr[51] = 0;
 	VDP_WriteVRAM_128K(s_Spr, SPR_ATT_LO + 8, 1, NSPR * 4);
 }
 
 static void SprInit(void)
 {
-	u8 col[16], s, r;
-	VDP_WriteVRAM_128K(k_SprFill[0], SPR_PAT_LO, 1, 32);
-	VDP_WriteVRAM_128K(k_SprFill[1], SPR_PAT_LO + 32, 1, 32);
+	u8 col[16], i, r;
 	VDP_WriteVRAM_128K(k_SprCar, SPR_PAT_LO + 64, 1, 32);
-	VDP_WriteVRAM_128K(k_SprEdge[0], SPR_PAT_LO + 160, 1, 32);
-	VDP_WriteVRAM_128K(k_SprEdge[1], SPR_PAT_LO + 192, 1, 32);
-	for (s = 0; s < 3; s++) VDP_WriteVRAM_128K(k_FigCol[s], SPR_COL_LO + 32 + s * 16, 1, 16);   // cor por linha: cabelo / pele / camisa / calca / sapato
+	VDP_WriteVRAM_128K((const u8*)k_SprPat, SPR_PAT_LO + 256, 1, (u16)sizeof(k_SprPat));         // padroes dos bonecos a partir do slot 8 (offset 256)
+	for (i = 0; i < 3; i++)
+	{
+		const u8* c = k_FigCol[i];
+		VDP_WriteVRAM_128K(c, SPR_COL_LO + (2 + i * 4) * 16, 1, 16);                              // preench. cima: linhas 0-15
+		for (r = 0; r < 16; r++) col[r] = (r < 8) ? c[16 + r] : 0;
+		VDP_WriteVRAM_128K(col, SPR_COL_LO + (3 + i * 4) * 16, 1, 16);                            // preench. baixo: linhas 16-23
+		for (r = 0; r < 16; r++) col[r] = COLOR_BLACK;
+		VDP_WriteVRAM_128K(col, SPR_COL_LO + (4 + i * 4) * 16, 1, 16);
+		VDP_WriteVRAM_128K(col, SPR_COL_LO + (5 + i * 4) * 16, 1, 16);                            // contornos pretos
+		s_PrevX[i] = 0; s_Dir[i] = 0;
+	}
 	for (r = 0; r < 16; r++) col[r] = COLOR_GRAY;
-	VDP_WriteVRAM_128K(col, SPR_COL_LO + 80, 1, 16);
-	for (r = 0; r < 16; r++) col[r] = COLOR_BLACK;
-	for (s = 0; s < 3; s++) VDP_WriteVRAM_128K(col, SPR_COL_LO + 96 + s * 16, 1, 16);           // contornos pretos (planos 6-8)
+	VDP_WriteVRAM_128K(col, SPR_COL_LO + 14 * 16, 1, 16);                                         // elevador (plano 14)
 }
 
 // ---------------------------------------------------------------- movimento
