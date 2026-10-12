@@ -242,3 +242,42 @@ sem travar; as posições dos carros dão a volta na pista corretamente.
 - Prioridade entre carros sobrepostos segue a ordem dos planos (não a profundidade).
 - 4 tamanhos de sprite ⇒ "saltos" visíveis ao se aproximar; a linha de base é suave.
 - Os sprites não acompanham o relevo dentro de uma mesma zona (usam a linha da tabela).
+
+
+---
+
+# Versão 6: layout de jogo (`game.asm`)
+
+![jogo](screenshot_game.png)
+
+Primeiro passo rumo a um jogo de verdade, seguindo a estrutura do original: a pista fica
+numa **faixa central de 84 linhas**; em cima há céu e **skyline** com scroll próprio; embaixo,
+o **cockpit** (bico do carro, pneus, asa) e os painéis do HUD. Toda a arte é **original**,
+gerada por `gen_game.py` como listas de retângulos.
+
+```sh
+./build_game.sh "/caminho/Super Monaco GP (USA) (En,Ja).md" 0 40 0 game.rom [pos_inicial]
+openmsx -machine C-BIOS_MSX2+ -cart game.rom
+```
+
+## Como funciona
+- **3 regiões, cada uma com página de VRAM e paleta próprias**, trocadas pela interrupção de
+  linha: topo = página 1 (céu/skyline), pista = página 0 (textura), base = página 1 (cockpit).
+  A cada região o ISR escreve R#26, R#27, R#23, **R#2 (página)** e, quando preciso, as
+  entradas 4–11 da **paleta**. As entradas 0–3 e 12–15 são estáticas e compartilhadas
+  (inclusive pelos sprites). Isso triplica as cores disponíveis sem sair de SCREEN 5.
+- **Zonas de 6 bytes**: R#26, R#27, R#23, R#2, id da paleta e linha da próxima interrupção
+  (E0 = skyline, E1..E14 = pista, E15 = cockpit).
+- **Skyline com paralaxe**: scroll horizontal acumulado de `curvatura × velocidade`; a arte
+  tem 256 px e dá a volta (o scroll em SCREEN 5 faz *wrap*).
+- A ROM agora é de **32 KB** (páginas 1 e 2): o código ativa o slot do cartucho na página 2
+  com `ENASLT`. O programa ocupa ~8,7 KB, então há folga.
+
+## Armadilha encontrada
+Incluir um arquivo **com dados antes do `ORG`** monta os dados no endereço 0 e desloca a ROM
+inteira. Por isso as constantes (`gamedefs.inc`, só `EQU`) ficam no topo e os dados
+(`gamedata.inc`) depois do código.
+
+## Próximos passos
+Direção e velocidade controladas pelo jogador, HUD dinâmico (velocidade, rotação, marcha),
+cenário nas margens, carros maiores e o jogador no cockpit com volante animado.
