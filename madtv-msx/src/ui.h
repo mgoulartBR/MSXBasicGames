@@ -25,6 +25,10 @@ void Ui_Clear(void);
 // Ui_Begin/Ui_End podem ser aninhados; a copia ocorre no Ui_End mais externo (usa o retangulo dele).
 void Ui_Begin(void);
 void Ui_End(u8 x, u8 y, u8 w, u8 h);
+// Console inferior (2.3): as telas de conteudo continuam desenhando em y = 26..186 do buffer, mas Ui_End as copia YSHIFT linhas mais
+// acima na tela (so fora de titulo/abertura/final); o console (HUD, dica, mensagem) usa Ui_EndTo com destino absoluto.
+#define YSHIFT 24
+void Ui_EndTo(u8 x, u8 ysrc, u8 w, u8 h, u8 ydst);
 u16  Ui_DirectBegin(void);     // desenha direto na tela mesmo dentro de Begin/End (retorna estado p/ Ui_DirectEnd)
 void Ui_DirectEnd(u16 saved);
 void Ui_Bar(u8 x, u8 y, u8 w, u8 h, u8 pct, u8 col);

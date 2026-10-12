@@ -1,9 +1,7 @@
 // "Casca" visual (1.4): paleta global, paineis com relevo, HUD (cabecalho) e caixas de dica/mensagem. Segmento 14 (banco 2).
 // Estilo inspirado no Mad TV original (painel cinza com relevo, campos azuis com texto preto, moldura marrom); desenhado em codigo.
-// Os icones ($, relogio, coracao) vem de src/data/art_icons.h, gerado LOCALMENTE a partir da copia do jogo original (nao versionado);
-// sem esse arquivo (ART_ICONS 0) o HUD usa simbolos de texto.
+// (Os icones $/relogio/coracao de src/data/art_icons.h deixaram de ser usados na 2.3: o console e todo desenhado em codigo.)
 #include "app.h"
-#include "data/art_icons.h"
 
 // paleta global: indices mantem o "papel" das cores do MSX (1 = preto = fundo, 14 = cinza, 15 = branco ...)
 static const u16 k_Pal[16] = {
@@ -32,13 +30,6 @@ void Chrome_Box(u8 x, u8 y, u8 w, u8 h, u8 face, u8 raised) __banked
 	Ui_FillPx(x, (u8)(y + h - 1), w, 1, lo); Ui_FillPx((u8)(x + w - 1), y, 1, h, lo);
 }
 
-#if ART_ICONS
-static void Icon(const u8* d, u8 x, u8 y, u8 w, u8 h)       // bitmap 4 bpp direto no buffer (pagina 2): 2 pixels por byte
-{
-	u8 r;
-	for (r = 0; r < h; r++) VDP_WriteVRAM_128K(d + r * (w >> 1), (u16)((u16)(y + r) * 128 + (x >> 1)), 1, (u16)(w >> 1));
-}
-#endif
 
 #if ART_SCENES
 typedef struct { u8 seg, stride, h, rps; } SceneDef;
@@ -74,94 +65,88 @@ void Room_Frame(u8 id) __banked                          // cena a esquerda + pa
 void Room_Frame(u8 id) __banked { (void)id; }
 #endif
 
-// ---------------------------------------------------------------- HUD (cabecalho): so os campos que mudaram sao redesenhados
+// ---------------------------------------------------------------- console inferior (2.3): HUD + dica + mensagem em y = 162..212 da tela
+// Desenhado no buffer (pagina 2) nas linhas 0..25 (livres: o conteudo usa 26..186 e a fonte preta fica em 218..) e copiado com Ui_EndTo.
+// Dica e mensagem usam as linhas 188..211 do buffer (mesmas da tela).
+// Esquerda: "TV" da Betty (simpatia); centro: painel cinza com dia/hora e caixa; direita: "TV" das emissoras (Image) e velocidade.
+#define CB      94                                         // (u8)(162 + 94) = 0: o console usa as linhas 0..25 do buffer
+#define CY      162                                        // topo do console na tela
 static u16 c_Day = 0xFFFF, c_T = 0xFFFF;
 static i32 c_Money = 0x7FFFFFFF;
 static u8  c_Image[NUM_STATIONS] = { 255, 255, 255 };
 static u8  c_Speed = 255, c_Sym = 255;
-static const u8 k_StFace[NUM_STATIONS] = { 8, 2, 5 };     // vermelho, verde, azul (como os botoes de emissora do original)
 
-#define F1Y 3                                              // linha 1 dos campos (dia, hora, dinheiro, Betty, velocidade)
-#define F2Y 13                                             // linha 2 (emissoras)
-
-static void Field(u8 x, u8 y, u8 w, u8 face) { Chrome_Box(x, y, w, 10, face, 0); }
+static void CEnd(u8 x, u8 y, u8 w, u8 h) { Ui_EndTo(x, (u8)(y + CB), w, h, y); }
+static void CBox(u8 x, u8 y, u8 w, u8 h, u8 face, u8 raised) { Chrome_Box(x, (u8)(y + CB), w, h, face, raised); }
+static void CFill(u8 x, u8 y, u8 w, u8 h, u8 c) { Ui_Fill(x, (u8)(y + CB), w, h, c); }
+static void CText(u8 x, u8 y, const char* s) { Ui_Text(x, (u8)(y + CB), s); }
 
 void Hud_Reset(void) __banked
 {
-	u8 i;
 	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255; c_Sym = 255;
-	for (i = 0; i < NUM_STATIONS; i++) c_Image[i] = 255;
+	c_Image[0] = c_Image[1] = c_Image[2] = 255;
 	Ui_Begin();
-	Ui_Fill(0, 0, 256, 1, C_WOOD_L); Ui_Fill(0, 1, 256, 1, C_WOOD_D);
-	Ui_Fill(0, 2, 256, 21, C_FACE); Ui_FillPx(0, 2, 256, 1, C_LIGHT);
-	Ui_Fill(0, 23, 256, 1, C_WOOD_D);
-	Field(4, F1Y, 42, C_BLUE);                                    // dia
-	Field(62, F1Y, 36, C_BLUE);                                   // hora
-	Field(112, F1Y, 58, C_BLUE);                                  // dinheiro
-	Field(186, F1Y, 28, C_BLUE);                                  // Betty
-	for (i = 0; i < NUM_STATIONS; i++) Field((u8)(4 + i * 84), F2Y, 80, k_StFace[i]);
-#if ART_ICONS
-	Icon(k_Art_clock, 50, F1Y, ART_CLOCK_W, ART_CLOCK_H);
-	Icon(k_Art_dollar, 101, F1Y, ART_DOLLAR_W, ART_DOLLAR_H);
-	Icon(k_Art_heart, 174, F1Y + 1, ART_HEART_W, ART_HEART_H);
-#else
-	Ui_Color(UI_BLACK); Ui_Text(50, F1Y + 1, "T"); Ui_Text(103, F1Y + 1, "$"); Ui_Text(176, F1Y + 1, "<3");
-#endif
-	Ui_End(0, 0, 256, 24);
+	Ui_Fill(0, 0, 0, 1, C_WOOD_L); Ui_Fill(0, 1, 0, 1, C_WOOD_D);      // moldura no topo da tela (y = 0..1)
+	Ui_EndTo(0, 0, 0, 2, 0);
+	Ui_Begin();
+	CFill(0, CY, 0, 26, C_WOOD_D);
+	CBox(2, CY, 84, 26, C_WOOD_L, 1);  CFill(5, CY + 3, 78, 20, 1);          // TV da Betty (dia e simpatia)
+	CBox(90, CY, 60, 26, C_FACE, 1);                                         // painel central (hora e caixa)
+	CBox(93, CY + 2, 54, 10, C_BLUE, 0); CBox(93, CY + 14, 54, 10, C_BLUE, 0);
+	CBox(154, CY, 100, 26, C_WOOD_L, 1); CFill(157, CY + 3, 94, 20, 1);      // TV das emissoras (Image) e velocidade
+	CEnd(0, CY, 256, 26);
 }
 
 void Hud_Draw(void) __banked
 {
 	char b[8];
-	u8 st, x;
+	u8 x, st;
 	if (c_Day != g_Game.day)
 	{
 		c_Day = g_Game.day;
-		Ui_Begin(); Ui_Fill(6, F1Y + 1, 38, 8, C_BLUE);
-		Ui_Color(UI_BLACK); Ui_Text(7, F1Y + 1, "Day"); Ui_Int(28, F1Y + 1, g_Game.day);
-		Ui_End(6, F1Y + 1, 38, 8);
+		Ui_Begin(); CFill(6, CY + 5, 74, 8, 1);
+		Ui_Color(UI_YELLOW); CText(8, CY + 5, "Day"); Ui_Int(32, (u8)(CY + 5 + CB), g_Game.day);
+		CEnd(6, CY + 5, 74, 8);
 	}
 	if (c_T != g_Game.t)
 	{
 		c_T = g_Game.t;
-		Ui_Begin(); Ui_Fill(64, F1Y + 1, 32, 8, C_BLUE);
-		Ui_Color(UI_BLACK); ClockStr(b, g_Game.t); Ui_Text(66, F1Y + 1, b);
-		Ui_End(64, F1Y + 1, 32, 8);
+		Ui_Begin(); CFill(94, CY + 3, 52, 8, C_BLUE);
+		Ui_Color(UI_BLACK); ClockStr(b, g_Game.t); CText(108, CY + 3, b);
+		CEnd(94, CY + 3, 52, 8);
 	}
 	if (c_Money != g_Game.money)
 	{
 		c_Money = g_Game.money;
-		Ui_Begin(); Ui_Fill(114, F1Y + 1, 54, 8, C_BLUE);
+		Ui_Begin(); CFill(94, CY + 15, 52, 8, C_BLUE);
 		Ui_Color(g_Game.money < 0 ? UI_RED : UI_BLACK);
-		x = Ui_Int(116, F1Y + 1, (i16)g_Game.money); Ui_Text(x, F1Y + 1, "k");
-		Ui_End(114, F1Y + 1, 54, 8);
+		CText(96, CY + 15, "$"); x = Ui_Int(104, (u8)(CY + 15 + CB), (i16)g_Game.money); CText(x, CY + 15, "k");
+		CEnd(94, CY + 15, 52, 8);
 	}
 	if (c_Sym != g_Game.sym[0])
 	{
 		c_Sym = g_Game.sym[0];
-		Ui_Begin(); Ui_Fill(188, F1Y + 1, 24, 8, C_BLUE);
-		Ui_Color(UI_BLACK); Ui_Int(190, F1Y + 1, g_Game.sym[0]);
-		Ui_End(188, F1Y + 1, 24, 8);
+		Ui_Begin(); CFill(6, CY + 14, 74, 8, 1);
+		Ui_Color(UI_RED); CText(8, CY + 14, "<3"); Ui_Color(UI_WHITE); x = Ui_Int(24, (u8)(CY + 14 + CB), g_Game.sym[0]); CText(x, CY + 14, "/100");
+		CEnd(6, CY + 14, 74, 8);
 	}
 	if (c_Speed != g_Speed)
 	{
 		c_Speed = g_Speed;
-		Ui_Begin();
-		Chrome_Box(218, F1Y, 34, 10, g_Speed == SPEED_PAUSE ? 8 : C_BLUE, 1);
-		Ui_Color(UI_BLACK);
-		Ui_TextR(248, F1Y + 1, g_Speed == SPEED_PAUSE ? "PAUSE" : g_Speed == SPEED_1 ? ">" : g_Speed == SPEED_2 ? ">>" : ">>>");
-		Ui_End(218, F1Y, 34, 10);
+		Ui_Begin(); CFill(208, CY + 14, 42, 8, 1);
+		Ui_Color(g_Speed == SPEED_PAUSE ? UI_RED : UI_YELLOW);
+		Ui_TextR(248, (u8)(CY + 14 + CB), g_Speed == SPEED_PAUSE ? "PAUSE" : g_Speed == SPEED_1 ? ">" : g_Speed == SPEED_2 ? ">>" : ">>>");
+		CEnd(208, CY + 14, 42, 8);
 	}
 	for (st = 0; st < NUM_STATIONS; st++)
 		if (c_Image[st] != g_Game.image[st])
 		{
-			u8 fx = (u8)(4 + st * 84);
+			u8 sx = (u8)(st == 1 ? 206 : 158), sy = (u8)(st == 2 ? CY + 14 : CY + 5);
 			c_Image[st] = g_Game.image[st];
-			Ui_Begin(); Ui_Fill((u8)(fx + 2), F2Y + 1, 76, 8, k_StFace[st]);
-			Ui_Color(UI_BLACK);
-			Ui_Text((u8)(fx + 4), F2Y + 1, g_StationName[st]);
-			Ui_Int((u8)(fx + 48), F2Y + 1, g_Game.image[st]);
-			Ui_End((u8)(fx + 2), F2Y + 1, 76, 8);
+			Ui_Begin(); CFill(sx, sy, 46, 8, 1);
+			Ui_Color(g_StationCol[st]); Ui_TextN(sx, (u8)(sy + CB), g_StationName[st], 3);
+			Ui_Color(UI_WHITE); Ui_Int((u8)(sx + 22), (u8)(sy + CB), g_Game.image[st]);
+			CEnd(sx, sy, 46, 8);
 		}
 }
 
@@ -169,9 +154,9 @@ void Hud_Draw(void) __banked
 void Chrome_Hint(const char* s) __banked
 {
 	Ui_Begin();
-	Chrome_Box(0, 186, 256, 14, C_FACE, 1);
+	Chrome_Box(0, 188, 256, 12, C_FACE, 1);
 	Ui_Color(UI_BLACK); Ui_Text(4, 190, s);
-	Ui_End(0, 186, 256, 14);
+	Ui_EndTo(0, 188, 256, 12, 188);
 }
 
 void Chrome_Msg(const char* s) __banked
@@ -179,5 +164,5 @@ void Chrome_Msg(const char* s) __banked
 	Ui_Begin();
 	Chrome_Box(0, 200, 256, 12, C_BLUE, 0);
 	Ui_Color(UI_BLACK); Ui_Text(4, 202, s);
-	Ui_End(0, 200, 256, 12);
+	Ui_EndTo(0, 200, 256, 12, 200);
 }

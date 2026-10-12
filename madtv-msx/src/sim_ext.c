@@ -461,3 +461,30 @@ void Sim_RivalDay(void) __banked
 		return;                                  // no maximo uma sabotagem por dia
 	}
 }
+
+// Sammy (premio de melhor telejornal): a cada SAMMY_DAYS dias, no fim do dia, o telejornal do jogador (qualidade x frescor) disputa com
+// um sorteio de cada rival vivo. Vencedor: +5 Image (rival: +3); o jogador ainda recebe SAMMY_PRIZE k. Sem estado novo (o savegame nao muda).
+void Sim_SammyDay(void) __banked
+{
+	u8 q = Sim_NewsQuality(), st, best = 0, who = 0, s;
+	if (g_Game.day % SAMMY_DAYS) return;
+	for (st = 1; st < NUM_STATIONS; st++)
+		if (g_Game.alive[st])
+		{
+			s = (u8)(SAMMY_RIVAL_MIN + Sim_Rnd(SAMMY_RIVAL_SPAN) + 5 * g_Diff);
+			if (s > best) { best = s; who = st; }
+		}
+	if (!who) best = SAMMY_RIVAL_MIN;                     // sem rivais: basta um telejornal minimo
+	if (q > best)
+	{
+		g_Game.image[0] = (u8)(g_Game.image[0] + 5 > 100 ? 100 : g_Game.image[0] + 5);
+		g_Game.money += SAMMY_PRIZE; g_Game.day_income += SAMMY_PRIZE;
+		Sim_MsgNum("You won the Sammy! Image +5, prize $", SAMMY_PRIZE, "k");
+	}
+	else if (who)
+	{
+		g_Game.image[who] = (u8)(g_Game.image[who] + 3 > 100 ? 100 : g_Game.image[who] + 3);
+		Sim_Msg(who == 1 ? "FunTV won the Sammy for best news." : "SunTV won the Sammy for best news.");
+	}
+	else Sim_Msg("Nobody won the Sammy: your news were too weak.");
+}

@@ -52,7 +52,13 @@ void Boss_Draw(void) __banked
 	Scene_Draw(SCN_BOSS, 0, CONTENT_Y - 2);
 	Chrome_Box(112, CONTENT_Y, 140, 106, 14, 1);
 	Ui_Color(UI_BLACK);
-	if (g_Game.image[0] >= 40) { Ui_Text(120, CONTENT_Y + 6, "\"Not bad, kid. Keep"); Ui_Text(120, CONTENT_Y + 16, "the money coming.\""); }
+	if (g_Game.day % SAMMY_DAYS >= SAMMY_DAYS - 1 || g_Game.day % SAMMY_DAYS == 0)      // dia do Sammy (ou a vespera): a fala do chefe do original
+	{
+		Ui_Text(120, CONTENT_Y + 3, "\"The Sammy for best");
+		Ui_Text(120, CONTENT_Y + 12, g_Game.day % SAMMY_DAYS ? "news comes tomorrow." : "news is tonight!");
+		Ui_Text(120, CONTENT_Y + 21, "I want US to get it!\"");
+	}
+	else if (g_Game.image[0] >= 40) { Ui_Text(120, CONTENT_Y + 6, "\"Not bad, kid. Keep"); Ui_Text(120, CONTENT_Y + 16, "the money coming.\""); }
 	else if (g_Game.image[0] < 20) { Ui_Text(120, CONTENT_Y + 6, "\"Your image is a"); Ui_Text(120, CONTENT_Y + 16, "DISGRACE! Raus hier!\""); }
 	else { Ui_Text(120, CONTENT_Y + 6, "\"Money, money, money."); Ui_Text(120, CONTENT_Y + 16, "That's all I ask.\""); }
 	Ui_Text(120, CONTENT_Y + 32, "Your cash");        Money(184, CONTENT_Y + 32, g_Game.money);

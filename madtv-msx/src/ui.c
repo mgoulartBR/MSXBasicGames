@@ -1,4 +1,4 @@
-#include "ui.h"
+#include "app.h"
 extern const u8 g_Font_MGL_Sample6[];   // dados da fonte vivem no segmento 3 (banco 3: dados), liberando ~1,5 KB do codigo fixo
 
 #define FONT_SRC_Y  212          // fonte branca desempacotada em page 0, linhas invisiveis (212..251)
@@ -145,12 +145,18 @@ void Ui_Begin(void)
 	s_YOff = BUF_Y;
 }
 
-void Ui_End(u8 x, u8 y, u8 w, u8 h)
+void Ui_EndTo(u8 x, u8 ysrc, u8 w, u8 h, u8 ydst)
 {
 	if (s_Depth) s_Depth--;
 	if (s_Depth) return;
 	s_YOff = 0;
-	VDP_CommandHMMM(x, y + BUF_Y, x, y, ((u16)w + 1) & 0xFFFE, h);   // HMMM trabalha em bytes (2 pixels): largura par
+	VDP_CommandHMMM(x, ysrc + BUF_Y, x, ydst, ((u16)w + 1) & 0xFFFE, h);   // HMMM trabalha em bytes (2 pixels): largura par
+}
+
+void Ui_End(u8 x, u8 y, u8 w, u8 h)
+{
+	u8 off = (g_Screen == SCR_TITLE || g_Screen == SCR_OVER || g_Splash) ? 0 : YSHIFT;
+	Ui_EndTo(x, y, w, h, (u8)(y - off));
 }
 
 static u8 s_SavedDepth;
@@ -239,15 +245,15 @@ static void PtrDraw(void)
 
 void Ui_SpriteSetup(void)
 {
-	u8 col[16], i, hide[24];
+	u8 col[16], i, hide[28];
 	VDP_WriteVRAM_128K(k_SprArrow, SPR_PAT_LO + 96, 1, 32);
 	VDP_WriteVRAM_128K(k_SprOutline, SPR_PAT_LO + 128, 1, 32);
 	for (i = 0; i < 16; i++) col[i] = COLOR_WHITE;
 	VDP_WriteVRAM_128K(col, SPR_COL_LO + 0, 1, 16);          // sprite 0 = seta branca
 	for (i = 0; i < 16; i++) col[i] = COLOR_BLACK;
 	VDP_WriteVRAM_128K(col, SPR_COL_LO + 16, 1, 16);         // sprite 1 = contorno preto
-	for (i = 0; i < 24; i += 4) { hide[i] = SPR_HIDE_Y; hide[i + 1] = 0; hide[i + 2] = 0; hide[i + 3] = 0; }
-	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 24);         // sprites do predio comecam escondidos
+	for (i = 0; i < 28; i += 4) { hide[i] = SPR_HIDE_Y; hide[i + 1] = 0; hide[i + 2] = 0; hide[i + 3] = 0; }
+	VDP_WriteVRAM_128K(hide, SPR_ATT_LO + 8, 1, 28);         // sprites do predio comecam escondidos
 	VDP_RegWrite(5, 0xF7); VDP_RegWrite(11, 3); VDP_RegWrite(6, 0x3E);       // tabelas na pagina 3 da VRAM
 	VDP_RegWriteBakMask(1, (u8)~(R01_ST | R01_MAG), R01_ST);                 // sprites 16x16
 	g_PtrX = 128; g_PtrY = 106; g_PtrMode = 3; g_PtrSpeed = 1; s_AccX = s_AccY = 0; g_PtrInject = 0; g_InExtra = 0; s_PtrShown = 0; g_PtrFound = 0; s_AutoIdle[0] = s_AutoIdle[1] = 0; s_AutoSig[0] = s_AutoSig[1] = 0xFFFF; s_AutoTurn = 0;   // modo 3 = automatico

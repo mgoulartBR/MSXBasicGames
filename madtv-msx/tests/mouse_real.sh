@@ -24,7 +24,7 @@ sleep 1
 DISPLAY=:80 timeout 60 openmsx -machine C-BIOS_MSX2 -cart "$ROM" -script /tmp/mouse_real.tcl >/tmp/mouse_real.log 2>&1 & OP=$!
 sleep 12
 DISPLAY=:80 xdotool mousemove 400 300; sleep 0.5
-for i in 1 2 3 4 5 6 7 8; do DISPLAY=:80 xdotool mousemove_relative -- 12 8; sleep 0.15; done
+for i in 1 2 3 4 5 6 7 8; do DISPLAY=:80 xdotool mousemove_relative -- 12 2; sleep 0.15; done
 sleep 1.5
 DISPLAY=:80 xdotool mousedown 1; sleep 0.25; DISPLAY=:80 xdotool mouseup 1     # clique >= 1 quadro (como um clique humano)
 wait $OP; kill $XP 2>/dev/null

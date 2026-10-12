@@ -289,8 +289,8 @@ void main()
 			}
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
 			{
-				if ((p & PTR_LEFT) && g_PtrY < 14 && g_PtrX >= 200) ev |= IN_SPEED;      // clicar na velocidade do cabecalho
-				else ScreenMouse(g_PtrX, g_PtrY, (p & PTR_LEFT) ? 1 : 0);
+				if (g_PtrY >= 162) { if ((p & PTR_LEFT) && g_PtrY < 188 && g_PtrX >= 154) ev |= IN_SPEED; }   // console: clicar na TV das emissoras muda a velocidade
+				else ScreenMouse(g_PtrX, (u8)(g_PtrY + YSHIFT), (p & PTR_LEFT) ? 1 : 0);                  // o conteudo e desenhado YSHIFT linhas acima (ver ui.h)
 			}
 		}
 

@@ -80,19 +80,19 @@ key DOWN;  at 0.3 { dump navdown }
 key RIGHT; at 0.3 { dump navright }
 key LEFT;  at 0.3 { dump navleft; shot 2b_cursor }
 # --- MOUSE (cursor injetado: o caminho de hit-test e o mesmo do mouse real)
-mouse 84 140 1                                      ;# passa por cima da ADS (sala 4): realca, sem viajar
+mouse 84 116 1                                      ;# passa por cima da ADS (sala 4): realca, sem viajar
 at 0.3 { dump mhover }
-mouse 220 5 2                                       ;# clique na velocidade do cabecalho: muda a velocidade
+mouse 220 170 2                                       ;# clique na velocidade do cabecalho: muda a velocidade
 at 0.3 { dump mspeed }
-mouse 220 5 2                                       ;# 2a vez: velocidade 3
-mouse 220 5 2                                       ;# 3a vez: volta a velocidade 1
-mouse 40 140 2                                      ;# clique na FILM (sala 3): viaja e entra na Agencia
+mouse 220 170 2                                       ;# 2a vez: velocidade 3
+mouse 220 170 2                                       ;# 3a vez: volta a velocidade 1
+mouse 40 116 2                                      ;# clique na FILM (sala 3): viaja e entra na Agencia
 at 5.0 { dump mclick }
-mouse 180 78 1                                      ;# passa por cima da 4a linha da lista
+mouse 180 54 1                                      ;# passa por cima da 4a linha da lista
 at 0.3 { dump mlist }
-mouse 180 78 2                                      ;# clique: compra o filme (Agencia: clique = comprar)
+mouse 180 54 2                                      ;# clique: compra o filme (Agencia: clique = comprar)
 at 0.5 { dump mbuy; shot 3m_mouse_buy }
-mouse 100 100 4                                     ;# botao direito = voltar ao predio
+mouse 100 76 4                                     ;# botao direito = voltar ao predio
 at 0.5 { dump mback }
 # --- Film agency (sala 3): comprar os filmes 1 e 2 de Lovestory
 room 3

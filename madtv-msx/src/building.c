@@ -32,14 +32,11 @@ static const Room k_Rooms[NROOMS] = {
 #define ROOM_OFFICE 9
 
 // sprites (16x16, 2 bytes... formato MSX: 16 bytes coluna esquerda + 16 bytes coluna direita)
-static const u8 k_SprFig[2][32] = {
-	{ 0x03,0x07,0x07,0x07,0x03,0x0F,0x1F,0x1F,0x1B,0x1B,0x0B,0x03,0x03,0x06,0x06,0x0E, 0xC0,0xE0,0xE0,0xE0,0xC0,0xF0,0xF8,0xF8,0xD8,0xD8,0xD0,0xC0,0xC0,0x60,0x60,0x70 },
-	{ 0x03,0x07,0x07,0x07,0x03,0x0F,0x1F,0x1F,0x1B,0x1B,0x0B,0x03,0x06,0x0C,0x18,0x38, 0xC0,0xE0,0xE0,0xE0,0xC0,0xF0,0xF8,0xF8,0xD8,0xD8,0xD0,0xC0,0x60,0x30,0x18,0x1C },
-};
+#include "sprites_fig.h"                     // k_SprFill / k_SprEdge / k_FigCol (tools/make_sprites.py)
 static const u8 k_SprCar[32] = {
 	0xFF,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0xFF, 0xFF,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0xFF };
 
-#define NSPR 4                                   // sprites do predio: indices 2 (jogador), 3-4 (rivais), 5 (elevador); 0-1 = cursor do mouse (ui.c)
+#define NSPR 7                                   // planos 2-4 = preenchimento do jogador/rivais, 5 = elevador, 6-8 = contornos; 0-1 = cursor do mouse (ui.c)
 #define HIDE_Y SPR_HIDE_Y
 
 // ---------------------------------------------------------------- estado (RAM fixa, inicializado em Building_Reset)
@@ -149,15 +146,14 @@ static void SprWrite(void)
 	// jogador/rivais: Y = pes-16 (atributo = linha visivel - 1); invisivel -> fora da tela
 	for (i = 0; i < 3; i++)
 	{
-		s_Spr[i * 4]     = s_M[i].vis ? (u8)(s_M[i].y - 16) : HIDE_Y;
-		s_Spr[i * 4 + 1] = (u8)(s_M[i].x - 8);
-		s_Spr[i * 4 + 2] = s_M[i].frame ? 4 : 0;
-		s_Spr[i * 4 + 3] = 0;
+		u8 y = s_M[i].vis ? (u8)(s_M[i].y - 16 - YSHIFT) : HIDE_Y, x = (u8)(s_M[i].x - 8);
+		s_Spr[i * 4]     = y; s_Spr[i * 4 + 1] = x; s_Spr[i * 4 + 2] = s_M[i].frame ? 4 : 0; s_Spr[i * 4 + 3] = 0;       // preenchimento
+		s_Spr[16 + i * 4] = y; s_Spr[17 + i * 4] = x; s_Spr[18 + i * 4] = s_M[i].frame ? 24 : 20; s_Spr[19 + i * 4] = 0;   // contorno (plano 6 + i)
 	}
 #if ART_HUB
 	s_Spr[12] = HIDE_Y;                                           // o fundo ja tem as portas do elevador
 #else
-	s_Spr[12] = (u8)(s_CarY - 16);
+	s_Spr[12] = (u8)(s_CarY - 16 - YSHIFT);
 #endif
 	s_Spr[13] = (u8)(SHAFT_X - 8); s_Spr[14] = 8; s_Spr[15] = 0;
 	VDP_WriteVRAM_128K(s_Spr, SPR_ATT_LO + 8, 1, NSPR * 4);
@@ -165,18 +161,17 @@ static void SprWrite(void)
 
 static void SprInit(void)
 {
-	static const u8 k_Cols[3] = { COLOR_MEDIUM_RED, COLOR_LIGHT_GREEN, COLOR_CYAN };
 	u8 col[16], s, r;
-	VDP_WriteVRAM_128K(k_SprFig[0], SPR_PAT_LO, 1, 32);
-	VDP_WriteVRAM_128K(k_SprFig[1], SPR_PAT_LO + 32, 1, 32);
+	VDP_WriteVRAM_128K(k_SprFill[0], SPR_PAT_LO, 1, 32);
+	VDP_WriteVRAM_128K(k_SprFill[1], SPR_PAT_LO + 32, 1, 32);
 	VDP_WriteVRAM_128K(k_SprCar, SPR_PAT_LO + 64, 1, 32);
-	for (s = 0; s < 3; s++)                                    // cor por linha: cabeca / tronco (cor da emissora) / pernas
-	{
-		for (r = 0; r < 16; r++) col[r] = (r < 5) ? COLOR_LIGHT_RED : (r < 11) ? k_Cols[s] : COLOR_DARK_BLUE;
-		VDP_WriteVRAM_128K(col, SPR_COL_LO + 32 + s * 16, 1, 16);
-	}
+	VDP_WriteVRAM_128K(k_SprEdge[0], SPR_PAT_LO + 160, 1, 32);
+	VDP_WriteVRAM_128K(k_SprEdge[1], SPR_PAT_LO + 192, 1, 32);
+	for (s = 0; s < 3; s++) VDP_WriteVRAM_128K(k_FigCol[s], SPR_COL_LO + 32 + s * 16, 1, 16);   // cor por linha: cabelo / pele / camisa / calca / sapato
 	for (r = 0; r < 16; r++) col[r] = COLOR_GRAY;
 	VDP_WriteVRAM_128K(col, SPR_COL_LO + 80, 1, 16);
+	for (r = 0; r < 16; r++) col[r] = COLOR_BLACK;
+	for (s = 0; s < 3; s++) VDP_WriteVRAM_128K(col, SPR_COL_LO + 96 + s * 16, 1, 16);           // contornos pretos (planos 6-8)
 }
 
 // ---------------------------------------------------------------- movimento

@@ -322,3 +322,10 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Options redesenha so a linha mudada (`OptRow`): com o redesenho completo (agora com o bloco "This MSX") a 2a tecla de uma sequencia rapida era perdida.
 - Testes: `sram.sh` ganhou F1/F2 (desliga efeitos + mouse rapido, reinicia, confere). Descoberta: o openMSX guarda a SRAM em `~/.openMSX/persistent/roms/<nome da rom>/`, entao a limpeza antiga (`persistent/*madtv*`) nunca apagava nada e as execucoes herdavam estado; smoke.sh e sram.sh agora limpam `persistent/roms/madtv-*`.
 - `tests/HARDWARE.md`: roteiro de 10 testes para MSX2 real. Continua nao testado em hardware.
+
+## 2.3: console inferior, Sammy, bonequinhos
+- Console: HUD fica em y=162..187 da tela (TV da Betty | painel cinza hora/caixa | TV das emissoras + velocidade), dica em 188..199 e mensagem em 200..211. As telas de conteudo nao mudaram de coordenadas: `Ui_End` copia o buffer `YSHIFT` (24) linhas acima, exceto quando `g_Screen` e titulo/final ou `g_Splash`. O console e desenhado nas linhas 0..25 do buffer (`CB` = 94, u8 dando a volta) e copiado com `Ui_EndTo`. Cuidado: a fonte preta vive em 218.. do buffer (pagina 2, y 730) - usar linhas ali corrompe o texto preto (visto como texto "esfarelado").
+- Mouse: `ScreenMouse(x, y + YSHIFT)`; cliques em y >= 162 so tratam a velocidade (TV da direita). Sprites do predio subtraem `YSHIFT` do Y.
+- Sammy (`Sim_SammyDay`, fim dos dias 7, 14, ...): nota do jogador = `Sim_NewsQuality()` no fim do dia; rivais vivos = 25 + rnd(35) + 5*dificuldade. No bot "smart": falencia 3%, caixa mediano 2338k (era 2572k na 2.0: os Sammys dos rivais dao Image a eles).
+- Sprites: planos 2-4 preenchimento, 5 elevador, 6-8 contorno (NSPR 7). Arte em `tools/make_sprites.py` -> `src/sprites_fig.h` (arte propria, versionada). O usuario achou feio: o desenho de 16x16 com cor por linha e limitado. Higgsfield/outra IA de imagem nao esta disponivel nesta sessao; o caminho e o usuario mandar uma folha de referencia e eu reduzir para 16x16 (2 camadas).
+- Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.

@@ -222,6 +222,19 @@ int main(void)
 		for (t = 0; t < DAY_MINUTES && !g_Game.game_over; t++) Sim_Tick();
 		CHECK(g_Game.game_over && g_Game.won == 2, "final de magnata (won=2)");
 	}
+	// 2.3: Sammy (melhor telejornal) a cada 7 dias
+	g_Diff = 1; Sim_Init(71);
+	{
+		u8 i, best = NONE; NewsRec r; i32 m0; u8 im0;
+		for (i = 0; i < DB_NUM_NEWS; i++) { Db_News(i, &r); if (r.quality >= 70) { best = i; break; } }
+		CHECK(best != NONE, "ha noticia de qualidade >= 70");
+		g_Game.alive[1] = g_Game.alive[2] = 0; g_Game.day = 3; m0 = g_Game.money; im0 = g_Game.image[0];
+		Sim_SammyDay(); CHECK(g_Game.money == m0 && g_Game.image[0] == im0, "Sammy so nos dias multiplos de 7");
+		g_Game.day = 7; for (i = 0; i < NEWS_SLATE; i++) g_Game.news_slate[i].idx = NONE;
+		Sim_SammyDay(); CHECK(g_Game.money == m0 && g_Game.image[0] == im0, "sem telejornal nao ha Sammy");
+		for (i = 0; i < NEWS_SLATE; i++) { g_Game.news_slate[i].idx = best; g_Game.news_slate[i].age = 0; }
+		Sim_SammyDay(); CHECK(g_Game.money == m0 + SAMMY_PRIZE && g_Game.image[0] == im0 + 5, "telejornal bom ganha o Sammy (+5 Image, premio)");
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }
