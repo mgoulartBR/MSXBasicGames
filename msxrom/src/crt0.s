@@ -84,6 +84,10 @@ noturbo:
  ld hl,#s__INITIALIZER
  ldir
 noinit:
+ ld hl,#0x6000            ; banco 0 da ROM, rotinas extras em RAM 0xD200..0xEFFF
+ ld de,#0xD200
+ ld bc,#0x1E00
+ ldir
  call _main
 halt_loop:
  jr halt_loop

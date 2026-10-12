@@ -27,6 +27,7 @@ __sfr __at(0xA9) ppi_b;
 #define PLAYER_R 14
 #define TEXY_WALL 512
 #define MAX_SPR 10
+#define MAX_SHOTS 4
 
 static void vr(u8 r,u8 v){ vc=v; vc=r|0x80; }
 static void wait_ce(void){ while(vc&1); }
@@ -87,16 +88,23 @@ s16 mulq14(s16 a,s16 b) __sdcccall(1);
 typedef struct{ s16 floor,ceil; u8 f0,f1,c0,c1,special,sky,fid,cid; } Sec;
 typedef struct{ s16 x,y; u8 kind; s16 ang; } ThingRom;
 typedef struct{ s16 x,y,hp; u8 kind,st,t,on,vis; } Th;
+typedef struct{ s16 ax,ay,bx,by; u8 sec,u,v,w,h; } Door;
 static s16 sin_tab[256];
 static Sec secs[NSEC];
+Door doors[NDOOR];
+u8 door_pos[NDOOR],door_state[NDOOR],door_hold[NDOOR];
 static u16 grid[BNX*BNY];
 Th th[NTHING];
+typedef struct{ s16 x,y,z,dx,dy,dz; u8 on,t,ttl,impact; } Shot;
+Shot shots[MAX_SHOTS];
+static u8 next_shot;
 static void cpy(void *d,const u8 *s,u16 n){ u8 *q=(u8*)d; while(n--)*q++=*s++; }
 static void load_meta(void){
   BANK(META_BANK);
   cpy(sin_tab,DATA+META_SIN,512);
   cpy(secs,DATA+META_SEC,sizeof(secs));
   cpy(grid,DATA+META_GRID,sizeof(grid));
+  cpy(doors,DATA+META_DOOR,sizeof(doors));
 }
 
 /* ---------------------------------------------------------------- matematica */
@@ -105,6 +113,25 @@ static s16 icos(u8 a){ return sin_tab[(u8)(a+64)]; }
 static s16 s16abs(s16 v){ return v<0?-v:v; }
 static u8 rnd_s=77;
 static u8 rnd(void){ rnd_s^=rnd_s<<3; rnd_s^=rnd_s>>5; rnd_s^=rnd_s<<4; return rnd_s; }
+static u8 door_blocked(s16 x,s16 y,u8 radius){
+  u8 i;
+  for(i=0;i<NDOOR;i++)if(door_pos[i]<56){
+    Door *d=&doors[i]; s16 cx=(d->ax+d->bx)/2,cy=(d->ay+d->by)/2;
+    if(s16abs(x-cx)<=(s16abs(d->bx-d->ax)>>1)+radius+8&&
+       s16abs(y-cy)<=(s16abs(d->by-d->ay)>>1)+radius+8)return 1;
+  }
+  return 0;
+}
+static u8 doors_in_box(s16 x0,s16 y0,s16 x1,s16 y1){
+  u8 i;s16 t;
+  if(x0>x1){t=x0;x0=x1;x1=t;}if(y0>y1){t=y0;y0=y1;y1=t;}
+  for(i=0;i<NDOOR;i++)if(door_pos[i]<56){
+    Door *d=&doors[i];s16 cx=(d->ax+d->bx)/2,cy=(d->ay+d->by)/2;
+    s16 rx=(s16abs(d->bx-d->ax)>>1)+8,ry=(s16abs(d->by-d->ay)>>1)+8;
+    if(x0<=cx+rx&&x1>=cx-rx&&y0<=cy+ry&&y1>=cy-ry)return 1;
+  }
+  return 0;
+}
 
 /* ---------------------------------------------------------------- raster do mapa (8 unidades por celula): setor ou 255 = bloqueado */
 static u8 rast(s16 x,s16 y){
@@ -115,6 +142,7 @@ static u8 rast(s16 x,s16 y){
 }
 static u8 can_stand(s16 x,s16 y,s16 r,s16 fl){
   u8 s,i; s16 ox,oy;
+  if(door_blocked(x,y,r))return 0;
   for(i=0;i<5;i++){ ox=(i&1)?r:-r; oy=(i&2)?r:-r; if(i==4)ox=oy=0;
     s=rast(x+ox,y+oy); if(s==255) return 0; if(secs[s].floor>fl+24) return 0; }
   return 1;
@@ -127,9 +155,11 @@ static void try_move(s16 *x,s16 *y,s16 dx,s16 dy,s16 r){
 }
 static u8 los(s16 x0,s16 y0,s16 x1,s16 y1){
   s16 dx=x1-x0,dy=y1-y0,n=(s16abs(dx)+s16abs(dy))>>4,i;
+  u8 test_doors;
   if(n<2) return 1;
+  test_doors=doors_in_box(x0,y0,x1,y1);
   dx/=n; dy/=n;                                                         /* passo de ~16 unidades */
-  for(i=1;i<n;i++){ x0+=dx; y0+=dy; if(rast(x0,y0)==255) return 0; }
+  for(i=1;i<n;i++){ x0+=dx; y0+=dy; if(rast(x0,y0)==255||(test_doors&&door_blocked(x0,y0,0)))return 0; }
   return 1;
 }
 
@@ -178,6 +208,7 @@ static void read_keys(void){
   ppi_c=(ppi_c&0xF0)|8; a=~ppi_b;
   if(a&0x10)keys|=K_LEFT; if(a&0x80)keys|=K_RIGHT; if(a&0x20)keys|=K_UP; if(a&0x40)keys|=K_DOWN; if(a&1)keys|=K_FIRE;
   ppi_c=(ppi_c&0xF0)|7; a=~ppi_b; if(a&0x80)keys|=K_USE; if(a&8)keys|=K_TAB;
+  ppi_c=(ppi_c&0xF0)|2; a=~ppi_b; if(a&0x40)keys|=K_USE;
 }
 static void psg(u8 r,u8 v){ psg_a=r; psg_d=v; }
 #include "e1m1_sound.h"
@@ -220,6 +251,44 @@ static void new_game(void){
     cpy(&tr,DATA+META_THING+i*7,7);
     th[i].x=tr.x; th[i].y=tr.y; th[i].kind=tr.kind; th[i].on=1; th[i].st=S_ASLEEP; th[i].t=i*3; th[i].vis=0; th[i].hp=tr.kind<3?mon_hp[tr.kind]:tr.kind==K_BARREL?20:0;
     if(tr.kind<3)total_mon++; else if(tr.kind>=K_STIM&&tr.kind<=K_SHOTGUN)total_items++;
+  }
+  for(i=0;i<MAX_SHOTS;i++)shots[i].on=0;
+  next_shot=0;
+  for(i=0;i<NDOOR;i++){door_pos[i]=0;door_state[i]=0;door_hold[i]=0;}
+}
+static void door_use(void){
+  u8 i,best=255; s16 nearest=75;
+  for(i=0;i<NDOOR;i++){
+    Door *d=&doors[i];
+    s16 cx=(d->ax+d->bx)/2,cy=(d->ay+d->by)/2;
+    s16 dx=s16abs(px-cx)-(s16abs(d->bx-d->ax)>>1);
+    s16 dy=s16abs(py-cy)-(s16abs(d->by-d->ay)>>1);
+    s16 dist=(dx>0?dx:0)+(dy>0?dy:0);
+    if(dist<nearest){nearest=dist;best=i;}
+  }
+  if(best!=255){door_state[best]=1;door_hold[best]=80;say("PORTA ABRINDO",24);}
+}
+static u8 door_occupied(const Door *d){
+  u8 j;s16 cx=(d->ax+d->bx)/2,cy=(d->ay+d->by)/2;
+  if(s16abs(px-cx)+s16abs(py-cy)<100)return 1;
+  for(j=0;j<NTHING;j++)if(th[j].on&&th[j].kind<3&&s16abs(th[j].x-cx)+s16abs(th[j].y-cy)<100)return 1;
+  return 0;
+}
+static void door_tick(void){
+  u8 i; s16 fl;
+  for(i=0;i<NDOOR;i++){
+    Door *d=&doors[i];fl=secs[d->sec].ceil-secs[d->sec].floor;
+    if(door_state[i]==1){
+      if(door_pos[i]+8>=fl){door_pos[i]=fl;door_state[i]=2;}
+      else door_pos[i]+=8;
+    } else if(door_state[i]==2){
+      if(door_occupied(d))door_hold[i]=80;
+      if(door_hold[i])door_hold[i]--;else door_state[i]=3;
+    } else if(door_state[i]==3){
+      if(door_occupied(d)){door_state[i]=1;door_hold[i]=80;}
+      else if(door_pos[i]<=8){door_pos[i]=0;door_state[i]=0;}
+      else door_pos[i]-=8;
+    }
   }
 }
 static void damage_player(s16 d){
@@ -285,9 +354,38 @@ static void pickup(u8 i){
   }
   if(ammo>200)ammo=200; th[i].on=0; items_got++; sound_play(SFX_ITEM);
 }
+static void shot_explode(Shot *s){
+  s->impact=1; s->t=0; sound_play(SFX_FIRE_IMPACT);
+}
+static void launch_imp(u8 i){
+  s16 dx=px-th[i].x,dy=py-th[i].y,d=s16abs(dx),a=s16abs(dy);
+  Shot *s=&shots[next_shot];
+  next_shot=(next_shot+1)&(MAX_SHOTS-1);
+  if(a>d)d=a; if(!d)d=1;
+  s->x=th[i].x; s->y=th[i].y; s->z=floor_at(s->x,s->y)+40;
+  s->dx=dx*10/d; s->dy=dy*10/d;
+  s->dz=(eye-8-s->z)*10/d;
+  s->ttl=100; s->t=0; s->impact=0; s->on=1;
+}
+static void shot_tick(void){
+  u8 i,sec; s16 nx,ny,nz; Shot *s;
+  for(i=0;i<MAX_SHOTS;i++){
+    s=&shots[i]; if(!s->on)continue;
+    if(s->impact){ if(++s->t>=6)s->on=0; continue; }
+    if(!--s->ttl){s->on=0;continue;}
+    nx=s->x+s->dx; ny=s->y+s->dy; nz=s->z+s->dz;
+    if(s16abs(nx-px)<22&&s16abs(ny-py)<22&&s16abs(nz-eye)<24){
+      s->x=nx;s->y=ny;s->z=nz;damage_player(9+(rnd()&15));shot_explode(s);continue;
+    }
+    sec=rast(nx,ny);
+    if(sec==255||door_blocked(nx,ny,5)||!can_stand(nx,ny,5,floor_at(s->x,s->y))||nz<secs[sec].floor+3||nz>secs[sec].ceil-3){shot_explode(s);continue;}
+    s->x=nx;s->y=ny;s->z=nz;s->t++;
+  }
+}
 static void mon_attack(u8 i){
   s16 dx=px-th[i].x,dy=py-th[i].y,d=s16abs(dx)+s16abs(dy); u8 k=th[i].kind,n=1,j; s16 chance,dm;
   th[i].st=S_ATTACK; th[i].t=8; sound_play(k==K_IMP?SFX_FIRE:k==K_SERGEANT?SFX_SHOTGUN:SFX_PISTOL);
+  if(k==K_IMP&&d>=80){launch_imp(i);return;}
   if(k==K_SERGEANT)n=3;
   chance=190-d/6; if(chance<60)chance=60;
   if(k==K_IMP&&d<110) chance=240;
@@ -320,6 +418,8 @@ static void update(void){
   if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R);
   if(cool)cool--; if(fire_t)fire_t--; if(hurt)hurt--; if(face_t)face_t--; if(msg_t&&!--msg_t)msg=0;
   if((keys&K_FIRE)&&!cool)shoot();
+  if((keys&K_USE)&&!(old_keys&K_USE))door_use();
+  door_tick();
   tgt=floor_at(px,py)+41; if(tgt>eye){ eye+=(tgt-eye+3)>>2; } else if(tgt<eye){ eye-=(eye-tgt+3)>>2; }
   for(i=0;i<NTHING;i++){
     if(!th[i].on)continue;
@@ -327,6 +427,7 @@ static void update(void){
     else if(th[i].kind==K_BARREL){ if(th[i].st==S_DYING)death_tick(i); else th[i].t++; }
     else if(th[i].kind<=K_SHOTGUN){ s16 dx=px-th[i].x,dy=py-th[i].y; if(s16abs(dx)+s16abs(dy)<36) pickup(i); }
   }
+  shot_tick();
   sc=rast(px,py);
   if(sc!=255){ u8 sp=secs[sc].special;
     if(sp==5||sp==7||sp==16||sp==4){ if((tick&31)==0){ damage_player(sp==7?5:sp==5?10:20); say("RADIACAO!",20); } } }
@@ -413,21 +514,64 @@ static void overlay(void){
   text(60,88,FONT_GRAY,"ABATES"); { char b[8]; u8 n=0; s16 k=kills; if(k>=10)b[n++]='0'+k/10; b[n++]='0'+k%10; b[n++]='/'; b[n++]='0'+total_mon; b[n]=0; text(110,88,FONT_GRAY,b); }
   text(60,100,FONT_GRAY,"APERTE ESPACO");
 }
-static void render(void){
-  u8 i,k=0,n,cn=0,slot; u16 bi; s16 bx,by; u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
-  const Sec *sc; u8 s0=rast(px,py);
-  /* Fundo do teto do setor atual; planos residentes ordenados junto das paredes. */
-  { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
-  if(s0!=255){ sc=&secs[sa]; fill(0,0,SCR_W,89,secs[s0].c0); fill(0,89,SCR_W,45,sc->f0); fill(0,134,SCR_W,VIEW_H-134,sc->f1); } }
-  if(s0==255){ fill(0,0,SCR_W,89,C_PANEL); fill(0,89,SCR_W,89,C_BLACK); }
-  wait_ce();
-  make_view();
-  bx=(px>>7)-BX0; by=(py>>7)-BY0;
-  if(bx>=0&&by>=0&&bx<BNX&&by<BNY){ bi=grid[by*BNX+bx];
-    if(bi!=0xFFFF){ u8 h=cur_h,d=(u8)(yaw-(u8)(cur_h<<6));       /* 4 conjuntos por bloco (um por direcao de 90 graus), com histerese de ~5 graus */
-      if(d>=128)d=(u8)(256-d);
-      if(cur_blk==0xFFFF||d>36)h=(u8)(((u8)(yaw+32)>>6)&3);
-      bi=(bi<<2)|h; if(bi!=cur_blk){ blk_load(bi); cur_h=h; } } }
+typedef struct{ s16 x0,y0,x1,y1,floor; } Water;
+static u8 emit_water_rect(const Water *r,u8 k){
+  u8 i,j,n=0,c,a,end,vi[4]; s16 x[4],y[4],z[4],ox[5],oy[5],dx,dy;
+  u8 *v,*f,*t; s16 ww,hh,num,den,frac;
+  x[0]=x[3]=r->x0;x[1]=x[2]=r->x1;y[0]=y[1]=r->y0;y[2]=y[3]=r->y1;
+  for(i=0;i<4;i++){dx=x[i]-px;dy=y[i]-py;z[i]=mulq14(M[6],dx)+mulq14(M[8],dy);}
+  for(i=0;i<4;i++){
+    j=(i+1)&3;
+    if(z[i]>=24){ox[n]=x[i];oy[n++]=y[i];}
+    if((z[i]>=24)!=(z[j]>=24)){
+      num=24-z[i];den=z[j]-z[i];if(den<0){num=-num;den=-den;}
+      while(den>127){num>>=1;den>>=1;}
+      frac=((num<<8)/den)<<6;
+      ox[n]=x[i]+mulq14(x[j]-x[i],frac);
+      oy[n++]=y[i]+mulq14(y[j]-y[i],frac);
+    }
+  }
+  if(n<3)return k;
+  end=k+(n==5?2:1);if(end>4)return k;
+  ww=r->x1-r->x0;hh=r->y1-r->y0;
+  for(i=0;k<end;k++,i++){
+    v=vbuf+24*k;f=fbuf+11*k;t=tbuf+8*k;c=cell_nv+4*k;
+    vi[0]=0;vi[1]=i?4:(n==3?2:3);vi[2]=i?3:(n==3?1:2);vi[3]=i?3:1;
+    for(j=0;j<4;j++){
+      a=vi[j];
+      put16(v+6*j,ox[a]);put16(v+6*j+2,r->floor);put16(v+6*j+4,oy[a]);
+      t[2*j]=(ox[a]-r->x0)*15/ww;t[2*j+1]=240+(oy[a]-r->y0)*15/hh;
+      f[j]=c+j;
+    }
+    put16(f+4,0);put16(f+6,-16384);put16(f+8,0);f[10]=0x80;
+  }
+  return k;
+}
+static u8 emit_water(u8 sec){
+  const Water *r;u8 i,k=0;s16 bx=(px&~127)-40,by=(py&~127)-40;
+  if(sec==255||secs[sec].special!=7)return 0;
+  BANK(META_BANK);r=(const Water *)(DATA+META_WATER);
+  for(i=0;i<NWATER&&k<4;i++,r++)if(r->x0<bx+208&&r->x1>bx&&r->y0<by+208&&r->y1>by)k=emit_water_rect(r,k);
+  return k;
+}
+static void emit_door(u8 i,u8 k){
+  Door *d=&doors[i]; u8 *v=vbuf+24*k,*f=fbuf+11*k,*t=tbuf+8*k;
+  s16 ax=d->ax,ay=d->ay,bx=d->bx,by=d->by,bot=secs[d->sec].floor+door_pos[i],top=secs[d->sec].ceil,tmp;
+  u8 base=cell_nv+4*k,vbot;
+  if((s32)(bx-ax)*(py-ay)-(s32)(by-ay)*(px-ax)>0){tmp=ax;ax=bx;bx=tmp;tmp=ay;ay=by;by=tmp;}
+  put16(v,bx);put16(v+2,bot);put16(v+4,by);
+  put16(v+6,ax);put16(v+8,bot);put16(v+10,ay);
+  put16(v+12,ax);put16(v+14,top);put16(v+16,ay);
+  put16(v+18,bx);put16(v+20,top);put16(v+22,by);
+  f[0]=base;f[1]=base+1;f[2]=base+2;f[3]=base+3;
+  put16(f+4,0);put16(f+6,-16384);put16(f+8,0);f[10]=0x80;
+  vbot=d->v+(d->h-1)*(top-bot)/(top-secs[d->sec].floor);
+  t[0]=d->u+d->w-1;t[1]=vbot;t[2]=d->u;t[3]=vbot;
+  t[4]=d->u;t[5]=d->v;t[6]=d->u+d->w-1;t[7]=d->v;
+}
+static u8 add_sprites(u8 sec){
+  u8 i,k=emit_water(sec),limit=MAX_SPR-k,n,cn=0,slot;
+  u8 cand[MAX_SPR]; s16 cd[MAX_SPR]; u8 *v,*f,*t; s16 j;
   /* sprites: os MAX_SPR mais proximos dentro do campo de visao e com linha de visao */
   for(i=0;i<NTHING;i++){
     s16 dx,dy,zc,xc,d; Th *m=&th[i];
@@ -437,25 +581,70 @@ static void render(void){
     xc=mulq14(M[0],dx)+mulq14(M[2],dy); if(s16abs(xc)>zc+zc/2+40)continue;
     if(((fcnt+i)&3)==0) m->vis=los(px,py,m->x,m->y);
     if(!m->vis)continue;
-    if(cn<MAX_SPR){ cand[cn]=i; cd[cn]=d; cn++; }
-    else { u8 w=0; for(j=1;j<MAX_SPR;j++) if(cd[j]>cd[w])w=j; if(d<cd[w]){ cand[w]=i; cd[w]=d; } }
+    if(cn<limit){cand[cn]=i;cd[cn]=d;cn++;}
+    else {u8 w=0;for(j=1;j<limit;j++)if(cd[j]>cd[w])w=j;if(d<cd[w]){cand[w]=i;cd[w]=d;}}
+  }
+  for(i=0;i<MAX_SHOTS;i++)if(shots[i].on){
+    s16 dx=shots[i].x-px,dy=shots[i].y-py,d=s16abs(dx)+s16abs(dy),zc,xc;
+    if(d>1500)continue;
+    zc=mulq14(M[6],dx)+mulq14(M[8],dy); if(zc<12)continue;
+    xc=mulq14(M[0],dx)+mulq14(M[2],dy); if(s16abs(xc)>zc+zc/2+40)continue;
+    if(!los(px,py,shots[i].x,shots[i].y))continue;
+    if(cn<limit){cand[cn]=NTHING+i;cd[cn]=d;cn++;}
+    else {u8 w=0;for(j=1;j<limit;j++)if(cd[j]>cd[w])w=j;if(d<cd[w]){cand[w]=NTHING+i;cd[w]=d;}}
+  }
+  for(i=0;i<NDOOR;i++)if(door_pos[i]<secs[doors[i].sec].ceil-secs[doors[i].sec].floor){
+    s16 dx=(doors[i].ax+doors[i].bx)/2-px,dy=(doors[i].ay+doors[i].by)/2-py;
+    s16 d=s16abs(dx)+s16abs(dy),zc,xc;
+    if(d>1500)continue;
+    zc=mulq14(M[6],dx)+mulq14(M[8],dy);if(zc<12)continue;
+    xc=mulq14(M[0],dx)+mulq14(M[2],dy);if(s16abs(xc)>zc+zc/2+96)continue;
+    if(cn<limit){cand[cn]=NTHING+MAX_SHOTS+i;cd[cn]=d;cn++;}
+    else {u8 w=0;for(j=1;j<limit;j++)if(cd[j]>cd[w])w=j;cand[w]=NTHING+MAX_SHOTS+i;cd[w]=d;}
   }
   for(n=0;n<cn;n++){
-    Th *m=&th[cand[n]]; s16 hx,hy,fl; u8 u,w,b,sw,sh;
-    slot=(m->kind<3)?mon_slot(m):kind_spr[m->kind];
-    if(m->kind==K_BARREL)slot=m->st==S_DYING?SPR_BEXPA0+(m->t>>1):SPR_BAR1A0+((m->t>>2)&1);
-    fl=floor_at(m->x,m->y); v=vbuf+24*k; f=fbuf+11*k; t=tbuf+8*k;
+    Th *m; Shot *s; s16 hx,hy,fl,mx,my; u8 u,w,b,sw,sh;
+    if(cand[n]>=NTHING+MAX_SHOTS){emit_door(cand[n]-NTHING-MAX_SHOTS,k++);continue;}
+    if(cand[n]>=NTHING){
+      s=&shots[cand[n]-NTHING]; mx=s->x;my=s->y;
+      slot=SPR_BAL1A0+(s->impact?2+(s->t>>1):(s->t>>2)&1);
+      fl=s->z-(spr_size[slot][2]+spr_size[slot][3])/2;
+    } else {
+      m=&th[cand[n]]; mx=m->x; my=m->y;
+      slot=(m->kind<3)?mon_slot(m):kind_spr[m->kind];
+      if(m->kind==K_BARREL)slot=m->st==S_DYING?SPR_BEXPA0+(m->t>>1):SPR_BAR1A0+((m->t>>2)&1);
+      fl=floor_at(mx,my);
+    }
+    v=vbuf+24*k; f=fbuf+11*k; t=tbuf+8*k;
     hx=mulq14(M[0],spr_size[slot][0]); hy=mulq14(M[2],spr_size[slot][0]);
-    put16(v,m->x+hx);put16(v+2,fl+spr_size[slot][2]);put16(v+4,m->y+hy);
-    put16(v+18,m->x+hx);put16(v+20,fl+spr_size[slot][3]);put16(v+22,m->y+hy);
+    put16(v,mx+hx);put16(v+2,fl+spr_size[slot][2]);put16(v+4,my+hy);
+    put16(v+18,mx+hx);put16(v+20,fl+spr_size[slot][3]);put16(v+22,my+hy);
     hx=mulq14(M[0],spr_size[slot][1]); hy=mulq14(M[2],spr_size[slot][1]);
-    put16(v+6,m->x+hx);put16(v+8,fl+spr_size[slot][2]);put16(v+10,m->y+hy);
-    put16(v+12,m->x+hx);put16(v+14,fl+spr_size[slot][3]);put16(v+16,m->y+hy);
+    put16(v+6,mx+hx);put16(v+8,fl+spr_size[slot][2]);put16(v+10,my+hy);
+    put16(v+12,mx+hx);put16(v+14,fl+spr_size[slot][3]);put16(v+16,my+hy);
     b=cell_nv+4*k; f[0]=b;f[1]=b+1;f[2]=b+2;f[3]=b+3; put16(f+4,SPR_NX);put16(f+6,SPR_NY);put16(f+8,SPR_NZ); f[10]=0x80;
     u=spr_rect[slot][0]; w=spr_rect[slot][1]; sw=spr_rect[slot][2]-1; sh=spr_rect[slot][3]-1;
     t[0]=u;t[1]=w;t[2]=u+sw;t[3]=w;t[4]=u+sw;t[5]=w+sh;t[6]=u;t[7]=w+sh;
     k++;
   }
+  return k;
+}
+static void render(void){
+  u8 k; u16 bi; s16 bx,by;
+  const Sec *sc; u8 s0=rast(px,py);
+  { s16 sn=isin(yaw),cs=icos(yaw); u8 sa=rast(px+mulq14(sn,96),py+mulq14(cs,96)); if(sa==255)sa=s0;
+    if(s0!=255){sc=&secs[sa];fill(0,0,SCR_W,89,secs[s0].c0);fill(0,89,SCR_W,45,sc->f0);fill(0,134,SCR_W,VIEW_H-134,sc->f1);}
+  }
+  if(s0==255){fill(0,0,SCR_W,89,C_PANEL);fill(0,89,SCR_W,89,C_BLACK);}
+  wait_ce();make_view();
+  bx=(px>>7)-BX0;by=(py>>7)-BY0;
+  if(bx>=0&&by>=0&&bx<BNX&&by<BNY){bi=grid[by*BNX+bx];
+    if(bi!=0xFFFF){u8 h=cur_h,d=(u8)(yaw-(u8)(cur_h<<6));
+      if(d>=128)d=(u8)(256-d);
+      if(cur_blk==0xFFFF||d>36)h=(u8)(((u8)(yaw+32)>>6)&3);
+      bi=(bi<<2)|h;if(bi!=cur_blk){blk_load(bi);cur_h=h;}}
+  }
+  k=add_sprites(s0);
   geo_light(LC);
   gi=0x40; gd=cell_nv; gd=0; gd=cell_nv+4*k;
   gi=0x58; gd=cell_nf; gd=cell_nf+k;

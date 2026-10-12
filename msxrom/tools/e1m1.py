@@ -49,6 +49,11 @@ def wall_pieces(w,m):
                 if fs['floor']<bs['floor'] and sd['lower'] not in ('-',''):
                     texmid=fs['ceil'] if fl&16 else bs['floor']                 # ML_DONTPEGBOTTOM
                     add('lower',fs['floor'],bs['floor'],sd['lower'],texmid)
+                if sd['mid'] not in ('-',''):
+                    tw,th=tinfo(sd['mid']); bottom=max(fs['floor'],bs['floor']); top=min(fs['ceil'],bs['ceil'])
+                    texmid=bottom+th if fl&16 else top
+                    anchor=texmid+sd['yoff']
+                    add('masked',max(bottom,anchor-th),min(top,anchor),sd['mid'],texmid)
     return pieces
 
 def split_piece(p):

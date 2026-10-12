@@ -192,5 +192,13 @@ proc finish_scene {} {
     incr ::scene
     begin_scene
 }
-after time 12 boot
+proc wait_boot {} {
+    if {$::flips>3 && [rd16 hp]==100} {boot; return}
+    check [expr {[machine_info time]<40}] "boot ainda em inicializacao (PCM incluido)"
+    after time 0.25 wait_boot
+}
+if {[info exists env(E1M1_INTERACTIONS)] && $env(E1M1_INTERACTIONS)} {
+    source [file join $root tools test_e1m1_interactions_openmsx.tcl]
+}
+after time 12 wait_boot
 after time 300 {puts $::log "FAIL timeout"; close $::log; exit}

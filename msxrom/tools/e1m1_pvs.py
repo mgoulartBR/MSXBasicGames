@@ -18,7 +18,7 @@ def lib():
     return _lib
 
 def open_doors(m):
-    """fase 1: as portas ficam abertas para sempre (teto = o menor teto vizinho)."""
+    """PVS conservador com portas abertas; os paineis/colisoes sao dinamicos."""
     for l in m.linedefs:
         if l['special'] in DOOR_SPECIALS and l['left']>=0:
             a=m.sidedefs[l['right']]['sector']; b=m.sidedefs[l['left']]['sector']
@@ -43,7 +43,19 @@ def los(segs,q):
 class Level: pass
 def load(wadpath):
     L=Level(); L.w=Wad(wadpath); L.m=L.w.load_map('E1M1'); open_doors(L.m)
-    L.pcs=e1m1.wall_pieces(L.w,L.m); L.sc,L.info=e1m1.choose_scales(L.w,L.pcs); L.rgb,L.alpha,L.tiles=e1m1.build_atlas(L.w,L.sc,L.info)
+    L.pcs=e1m1.wall_pieces(L.w,L.m)
+    sources=list(L.pcs)
+    present={p['tex'] for p in sources}
+    for l in L.m.linedefs:
+        if l['special'] not in DOOR_SPECIALS: continue
+        for side in ('right','left'):
+            if l[side]<0: continue
+            tex=L.m.sidedefs[l[side]]['upper']
+            if tex in ('-','') or tex in present: continue
+            h,w=L.w.texture(tex).shape
+            sources.append(dict(tex=tex,tw=w,th=h,A=(0,0),B=(128,0),ybot=0,ytop=72))
+            present.add(tex)
+    L.sc,L.info=e1m1.choose_scales(L.w,sources); L.rgb,L.alpha,L.tiles=e1m1.build_atlas(L.w,L.sc,L.info)
     L.tile_avg={}
     for k,t in L.tiles.items():
         reg=L.rgb[t['y']:t['y']+t['h'],t['x']:t['x']+t['w']].reshape(-1,3).astype(float); L.tile_avg[k]=tuple(int(v) for v in reg.mean(0))

@@ -33,6 +33,13 @@ proc gp_reset {} {
     wr16 hp 100; wr16 armor 0; wr16 ammo 50
     foreach n {over yaw cool fire_t kills dbg} {wr8 $n 0}
     keymatrixup 8 1
+    if {[info exists ::e1m1_symbol(shots)]} {
+        for {set i 0} {$i<4} {incr i} {debug write memory [expr {$::e1m1_symbol(shots)+16*$i+12}] 0}
+        foreach name {door_pos door_state door_hold} {
+            for {set i 0} {$i<$::gp_def(NDOOR)} {incr i} {debug write memory [expr {$::e1m1_symbol($name)+$i}] 0}
+        }
+        keymatrixup 2 0x40
+    }
 }
 proc gp_blit {sx sy w h dx dy} {
     for {set y 0} {$y<$h} {incr y} {

@@ -29,7 +29,7 @@ MON_FRAMES=[
     ['POSS'+f+'1' for f in 'ABCDEFG']+['POSS'+f+'0' for f in 'HIJKL'],
     ['SPOS'+f+'1' for f in 'ABCDEFG']+['SPOS'+f+'0' for f in 'HIJKL'],
     ['TROO'+f+'1' for f in 'ABCDEFGH']+['TROO'+f+'0' for f in 'IJKLM']]
-SPRITES=sum(MON_FRAMES,[])+['STIMA0','MEDIA0','BON1A0','BON2A0','ARM1A0','CLIPA0','AMMOA0','SBOXA0','SHELA0','SHOTA0','COLUA0','ELECA0','CBRAA0','ARM2A0','BAR1A0','BAR1B0']+['BEXP'+f+'0' for f in 'ABCDE']
+SPRITES=sum(MON_FRAMES,[])+['STIMA0','MEDIA0','BON1A0','BON2A0','ARM1A0','CLIPA0','AMMOA0','SBOXA0','SHELA0','SHOTA0','COLUA0','ELECA0','CBRAA0','ARM2A0','BAR1A0','BAR1B0']+['BEXP'+f+'0' for f in 'ABCDE']+['BAL1'+f+'0' for f in 'ABCDE']
 SLOT={n:i for i,n in enumerate(SPRITES)}
 CW,CH=24,32
 def build_sprite_cells(w,pal):
@@ -157,7 +157,7 @@ def main():
         return out
     # --- VRAM: V = linhas 512..1023, B = linhas 468..491 (fontes)
     V=np.zeros((512,256),np.uint8)
-    at=q(imgs['atlas'],dither=True); at[(at==0)]=1; V[0:at.shape[0]]=at
+    at=q(imgs['atlas'],dither=True); at[(at==0)&(imgs['atlas'][...,3]>=128)]=1; V[0:at.shape[0]]=at
     V[256:384]=q(imgs['sprites'])                                        # linhas 768..895
     bar=q(imgs['bar']); V[384:384+bar.shape[0],0:bar.shape[1]]=bar    # 896..
     layout={}
@@ -180,6 +180,9 @@ def main():
         qg=q(g); gh=qg.shape[0]; V[gy-512:gy-512+gh,x:x+qg.shape[1]]=qg; gn.append((x,gy,qg.shape[1],gh,dx,dy)); x+=qg.shape[1]+1
     assert x<=256,x
     layout['gun']=gn
+    assert gy+max(g.shape[0] for g,_,_ in imgs['gun'])<=752
+    water=q(flat_tile('NUKAGE3')); water[water==0]=1
+    V[240:256,0:16]=water  # VRAM 752..767, below the gun frames and above sprites.
     B=np.zeros((64,256),np.uint8)                                   # linhas 468..531: fontes em 468..
     chars=FONT_CHARS; fyb=468; fo={}
     for n,f in imgs['fonts'].items():
@@ -232,6 +235,15 @@ def main():
         for hd in range(P.NHEAD):
             ids=[j for j in allids if P.inview(L,j,bx,by,P.head_deg(hd),P.CONE)]
             r=P.build_block(L,bx,by,ids=ids,tiles=[t for t in allt if P.tile_in_cone(L,t,bx,by,P.head_deg(hd),P.CONE)],lids=[i_ for i_ in alll if P.lid_in_cone(L,i_,bx,by,P.head_deg(hd),P.CONE)])
+            for fi,fl in enumerate(r['flat']):
+                if fl is None or fl[0]!='F': continue
+                name=m.sectors[fl[1]]['ftex']
+                if not name.startswith('NUKAGE'): continue
+                u=0; v=240
+                face=r['faces'][fi]
+                r['faces'][fi]=(face[0],face[3],face[2],face[1],*face[4:])
+                r['uvs'][fi]=(u,v,u,v+15,u+15,v+15,u+15,v)
+                r['flat'][fi]=None
             P.ceiling_faces(L,r,bx,by,allt,P.head_deg(hd))
             res[(bx,by,hd)]=r; maxf=max(maxf,len(r['faces']))
             nv=len(r['verts']); nf=len(r['faces'])
@@ -273,6 +285,36 @@ def main():
     off['blk']=len(meta); meta+=b''.join(struct.pack('<BH',*blk_tab[k]) for k in keys)
     off['grid']=len(meta); meta+=b''.join(struct.pack('<H',g) for g in grid)
     off['thing']=len(meta); meta+=b''.join(struct.pack('<hhBh',*t) for t in things)
+    # Door panels are dynamic; keep open geometry in PVS and store the four
+    # sectors/texture rectangles separately for the runtime renderer.
+    door_lines={}
+    for l in m.linedefs:
+        if l['special'] not in P.DOOR_SPECIALS or l['left']<0: continue
+        r=m.sidedefs[l['right']]; b=m.sidedefs[l['left']]
+        sec=r['sector'] if m.sectors[r['sector']].get('is_door') else b['sector']
+        if sec not in smap or sec in door_lines: continue
+        door_lines[sec]=l
+    off['door']=len(meta)
+    for sec,l in sorted(door_lines.items()):
+        r=m.sidedefs[l['right']]
+        sides=(m.sidedefs[l['right']],m.sidedefs[l['left']])
+        tex=next((s['upper'] for s in sides if s['sector']!=sec and s['upper'] in L.tiles),None)
+        assert tex is not None,(sec,l)
+        a,b=m.vertexes[l['v1']],m.vertexes[l['v2']]
+        # Midplane of the parallel linedefs (doors in this map are 16 units thick).
+        partner=next((p for p in m.linedefs if p is not l and p['special'] in P.DOOR_SPECIALS and
+                      (m.sidedefs[p['right']]['sector']==sec or m.sidedefs[p['left']]['sector']==sec)),None)
+        assert partner is not None,sec
+        c,d=m.vertexes[partner['v1']],m.vertexes[partner['v2']]
+        if (a[0]-b[0])*(c[0]-d[0])+(a[1]-b[1])*(c[1]-d[1])<0: c,d=d,c
+        ax,ay=(a[0]+c[0])//2,(a[1]+c[1])//2
+        bx,by=(b[0]+d[0])//2,(b[1]+d[1])//2
+        tile=L.tiles[tex]
+        meta+=struct.pack('<hhhhBBBBB',ax,ay,bx,by,smap[sec],tile['x'],tile['y'],tile['w'],tile['h'])
+    water_rects=[t for t in L.stiles if m.sectors[t['sec']]['ftex'].startswith('NUKAGE')]
+    off['water']=len(meta)
+    for t in water_rects:
+        meta+=struct.pack('<hhhhh',t['x0'],t['y0'],t['x1'],t['y1'],t['floor'])
     assert len(meta)<=16384,len(meta)
     meta_b=bytes(meta).ljust(16384,b'\0')
     rb=[]
@@ -288,7 +330,7 @@ def main():
     h+=sound_defines
     h+=['#define AREAA_BANK 2','#define AREAB_BANK 3','#define VRAM_BANK0 4','#define FLAT_TILE_Y 212','#define FL_REG_Y 640','#define CE_REG_Y 704','#define NVRAM_BANKS 8','#define META_BANK %d'%meta_bank,'#define RAST_BANK0 %d'%RAST_BANK0,
         '#define RAST_W %d'%R.nx,'#define RAST_H %d'%R.ny,'#define RAST_ROWS %d'%ROWS,'#define RAST_X0 %d'%R.x0,'#define RAST_Y0 %d'%R.y0,
-        '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things)]
+        '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things),'#define NDOOR %d'%len(door_lines),'#define NWATER %d'%len(water_rects)]
     for k,v in off.items(): h.append('#define META_%s %d'%(k.upper(),v))
     h+=['#define START_X %d'%start['x'],'#define START_Y %d'%start['y'],'#define START_ANG %d'%start['angle'],'#define EXIT_X %d'%((e1x+e2x)//2),'#define EXIT_Y %d'%((e1y+e2y)//2)]
     mk=sum(1 for t in things if t[2]<=2)

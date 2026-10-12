@@ -1,9 +1,42 @@
 # MSX DOOM — ROM texturizada (turbo R + V9968 + Geo3D)
 
+## E1M1 — fogo do Imp, portas, grades e radiação
+
+O Imp distante lança BAL1A0/BAL1B0; o impacto usa BAL1C0–BAL1E0. O projétil
+move-se a cada quadro, pode ser esquivado e só causa dano ao atingir o jogador.
+Paredes, portas, piso/teto e TTL interrompem o voo; há até quatro projéteis.
+O ataque corpo a corpo do Imp e os ataques dos outros inimigos continuam ativos.
+
+Quatro portas começam fechadas. **E ou ENTER** abre a porta próxima; o painel
+texturizado sobe, permite passagem e fecha após o intervalo. A presença de jogador
+ou inimigo no vão impede o fechamento. Portas são faces dinâmicas, fora do PVS
+estático; a visibilidade rasterizada considera portas fechadas, com broad-phase
+por caixa antes de testar cada passo da linha de visão.
+
+Texturas de meio dos linedefs de dois lados agora entram como faces mascaradas.
+BRNBIGL/C/R e BROWNGRN preservam o índice zero transparente; os flags de colisão
+do mapa continuam sendo respeitados. O Geo3D permanece sem z-buffer: os problemas
+anteriores de PVS, recorte e ordenação painter não foram eliminados nesta revisão.
+
+NUKAGE3 ocupa um tile de 16×16 em VRAM Y=752..767, separado das armas. Pisos
+radioativos usam UV desse tile e até quatro faces próximas, recortadas no near
+plane na CPU, para cobrir a região omitida pelo PVS. A textura é estática; o dano
+periódico continua ativo. Não inclui animação dos flats nem elevação de plataformas.
+
+Rotinas extras ocupam `_ECODE`, copiadas no boot de ROM 6000h para RAM D200h..EFFFh.
+O build valida os limites de código/dados. O restante dos modelos permanece residente
+no Geo3D e o desenho segue em lotes de faces, não em colunas calculadas pela CPU.
+
+Testes adicionais: `tools/test_e1m1_interactions.py` com E1M1_WAD/GEO3D_SIM;
+`E1M1_GAMEPLAY=1 E1M1_INTERACTIONS=1 ... -script tools/test_e1m1_openmsx.tcl`
+no fork Geo3D. Incluem cenas preparadas pelo debugger, teclas reais e capturas de
+VRAM; não representam uma partida completa manual. O boot aguarda a carga PCM.
+As seções históricas abaixo descrevem revisões anteriores, não o estado atual.
+
 ## E1M1 — MoonSound opcional
 
-O driver detecta OPL4 e sample RAM em 0x7E/0x7F e 0xC4–0xC7. Carrega dez samples
-DMX PCM8/11025 Hz do WAD privado em 105.680 bytes de RAM; cabe no MoonSound de
+O driver detecta OPL4 e sample RAM em 0x7E/0x7F e 0xC4–0xC7. Carrega onze samples
+DMX PCM8/11025 Hz do WAD privado em 117.357 bytes de RAM; cabe no MoonSound de
 128 KiB. Não usa os instrumentos da YRW801. Conversão unsigned→signed, remoção
 das margens DMX e rampas curtas contra clicks. O curto loop silencioso final é
 interrompido por key-off/damping: as vozes não ficam indefinidamente processando zeros.
@@ -88,7 +121,7 @@ Na comparação atual, ambas as ROMs deram 10,90 FPS no início e 9,59 com TAB, 
 mensurável nesses dois casos. Capturas `.vram` são o framebuffer lido diretamente do fork
 na troca de página; em execução acelerada, o screenshot SDL pode refletir um frame anterior.
 
-Não foram corrigidos nesta revisão PVS, near clipping, ordenação painter, portas abertas,
+Na revisão histórica de HUD/combate não foram corrigidos PVS, near clipping, ordenação painter, portas abertas,
 elevadores ou os glitches do cenário. FPGA, BIOS Panasonic e hardware físico permanecem UNTESTED.
 WAD, ROM e dados derivados continuam privados e fora do Git.
 
@@ -208,7 +241,7 @@ vértices/faces; o que sobra é descartado do mais distante/menor para o maior);
 
 Estado desta fase: **BUILD OK + SIMULATED + OPENMSX TESTED** (perfil sintético C-BIOS/R800/V9968/Geo3D, com ativação de R800 pelo debugger).
 **BIOS Panasonic, FPGA e hardware físico: UNTESTED.** O resultado do harness continua sendo apenas SIMULATED.
-Fase 1 NÃO tem: portas funcionando (ficam abertas), elevadores, pisos/tetos texturizados (faixas de cor do setor), iluminação por setor,
+Limitações históricas da Fase 1, parcialmente superadas pelas revisões acima: portas funcionando (ficavam abertas), elevadores, pisos/tetos texturizados (faixas de cor do setor), iluminação por setor,
 projéteis do imp (ataque instantâneo), espingarda como arma (o item só dá munição), explosão de barris, itens/monstros em áreas só
 alcançáveis por segredos (os 4 itens do fechamento secreto sudeste são ignorados). Colisão é por raster de 8 unidades.
 Teclas: setas = mover/girar, ESPAÇO = atirar, ENTER = usar (sair da fase perto do interruptor), **TAB = mostrar/ocultar X, Y e ângulo Doom**.
@@ -261,7 +294,7 @@ O teste `E1M1_WAD=/caminho/doom1.wad python3 -I tools/test_e1m1_ceiling.py` conf
 Isso é uma aproximação de teto liso, **não teto texturizado nem clipping/oclusão por pixel completos**. A cobertura dos planos é limitada;
 faces que cruzam o near continuam sujeitas ao descarte do Geo3D. O fundo de cor do setor cobre essas lacunas sem blocos pretos.
 Em lacunas ainda pode aparecer geometria distante que deveria estar oculta; a oclusão integral continua pendente.
-Portas abertas, pisos simplificados e limitações de geometria/PVS permanecem.
+Na revisão histórica do teto, portas ainda abertas e pisos simplificados permaneciam; a revisão de interações acima implementa portas e NUKAGE3. Limitações de geometria/PVS permanecem.
 
 Comparação controlada no mesmo fork/perfil R800, TAB desligado, 60 frames por cena:
 

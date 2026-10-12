@@ -9,5 +9,7 @@ python3 tools/e1m1_build.py "$WAD" "$SKILL"
 sdasz80 -plosgff -o out/crt0.rel src/crt0.s
 sdasz80 -plosgff -o out/math.rel src/math.s
 sdcc -mz80 --opt-code-size -Iprivate -c -o out/e1m1.rel src/e1m1.c
-sdcc -mz80 --no-std-crt0 --code-loc 0x8000 --data-loc 0xC000 -o out/e1m1.ihx out/crt0.rel out/math.rel out/e1m1.rel
+python3 tools/split_e1m1_code.py out/e1m1.asm
+sdasz80 -plosgff -o out/e1m1.rel out/e1m1.asm
+sdcc -mz80 --no-std-crt0 --code-loc 0x8000 --data-loc 0xC000 -Wl-b_ECODE=0xD200 -o out/e1m1.ihx out/crt0.rel out/math.rel out/e1m1.rel
 python3 tools/mkrom.py out/e1m1.ihx private/e1m1_banks.bin private/e1m1.rom
