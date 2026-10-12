@@ -239,6 +239,7 @@ static void ScreenMouse(u8 x, u8 y, u8 btn)
 	}
 }
 
+static u8 s_TickFc;
 static u8 s_Prev = SPEED_1;       // velocidade anterior a pausa
 
 static void StartGame(void)
@@ -334,6 +335,7 @@ void main()
 		if (g_Game.game_over) { if (g_Screen == SCR_HUB) Building_Leave(); g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
 
 		if (g_Dirty & D_HDR) Hud_Draw();
+		if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && !g_Splash && ++s_TickFc >= 12) { s_TickFc = 0; Hud_Tick(); }   // ticker de noticias (~4 Hz)
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
 		if (g_Dirty & D_CON)
 		{

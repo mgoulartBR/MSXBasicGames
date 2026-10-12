@@ -25,6 +25,12 @@ static void BuildPick(void)
 #define GR_PW    100
 #define GR_AX    170                                      // coluna do anuncio
 #define GR_AW    62
+#define PK_ROWS  7                                        // escolha em menu suspenso sobre a grade (como no original)
+#define PK_X     38
+#define PK_W     180
+#define PK_Y(i)  ((u8)(60 + (i) * ROW_H))
+#else
+#define PK_ROWS  LIST_ROWS
 #endif
 
 static void DrawRow_Grid_Body(u8 s)
@@ -121,29 +127,31 @@ static void Draw_GridRows(void)
 static void DrawRow_Pick_Body(u8 i)
 {
 	u8 v, y;
-	if (i >= LIST_ROWS) return;
+	if (i >= PK_ROWS) return;
 	y = CONTENT_Y + 14 + i * ROW_H;
 #if ART_SCENES
-	Ui_Fill(4, y - 1, 248, ROW_H, 14);
+	y = PK_Y(i);
+	Ui_Fill(PK_X + 4, y - 1, PK_W - 8, ROW_H, 14);
 	if (g_First + i >= s_PickN) return;
-	if (g_First + i == g_Sel) Chrome_Box(4, y - 1, 248, ROW_H, 5, 0);
+	if (g_First + i == g_Sel) Chrome_Box(PK_X + 4, y - 1, PK_W - 8, ROW_H, 5, 0);
 	Ui_Color(UI_BLACK);
 	v = s_PickList[g_First + i];
-	if (v == NONE) { Ui_Text(10, y, "(none)"); return; }
+	if (v == NONE) { Ui_Text(PK_X + 8, y, "(none)"); return; }
 	if (s_Pick == 1)
 	{
-		Ui_TextN(10, y, (*Mov(v)).title, 22);
-		Ui_Int(170, y, (*Mov(v)).blocks); Ui_Text(178, y, "bl");
-		Ui_Text(196, y, "Q"); Ui_Int(204, y, Sim_Quality(v));
-		Ui_Text(226, y, "x"); Ui_Int(234, y, g_Game.plays[0][v]);
+		Ui_TextN(PK_X + 8, y, (*Mov(v)).title, 17);
+		{ u8 x = Ui_Int(PK_X + 112, y, (*Mov(v)).blocks); Ui_Text(x, y, "bl"); }
+		Ui_Text(PK_X + 134, y, "Q"); Ui_Int(PK_X + 140, y, Sim_Quality(v));
+		Ui_Text(PK_X + 158, y, "x"); Ui_Int(PK_X + 164, y, g_Game.plays[0][v]);
 	}
 	else
 	{
 		const Contract* c = &g_Game.contract[v];
-		Ui_TextN(10, y, g_Ads[c->ad].title, 18);
-		Ui_Text(128, y, "min "); Ui_Dec1(152, y, g_Ads[c->ad].min_audience);
-		Ui_Int(184, y, c->reps_left); Ui_Text(196, y, "x");
-		Ui_Int(208, y, c->days_left); Ui_Text(220, y, "d");
+		u8 x;
+		Ui_TextN(PK_X + 8, y, g_Ads[c->ad].title, 10);
+		Ui_Text(PK_X + 72, y, "min"); Ui_Dec1(PK_X + 94, y, g_Ads[c->ad].min_audience);
+		x = Ui_Int(PK_X + 122, y, c->reps_left); Ui_Text(x, y, "x");
+		x = Ui_Int(PK_X + 148, y, c->days_left); Ui_Text(x, y, "d");
 	}
 	return;
 #endif
@@ -174,11 +182,11 @@ static void DrawRow_Pick_Body(u8 i)
 
 static void DrawRow_Pick(u8 i)
 {
-	if (i >= LIST_ROWS) return;
+	if (i >= PK_ROWS) return;
 	Ui_Begin();
 	DrawRow_Pick_Body(i);
 #if ART_SCENES
-	Ui_End(4, (u8)(CONTENT_Y + 14 + i * ROW_H - 1), 248, ROW_H);
+	Ui_End(PK_X + 4, (u8)(PK_Y(i) - 1), PK_W - 8, ROW_H);
 #else
 	Ui_End(0, (u8)(CONTENT_Y + 14 + i * ROW_H - 1), 255, ROW_H);
 #endif
@@ -187,7 +195,7 @@ static void DrawRow_Pick(u8 i)
 static void DrawList_Pick(void)
 {
 	u8 i;
-	for (i = 0; i < LIST_ROWS; i++) DrawRow_Pick(i);
+	for (i = 0; i < PK_ROWS; i++) DrawRow_Pick(i);
 }
 
 static void Draw_Grid_Body(void)
@@ -195,17 +203,13 @@ static void Draw_Grid_Body(void)
 #if ART_SCENES
 	Ui_Fill(0, CONTENT_Y - 2, 0, 160, UI_BG);
 	Chrome_Box(0, CONTENT_Y - 2, 256, 160, 14, 1);
-	Ui_Color(UI_BLACK);
-	if (s_Pick == 0)
-	{
-		Scene_Part(SCN_GRIDCOL, 0, 14, 2, 30);                // setas e lixeira (esquerda) e os 6 icones (direita), recortados do original
-		Scene_Part(SCN_GRIDCOL, 14, 10, 234, 30);
-		Draw_GridRows();
-		GridDetail_Body();
-		Hint("L/R:column OK:edit  icons: ratings, erase, save");
-		return;
-	}
-	Ui_Text(8, CONTENT_Y + 3, s_Pick == 1 ? "Choose programme" : "Choose ad contract");
+	Scene_Part(SCN_GRIDCOL, 0, 14, 2, 30);                // setas e lixeira (esquerda) e os 6 icones (direita), recortados do original
+	Scene_Part(SCN_GRIDCOL, 14, 10, 234, 30);
+	Draw_GridRows();
+	GridDetail_Body();
+	if (s_Pick == 0) { Hint("L/R:column OK:edit  icons: ratings, erase, save"); return; }
+	Chrome_Box(PK_X, 44, PK_W, 14 + PK_ROWS * ROW_H + 6, 14, 1);          // menu suspenso por cima da grade
+	Ui_Color(UI_BLACK); Ui_Text(PK_X + 8, 49, s_Pick == 1 ? "Choose programme" : "Choose ad contract");
 	DrawList_Pick();
 	Hint("OK:place BACK:cancel");
 	return;
@@ -248,7 +252,7 @@ void Grid_Input(u8 ev) __banked
 		}
 		return;
 	}
-	NavApply(Nav(ev, s_PickN, LIST_ROWS));
+	NavApply(Nav(ev, s_PickN, PK_ROWS));
 	if (ev & IN_BACK) { s_Pick = 0; g_Dirty |= D_CON; return; }
 	if (ev & IN_OK)
 	{
@@ -684,7 +688,12 @@ void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
 	}
 	else
 	{
+#if ART_SCENES
+		u8 r = HitRow(y, (u8)(PK_Y(0) - 1), ROW_H, PK_ROWS);
+		if (x < PK_X || x >= PK_X + PK_W) return;
+#else
 		u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, LIST_ROWS);
+#endif
 		if (r == 0xFF || !SelVisible(r, s_PickN)) return;
 		if (btn) Grid_Input(IN_OK);
 	}

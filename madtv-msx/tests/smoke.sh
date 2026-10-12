@@ -103,7 +103,7 @@ back
 room 9
 at 0.6 { shot 3b_office; dump office }
 key RET
-at 0.5 {}; key RET; at 0.3 {}; key DOWN; key RET
+at 0.5 {}; key RET; at 1.2 { shot 4a_pick }; key DOWN; key RET
 at 1.2 { shot 4_grid; dump placed }
 back
 back

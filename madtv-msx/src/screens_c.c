@@ -48,8 +48,16 @@ void Boss_Draw(void) __banked
 	i32 lim = Sim_CreditLimit();
 	Ui_Begin();
 #if ART_SCENES
-	Ui_Fill(0, 137, 0, 49, UI_BG);                        // abaixo da cena
 	Scene_Draw(SCN_BOSS, 0, CONTENT_Y - 2);
+	{                                                     // painel inferior: o premio Sammy (melhor telejornal)
+		u8 left = (u8)((SAMMY_DAYS - g_Game.day % SAMMY_DAYS) % SAMMY_DAYS), x;
+		Chrome_Box(0, 138, 256, 48, 14, 1);
+		Ui_Color(UI_BLACK);
+		Ui_Text(8, 143, "Sammy - best newscast of the week");
+		if (left) { x = Ui_Int(8, 156, left); Ui_Text(x, 156, left == 1 ? " day to go." : " days to go."); }
+		else Ui_Text(8, 156, "Awarded tonight!");
+		Ui_Text(8, 168, "Your newscast"); x = Ui_Int(92, 168, Sim_NewsQuality()); Ui_Text(x, 168, "%"); Ui_Text(150, 168, "prize $300k");
+	}
 	Chrome_Box(112, CONTENT_Y, 140, 106, 14, 1);
 	Ui_Color(UI_BLACK);
 	if (g_Game.day % SAMMY_DAYS >= SAMMY_DAYS - 1 || g_Game.day % SAMMY_DAYS == 0)      // dia do Sammy (ou a vespera): a fala do chefe do original
