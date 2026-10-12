@@ -195,3 +195,50 @@ contém o código conversor.
 - O terceiro fluxo (zonas) e os bits baixos do flag (classe de raio) não são usados.
 - A convenção "bit 6 = esquerda" é uma suposição; a pista pode sair espelhada.
 - Sem sprites, HUD, colisão, nem os cenários (placas, túneis) do original.
+
+
+---
+
+# Versão 5: sprites de carros adversários (`road_cars.asm`)
+
+| | |
+|---|---|
+| ![carros](screenshot_cars.png) | ![carros](screenshot_cars2.png) |
+
+Pista real (v4) + 3 carros adversários. **Arte 100 % original** (carro de corrida
+genérico visto por trás, gerado em `gen_cars.py`), sem personagens nem gráficos da Sega.
+
+```sh
+./build_cars.sh "/caminho/Super Monaco GP (USA) (En,Ja).md" 0 40 0 cars.rom [pos_inicial]
+openmsx -machine C-BIOS_MSX2+ -cart cars.rom
+```
+
+## Como funciona
+- **Sprites modo 2 (SCREEN 5), 16×16**: cada carro usa 2 planos sobrepostos
+  (escuro: asa/pneus/câmbio, por cima; corpo colorido por linha). 4 tamanhos
+  (16, 11, 7 e 4 px) escolhidos pela distância. Tabelas BIOS: atributos `$7600`,
+  cores `$7400`, padrões `$7800`; por isso a textura foi limitada a 132 linhas
+  (as linhas 232+ da página 0 ficam livres para os sprites).
+- **Projeção por tabelas**: distância em 1/4 de posição → linha da base (`ytab`),
+  tamanho (`sizetab`) e zona (`zlinetab`). O X vem da faixa do carro × meia
+  largura da pista na linha **+ deslocamento de curva da zona** (os sprites não
+  acompanham o scroll R#26/R#27, então somamos `s` à mão). A fórmula usa o R#23 da
+  zona para achar a linha certa da textura (largura da pista).
+- **Atributos enviados no VBlank** (ISR, 28 bytes por `OTIR`), nunca no laço
+  principal, para não colidir com o uso da porta de controle pelas interrupções.
+- **Paleta reorganizada**: 0 céu (com `TP=1` no R#8: sem isso a cor 0 é
+  transparente e mostra a cor de fundo), 1 névoa, 2 grama, 3 azul, 4–7 asfalto e 8–11
+  zebra (giram), 12 vermelho, 13 escuro, 14 amarelo, 15 branco. A faixa central
+  agora é uma linha branca **contínua estática** (as cores dos carros precisaram dos índices).
+- Os carros avançam na pista com velocidades diferentes, dão a volta e somem quando
+  ficam a mais de 63 posições ou atrás do jogador.
+
+## Resultados (openMSX 19.1, C-BIOS MSX2+; **emulador, não hardware real**)
+**60 fps, ≈ 37 % de CPU livre.** Execução longa de 240 s emulados (14 mil quadros)
+sem travar; as posições dos carros dão a volta na pista corretamente.
+
+## Limitações
+- Sem colisão, ultrapassagem real, nem IA; os carros só andam em linha reta na faixa.
+- Prioridade entre carros sobrepostos segue a ordem dos planos (não a profundidade).
+- 4 tamanhos de sprite ⇒ "saltos" visíveis ao se aproximar; a linha de base é suave.
+- Os sprites não acompanham o relevo dentro de uma mesma zona (usam a linha da tabela).

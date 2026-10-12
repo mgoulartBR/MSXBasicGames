@@ -178,6 +178,14 @@ monotônica com `V/L` (flag 1 -> ~10,9; 2 -> ~8,2; 4 -> ~6,5; ...).
 openMSX: **60 fps, ~46 % de CPU livre**. Os dados derivados da ROM ficam só
 localmente (`track.inc` no `.gitignore`).
 
+## 13. Protótipo v5: sprites de carros (resultado)
+
+`prototype/road/road_cars.asm`: 3 carros adversários (2 planos de sprite 16x16
+cada, 4 tamanhos) sobre a pista real. Arte original. Achados de hardware:
+sprites não seguem R#26/R#27 (somar o deslocamento da zona ao X); em SCREEN 5 a cor 0
+é transparente (mostra R#7) a menos que `TP=1` em R#8; as tabelas de sprites da BIOS
+ocupam as linhas 232+ da página 0. openMSX: **60 fps, ~37 % de CPU livre**.
+
 ## 8. Pendências
 
 - [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
@@ -187,4 +195,5 @@ localmente (`track.inc` no `.gitignore`).
 - [x] Protótipo Z80/V9958 da pista (§9) e versão paleta + zonas R#27 (§10).
 - [x] Relevo no renderizador MSX (§11).
 - [x] Ler as pistas reais da ROM do usuário (§12).
-- [ ] Horizonte móvel/oclusão de crista; sprites dos carros; HUD; usar o fluxo de zonas e a classe de raio do flag.
+- [x] Sprites dos carros adversários (§13).
+- [ ] Carro do jogador, colisão/IA, HUD; horizonte móvel/oclusão de crista; usar o fluxo de zonas e a classe de raio do flag.
