@@ -17,6 +17,16 @@ static void BuildPick(void)
 	else             { for (i = 0; i < MAX_CONTRACTS; i++) if (g_Game.contract[i].ad != NONE) s_PickList[s_PickN++] = i; }
 }
 
+#if ART_SCENES
+#define GR_Y(s)  ((u8)(30 + (s) * 16))                    // linhas da grade (7 x 16 px) a partir do topo do conteudo
+#define GR_TX    32                                       // coluna da hora
+#define GR_TW    32
+#define GR_PX    66                                       // coluna do programa
+#define GR_PW    102
+#define GR_AX    170                                      // coluna do anuncio
+#define GR_AW    62
+#endif
+
 static void DrawRow_Grid_Body(u8 s)
 {
 	char b[8];
@@ -26,18 +36,35 @@ static void DrawRow_Grid_Body(u8 s)
 	sl = &g_Game.slot[0][s];
 	y = CONTENT_Y + 14 + s * 14;
 #if ART_SCENES
-	Ui_Fill(4, y - 2, 248, 13, 14);                      // painel cinza; hora, programa e anuncio em campos afundados (selecionado = azul)
-	ClockStr(b, FIRST_SLOT_T + s * 60);
-	Chrome_Box(6, y - 2, 40, 13, 14, 0);
-	Chrome_Box(50, y - 2, 104, 13, (s == s_Slot && s_GridCol == 0) ? 5 : 14, 0);
-	Chrome_Box(158, y - 2, 92, 13, (s == s_Slot && s_GridCol == 1) ? 5 : 14, 0);
-	Ui_Color(UI_BLACK);
-	Ui_Text(12, y, b);
-	if (sl->movie == NONE) Ui_Text(56, y, "- empty -");
-	else if (sl->part) Ui_Text(56, y, "  (cont.)");
-	else Ui_TextN(56, y, (*Mov(sl->movie)).title, 16);
-	if (sl->ad == NONE) Ui_Text(164, y, "no ad");
-	else Ui_TextN(164, y, g_Ads[g_Game.contract[sl->ad].ad].title, 14);
+	y = GR_Y(s);                                          // grade no estilo do original: hora | programa (2 linhas) | anuncio (2 linhas); rosa = ja comecou
+	{
+		u8 aired = (g_Game.t >= FIRST_SLOT_T + (u16)s * 60 + 5), fp, fa;
+		u8 mb = sl->movie, cont = (u8)(mb != NONE && sl->part);
+		fp = (s == s_Slot && s_GridCol == 0) ? 5 : (aired ? 9 : 14);
+		fa = (s == s_Slot && s_GridCol == 1) ? 5 : (aired ? 9 : 14);
+		Ui_Fill(GR_TX, y, GR_AX + GR_AW - GR_TX, 16, 1);
+		Chrome_Box(GR_TX, y, GR_TW, 15, aired ? 9 : 14, 1);
+		Chrome_Box(GR_PX, cont ? (u8)(y - 1) : y, GR_PW, cont ? 16 : 15, fp, 1);
+		Chrome_Box(GR_AX, y, GR_AW, 15, fa, 1);
+		Ui_Color(UI_BLACK);
+		ClockStr(b, FIRST_SLOT_T + s * 60);
+		Ui_Text(GR_TX + 4, (u8)(y + 4), b);
+		if (mb != NONE)
+		{
+			if (cont) { Ui_Int(GR_PX + 6, (u8)(y + 4), sl->part + 1); Ui_Text(GR_PX + 18, (u8)(y + 4), "/"); Ui_Int(GR_PX + 26, (u8)(y + 4), (*Mov(mb)).blocks); }
+			else
+			{
+				Ui_TextN(GR_PX + 3, (u8)(y + 1), (*Mov(mb)).title, 16);
+				Ui_Text(GR_PX + 3, (u8)(y + 8), "block 1/"); Ui_Int(GR_PX + 51, (u8)(y + 8), (*Mov(mb)).blocks);
+			}
+		}
+		if (sl->ad != NONE)
+		{
+			const Contract* ct = &g_Game.contract[sl->ad];
+			Ui_TextN(GR_AX + 3, (u8)(y + 1), g_Ads[ct->ad].title, 10);
+			{ u8 x = Ui_Int(GR_AX + 3, (u8)(y + 8), ct->reps_left); Ui_Text(x, (u8)(y + 8), "x"); x = Ui_Int((u8)(x + 12), (u8)(y + 8), ct->days_left); Ui_Text(x, (u8)(y + 8), "d"); }
+		}
+	}
 	return;
 #endif
 	Ui_Fill(0, y - 2, 255, 13, UI_BG);
@@ -51,13 +78,35 @@ static void DrawRow_Grid_Body(u8 s)
 	else { Ui_Color((s == s_Slot && s_GridCol == 1) ? UI_YELLOW : UI_CYAN); Ui_TextN(156, y, g_Ads[g_Game.contract[sl->ad].ad].title, 16); }
 }
 
+#if ART_SCENES
+static void GridDetail_Body(void)                          // painel de baixo: o que esta no slot selecionado
+{
+	const Slot* sl = &g_Game.slot[0][s_Slot];
+	char b[8];
+	Chrome_Box(0, 154, 256, 32, 14, 1);
+	Ui_Color(UI_BLACK);
+	ClockStr(b, FIRST_SLOT_T + s_Slot * 60);
+	Ui_Text(8, 158, b);
+	if (sl->movie == NONE) Ui_Text(48, 158, "(empty slot)");
+	else
+	{
+		Ui_TextN(48, 158, (*Mov(sl->movie)).title, 33);
+		Ui_Text(8, 170, "Q"); Ui_Int(18, 170, Sim_Quality(sl->movie));
+		Ui_Text(44, 170, "block"); { u8 x = Ui_Int(80, 170, sl->part + 1); Ui_Text(x, 170, "/"); Ui_Int((u8)(x + 6), 170, (*Mov(sl->movie)).blocks); }
+	}
+	if (sl->ad == NONE) Ui_Text(132, 170, "no ad contract");
+	else { const Ad* ad = &g_Ads[g_Game.contract[sl->ad].ad]; Ui_Text(132, 170, "min"); Ui_Dec1(156, 170, ad->min_audience); Ui_Text(184, 170, "M"); Money(200, 170, ad->profit); }
+}
+#endif
+
 static void DrawRow_Grid(u8 s)
 {
 	if (s >= NUM_SLOTS) return;
 	Ui_Begin();
 	DrawRow_Grid_Body(s);
 #if ART_SCENES
-	Ui_End(4, (u8)(CONTENT_Y + 14 + s * 14 - 2), 248, 13);
+	Ui_End(GR_TX, (u8)(GR_Y(s) - 1), GR_AX + GR_AW - GR_TX, 17);
+	if (s == s_Slot) { Ui_Begin(); GridDetail_Body(); Ui_End(0, 154, 256, 32); }
 #else
 	Ui_End(0, (u8)(CONTENT_Y + 14 + s * 14 - 2), 255, 13);
 #endif
@@ -149,9 +198,11 @@ static void Draw_Grid_Body(void)
 	Ui_Color(UI_BLACK);
 	if (s_Pick == 0)
 	{
-		Ui_Text(8, CONTENT_Y + 3, "Programme grid (today)");
+		Scene_Part(SCN_GRIDCOL, 0, 14, 2, 30);                // setas e lixeira (esquerda) e os 6 icones (direita), recortados do original
+		Scene_Part(SCN_GRIDCOL, 14, 10, 234, 30);
 		Draw_GridRows();
-		Hint("L/R:column OK:edit BACK:office");
+		GridDetail_Body();
+		Hint("L/R:column OK:edit  icons: ratings, erase, save");
 		return;
 	}
 	Ui_Text(8, CONTENT_Y + 3, s_Pick == 1 ? "Choose programme" : "Choose ad contract");
@@ -588,11 +639,45 @@ void Ratings_Dyn(void) __banked { RatingsDynLocal(); }
 void Ratings_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_OFFICE); }
 
 // ---------------------------------------------------------------- mouse
+#if ART_SCENES
+static void GridClear(void)                                        // lixeira / borracha: esvazia o slot selecionado (se ainda nao comecou)
+{
+	if (g_Game.t >= FIRST_SLOT_T + (u16)s_Slot * 60 + 5) { Sim_Msg("That hour has already started."); g_Dirty |= D_MSG; return; }
+	if (g_Game.slot[0][s_Slot].movie == NONE && g_Game.slot[0][s_Slot].ad == NONE) { Sim_Msg("Nothing to erase."); g_Dirty |= D_MSG; return; }
+	Sim_ClearSlot(s_Slot); Sim_Msg("Slot cleared.");
+	g_Dirty |= D_DAT | D_MSG;
+}
+#endif
+
 void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
 {
 	if (s_Pick == 0)
 	{
+#if ART_SCENES
+		u8 r, col = (x >= GR_AX);
+		if (x < 30)                                                    // coluna da esquerda: seta p/ cima, seta p/ baixo, lixeira
+		{
+			if (!btn) return;
+			if (y >= 36 && y < 52) Grid_Input(IN_UP);
+			else if (y >= 52 && y < 70) Grid_Input(IN_DOWN);
+			else if (y >= 114 && y < 134) GridClear();
+			return;
+		}
+		if (x >= 232)                                                  // 6 icones (como no original): so alguns existem nesta versao
+		{
+			u8 k = (u8)((y - 30) / 17);
+			if (!btn || y < 30 || k > 5) return;
+			if (k == 0) Goto(SCR_OPTIONS);
+			else if (k == 3) Goto(SCR_RATINGS);
+			else if (k == 4) GridClear();
+			else if (k == 5) Goto(SCR_SLOTS);
+			else { Sim_Msg("That tool is not in this port yet."); g_Dirty |= D_MSG; }
+			return;
+		}
+		r = HitRow(y, GR_Y(0), 16, NUM_SLOTS);
+#else
 		u8 r = HitRow(y, (u8)(CONTENT_Y + 12), 14, NUM_SLOTS), col = (x >= 152);
+#endif
 		if (r == 0xFF) return;
 		if (r != s_Slot || col != s_GridCol) { u8 old = s_Slot; s_Slot = r; s_GridCol = col; MarkRows(old, r); }
 		if (btn) Grid_Input(IN_OK);

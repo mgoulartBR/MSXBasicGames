@@ -104,7 +104,7 @@ room 9
 at 0.6 { shot 3b_office; dump office }
 key RET
 at 0.5 {}; key RET; at 0.3 {}; key DOWN; key RET
-at 0.6 { shot 4_grid; dump placed }
+at 1.2 { shot 4_grid; dump placed }
 back
 back
 # --- Ad agency (sala 4): assinar oferta 0

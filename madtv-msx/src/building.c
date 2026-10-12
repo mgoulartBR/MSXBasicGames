@@ -67,6 +67,38 @@ static void ArtRect(u8 sx, u8 sy, u8 w, u8 h, u8 dx, u8 dy)
 	SET_BANK_SEGMENT(3, prev);
 }
 
+// micro-fonte 3x5 (celula 4x6) so com A-Z e 0-9, para os rotulos sobre as portas: guardada em VRAM (pagina 1, linhas 500..505) e copiada com LMMM/TIMP
+static const u8 k_Micro[36][5] = {
+	{2,5,7,5,5},{6,5,6,5,6},{3,4,4,4,3},{6,5,5,5,6},{7,4,6,4,7},{7,4,6,4,4},{3,4,5,5,3},{5,5,7,5,5},{7,2,2,2,7},{1,1,1,5,2},{5,5,6,5,5},{4,4,4,4,7},{5,7,7,5,5},
+	{6,5,5,5,5},{2,5,5,5,2},{6,5,6,4,4},{2,5,5,7,3},{6,5,6,5,5},{3,4,2,1,6},{7,2,2,2,2},{5,5,5,5,7},{5,5,5,5,2},{5,5,7,7,5},{5,5,2,5,5},{5,5,2,2,2},{7,1,2,4,7},
+	{7,5,5,5,7},{2,6,2,2,7},{6,1,2,4,7},{6,1,2,1,6},{5,5,7,1,1},{7,4,6,1,6},{3,4,7,5,7},{7,1,2,2,2},{7,5,7,5,7},{7,5,7,1,6}
+};
+#define MICRO_ROW 500
+static void Micro_Init(void)
+{
+	u8 buf[72], r, g;
+	for (r = 0; r < 6; r++)
+	{
+		for (g = 0; g < 36; g++)
+		{
+			u8 b = (r < 5) ? k_Micro[g][r] : 0;
+			buf[g * 2]     = (u8)(((b & 4) ? 0x10 : 0) | ((b & 2) ? 0x01 : 0));       // pixels 0 e 1 (cor 1 = preto; 0 = transparente no TIMP)
+			buf[g * 2 + 1] = (u8)((b & 1) ? 0x10 : 0);                                // pixel 2 (o 3o fica vazio: espaco entre letras)
+		}
+		VDP_WriteVRAM_128K(buf, (u16)(0x8000 + (u16)(MICRO_ROW - 256 + r) * 128), 0, 72);
+	}
+}
+
+static u8 MicroLen(const char* s) { u8 n = 0; while (s[n]) n++; return n; }
+static void Micro(u8 x, u8 y, const char* s)                                          // dentro de Ui_Begin (buffer na pagina 2)
+{
+	for (; *s; s++, x += 4)
+	{
+		u8 c = (u8)*s, g = (c >= 'A' && c <= 'Z') ? (u8)(c - 'A') : (c >= '0' && c <= '9') ? (u8)(26 + c - '0') : 0xFF;
+		if (g != 0xFF) VDP_CommandLMMM((u16)g * 4, MICRO_ROW, x, (u16)y + 512, 4, 6, VDP_OP_TIMP);
+	}
+}
+
 static void DoorBody(u8 i)
 {
 	const Room* r = &k_Rooms[i];
@@ -74,13 +106,12 @@ static void DoorBody(u8 i)
 	ArtRect((u8)(x - 14), (u8)(fy - 56), 28, 31, (u8)(x - 14), (u8)(fy - 30));       // fundo (porta, parede) desta celula
 	if (i == g_BldSel)
 	{
-		Ui_Fill((u8)(x - 12), (u8)(fy - 29), 24, 8, COLOR_LIGHT_YELLOW);               // rotulo em destaque
+		{ u8 lw = (u8)(MicroLen(r->lbl) * 4 + 4); Ui_Fill((u8)(x - lw / 2), (u8)(fy - 29), lw, 8, COLOR_LIGHT_YELLOW); }   // rotulo em destaque
 		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 22, 1, COLOR_LIGHT_YELLOW);             // moldura em volta da porta
 		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
 		Ui_FillPx((u8)(x + 10), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
 	}
-	Ui_Color(UI_BLACK);
-	Ui_Text((u8)(x - 12), (u8)(fy - 29), r->lbl);
+	Micro((u8)(x - MicroLen(r->lbl) * 2), (u8)(fy - 27), r->lbl);
 }
 #else
 static void DoorBody(u8 i)
@@ -126,7 +157,7 @@ static void BodyAll(void)
 		}
 		SET_BANK_SEGMENT(3, prev);
 	}
-	for (i = 0; i < NROOMS; i++) { const Room* rm = &k_Rooms[i]; Ui_Color(UI_BLACK); Ui_Text((u8)(rm->x - 12), (u8)(FY(rm->floor) - 29), rm->lbl); }
+	for (i = 0; i < NROOMS; i++) { const Room* rm = &k_Rooms[i]; Micro((u8)(rm->x - MicroLen(rm->lbl) * 2), (u8)(FY(rm->floor) - 27), rm->lbl); }
 	DoorBody(g_BldSel);
 #else
 	ClearContent();
@@ -244,6 +275,9 @@ static void RivalThink(Mover* m)                 // decoracao: anda ate uma port
 void Building_Reset(void) __banked
 {
 	u8 i;
+#if ART_HUB
+	Micro_Init();
+#endif
 	for (i = 0; i < 3; i++)
 	{
 		s_M[i].x = (i == 0) ? SHAFT_X : k_Rooms[i == 1 ? 3 : 9].x;

@@ -17,9 +17,10 @@ SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40
           ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (110, 4, 230, 4 + H)), ("realty", "realestate.png", (160, 4, 280, 4 + H)),
           ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H)),
           ("news", "news.png", (150, 4, 270, 4 + H)),
+          ("gridcol", "grid1.png", None),                      # colunas da grade (setas+lixeira a esquerda, 6 icones a direita) lado a lado: 28 + 20 = 48 px
           ("title", "../user/title.webp", (130, 10, 1456, 981))]   # tela de abertura (arte enviada pelo usuario, ampliada ~5x): reduzida para 256x196
 RESIZE = {"title": (256, 196)}
-FIXED_SEG = {"news": 15, "title": 32}     # segmento 15 estava livre: evita ROM de 512 KB
+FIXED_SEG = {"news": 15, "gridcol": 2, "title": 32}     # segmento 15 estava livre: evita ROM de 512 KB
 
 def main(d):
     first_seg = 19
@@ -27,12 +28,15 @@ def main(d):
     table = []
     for name, fn, box in SCENES:
         if name in FIXED_SEG: seg_save, seg = seg, FIXED_SEG[name]
-        im = Image.open(d + "/" + fn).convert("RGB").crop(box)
+        if name == "gridcol":
+            src = Image.open(d + "/" + fn).convert("RGB")
+            im = Image.new("RGB", (48, 106)); im.paste(src.crop((6, 6, 34, 112)), (0, 0)); im.paste(src.crop((294, 6, 314, 112)), (28, 0))
+        else: im = Image.open(d + "/" + fn).convert("RGB").crop(box)
         if name == "title": im.paste((0, 0, 0), (270, 625, 870, 740))      # credito "MSX Port by BigFive" some: o jogo o escreve com a fonte propria (legivel a 256 px)
         if name in RESIZE: im = im.resize(RESIZE[name], Image.LANCZOS)
         w, h = im.size
         stride = w // 2
-        rps = 8192 // stride
+        rps = min(255, 8192 // stride)             # u8 na tabela de cenas
         nseg = (h + rps - 1) // rps
         px = [[nearest(im.getpixel((x, y))) for x in range(w)] for y in range(h)]
         q = Image.new("RGB", (w, h))

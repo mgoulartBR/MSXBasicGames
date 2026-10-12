@@ -34,7 +34,7 @@ void Chrome_Box(u8 x, u8 y, u8 w, u8 h, u8 face, u8 raised) __banked
 #if ART_SCENES
 typedef struct { u8 seg, stride, h, rps; } SceneDef;
 static const SceneDef k_Scn[] = SCN_INIT;
-void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` bytes em segmentos de dados mapeados no banco 3 (rps linhas por segmento)
+void Scene_Part(u8 id, u8 sbyte, u8 nbytes, u8 dx, u8 dy) __banked   // so as colunas [sbyte, sbyte+nbytes) de cada linha (1 byte = 2 pixels)
 {
 	const SceneDef* d = &k_Scn[id];
 	u8 r, seg = 0xFF, s, prev = GET_BANK_SEGMENT(3);
@@ -42,12 +42,18 @@ void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` by
 	{
 		s = (u8)(d->seg + r / d->rps);
 		if (s != seg) { SET_BANK_SEGMENT(3, s); seg = s; }
-		Ui_BlitRow((const u8*)(0xA000 + (u16)(r % d->rps) * d->stride), dx, (u8)(dy + r), d->stride);
+		Ui_BlitRow((const u8*)(0xA000 + (u16)(r % d->rps) * d->stride + sbyte), dx, (u8)(dy + r), nbytes);
 	}
 	SET_BANK_SEGMENT(3, prev);
 }
+
+void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` bytes em segmentos de dados mapeados no banco 3 (rps linhas por segmento)
+{
+	Scene_Part(id, 0, k_Scn[id].stride, dx, dy);
+}
 #else
 void Scene_Draw(u8 id, u8 dx, u8 dy) __banked { (void)id; (void)dx; (void)dy; }
+void Scene_Part(u8 id, u8 sbyte, u8 nbytes, u8 dx, u8 dy) __banked { (void)id; (void)sbyte; (void)nbytes; (void)dx; (void)dy; }
 #endif
 
 #if ART_SCENES
