@@ -140,10 +140,20 @@ notícia para o MSX: cabe em poucos KB e a pista é gerada em tempo de execuçã
 Ferramenta: `tools/smgp/tracks.py <rom> [n]` (usa a ROM do usuário; não
 contém dados dela).
 
+## 9. Protótipo Z80/V9958 (resultado)
+
+`prototype/road/`: pista por bandas com `HMMM` (dados sintéticos). Em openMSX
+(C-BIOS MSX2+): **11,8 fps** com 56 bandas de 256 px; o limite é a banda de
+cópia do VDP (~220 KB/s para `HMMM`, ~360 KB/s para `HMMV`), não o Z80. Para 30 fps
+o orçamento é ~7 KB/quadro. Caminho recomendado: listras por ciclo de paleta +
+curva por zonas (R#27 + interrupção de linha), copiando só quando necessário.
+Detalhes e números em `prototype/road/README.md`. Medição em emulador; falta
+validar em hardware real.
+
 ## 8. Pendências
 
 - [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
 - [ ] Valor do campo `flag` do segmento de curvatura (bits além do 6) e fórmula exata de `$87A`.
 - [ ] Preenchimento de `$9500` e tabela V (`a6` em `$6C20`).
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
-- [ ] Protótipo Z80/V9958 da pista com dados sintéticos; medir FPS.
+- [x] Protótipo Z80/V9958 da pista (ver §9). Próximo: paleta + zonas R#27.

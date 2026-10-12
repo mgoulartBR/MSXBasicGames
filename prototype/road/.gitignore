@@ -1,0 +1,5 @@
+# gerados por build.sh / testes
+config.inc
+speedcfg.inc
+*.rom
+*.txt
