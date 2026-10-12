@@ -70,9 +70,45 @@ e quanto deslocá-la (HScroll, curvas).
 - Como não há VSRAM, o "VScroll por linha" vira "qual linha da textura copiar"
   (opção b) — natural para `HMMM`.
 
-## 5. Pendências
+## 5. Tabelas de profundidade (passo 2) — mapeamento
 
-- [ ] Mapear as rotinas que preenchem `$9900`/`$9600`/tabela V (`a6`).
-- [ ] Localizar tabelas de dados de pista (curvas, relevo, zonas) na ROM.
+Duas rotinas por quadro na corrida, chamadas pelo estado `$3A18` (`$6ED0` e `$70CE`):
+
+| Tabela (RAM) | Conteúdo | Quem preenche |
+|---|---|---|
+| `$9600` (120 words) | deslocamento X (curva) por passo de profundidade | `$7000`–`$7040`: rampa linear acumulada (16.16) com inclinação derivada da curvatura atual (`$87A` faz a divisão); depois soma `$9500` |
+| `$9500` (96 words) | offset lateral/relevo por profundidade (também lido por `$9BE0` p/ inclinação do carro) | **a mapear** |
+| `$9400`, `$9300` | versões subamostradas (cada 4 words) de `$9600` | `$7020`, `$70B8` |
+| `$9800`–`$9850` | atributos por segmento (34 entradas na 1ª passada, 40 na 2ª) | `$7040`–`$70B0` / `$70CE`–`$7150` |
+| `$9700` (96 words) | **altura de tela projetada de cada passo de profundidade** (inclui relevo) | 2ª passada `$70CE`–`$7150` (escreve de trás p/ frente a partir de `$97C0`); `$6750` só inicializa uma estrada plana |
+| `$9900` (224 words) | **mapa linha de tela -> índice de profundidade** (0 = céu) | `$71A0`: percorre `$9700`; entre duas alturas consecutivas preenche as linhas com o mesmo índice; se a altura recua (crista de ladeira) preenche para trás e marca `$AEDA` |
+
+Dados de pista em RAM (carregados na entrada da corrida; origem na ROM ainda não localizada):
+
+- `$FF5B00`: segmentos de **curvatura** por posição (1ª passada, `$7040`); byte com bit 7 = marcador de volta/fim.
+- `$FF7300`: segmentos de **relevo/ladeira** (2ª passada, `$70CE`).
+- `$FF8300`: um byte por posição (-> `$920A`, provavelmente inclinação/zona atual).
+- `$AE1A`: posição do jogador na pista (índice = `$AE1A >> 2`); `$9206`: comprimento da volta; `$9232`: contador de voltas.
+
+Consumidores da projeção (só leitura de `$9700`/`$9600`): `$12E6`, `$9C4E`, `$52F0`
+(posicionam carros/sprites usando a mesma função profundidade -> Y/X de tela).
+
+A prévia de pista do menu usa `$4F92` (rampa linear simples, estado `$5344`).
+
+Fórmula por linha (já confirmada, §3):
+`VScroll[y] = 0x190 - y + (prof-1) + tabV[prof]`, `HScroll[y] = $9600[prof-1]`.
+
+## 6. Implicações para o porte
+
+A pista pode ser **pré-computada por posição**, pois depende só de (curvatura,
+relevo, posição fracionária). Em MSX2+ a ideia é manter só:
+96 passos de profundidade -> altura Y (`$9700`) e X (`$9600`), em 8 bits, e
+desenhar por bandas com `HMMM`. A rampa linear de `$9600` é barata em Z80
+(soma acumulada de 16 bits por passo).
+
+## 7. Pendências
+
+- [ ] Origem na ROM dos dados de pista (`$FF5B00`, `$FF7300`, `$FF8300`) e formato dos segmentos (rotinas `$72C6`, `$7322`, `$737C`).
+- [ ] Preenchimento de `$9500` e tabela V (`a6` em `$6C20`).
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
 - [ ] Protótipo Z80/V9958 da pista com dados sintéticos; medir FPS.
