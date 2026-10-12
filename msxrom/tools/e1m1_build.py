@@ -332,6 +332,8 @@ def main():
         '#define RAST_W %d'%R.nx,'#define RAST_H %d'%R.ny,'#define RAST_ROWS %d'%ROWS,'#define RAST_X0 %d'%R.x0,'#define RAST_Y0 %d'%R.y0,
         '#define BX0 %d'%BX0,'#define BY0 %d'%BY0,'#define BNX %d'%BNX,'#define BNY %d'%BNY,'#define NSEC %d'%len(sectors),'#define NBLK %d'%len(blocks_),'#define NTHING %d'%len(things),'#define NDOOR %d'%len(door_lines),'#define NWATER %d'%len(water_rects)]
     for k,v in off.items(): h.append('#define META_%s %d'%(k.upper(),v))
+    h.append('const unsigned char rast_banks[RAST_H]={'+','.join(str(y//ROWS) for y in range(R.ny))+'};')
+    h.append('const unsigned int rast_offsets[RAST_ROWS]={'+','.join(str(y*R.nx) for y in range(ROWS))+'};')
     h+=['#define START_X %d'%start['x'],'#define START_Y %d'%start['y'],'#define START_ANG %d'%start['angle'],'#define EXIT_X %d'%((e1x+e2x)//2),'#define EXIT_Y %d'%((e1y+e2y)//2)]
     mk=sum(1 for t in things if t[2]<=2)
     h.append('#define NMON %d'%mk)

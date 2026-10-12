@@ -211,4 +211,50 @@ for sector in (13, 55, 57, 61):
         assert M.gb[0x42]<=255 and M.gb[0x59]<=255
 print('PASS damage in all four radiation sectors')
 print('PASS floor clipping/UV and batch limits at 16 headings in every radiation sector')
+
+def floor_at(x, y):
+    cx, cy = (x-L.R.x0)//8, (y-L.R.y0)//8
+    assert L.R.open[cy, cx], ('blocked actor position', x, y)
+    return L.m.sectors[int(L.R.sec[cy, cx])]['floor']
+
+
+def chase(kind, mx, my, x, y, count=100):
+    clear()
+    put('px', x); put('py', y); put('eye', floor_at(x, y)+41)
+    put('hp', 30000)
+    imp(mx, my); put('th', kind, 1, 6)
+    visited = []
+    for _ in range(count):
+        frames()
+        visited.append((get('th', offset=0), get('th', offset=2)))
+    return visited
+
+
+for kind in range(3):
+    visited = chase(kind, 3360, -3504, 3200, -3504)
+    assert visited[-1][0] < 3352, ('must move on platform', kind)
+    assert all(floor_at(x, y) == 96 for x, y in visited), ('fell off platform', kind)
+    for mx, target, expected in ((3152, 3264, -48), (3232, 3120, -24)):
+        visited = chase(kind, mx, -3588, target, -3588)
+        assert floor_at(*visited[-1]) == expected, ('24-unit step blocked', kind, visited[-1])
+    print(f'PASS enemy {kind}: platform drop blocked, 24-unit steps in both directions allowed')
+
+clear()
+put('px', 3360); put('py', -3504); put('eye', 137); put('yaw', 192, 1)
+held[8] = 0x20; frames(20); held.clear()
+assert floor_at(get('px'), get('py')) < 96, 'player must still descend high platform'
+print('PASS player can still descend the platform')
+
+for i, (ax, ay, bx, by, sec, *_texture) in enumerate(records):
+    clear()
+    cx, cy = (ax+bx)//2, (ay+by)//2
+    nx, ny = (1, 0) if ax == bx else (0, 1)
+    put('px', cx+100*nx); put('py', cy+100*ny); put('hp', 30000)
+    imp(cx-60*nx, cy-60*ny)
+    frames(30)
+    assert (get('th', offset=0)-cx)*nx+(get('th', offset=2)-cy)*ny < 0, ('enemy crossed closed door', i)
+    put('door_pos', 120, 1, i); put('door_state', 2, 1, i); put('door_hold', 255, 1, i)
+    frames(120)
+    assert (get('th', offset=0)-cx)*nx+(get('th', offset=2)-cy)*ny > 0, ('enemy blocked by open door', i)
+print('PASS enemy passage: blocked closed doors, traverses all four open doors')
 print('ALL INTERACTION TESTS PASSED (SIMULATED)')

@@ -2,7 +2,7 @@
  * MSX turbo R / Z80 + V9968 + Geo3D (SDCC). Paredes texturizadas pelo Geo3D a partir de um PVS por bloco de 128 unidades,
  * monstros e itens como billboards do atlas de sprites, HUD da barra de status do Doom.
  * STATUS: BUILD OK + SIMULATED + OPENMSX (perfil sintetico C-BIOS/R800 com script). FPGA/hardware UNTESTED.
- * Fase 1: portas abertas para sempre, pisos/tetos como faixas de cor, sem iluminacao por setor, sem elevadores. */
+ * Portas dinamicas, grades mascaradas e pisos radioativos; tetos lisos, sem elevadores. */
 #include "e1m1_assets.h"
 typedef unsigned char u8; typedef unsigned int u16; typedef int s16; typedef long s32;
 
@@ -25,6 +25,7 @@ __sfr __at(0xA9) ppi_b;
 #define HUD_Y 178
 #define BAR_DY 178
 #define PLAYER_R 14
+#define STEP_HEIGHT 24
 #define TEXY_WALL 512
 #define MAX_SPR 10
 #define MAX_SHOTS 4
@@ -83,6 +84,7 @@ vt_blk:
 }
 static void set_vram_write(u8 blk,u16 addr){ vr(14,blk); vc=(u8)addr; vc=((u8)(addr>>8)&0x3F)|0x40; }
 s16 mulq14(s16 a,s16 b) __sdcccall(1);
+void math_init(void);
 
 /* ---------------------------------------------------------------- tabelas em RAM (copiadas do banco META no boot) */
 typedef struct{ s16 floor,ceil; u8 f0,f1,c0,c1,special,sky,fid,cid; } Sec;
@@ -135,23 +137,24 @@ static u8 doors_in_box(s16 x0,s16 y0,s16 x1,s16 y1){
 
 /* ---------------------------------------------------------------- raster do mapa (8 unidades por celula): setor ou 255 = bloqueado */
 static u8 rast(s16 x,s16 y){
-  s16 cx=(x-RAST_X0)>>3,cy=(y-RAST_Y0)>>3; u8 b; u16 r;
+  s16 cx=(x-RAST_X0)>>3,cy=(y-RAST_Y0)>>3; u8 b,r;
   if(cx<0||cy<0||cx>=RAST_W||cy>=RAST_H) return 255;
-  b=0; r=cy; while(r>=RAST_ROWS){ r-=RAST_ROWS; b++; }
-  BANK(RAST_BANK0+b); return DATA[r*RAST_W+cx];
+  b=rast_banks[cy]; r=cy-(u16)b*RAST_ROWS;
+  BANK(RAST_BANK0+b); return DATA[rast_offsets[r]+cx];
 }
-static u8 can_stand(s16 x,s16 y,s16 r,s16 fl){
+static u8 can_stand(s16 x,s16 y,s16 r,s16 fl,u8 limit_drop){
   u8 s,i; s16 ox,oy;
   if(door_blocked(x,y,r))return 0;
   for(i=0;i<5;i++){ ox=(i&1)?r:-r; oy=(i&2)?r:-r; if(i==4)ox=oy=0;
-    s=rast(x+ox,y+oy); if(s==255) return 0; if(secs[s].floor>fl+24) return 0; }
+    s=rast(x+ox,y+oy); if(s==255) return 0;
+    if(secs[s].floor>fl+STEP_HEIGHT || (limit_drop&&secs[s].floor<fl-STEP_HEIGHT)) return 0; }
   return 1;
 }
 static s16 floor_at(s16 x,s16 y){ u8 s=rast(x,y); return s==255?0:secs[s].floor; }
-static void try_move(s16 *x,s16 *y,s16 dx,s16 dy,s16 r){
+static void try_move(s16 *x,s16 *y,s16 dx,s16 dy,s16 r,u8 limit_drop){
   s16 fl=floor_at(*x,*y);
-  if(dx&&can_stand(*x+dx,*y,r,fl))*x+=dx;
-  if(dy&&can_stand(*x,*y+dy,r,fl))*y+=dy;
+  if(dx&&can_stand(*x+dx,*y,r,fl,limit_drop))*x+=dx;
+  if(dy&&can_stand(*x,*y+dy,r,fl,limit_drop))*y+=dy;
 }
 static u8 los(s16 x0,s16 y0,s16 x1,s16 y1){
   s16 dx=x1-x0,dy=y1-y0,n=(s16abs(dx)+s16abs(dy))>>4,i;
@@ -378,7 +381,7 @@ static void shot_tick(void){
       s->x=nx;s->y=ny;s->z=nz;damage_player(9+(rnd()&15));shot_explode(s);continue;
     }
     sec=rast(nx,ny);
-    if(sec==255||door_blocked(nx,ny,5)||!can_stand(nx,ny,5,floor_at(s->x,s->y))||nz<secs[sec].floor+3||nz>secs[sec].ceil-3){shot_explode(s);continue;}
+    if(sec==255||door_blocked(nx,ny,5)||!can_stand(nx,ny,5,floor_at(s->x,s->y),0)||nz<secs[sec].floor+3||nz>secs[sec].ceil-3){shot_explode(s);continue;}
     s->x=nx;s->y=ny;s->z=nz;s->t++;
   }
 }
@@ -403,7 +406,7 @@ static void mon_update(u8 i){
   if(ad>56){
     sx=(s16abs(dx)>6)?(dx>0?sp:-sp):0; sy=(s16abs(dy)>6)?(dy>0?sp:-sp):0;
     if(s16abs(dx)>s16abs(dy)*2)sy=0; else if(s16abs(dy)>s16abs(dx)*2)sx=0;
-    try_move(&m->x,&m->y,sx,sy,12);
+    try_move(&m->x,&m->y,sx,sy,12,1);
   }
   if(((fcnt+i)&7)==0&&ad<1000&&los(m->x,m->y,px,py)){
     if(m->kind==K_IMP){ if(ad<90||(rnd()&3)==0) mon_attack(i); }
@@ -414,8 +417,8 @@ static void update(void){
   u8 i; s16 s=isin(yaw),c=icos(yaw),tgt; u8 sc;
   fcnt++; tick++;
   if(keys&K_LEFT)yaw-=3; if(keys&K_RIGHT)yaw+=3;
-  if(keys&K_UP) try_move(&px,&py,mulq14(s,7),mulq14(c,7),PLAYER_R);
-  if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R);
+  if(keys&K_UP) try_move(&px,&py,mulq14(s,7),mulq14(c,7),PLAYER_R,0);
+  if(keys&K_DOWN) try_move(&px,&py,-mulq14(s,6),-mulq14(c,6),PLAYER_R,0);
   if(cool)cool--; if(fire_t)fire_t--; if(hurt)hurt--; if(face_t)face_t--; if(msg_t&&!--msg_t)msg=0;
   if((keys&K_FIRE)&&!cool)shoot();
   if((keys&K_USE)&&!(old_keys&K_USE))door_use();
@@ -665,6 +668,7 @@ static void no_geo(void){
 
 void main(void){
   u8 i; u16 n;
+  math_init();
   vp4=0;
   vr(0,14); vr(1,0); vr(2,31); vr(7,0); vr(8,10); vr(9,128);
   vr(21,0); vr(20,0x11);

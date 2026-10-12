@@ -336,3 +336,21 @@ Competem com as paredes pelo limite de 255 vertices/faces (peso: tetos 3x, pisos
 v11: TETO PRETO SOLIDO em tempo de execucao: depois do Geo3D, tudo acima da linha do teto e pintado de preto. A linha vem de um leque de 8 raios (12 passos de 32 de profundidade, recalculado a cada 2 quadros): por faixa
 de colunas, max sobre os trechos de setor de 89-160*H/d_fim (H = teto - altura do olho); entre faixas interpola (diferenca >24 linhas: usa a menor). Removidos: piso texturizado por LRMM (TAB), tampas pretas e tetos como geometria.
 Pisos continuam como faixas do setor a frente + retangulos lisos no PVS. Banco de codigo: ~12,7 KB.
+
+### Revisão da plataforma do Imp
+
+Inimigos limitam tanto subida quanto descida a 24 unidades por movimento. O jogador
+mantém as descidas anteriores. `mulq14` detecta R800 no boot e usa MULUW, com
+fallback em software para Z80. Tabelas de linhas do raster aceleram colisão e LOS;
+os dados do mapa, as faces e os lotes do Geo3D não mudaram.
+
+Além dos testes anteriores, execute `tools/test_e1m1_platform_openmsx.tcl` no fork
+Geo3D com a configuração sintética R800. Valida 600 pares matemáticos em cada
+caminho e os três tipos de inimigo na plataforma e nos degraus. O teste Z80
+`tools/test_mulq14.py` verifica a detecção do fallback.
+
+`tools/test_e1m1_area_openmsx.tcl` compara nove cenários, incluindo caminhada e giro.
+Mantém os atores originais ativos e reinicia a partida por cenário; mede 60 trocas
+reais de página, não tempo de processamento do PC. Para comparar uma ROM anterior,
+use `E1M1_ROM`, `E1M1_MAP`, `E1M1_LIST` e `E1M1_HEADER` correspondentes a essa ROM.
+Saída em `E1M1_TEST_OUT`. FPS do fork sintético não são previsão para hardware.
