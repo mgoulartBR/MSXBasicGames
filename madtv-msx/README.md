@@ -22,6 +22,9 @@ Film agency (comprar) -> Ad agency (contrato) -> Programme grid (encaixar filmes
 ## Arte do jogo original (so em build local)
 O repositorio **nao contem arte do Mad TV original**. Se voce tiver os arquivos do jogo, as ferramentas `tools/make_*.py` geram localmente (pastas e arquivos ignorados pelo git) o predio, as cenas das salas, a grade e a abertura a partir de capturas em `original/`. Sem elas o jogo usa telas de texto e um predio desenhado em codigo; os bonequinhos sao desenhados a mao (`src/sprites_fig.h`). Ver `docs/PORTING.md`.
 
+## Fidelidade
+Comparacao com o jogo original: `docs/FIDELITY.md`.
+
 ## Testes
 `tests/unit.sh` (logica no PC), `tests/balance.sh` (autoplay; `CFLAGS_EXTRA=-DBALANCE_STATS`), `tests/smoke.sh` (openMSX; `SHOTS=1` para capturas fieis), `tests/sram.sh`, `tests/audio_fm.sh`, `tests/mouse_real.sh`; roteiro para MSX2 real em `tests/HARDWARE.md`. Capturas dos testes ficam em `screenshots/` (nao versionado: mostram a arte do original em builds locais).
 

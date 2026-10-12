@@ -7,7 +7,7 @@ Aberto:
 - Interface: a TV da esquerda do console mostra so texto do que esta no ar (sem arte); 6 cenarios (Betty, supermercado, estudios, roteiros, corretor, porteiro) ainda sao blitados sem cache; 
 - Mais conteudo possivel: leilao ativo entre rivais, conquistas, balanceamento fino das emissoras (FunTV/SunTV so foram testadas por unit test).
 
-Fechado na 2.9: bonecos somem dentro do elevador, venda de filmes corrigida, balanceamento das 3 emissoras, teste de estresse (tests/fuzz.sh). Fechado na 2.8: emissora do jogador, temas e jingles, icones 2/3 da grade, audiencia dos rivais no porteiro. Fechado na 2.7: historico do git sem as capturas de teste (reescrito e enviado), rivais levam filmes do catalogo, escritorios dos rivais com cena, README reescrito.
+Auditoria de fidelidade ao original: docs/FIDELITY.md (lacunas: grade de amanha, leilao, lista de compras da producao, sabotagem enviada, aluguel do corretor, limite de 4 por genero, TVs do console com imagem). Fechado na 2.9: bonecos somem dentro do elevador, venda de filmes corrigida, balanceamento das 3 emissoras, teste de estresse (tests/fuzz.sh). Fechado na 2.8: emissora do jogador, temas e jingles, icones 2/3 da grade, audiencia dos rivais no porteiro. Fechado na 2.7: historico do git sem as capturas de teste (reescrito e enviado), rivais levam filmes do catalogo, escritorios dos rivais com cena, README reescrito.
 
 ---- historico (mais recente primeiro) ----
 # TODO (DONE / PARTIAL / TODO / BLOCKED)
