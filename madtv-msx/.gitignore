@@ -17,3 +17,6 @@ src/data/art_scenes.h
 src/seg/seg_s15_b3.c
 src/data/sprites_art.h
 src/seg/seg_s2_b3.c
+
+# capturas dos testes mostram a arte do original em builds locais: nao versionar
+screenshots/
