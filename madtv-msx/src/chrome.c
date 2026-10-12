@@ -51,13 +51,67 @@ void Scene_Part(u8 id, u8 sbyte, u8 nbytes, u8 dx, u8 dy) __banked   // so as co
 	SET_BANK_SEGMENT(3, prev);
 }
 
+// Cache de cenas na VRAM (pagina 3, linhas 770..991: a fonte preta usa 730..769): 4 cenas de 120x111 (2 por banda, 2 bandas), FIXAS nas 4 salas
+// mais visitadas. Reentrar numa delas copia da VRAM com HMMM (3 jiffies) em vez de reescrever 6,6 KB pela CPU (6 jiffies; o VDP limita a
+// escrita a ~100 KB/s). Medido (agencia de filmes): 20 -> 17 jiffies por visita; a carga (~0,4 s) e feita em Hud_Reset. Um LRU com 4 vagas para 10 cenas se mostrou pior (acesso ciclico = 0 acertos).
+#define SC_BAND0   770
+#define SC_BAND1   881
+static const u8 k_ScPin[4] = { SCN_MOVIE, SCN_ADS, SCN_NEWS, SCN_LIBRARY };
+static u8 s_ScOk[4];                                        // 1 = cena ja esta na vaga (Scene_Preload em Hud_Reset)
+
+static void SceneFillSlot(const SceneDef* d, u16 sy, u8 sxbyte)
+{
+	u8 r = 0, seg = d->seg, n, prev = GET_BANK_SEGMENT(3);
+	while (r < d->h)
+	{
+		const u8* p = (const u8*)0xA000;
+		SET_BANK_SEGMENT(3, seg++);
+		for (n = 0; n < d->rps && r < d->h; n++, r++, p += d->stride)
+		{
+			u32 addr = (u32)(sy + r) * 128 + sxbyte;                 // endereco absoluto na VRAM de 128 KB
+			VDP_WriteVRAM_128K(p, (u16)addr, (u8)(addr >> 16), d->stride);
+		}
+	}
+	SET_BANK_SEGMENT(3, prev);
+}
+
+static u8 s_PreK = 4, s_PreR;                              // carga incremental: vaga atual (4 = pronto) e proxima linha
+void Scene_PreStart(void) { s_PreK = 0; s_PreR = 0; s_ScOk[0] = s_ScOk[1] = s_ScOk[2] = s_ScOk[3] = 0; }
+void Scene_PreStep(void) __banked                           // chamado a cada quadro: carrega ate 12 linhas da proxima cena fixa (a carga inteira leva ~30 quadros)
+{
+	const SceneDef* d;
+	u8 n, prev, seg;
+	if (s_PreK >= 4) return;
+	d = &k_Scn[k_ScPin[s_PreK]];
+	prev = GET_BANK_SEGMENT(3);
+	for (n = 0; n < 12 && s_PreR < d->h; n++, s_PreR++)
+	{
+		u32 addr = (u32)(((s_PreK >> 1) ? SC_BAND1 : SC_BAND0) + s_PreR) * 128 + ((s_PreK & 1) ? 64 : 0);
+		seg = (u8)(d->seg + s_PreR / d->rps);
+		SET_BANK_SEGMENT(3, seg);
+		VDP_WriteVRAM_128K((const u8*)(0xA000 + (u16)(s_PreR % d->rps) * d->stride), (u16)addr, (u8)(addr >> 16), d->stride);
+	}
+	SET_BANK_SEGMENT(3, prev);
+	if (s_PreR >= d->h) { s_ScOk[s_PreK] = 1; s_PreK++; s_PreR = 0; }
+}
+
 void Scene_Draw(u8 id, u8 dx, u8 dy) __banked           // linhas de `stride` bytes em segmentos de dados mapeados no banco 3 (rps linhas por segmento)
 {
-	Scene_Part(id, 0, k_Scn[id].stride, dx, dy);
+	const SceneDef* d = &k_Scn[id];
+	u8 k;
+	u16 sy;
+	u8 sx;
+	for (k = 0; k < 4; k++) if (k_ScPin[k] == id) break;
+	if (k == 4) { Scene_Part(id, 0, d->stride, dx, dy); return; }
+	sy = (k >> 1) ? SC_BAND1 : SC_BAND0; sx = (k & 1) ? 128 : 0;
+	if (!s_ScOk[k]) { SceneFillSlot(d, sy, (k & 1) ? 64 : 0); s_ScOk[k] = 1; }      // ainda nao carregada pelo Scene_PreStep: carrega agora
+	VDP_CommandWait();
+	VDP_CommandHMMM(sx, sy, dx, (u16)dy + 512, 120, 111);                                       // para o buffer (pagina 2)
 }
 #else
 void Scene_Draw(u8 id, u8 dx, u8 dy) __banked { (void)id; (void)dx; (void)dy; }
 void Scene_Part(u8 id, u8 sbyte, u8 nbytes, u8 dx, u8 dy) __banked { (void)id; (void)sbyte; (void)nbytes; (void)dx; (void)dy; }
+void Scene_PreStep(void) __banked { }
 #endif
 
 #if ART_SCENES
@@ -104,6 +158,27 @@ void Micro_Init(void) __banked
 	}
 }
 
+void Chrome_CastLines(u8 m) __banked                   // 2 linhas de micro-fonte (y 173 e 180): diretor e elenco do filme m (dentro de Ui_Begin)
+{
+	CastRec c;
+	char t[52];
+	u8 n = 0, i;
+	const char* src;
+	Db_Cast(m, &c);
+	if (!c.dir[0]) return;                                 // filme proprio: sem elenco
+	t[n++] = 'D'; t[n++] = 'I'; t[n++] = 'R'; t[n++] = ' ';
+	for (i = 0; c.dir[i]; i++) t[n++] = c.dir[i];
+	if (Mov(m)->fsk18) { t[n++] = ' '; t[n++] = ' '; t[n++] = 'F'; t[n++] = 'S'; t[n++] = 'K'; t[n++] = '1'; t[n++] = '8'; }
+	t[n] = 0;
+	Chrome_Micro(8, 173, t);
+	n = 0; t[n++] = 'C'; t[n++] = 'A'; t[n++] = 'S'; t[n++] = 'T'; t[n++] = ' ';
+	for (src = c.a1; *src; src++) t[n++] = *src;
+	t[n++] = ' '; t[n++] = '/'; t[n++] = ' ';
+	for (src = c.a2; *src; src++) t[n++] = *src;
+	t[n] = 0;
+	Chrome_Micro(8, 180, t);
+}
+
 static void MicroDraw(u8 x, u8 y, const char* s, u16 row)
 {
 	for (; *s; s++, x += 4)
@@ -137,6 +212,9 @@ static void CText(u8 x, u8 y, const char* s) { Ui_Text(x, (u8)(y + CB), s); }
 void Hud_Reset(void) __banked
 {
 	Micro_Init();
+#if ART_SCENES
+	Scene_PreStart();                                       // as 4 cenas fixas vao para a VRAM aos poucos (Scene_PreStep, ~30 quadros)
+#endif
 	c_Day = 0xFFFF; c_T = 0xFFFF; c_Money = 0x7FFFFFFF; c_Speed = 255; c_Sym = 255; c_Air = 254; s_TickKey = 0xFF; s_TickPos = 0;
 	c_Image[0] = c_Image[1] = c_Image[2] = 255;
 	Ui_Begin();

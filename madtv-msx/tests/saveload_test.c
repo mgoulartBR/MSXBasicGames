@@ -235,6 +235,24 @@ int main(void)
 		for (i = 0; i < NEWS_SLATE; i++) { g_Game.news_slate[i].idx = best; g_Game.news_slate[i].age = 0; }
 		Sim_SammyDay(); CHECK(g_Game.money == m0 + SAMMY_PRIZE && g_Game.image[0] == im0 + 5, "telejornal bom ganha o Sammy (+5 Image, premio)");
 	}
+	// 2.6: elenco dos filmes (estrelas aumentam qualidade e preco)
+	g_Diff = 1; Sim_Init(81);
+	{
+		u8 m, withstars = 0, bad = 0, maxs = 0, hi = NONE, lo = NONE;
+		CastRec c;
+		for (m = 0; m < DB_NUM_MOVIES; m++)
+		{
+			Db_Cast(m, &c);
+			if (!c.dir[0] || !c.a1[0] || !c.a2[0] || c.stars > 9 || c.stars != Db_Stars(m)) bad++;
+			if (c.stars) withstars++;
+			if (c.stars > maxs) { maxs = c.stars; hi = m; }
+			if (c.stars == 0 && lo == NONE) lo = m;
+		}
+		CHECK(!bad, "todo filme tem diretor, 2 atores e estrelas coerentes (0..9)");
+		CHECK(withstars > DB_NUM_MOVIES / 2 && maxs >= 5, "distribuicao de estrelas: maioria com alguma, ha filmes de elenco forte");
+		Db_Cast(DB_NUM_MOVIES, &c); CHECK(!c.dir[0] && Db_Stars(DB_NUM_MOVIES) == 0, "filme proprio nao tem elenco");
+		{ const Movie* mv = Mov(hi); u16 base = (u16)(((u16)mv->critics * 3 + (u16)mv->outcome * 4 + (u16)mv->speed * 3) / 10); CHECK(Sim_Quality(hi) >= base && (Sim_Quality(hi) > base || base >= 100 - 2), "estrelas somam qualidade"); }
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }

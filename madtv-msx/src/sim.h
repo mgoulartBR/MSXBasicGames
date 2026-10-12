@@ -33,6 +33,8 @@
 #define RIVAL_LIB_GROWTH_DAYS 1  // +1 filme a cada N dias
 #endif
 
+#define CAST_Q_PER_STAR 2        // elenco: pontos de qualidade por estrela (soma 0..9)
+#define CAST_PRICE_PER_STAR 4    // elenco: % de preco por estrela
 #define SAMMY_DAYS    7          // o Sammy do melhor telejornal sai no fim dos dias 7, 14, 21...
 #define SAMMY_PRIZE   300        // k$ para o vencedor jogador
 #define SAMMY_RIVAL_MIN 25       // nota de cada rival: MIN + rnd(SPAN) + 5*dificuldade
@@ -142,6 +144,8 @@ u8    Sim_Quality(u8 movie);            // 0..100
 void  Sim_Msg(const char* s);
 // noticias
 void  Db_News(u8 idx, NewsRec* out);        // db.c (acesso ao segmento 4)
+u8    Db_Stars(u8 m);                       // soma de estrelas do elenco (0..9)
+void  Db_Cast(u8 m, CastRec* out);          // diretor + 2 atores (RAM)
 u8    Sim_NewsFresh(u8 age) __banked;                // frescor 0..100
 u8    Sim_NewsQuality(void) __banked;                // 0..100 do telejornal atual (frescor x qualidade)
 u16   Sim_NewsCost(u8 idx) __banked;                 // k$

@@ -7,6 +7,7 @@ u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
 // Medicao de desempenho: maior tempo (jiffies = interrupcoes do VDP) gasto no desenho completo de cada tela. Lido pelos testes.
 u8 g_DrawMax[SCR_OVER + 1];
 u8 g_BufScene = 0xFF;
+u8 g_LastDraw;                       // gancho de teste: jiffies do ultimo desenho completo
 u8 g_Splash;                         // 1 = tela de abertura (so no boot); qualquer tecla/clique segue para o titulo
 #define JIFFY (*(volatile u16*)0xFC9E)
 
@@ -334,6 +335,7 @@ void main()
 		if (((ev | clk) & IN_OK) && (g_Dirty & D_MSG)) Audio_Result(g_Msg);
 		if (g_Game.game_over) { if (g_Screen == SCR_HUB) Building_Leave(); g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
 
+		if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && !g_Splash) Scene_PreStep();     // carga incremental do cache de cenas
 		if (g_Dirty & D_HDR) Hud_Draw();
 		if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && !g_Splash && ++s_TickFc >= 12) { s_TickFc = 0; Hud_Tick(); }   // ticker de noticias (~4 Hz)
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();
@@ -343,6 +345,7 @@ void main()
 			u8 d;
 			ScreenDraw();
 			d = (u8)(JIFFY - t0);
+			g_LastDraw = d;
 			if (d > g_DrawMax[g_Screen]) g_DrawMax[g_Screen] = d;
 		}
 		else if (g_Dirty & (D_ROWS | D_LIST | D_DET))

@@ -14,6 +14,9 @@ typedef struct {
 	u8 fsk18;     // 1 = so apos 21h
 } Movie;
 
+typedef struct { char name[19]; u8 star; } Person;           // elenco (SEGMENTO 4): nome + estrelas 0..3
+typedef struct { char dir[19]; char a1[19]; char a2[19]; u8 stars; } CastRec;   // copia em RAM (Db_Cast)
+
 typedef struct {
 	const char* title;
 	u8 min_audience; // milhoes * 10

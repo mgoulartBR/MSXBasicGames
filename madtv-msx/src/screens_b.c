@@ -244,10 +244,12 @@ static void ArchiveDetailBody(void)
 	if (!s_OwnN) { Ui_Text(8, 142, "No movies - buy them at the Film agency."); return; }
 	{
 		u8 m = s_Own[g_Sel], x;
-		Ui_TextN(8, 142, (*Mov(m)).title, 30);
-		Ui_Text(8, 156, "Blocks"); Ui_Int(50, 156, (*Mov(m)).blocks);
-		Ui_Text(80, 156, "Aired"); x = Ui_Int(116, 156, g_Game.plays[0][m]); Ui_Text(x, 156, "x");
-		Ui_Text(8, 168, "Resale value"); Money(86, 168, Sim_MovieValue(m));
+		Ui_TextN(8, 141, (*Mov(m)).title, 30);
+		Ui_Text(8, 152, "Blocks"); Ui_Int(50, 152, (*Mov(m)).blocks);
+		Ui_Text(80, 152, "Aired"); x = Ui_Int(116, 152, g_Game.plays[0][m]); Ui_Text(x, 152, "x");
+		Ui_Text(150, 152, "Stars"); Ui_Int(186, 152, Db_Stars(m));
+		Ui_Text(8, 162, "Resale value"); Money(86, 162, Sim_MovieValue(m));
+		Chrome_CastLines(m);
 	}
 }
 

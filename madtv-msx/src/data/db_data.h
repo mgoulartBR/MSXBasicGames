@@ -16,3 +16,7 @@ extern const Movie g_Movies[DB_NUM_MOVIES];
 extern const Ad g_Ads[DB_NUM_ADS];
 extern const char* const g_AgencyName[DB_NUM_AGENCIES];
 extern const NewsRec g_NewsRec[DB_NUM_NEWS];     // SEGMENTO 4 (banco 3 so mapeado dentro de Db_News)
+#define DB_NUM_PERSONS 88
+#define DB_NAME_LEN 19
+extern const Person g_Person[DB_NUM_PERSONS];    // SEGMENTO 4 (acesso por Db_Cast)
+extern const u8 g_Cast[DB_NUM_MOVIES][4];        // SEGMENTO 4: diretor, ator 1, ator 2, soma de estrelas (0..9)

@@ -82,13 +82,15 @@ const Movie* Mov(u8 i) { return i < DB_NUM_MOVIES ? &g_Movies[i] : &g_OwnMv[i - 
 u8 Sim_Quality(u8 m)
 {
 	const Movie* mv = Mov(m);
-	return (u8)(((u16)mv->critics * 3 + (u16)mv->outcome * 4 + (u16)mv->speed * 3) / 10);
+	u16 q = ((u16)mv->critics * 3 + (u16)mv->outcome * 4 + (u16)mv->speed * 3) / 10 + (u16)Db_Stars(m) * CAST_Q_PER_STAR;   // elenco: +CAST_Q_PER_STAR por estrela
+	return (u8)(q > 100 ? 100 : q);
 }
 
 u16 Sim_MoviePrice(u8 idx)        // k$ (formula propria)
 {
 	u16 avg = (u16)(((u16)(*Mov(idx)).critics + (*Mov(idx)).speed + (*Mov(idx)).outcome) / 3);
-	return (u16)((avg * (*Mov(idx)).price) / PRICE_DIV * (*Mov(idx)).blocks / 2 + 50);
+	u16 base = (u16)((avg * (*Mov(idx)).price) / PRICE_DIV * (*Mov(idx)).blocks / 2 + 50);
+	return (u16)((u32)base * (100 + (u16)Db_Stars(idx) * CAST_PRICE_PER_STAR) / 100);
 }
 
 void Sim_MsgNum(const char* a, i32 v, const char* b)

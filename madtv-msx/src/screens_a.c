@@ -364,12 +364,12 @@ static void DrawDetail_Agency_Body(void)
 	Ui_Text(8, 141, "Year"); Ui_Int(38, 141, 1850 + m->year);
 	Ui_Text(80, 141, "Blocks"); Ui_Int(122, 141, m->blocks);
 	Ui_Text(144, 141, "Price"); Money(180, 141, Sim_MoviePrice(idx));
-	if (m->fsk18) { Ui_Color(UI_RED); Ui_Text(8, 174, "FSK18"); }
-	Ui_Color(UI_BLACK);
 	Ui_Text(8, 152, "Critics"); Ui_Bar(56, 153, 52, 5, m->critics, COLOR_LIGHT_GREEN);
 	Ui_Text(120, 152, "Speed"); Ui_Bar(156, 153, 52, 5, m->speed, COLOR_CYAN);
 	Ui_Text(8, 163, "Box off."); Ui_Bar(56, 164, 52, 5, m->outcome, COLOR_LIGHT_YELLOW);
 	Ui_Text(120, 163, "Quality"); Ui_Int(168, 163, Sim_Quality(idx));
+	Ui_Text(196, 163, "Stars"); Ui_Int(232, 163, Db_Stars(idx));
+	Chrome_CastLines(idx);
 	return;
 #endif
 	Ui_Fill(0, 132, 255, 35, UI_BG);
