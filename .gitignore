@@ -1,0 +1,8 @@
+
+# ROMs comerciais nunca devem ser versionadas
+*.md.rom
+*.gen
+*.smd
+*.bin
+*.rom
+Super Monaco GP*
