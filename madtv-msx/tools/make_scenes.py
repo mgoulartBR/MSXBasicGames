@@ -28,6 +28,7 @@ def main(d):
     for name, fn, box in SCENES:
         if name in FIXED_SEG: seg_save, seg = seg, FIXED_SEG[name]
         im = Image.open(d + "/" + fn).convert("RGB").crop(box)
+        if name == "title": im.paste((0, 0, 0), (270, 625, 870, 740))      # credito "MSX Port by BigFive" some: o jogo o escreve com a fonte propria (legivel a 256 px)
         if name in RESIZE: im = im.resize(RESIZE[name], Image.LANCZOS)
         w, h = im.size
         stride = w // 2

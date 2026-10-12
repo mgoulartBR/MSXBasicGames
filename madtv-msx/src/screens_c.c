@@ -303,6 +303,8 @@ void Splash_Draw(void) __banked
 #if ART_SCENES
 	Ui_Fill(0, 0, 0, 212, SPLASH_BG);
 	Scene_Draw(SCN_TITLE, 0, 8);
+	Ui_Color(UI_GRAY);  Ui_Text(75, 139, "MSX port by");
+	Ui_Color(UI_WHITE); Ui_Text(63, 150, "BigFive Studios");
 #else
 	Ui_Clear();
 	Ui_Color(UI_RED);    Ui_Text(100, 70, "MAD TV");
