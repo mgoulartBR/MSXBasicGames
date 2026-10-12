@@ -106,9 +106,44 @@ relevo, posição fracionária). Em MSX2+ a ideia é manter só:
 desenhar por bandas com `HMMM`. A rampa linear de `$9600` é barata em Z80
 (soma acumulada de 16 bits por passo).
 
-## 7. Pendências
+## 7. Dados de pista na ROM (passo 3) — localizados e validados
 
-- [ ] Origem na ROM dos dados de pista (`$FF5B00`, `$FF7300`, `$FF8300`) e formato dos segmentos (rotinas `$72C6`, `$7322`, `$737C`).
+**Tabela de pistas**: `$FBDA`, registros de `$48` bytes. Seleção em `$FBB0`:
+modo `$9140==1` -> índice direto (`$9144 * $48`); outro modo -> bloco extra a
+partir de `$480` (`$9142 * $48` + `$9144 * $48`). Registros 0–15 = as 16 pistas
+do campeonato; 16–18 = registros extras (16 é curto, 848 posições; 17 e 18 são
+iguais). O registro 19 já cai fora da tabela.
+
+**Registro** (a partir de +`$20`): flag(w), comprimento da volta(w), 3 longs
+(parâmetros de câmera/posição inicial, copiados p/ `$9240`/`$9254`/`$9226`) e
+3 ponteiros para fluxos de segmentos (+`$30`/`$34`/`$38`), todos na faixa
+`$717C8`–`$73C66` da ROM. O carregador é `$658C`–`$66A0`; ele **expande** os
+fluxos para RAM a cada início de corrida.
+
+**Fluxos** (todos terminam em byte com bit 7 ligado; comprimento em posições):
+
+| Fluxo | Segmento | Expansão em RAM |
+|---|---|---|
+| Curvatura | `len(w) flag(b)` + `valor(w)` se `flag!=0`; `flag` bit 6 = sentido | flags -> `$FF5B01+`; ângulo acumulado (10 bits, via `$87A`) -> `$FF6300` (words) |
+| Relevo | byte de altura inicial + `len(w) flag(b)` + `inclinação(b)` se `flag!=0`; bit 6 = sinal | flags -> `$FF7301+`; altura acumulada (8 bits) -> `$FF7B00` |
+| Zonas | `len(w) valor(b)` | `valor` repetido -> `$FF8300+` |
+
+**Validação**: nas 19 pistas os três fluxos somam o mesmo nº de posições, e
+`lap == 4 * posições` (ex.: pista 0: lap 7040, 1760 posições; 38 segmentos de
+curva, 23 de relevo, 11 zonas). Isso confirma o formato e a unidade de posição
+(`$AE1A >> 2`).
+
+Tamanho: pistas de 1520 a 1936 posições, com 21–51 segmentos de curva — a
+descrição de cada pista é **minúscula** (algumas centenas de bytes), ótima
+notícia para o MSX: cabe em poucos KB e a pista é gerada em tempo de execução.
+
+Ferramenta: `tools/smgp/tracks.py <rom> [n]` (usa a ROM do usuário; não
+contém dados dela).
+
+## 8. Pendências
+
+- [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
+- [ ] Valor do campo `flag` do segmento de curvatura (bits além do 6) e fórmula exata de `$87A`.
 - [ ] Preenchimento de `$9500` e tabela V (`a6` em `$6C20`).
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
 - [ ] Protótipo Z80/V9958 da pista com dados sintéticos; medir FPS.
