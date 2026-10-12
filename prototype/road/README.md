@@ -281,3 +281,44 @@ inteira. Por isso as constantes (`gamedefs.inc`, só `EQU`) ficam no topo e os d
 ## Próximos passos
 Direção e velocidade controladas pelo jogador, HUD dinâmico (velocidade, rotação, marcha),
 cenário nas margens, carros maiores e o jogador no cockpit com volante animado.
+
+
+---
+
+# Versão 7: jogável (`game.asm`)
+
+| Acelerando (168 km/h) | Virando (207 km/h) |
+|---|---|
+| ![v7](screenshot_v7a.png) | ![v7](screenshot_v7b.png) |
+
+Direção, física, HUD dinâmico e carros grandes. **Arte 100 % original.**
+
+## Controles
+- **Setas** ou **joystick 1**: ← → direção, ↑ acelera, ↓ freia. **Espaço** ou botão do joystick também aceleram.
+
+## O que há de novo
+- **Física simples**: aceleração que cai com a velocidade, freio, atrito, força centrífuga nas
+  curvas (`xp -= curvatura × velocidade >> 10`) e penalidade fora da pista (|xp| > 256: limita a ~75 km/h).
+  Velocidade em `spd16` (8.8): 0..25600 = 0..300 km/h; ela é o incremento de posição por quadro.
+- **Câmera lateral**: o carro do jogador se move na pista (`xp`); cada zona desloca o mundo por
+  `|xp| × meia-largura da zona >> 8`. A pista foi estreitada (máx. 66 px de meia largura) para que a
+  grama das bordas comporte o scroll com *wrap* de 256 px.
+- **HUD dinâmico** (escrito na VRAM durante o VBlank, no máximo 3 células por quadro): velocidade em
+  km/h, marcha (N quando parado; 6 marchas), conta-giros de 12 LEDs (verdes/âmbar/vermelho), posição
+  (P n/4) e volta (L n/3). Fonte própria de 5×7 gerada em `gen_game.py`.
+- **Carros grandes**: sprites **ampliados** (R#1 bit 0): 32×32 px por sprite; o tamanho XL usa
+  **2 sprites lado a lado (64×32)** e há mais 4 tamanhos até o tamanho "ao longe". Cada carro usa 4
+  planos (escuro/corpo × esquerda/direita).
+- **Colisão simples** com os adversários (perto e sobrepondo a faixa: perde 1/8 da velocidade por quadro).
+- Cockpit maior: pista em 76 linhas, cockpit/HUD em 52.
+
+## Armadilhas encontradas
+- Com sprites ampliados, ocultar com Y=`$E0` deixa a última linha visível no topo da tela; o valor
+  seguro é 212 (216 encerra a lista em modo 2).
+- A troca de página no meio da linha deixa um trecho da página 1 visível na 1ª linha da pista; as
+  linhas livres da página 1 foram preenchidas com a cor da grama para esconder isso.
+
+## Limitações
+- Os adversários andam em linha reta, sem IA; só 3 carros; a colisão é rudimentar.
+- Sem som, sem tela de título, fim de corrida nem tempo de volta.
+- Medido em emulador (openMSX/C-BIOS); falta validar em hardware real.
