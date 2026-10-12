@@ -321,6 +321,35 @@ void Title_Draw(void) __banked
 	Ui_End(0, 0, 256, 212);
 }
 
+#if ART_SCENES
+void Over_Draw(void) __banked              // final: cena a esquerda (Betty = casamento, estudio = magnata, chefe = falencia) + painel com o resumo
+{
+	u8 x;
+	Ui_Begin();
+	Ui_Clear();
+	Ui_Fill(0, 20, 0, 160, 12);
+	if (g_Game.won) Scene_Draw(g_Game.won == 1 ? SCN_BETTY : SCN_NEWS, 8, 28);
+	else Scene_Draw(SCN_BOSS, 0, 28);                  // cena do chefe tem 256 px: o painel cobre o resto
+	Chrome_Box(132, 28, 116, 111, 14, 1);
+	Ui_Color(UI_BLACK);
+	if (g_Game.won == 1) { Ui_Text(142, 36, "BETTY SAID YES!"); Ui_Text(138, 54, "You are the king"); Ui_Text(138, 64, "of television."); }
+	else if (g_Game.won == 2) { Ui_Text(142, 36, "TV TYCOON!"); Ui_Text(138, 54, "Both rivals are"); Ui_Text(138, 64, "off the air and"); Ui_Text(138, 74, "you own the town."); }
+	else
+	{
+		Ui_Text(142, 36, "BANKRUPT!");
+		if (g_Game.alive[0]) { Ui_Text(138, 54, "Mr. Raffer shows"); Ui_Text(138, 64, "you the door."); }
+		else { Ui_Text(138, 54, "Nobody watches"); Ui_Text(138, 64, "your station."); }
+	}
+	Ui_Text(138, 96, "Days"); Ui_Int(180, 96, g_Game.day);
+	Ui_Text(138, 108, "Image"); Ui_Int(180, 108, g_Game.image[0]);
+	Ui_Text(138, 120, "Cash"); Money(180, 120, g_Game.money);
+	Chrome_Box(8, 144, 240, 36, 14, 1);
+	Ui_Color(UI_BLACK);
+	Ui_Text(16, 150, "Coverage level"); x = Ui_Int(112, 150, g_Game.tower); Ui_Text(x, 150, "/"); Ui_Int((u8)(x + 6), 150, TOWER_MAX);
+	Ui_Text(16, 164, "Press OK to restart");
+	Ui_End(0, 0, 256, 212);
+}
+#else
 void Over_Draw(void) __banked
 {
 	Ui_Begin();
@@ -336,4 +365,5 @@ void Over_Draw(void) __banked
 	Ui_Color(UI_BLACK); Ui_Text(60, 150, "Press OK to restart");
 	Ui_End(0, 0, 256, 212);
 }
+#endif
 

@@ -62,7 +62,9 @@
 #define NUM_ALL       (DB_NUM_MOVIES + NUM_OWN)
 #define OWNED_BYTES   ((NUM_ALL + 7) / 8)
 #define SAVE_BYTES    (51 + OWNED_BYTES + 15)
-#define TOWER_MAX     4          // niveis de torre do jogador (Corretor); rivais sobem 1 nivel a cada 30 dias
+#define TOWER_MAX     6          // niveis de cobertura do jogador (Corretor): 1-4 torres, 5 rede a cabo, 6 satelite
+#define RIVAL_TOWER_MAX 4        // rivais sobem 1 nivel a cada 30 dias ate aqui
+#define TYCOON_CASH   10000      // k$: com os dois rivais falidos e esse caixa, final "dono da TV" (g_Game.won = 2)
 #define TOWER_UPKEEP  40         // k$/dia por nivel
 #define SAVE_CHARS    ((SAVE_BYTES * 8 + 4) / 5)   // ceil(SAVE_BYTES*8/5)
 #ifndef IMAGE_LOW

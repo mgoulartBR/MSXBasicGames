@@ -198,7 +198,7 @@ u8 Sim_GiftEffect(u8 g) __banked
 	return (u >= 3) ? (u8)(k_GiftEff[g] / 10) : (u8)((u16)k_GiftEff[g] * (100 - 30 * u) / 100);
 }
 
-static const u16 k_TowerCost[TOWER_MAX] = { 1500, 3000, 5000, 8000 };
+static const u16 k_TowerCost[TOWER_MAX] = { 1500, 3000, 5000, 8000, 12000, 20000 };
 u16 Sim_TowerCost(void) __banked { return g_Game.tower >= TOWER_MAX ? 0 : k_TowerCost[g_Game.tower]; }
 u8 Sim_BuyTower(void) __banked
 {

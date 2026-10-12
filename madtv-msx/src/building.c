@@ -22,7 +22,7 @@ static const Room k_Rooms[NROOMS] = {
 	{ 1, 172, COLOR_CYAN,        SCR_NEWS,   "NEWS", "News room" },
 	{ 2,  40, COLOR_DARK_YELLOW, SCR_SCRIPTS, "SCRP", "Script agency - buy scripts" },
 	{ 2,  84, COLOR_MAGENTA,     SCR_STUDIO,  "STUD", "Studios - produce your own films" },
-	{ 2, 172, COLOR_LIGHT_RED,  SCR_REALTOR, "REAL", "Realtor - buy transmitter towers" },
+	{ 2, 172, COLOR_LIGHT_RED,  SCR_REALTOR, "REAL", "Realtor - towers, cable, satellite" },
 	{ 3,  84, COLOR_LIGHT_YELLOW, SCR_OFFICE, "OFFC", "Your office - grid, ratings, save" },
 	{ 3, 172, COLOR_MEDIUM_GREEN, SCR_FUN,   "FUN",  "FunTV office - spy on their schedule" },
 	{ 3, 216, COLOR_CYAN,      SCR_SUN,    "SUN",  "SunTV office - spy on their schedule" },

@@ -259,7 +259,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 		}
 		day++;
 	}
-	r.won = g_Game.won;
+	r.won = (g_Game.won == 1);
 	r.rivals_dead = !g_Game.alive[1] + !g_Game.alive[2];
 	r.bankrupt = g_Game.game_over && !g_Game.won;
 	r.days = g_Game.day;

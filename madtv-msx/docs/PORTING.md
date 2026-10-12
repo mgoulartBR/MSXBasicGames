@@ -304,3 +304,9 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - `Sim_RivalDay` (sim_ext.c, chamada em `EndDay`): cada rival vivo com Image > Image do jogador sorteia `SABOTAGE_PCT + 6*dificuldade` %; no maximo uma sabotagem por dia, escolhida entre difamacao (-2 Image), suborno dos reporteres (+6 h de idade nas noticias do telejornal) e roubo de um contrato de anuncio (sem multa, o slot fica sem anuncio). Sem estado novo: savegame inalterado. Efeito no bot "smart" (200 partidas, normal): falencia 1% -> 3%, caixa mediano 2526k -> 2572k (numeros de um bot, nao de humano). Para comparar sem sabotagem: `CFLAGS_EXTRA="-DBALANCE_STATS -DSABOTAGE_PCT=-6"`.
 - Slots: menu "Erase a slot"; o 1o OK arma o slot (mensagem pede confirmacao), o 2o apaga; mudar a selecao desarma. `tests/sram.sh` agora apaga o slot 1 e confere que Esc no titulo cai na tela do codigo.
 - Verificado so no emulador (openMSX, C-BIOS).
+
+## 2.0: cobertura e finais
+- `TOWER_MAX` 4 -> 6 (4 torres, rede a cabo, satelite): `k_TowerPct` {100,112,125,140,155,175,200}; custos 1500/3000/5000/8000/12000/20000; rivais continuam em no maximo `RIVAL_TOWER_MAX` = 4. O byte `tower` do save ja comportava o valor: formato igual. Alcance base 12,0 milhoes x2 = 24,0 cabe em u8.
+- Finais: `g_Game.won` 1 = casamento, 2 = magnata (`TYCOON_CASH` = 10000k com os dois rivais falidos, checado no fim do dia), 0 + `game_over` = falencia / Image zerado. `Over_Draw` usa a cena da Betty, do estudio de noticias ou do chefe e um painel com dias, Image, caixa e cobertura; `main` esconde os sprites do predio ao entrar na tela final.
+- Autoplay (bot "smart", normal): sem diferenca perceptivel (o bot raramente junta caixa para cabo/satelite); o magnata e raro no bot.
+- Verificado so no emulador (openMSX, C-BIOS): os tres finais foram vistos em capturas (casamento pelo smoke; magnata e falencia por um script avulso que zera os rivais/caixa e acelera o dia).

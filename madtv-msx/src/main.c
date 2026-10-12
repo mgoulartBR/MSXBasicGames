@@ -327,7 +327,7 @@ void main()
 		}
 		ScreenInput(ev);
 		if (((ev | clk) & IN_OK) && (g_Dirty & D_MSG)) Audio_Result(g_Msg);
-		if (g_Game.game_over) { g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
+		if (g_Game.game_over) { if (g_Screen == SCR_HUB) Building_Leave(); g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
 
 		if (g_Dirty & D_HDR) Hud_Draw();
 		if ((g_Dirty & D_DAT) && !(g_Dirty & D_CON)) ScreenDyn();

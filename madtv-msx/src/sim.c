@@ -121,11 +121,11 @@ static u8 Audience(u8 st, u8 s)
 	return (u8)a;
 }
 
-static const u8 k_TowerPct[TOWER_MAX + 1] = { 100, 112, 125, 140, 155 };
+static const u8 k_TowerPct[TOWER_MAX + 1] = { 100, 112, 125, 140, 155, 175, 200 };
 u8 Sim_Reach(u8 st)
 {
 	u8 l = g_Game.tower;
-	if (st) { l = (u8)(g_Game.day / 30); if (l > TOWER_MAX) l = TOWER_MAX; }
+	if (st) { l = (u8)(g_Game.day / 30); if (l > RIVAL_TOWER_MAX) l = RIVAL_TOWER_MAX; }
 	return (u8)((u16)g_Reach[st] * k_TowerPct[l] / 100);
 }
 
@@ -369,6 +369,7 @@ static void EndDay(void)
 	for (i = 0; i < DB_NUM_AGENCIES; i++) if (g_Game.news_sub[i]) { g_Game.money -= NEWS_FEE; g_Game.day_cost += NEWS_FEE; }
 	if (g_Game.debt > 0) g_Game.debt += g_Game.debt * INTEREST_PCT / 100;     // juros do chefe
 	if (g_Game.money < BANKRUPT_AT) g_Game.game_over = 1;
+	else if (!g_Game.alive[1] && !g_Game.alive[2] && g_Game.money >= TYCOON_CASH) { g_Game.won = 2; g_Game.game_over = 1; }   // final "dono da TV"
 	StartDay();
 }
 

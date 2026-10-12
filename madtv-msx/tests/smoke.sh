@@ -223,7 +223,7 @@ room 13
 at 0.2 { poke [expr {$G+[off 4]}] 100; poke [expr {$G+[off 4]+1}] 0; poke [expr {$G+[off 4]+2}] 0; poke [expr {$G+[off 10]}] 100; poke [expr {$G+[off 11]+1}] 0; poke [expr {$G+[off 11]+2}] 0; poke [expr {$G+[off 12]+9}] 1 }
 for {set i 0} {$i < 10} {incr i} { key DOWN }
 key RET
-at 0.5 { shot 12b_win; dump win }
+at 1.5 { shot 12b_win; dump win }
 key RET
 at 0.5 {}
 # --- simular dias em velocidade maxima

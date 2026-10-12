@@ -386,6 +386,8 @@ void Rival_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_HUB); }
 
 // ---------------------------------------------------------------- CORRETOR (torres de transmissao)
 #if ART_SCENES
+static const char* const k_CovName[TOWER_MAX + 1] = { "None", "Tower 1", "Tower 2", "Tower 3", "Tower 4", "Cable network", "Satellite" };
+
 void Realtor_Draw(void) __banked
 {
 	u8 x, st;
@@ -393,34 +395,36 @@ void Realtor_Draw(void) __banked
 	Ui_Begin();
 	Room_Frame(SCN_REALTY);
 	Ui_Color(UI_BLACK);
-	Ui_Text(130, CONTENT_Y + 2, "Tower level"); Ui_Int(204, CONTENT_Y + 2, g_Game.tower); Ui_Text(212, CONTENT_Y + 2, "/"); Ui_Int(220, CONTENT_Y + 2, TOWER_MAX);
-	Ui_Text(130, CONTENT_Y + 14, "Reach"); Ui_Dec1(170, CONTENT_Y + 14, Sim_Reach(0)); Ui_Text(200, CONTENT_Y + 14, "million");
-	Ui_Text(130, CONTENT_Y + 26, "Upkeep"); x = Ui_Int(176, CONTENT_Y + 26, TOWER_UPKEEP * g_Game.tower); Ui_Text(x, CONTENT_Y + 26, "k/day");
-	Ui_Text(130, CONTENT_Y + 46, "Rival reach");
+	Ui_Text(130, CONTENT_Y + 2, "Coverage"); Ui_Text(130, CONTENT_Y + 12, k_CovName[g_Game.tower]);
+	Ui_Text(130, CONTENT_Y + 24, "Reach"); Ui_Dec1(170, CONTENT_Y + 24, Sim_Reach(0)); Ui_Text(200, CONTENT_Y + 24, "million");
+	Ui_Text(130, CONTENT_Y + 36, "Upkeep"); x = Ui_Int(176, CONTENT_Y + 36, TOWER_UPKEEP * g_Game.tower); Ui_Text(x, CONTENT_Y + 36, "k/day");
+	Ui_Text(130, CONTENT_Y + 56, "Rival reach");
 	for (st = 1; st < NUM_STATIONS; st++)
 	{
-		u8 y = (u8)(CONTENT_Y + 48 + st * 10);
+		u8 y = (u8)(CONTENT_Y + 58 + st * 10);
 		Ui_Color(UI_BLACK); Ui_Text(130, y, g_StationName[st]);
 		Ui_Dec1(190, y, Sim_Reach(st));
 	}
 	Chrome_Box(0, 138, 256, 48, 14, 1);
 	Ui_Color(UI_BLACK);
-	if (c) { Ui_Text(8, 142, "Build next tower:"); Money(116, 142, c); Ui_Text(8, 158, "Press OK to build."); }
-	else Ui_Text(8, 142, "Maximum coverage reached.");
+	if (c) { Ui_Text(8, 142, "Build next:"); Ui_Text(74, 142, k_CovName[g_Game.tower + 1]); Money(176, 142, c); Ui_Text(8, 158, "Press OK to build."); }
+	else Ui_Text(8, 142, "Maximum coverage: satellite!");
 	Ui_Text(8, 172, "More reach = more audience and ads.");
 	Ui_End(0, CONTENT_Y - 2, 0, 160);
 	Hint("OK:build tower  BACK:building");
 }
 
 #else
+static const char* const k_CovName[TOWER_MAX + 1] = { "None", "Tower 1", "Tower 2", "Tower 3", "Tower 4", "Cable network", "Satellite" };
+
 void Realtor_Draw(void) __banked
 {
 	u8 x, st;
 	u16 c = Sim_TowerCost();
 	Ui_Begin();
 	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Realtor - transmitter towers");
-	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 16), "Your tower level");  Ui_Color(UI_WHITE); Ui_Int(130, (u8)(CONTENT_Y + 16), g_Game.tower); Ui_Text(142, (u8)(CONTENT_Y + 16), "/"); Ui_Int(150, (u8)(CONTENT_Y + 16), TOWER_MAX);
+	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Realtor - towers, cable, satellite");
+	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 16), "Your coverage");  Ui_Color(UI_WHITE); Ui_Text(130, (u8)(CONTENT_Y + 16), k_CovName[g_Game.tower]);
 	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 26), "Audience reach");    Ui_Color(UI_WHITE); Ui_Dec1(130, (u8)(CONTENT_Y + 26), Sim_Reach(0)); Ui_Text(160, (u8)(CONTENT_Y + 26), "million");
 	Ui_Color(UI_GRAY);   Ui_Text(4, (u8)(CONTENT_Y + 36), "Tower upkeep");      Ui_Color(UI_WHITE); x = Ui_Int(130, (u8)(CONTENT_Y + 36), TOWER_UPKEEP * g_Game.tower); Ui_Text(x, (u8)(CONTENT_Y + 36), "k/day");
 	for (st = 1; st < NUM_STATIONS; st++)
@@ -430,8 +434,8 @@ void Realtor_Draw(void) __banked
 		Ui_Color(UI_GRAY); Ui_Text(60, y, "reach"); Ui_Dec1(100, y, Sim_Reach(st));
 	}
 	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 84), c ? ">" : " ");
-	if (c) { Ui_Text(14, (u8)(CONTENT_Y + 84), "Build next tower:"); Money(120, (u8)(CONTENT_Y + 84), c); }
-	else { Ui_Color(UI_GREEN); Ui_Text(14, (u8)(CONTENT_Y + 84), "Maximum coverage reached."); }
+	if (c) { Ui_Text(14, (u8)(CONTENT_Y + 84), "Build next:"); Ui_Text(80, (u8)(CONTENT_Y + 84), k_CovName[g_Game.tower + 1]); Money(190, (u8)(CONTENT_Y + 84), c); }
+	else { Ui_Color(UI_GREEN); Ui_Text(14, (u8)(CONTENT_Y + 84), "Maximum coverage: satellite!"); }
 	Ui_Color(UI_GRAY); Ui_Text(4, (u8)(CONTENT_Y + 100), "More reach = more audience, Image and ads.");
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
 	Hint("OK:build tower  BACK:building");
@@ -445,7 +449,7 @@ void Realtor_Input(u8 ev) __banked
 	if (ev & IN_OK)
 	{
 		u8 r = Sim_BuyTower();
-		Sim_Msg(r == 0 ? "Tower built! Your reach grows." : r == 1 ? "Not enough money!" : "No more towers to build.");
+		Sim_Msg(r == 0 ? "Built! Your reach grows." : r == 1 ? "Not enough money!" : "Nothing left to build.");
 		g_Dirty |= D_CON | D_MSG | D_HDR;
 	}
 }

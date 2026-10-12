@@ -164,11 +164,12 @@ int main(void)
 	{
 		u8 r0 = Sim_Reach(0), i;
 		i32 m0;
-		g_Game.money = 20000; m0 = g_Game.money;
+		g_Game.money = 60000; m0 = g_Game.money;
 		CHECK(Sim_TowerCost() == 1500 && Sim_BuyTower() == 0 && g_Game.tower == 1 && g_Game.money == m0 - 1500, "comprar torre 1");
 		CHECK(Sim_Reach(0) > r0, "torre aumenta o alcance");
 		for (i = 0; i < 10; i++) Sim_BuyTower();
 		CHECK(g_Game.tower == TOWER_MAX && Sim_TowerCost() == 0 && Sim_BuyTower() == 2, "nivel maximo de torres");
+		CHECK(Sim_Reach(0) >= 2 * r0 - 3, "satelite dobra o alcance (aprox.)");
 		g_Game.money = 0; g_Game.tower = 0; CHECK(Sim_BuyTower() == 1 && g_Game.tower == 0, "torre sem dinheiro");
 		g_Game.tower = 2; g_Game.money = 5000;
 		{ i32 a = g_Game.money; u16 t; for (t = 0; t < DAY_MINUTES; t++) Sim_Tick(); CHECK(a - g_Game.money >= DAILY_UPKEEP + 2 * TOWER_UPKEEP - 200, "manutencao das torres"); }
@@ -209,6 +210,17 @@ int main(void)
 		hit = (u8)(g_Game.image[0] < img0 || g_Game.news_slate[0].age > 0 || g_Game.contract[0].ad == NONE);
 		CHECK(hit, "rival na frente sabota (300 dias)");
 		g_Diff = 1;
+	}
+	// 2.0: final "dono da TV" (rivais falidos + caixa alto no fim do dia)
+	g_Diff = 1; Sim_Init(61);
+	{
+		u16 t;
+		g_Game.alive[1] = g_Game.alive[2] = 0; g_Game.money = TYCOON_CASH - 5000;
+		for (t = 0; t < DAY_MINUTES; t++) Sim_Tick();
+		CHECK(!g_Game.game_over, "sem caixa nao ha final de magnata");
+		g_Game.money = TYCOON_CASH + 5000;
+		for (t = 0; t < DAY_MINUTES && !g_Game.game_over; t++) Sim_Tick();
+		CHECK(g_Game.game_over && g_Game.won == 2, "final de magnata (won=2)");
 	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
