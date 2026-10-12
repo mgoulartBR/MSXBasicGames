@@ -148,3 +148,50 @@ multiplicação ou calculando só quando curva/relevo mudam.
 - Não há oclusão real de crista nem céu/horizonte que sobe e desce; o horizonte
   fica fixo na linha 100.
 - Sprites, HUD, colisão e a leitura das pistas reais ainda não existem.
+
+
+---
+
+# Versão 4: pistas REAIS lidas da ROM do usuário (`road_track.asm`)
+
+| Curva fechada (pos. 1121) | Subida à frente (pos. 676) |
+|---|---|
+| ![curva](screenshot_track_curve.png) | ![subida](screenshot_track_uphill.png) |
+
+A curvatura e o relevo deixam de ser sintéticos: vêm de uma das 16 pistas do
+campeonato, lida da **sua** ROM de Super Monaco GP.
+
+```sh
+./build_track.sh "/caminho/Super Monaco GP (USA) (En,Ja).md" 0 40 0 track.rom [pos_inicial]
+openmsx -machine C-BIOS_MSX2+ -cart track.rom
+```
+Args: ROM, pista (0–15), velocidade (fração de posição por quadro, 0–255), direção
+da paleta (0|1), saída e posição inicial (opcional).
+
+**Dados da ROM não são versionados**: `tools/smgp/export_track.py` gera
+`track.inc` localmente (está no `.gitignore`, assim como `*.rom`). O repositório só
+contém o código conversor.
+
+## Como os dados são usados
+- Cada pista = 1520–1936 **posições**. `export_track.py` expande os 3 fluxos do
+  formato original (veja `notes/`) em dois vetores `int8` por posição:
+  - `trkc`: curvatura = `±V/L × 18` (sentido pelo bit 6 do flag), suavizada em 7 posições;
+  - `trkh`: altura relativa × 2 (descida/subida pelo bit 6; a volta **fecha em 0,0** nas 16 pistas).
+- O jogador avança `pfrac` por quadro; ao completar 256, `pos++` (com volta ao início).
+- **Olhar adiante por zona** (`zt3`): cada zona lê a pista `adiante` posições à frente
+  (0 perto, ~47 no horizonte). Curva: `s = trkc[pos+adiante] × q >> 9`. Relevo:
+  `dv = (trkh[pos+adiante] − trkh[pos]) >> 2`, limitado a ±16. Assim o horizonte já
+  mostra a curva/subida que ainda vai chegar.
+- A fase da paleta vem de `pfrac`, então as listras avançam junto com o carro.
+
+## Resultados (openMSX 19.1, C-BIOS MSX2+; **emulador, não hardware real**)
+**60 fps, ≈ 46 % de CPU livre**; a posição percorre a pista continuamente
+(≈ 9,4 posições/s com `speedf = 40`).
+
+## Aproximações e limitações
+- A curva é uma **aproximação** (amostra da curvatura à frente), não a dupla
+  integral do original; em curvas fortes (`|c|` satura em 127) a forma é mais
+  "dobrada" que a real.
+- O terceiro fluxo (zonas) e os bits baixos do flag (classe de raio) não são usados.
+- A convenção "bit 6 = esquerda" é uma suposição; a pista pode sair espelhada.
+- Sem sprites, HUD, colisão, nem os cenários (placas, túneis) do original.

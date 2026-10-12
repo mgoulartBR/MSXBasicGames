@@ -6,3 +6,5 @@
 *.bin
 *.rom
 Super Monaco GP*
+__pycache__/
+*.pyc

@@ -168,6 +168,16 @@ Achados: R#19 compara com `linha + R#23` (compensar na agenda das zonas) e
 `NX=0` pinta 256 px. openMSX: **60 fps com ~43 % de CPU livre**.
 Pendente: oclusão de crista/horizonte móvel, sprites, HUD e leitura das pistas reais.
 
+## 12. Protótipo v4: pistas reais da ROM do usuário (resultado)
+
+`tools/smgp/export_track.py` expande os 3 fluxos de uma pista em vetores por
+posição (curvatura `V/L` e altura acumulada) e `prototype/road/road_track.asm`
+os usa com "olhar adiante" por zona. Validações: a volta fecha em altura 0,0 nas
+16 pistas; a classe de curvatura (bits baixos do flag) decresce de forma
+monotônica com `V/L` (flag 1 -> ~10,9; 2 -> ~8,2; 4 -> ~6,5; ...).
+openMSX: **60 fps, ~46 % de CPU livre**. Os dados derivados da ROM ficam só
+localmente (`track.inc` no `.gitignore`).
+
 ## 8. Pendências
 
 - [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
@@ -176,4 +186,5 @@ Pendente: oclusão de crista/horizonte móvel, sprites, HUD e leitura das pistas
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
 - [x] Protótipo Z80/V9958 da pista (§9) e versão paleta + zonas R#27 (§10).
 - [x] Relevo no renderizador MSX (§11).
-- [ ] Horizonte móvel/oclusão de crista; sprites dos carros; HUD; ler as pistas reais da ROM do usuário.
+- [x] Ler as pistas reais da ROM do usuário (§12).
+- [ ] Horizonte móvel/oclusão de crista; sprites dos carros; HUD; usar o fluxo de zonas e a classe de raio do flag.

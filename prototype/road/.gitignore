@@ -5,3 +5,6 @@ zconfig.inc
 hconfig.inc
 *.rom
 *.txt
+
+track.inc
+tconfig.inc

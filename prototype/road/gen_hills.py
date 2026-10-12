@@ -32,10 +32,14 @@ for h in heights:
     off += h
 ZN = len(zones)
 il = [y - 1 + ILADJ for y, _, _ in zones]
-zt2 = []
+zt2, zt3 = [], []
 for k, (y, h, rc) in enumerate(zones):
     q = int(255 * ((ROWS - 1 - rc) / (ROWS - 1)) ** 2)
-    zt2 += [q, il[k + 1] if k + 1 < ZN else 0]
+    ilb = il[k + 1] if k + 1 < ZN else 0
+    zt2 += [q, ilb]
+    # distância (em posições da pista) que a zona "enxerga" adiante: 0 perto, ~47 no horizonte
+    ahead = int(0.5 + 48 * ((ROWS - rc) / ROWS) ** 1.6)
+    zt3 += [q, ahead, ilb]
 
 
 def smooth(raw, n=64, w=3):
@@ -77,7 +81,7 @@ def db(name, vals, per=16):
 
 lines = ["; gerado por gen_hills.py - dados sintéticos",
          "ZN      equ %d" % ZN, "IL0     equ %d" % il[0], "TEXROWS equ %d" % TEX]
-lines += db("hwtab", hw) + db("sbt", sb) + db("zt2", zt2, 8) + db("curvetab", curve)
+lines += db("hwtab", hw) + db("sbt", sb) + db("zt2", zt2, 8) + db("zt3", zt3, 9) + db("curvetab", curve)
 lines += db("hilltab", hill) + db("palbase", palbase) + db("paltab", paltab)
 open("hills.inc", "w").write("\n".join(lines) + "\n")
 print("hills.inc: zonas=%d texrows=%d il0=%d" % (ZN, TEX, il[0]))
