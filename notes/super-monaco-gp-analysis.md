@@ -159,6 +159,15 @@ Em openMSX (C-BIOS MSX2+): **60 fps travados no VBlank com ~61 % de CPU livre**
 (deslocamento horizontal por linha; aqui por zona) sem consumir banda de VRAM.
 Falta: relevo, sprites, HUD e validação em hardware real.
 
+## 11. Protótipo v3: relevo por R#23 (resultado)
+
+`prototype/road/road_hills.asm`: além das curvas (R#26/R#27) cada zona soma um
+deslocamento vertical a R#23, equivalente ao VScroll por linha do Mega Drive
+(`tabV`, §3/§5). Textura de 144 linhas; subida = dv > 0, descida = dv < 0.
+Achados: R#19 compara com `linha + R#23` (compensar na agenda das zonas) e
+`NX=0` pinta 256 px. openMSX: **60 fps com ~43 % de CPU livre**.
+Pendente: oclusão de crista/horizonte móvel, sprites, HUD e leitura das pistas reais.
+
 ## 8. Pendências
 
 - [ ] Significado dos 3 longs do registro (`$9240`/`$9254`/`$9226`) e do campo `flag` (`$920C`).
@@ -166,4 +175,5 @@ Falta: relevo, sprites, HUD e validação em hardware real.
 - [ ] Preenchimento de `$9500` e tabela V (`a6` em `$6C20`).
 - [ ] Confirmar rótulos dos 54 estados em emulador (BlastEm com depurador).
 - [x] Protótipo Z80/V9958 da pista (§9) e versão paleta + zonas R#27 (§10).
-- [ ] Relevo (subidas/descidas) no renderizador MSX; sprites dos carros; HUD.
+- [x] Relevo no renderizador MSX (§11).
+- [ ] Horizonte móvel/oclusão de crista; sprites dos carros; HUD; ler as pistas reais da ROM do usuário.

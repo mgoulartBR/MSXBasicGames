@@ -99,3 +99,52 @@ descontar interrupções e o cálculo por quadro (17 multiplicações + escrita 
 - Sprites (carros), HUD e colisão ainda não existem; o HUD pode ocupar linhas
   sem zonas.
 - Falta validar em hardware real (tempo exato das interrupções de linha e IM2).
+
+
+---
+
+# Versão 3: curvas + relevo (`road_hills.asm`)
+
+| Subida (+16) | Descida (−16) |
+|---|---|
+| ![subida](screenshot_hills.png) | ![descida](screenshot_hills_down.png) |
+
+O relevo usa **R#23 (scroll vertical) por zona**, o equivalente no V9958 do scroll
+vertical por linha do original: cada zona mostra outras linhas da textura.
+
+- **Textura estendida**: 144 linhas (VRAM y = 100…243). Com R#23 = 16 o horizonte
+  mostra a linha 16 da textura (pista plana); linhas anteriores são pista estreita
+  (além da crista), as posteriores, pista larga.
+- **Por zona**: `dv = relevo × q / 256` (−16…+16, mesmo fator quadrático da curva,
+  zero perto da câmera) e `R#23 = 16 + dv`. Subida = `dv > 0` (pista chega larga ao
+  horizonte); descida = `dv < 0` (a pista "some" atrás da crista).
+- **Achado importante**: a interrupção de linha (R#19) compara com
+  `linha + R#23`. Cada zona precisa agendar a próxima com
+  `R#19 = linha_base + R#23_da_zona_atual`; sem isso a última zona sai desalinhada
+  (teste com `ILV=0`).
+- **Armadilha**: `NX = 0` no VDP significa 256 pixels. As linhas acima do horizonte
+  geravam largura 0 e pintavam uma faixa cinza; a largura mínima é 2.
+- Zonas passaram a ter 4 bytes (R#26, R#27, R#23, linha da próxima interrupção).
+
+```sh
+./build_hills.sh 0x00A0 0 0 0 1 -1 hills.rom    # speed paldir forcecurve forcehill ilv iladj saida
+openmsx -machine C-BIOS_MSX2+ -cart hills.rom
+```
+
+## Resultados (openMSX 19.1, C-BIOS MSX2+; **emulador, não hardware real**)
+
+| Versão | fps | CPU livre |
+|---|---|---|
+| 1: 56 bandas com `HMMM` | 11,8 | — |
+| 2: paleta + zonas R#26/27 | 60 | ≈ 61 % |
+| 3: + relevo (R#23) | **60** | **≈ 43 %** |
+
+O custo extra vem da 2ª multiplicação por zona (17 × 2 ≈ 10 mil T por quadro) e da
+ISR maior (3 registros por zona). Dá para recuperar CPU com uma tabela de
+multiplicação ou calculando só quando curva/relevo mudam.
+
+## Limitações
+- O relevo é um deslocamento por zona (degraus de largura/posição perto do horizonte).
+- Não há oclusão real de crista nem céu/horizonte que sobe e desce; o horizonte
+  fica fixo na linha 100.
+- Sprites, HUD, colisão e a leitura das pistas reais ainda não existem.

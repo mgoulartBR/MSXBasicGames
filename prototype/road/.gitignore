@@ -1,6 +1,7 @@
-# gerados por build.sh / build_zones.sh e pelos testes
+# gerados por build*.sh e pelos testes
 config.inc
 speedcfg.inc
 zconfig.inc
+hconfig.inc
 *.rom
 *.txt
