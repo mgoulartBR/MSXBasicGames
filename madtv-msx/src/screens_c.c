@@ -281,6 +281,7 @@ void Save_Mouse(u8 x, u8 y, u8 btn) __banked
 
 // ---------------------------------------------------------------- titulo e fim de jogo (fora do nucleo fixo p/ poupar espaco)
 // geometria dos botoes do titulo (estilo da tela "Select a player" do original)
+#define TB_ST_Y    106                         // botoes da emissora (nova na 2.8)
 #define TB_DIFF_Y  124
 #define TB_ACT_Y   148
 
@@ -294,18 +295,26 @@ void Title_Opts(void) __banked                   // so os botoes de dificuldade 
 {
 	static const char* const k_D[3] = { "Easy", "Normal", "Hard" };
 	u8 i;
+	static const char* const k_S[3] = { "MadTV", "FunTV", "SunTV" };
+	static const char* const k_Perk[3] = { "Balanced start.", "+500k cash, Image -5.", "Respected: Image +8, -500k." };
 	Ui_Begin();
+	Ui_Fill(12, TB_ST_Y - 2, 232, 18, 14);
+	for (i = 0; i < 3; i++) Btn((u8)(16 + i * 80), TB_ST_Y, 64, g_Station == i ? 10 : 14, k_S[i], 14);
 	Ui_Fill(12, TB_DIFF_Y - 2, 232, 18, 14);
 	for (i = 0; i < 3; i++) Btn((u8)(16 + i * 80), TB_DIFF_Y, 64, g_Diff == i ? 10 : 14, k_D[i], i == 1 ? 14 : 20);
+	Ui_Fill(12, 139, 232, 8, 14);
+	Ui_Color(UI_BLACK); Ui_Text(16, 139, k_Perk[g_Station]);
 	Ui_Fill(12, 168, 232, 10, 14);
 	Ui_Color(UI_BLACK); Ui_Text(16, 169, k_MouseTxt[g_PtrMode]);
-	Ui_End(12, TB_DIFF_Y - 2, 232, 56);
+	Ui_End(12, TB_ST_Y - 2, 232, 74);
 }
 
 u8 Title_Click(u8 x, u8 y) __banked              // 0 nada, 1 novo jogo, 2 carregar; os botoes de dificuldade mudam na hora
 {
 	u8 i;
 	if (y >= TB_ACT_Y && y < TB_ACT_Y + 14) { if (x >= 16 && x < 120) return 1; if (x >= 136 && x < 240) return 2; }
+	if (y >= TB_ST_Y && y < TB_ST_Y + 14)
+		for (i = 0; i < 3; i++) if (x >= 16 + i * 80 && x < 80 + i * 80) { if (g_Station != i) { g_Station = i; Title_Opts(); } break; }
 	if (y >= TB_DIFF_Y && y < TB_DIFF_Y + 14)
 		for (i = 0; i < 3; i++) if (x >= 16 + i * 80 && x < 80 + i * 80) { if (g_Diff != i) { g_Diff = i; Title_Opts(); } break; }
 	return 0;
@@ -340,9 +349,9 @@ void Title_Draw(void) __banked
 	Ui_Text(74, 38, "MSX2 port - v" VERSION_STR);
 	Ui_Text(16, 48, "Run the station: buy movies, sign");
 	Ui_Text(16, 58, "ad contracts, fill the programme");
-	Ui_Text(16, 68, "grid and beat FunTV and SunTV in");
+	Ui_Text(16, 68, "grid and beat the rival stations in");
 	Ui_Text(16, 78, "the ratings.");
-	Ui_Text(16, 96, "Choose the difficulty:");
+	Ui_Text(16, 92, "Choose your station and difficulty:");
 	Title_Opts();
 	Btn(16, TB_ACT_Y, 104, 8, "New game (OK)", 8);
 	Btn(136, TB_ACT_Y, 104, 8, "Load game (Esc)", 4);

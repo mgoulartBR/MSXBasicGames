@@ -8,6 +8,7 @@ __sfr __at(0xA1) PSG_DATA;
 
 u8 g_SndSfx, g_SndMus, g_SfxCount, g_MusicPos;       // g_SfxCount / g_MusicPos: ganchos de teste (smoke.sh)
 static u8 s_SfxId, s_SfxStep, s_SfxLeft;
+#define NSFX 7                                        // ids 0-4 efeitos, 5 = Sammy ganho, 6 = derrota
 
 static void Wr(u8 r, u8 v) { PSG_ADDR = r; PSG_DATA = v; }
 static void Tone(u8 ch, u16 period) { Wr((u8)(ch * 2), (u8)period); Wr((u8)(ch * 2 + 1), (u8)(period >> 8)); }
@@ -28,6 +29,16 @@ static const u8 k_Lead[128] = { /* 253 = sustenta, 255 = pausa */
 };
 static const u8 k_Root[32] = { 12, 12, 9, 9, 14, 14, 7, 7, 12, 12, 9, 9, 14, 7, 12, 12, 5, 5, 16, 16, 14, 14, 7, 7, 5, 5, 16, 9, 14, 14, 7, 7 };
 static const u8 k_Comp[32] = { 23, 23, 19, 19, 24, 24, 17, 17, 23, 23, 19, 19, 24, 17, 23, 23, 21, 21, 19, 19, 24, 24, 17, 17, 21, 21, 19, 21, 24, 24, 17, 17 };
+// ---- tema 2 ("trabalho", nas salas): mais calmo e esparso, Do maior pentatonico; mesmos formatos. Progressao por compasso: C Am F G.
+static const u8 k_Lead2[128] = {
+	28, 253, 253, 253, 31, 253, 253, 253, 33, 253, 31, 253, 28, 253, 253, 253, 26, 253, 253, 253, 28, 253, 31, 253, 33, 253, 253, 253, 255, 255, 255, 255,
+	28, 253, 253, 253, 31, 253, 253, 253, 36, 253, 253, 253, 33, 253, 31, 253, 33, 253, 31, 253, 28, 253, 26, 253, 28, 253, 253, 253, 253, 253, 255, 255,
+	33, 253, 253, 253, 36, 253, 253, 253, 38, 253, 253, 253, 36, 253, 33, 253, 31, 253, 253, 253, 33, 253, 31, 253, 28, 253, 253, 253, 255, 255, 255, 255,
+	28, 253, 253, 253, 31, 253, 253, 253, 36, 253, 253, 253, 33, 253, 31, 253, 33, 253, 31, 253, 26, 253, 28, 253, 24, 253, 253, 253, 253, 253, 255, 255
+};
+static const u8 k_Root2[32] = { 12, 12, 9, 9, 5, 5, 7, 7, 12, 12, 9, 9, 5, 5, 7, 7, 12, 12, 9, 9, 5, 5, 7, 7, 12, 12, 9, 9, 5, 5, 7, 7 };
+static const u8 k_Comp2[32] = { 16, 16, 12, 12, 9, 9, 11, 11, 16, 16, 12, 12, 9, 9, 11, 11, 16, 16, 12, 12, 9, 9, 11, 11, 16, 16, 12, 12, 9, 9, 11, 11 };
+static u8 s_Theme;
 static const u8 k_PatA[4] = { 0, 7, 12, 7 }, k_PatB[4] = { 0, 12, 7, 12 };   // baixo: passos pares do compasso (fundamental/quinta/oitava)
 
 // ---- chip MSX-MUSIC (YM2413/OPLL), se existir: musica em FM nos canais 1-3; senao o PSG toca a musica. Efeitos sempre no PSG (canal C).
@@ -85,7 +96,7 @@ static u8 s_Step, s_Sub, s_LAge, s_BAge, s_CAge, s_LOn, s_BOn, s_COn;
 void Audio_Init(void) __banked
 {
 	u8 r;
-	g_SndSfx = 1; g_SndMus = 1; g_SfxCount = 0; g_MusicPos = 0; s_Sub = 0; s_SfxLeft = 0; s_SfxId = 0xFF;
+	g_SndSfx = 1; g_SndMus = 1; g_SfxCount = 0; g_MusicPos = 0; s_Sub = 0; s_SfxLeft = 0; s_SfxId = 0xFF; s_Theme = 0;
 	s_Step = VDP_GetFrequency() ? 15 : 18;                  // colcheia = ~0,3 s (96 BPM) nos dois sistemas de video
 	s_LOn = s_BOn = s_COn = 0; s_LAge = s_BAge = s_CAge = 0;
 	for (r = 0; r < 7; r++) Wr(r, 0);
@@ -102,13 +113,23 @@ void Audio_Init(void) __banked
 }
 
 // efeitos: ate 3 trechos {periodo, quadros}
-static const u16 k_Sfx[5][3][2] = {
+static const u16 k_Sfx[NSFX][3][2] = {
 	{ { 250, 2 }, { 0, 0 }, { 0, 0 } },                     // 0 mover cursor
 	{ { 380, 3 }, { 285, 4 }, { 0, 0 } },                   // 1 confirmar
 	{ { 1100, 5 }, { 1300, 7 }, { 0, 0 } },                 // 2 erro
 	{ { 320, 4 }, { 254, 4 }, { 214, 7 } },                 // 3 novo dia
 	{ { 285, 3 }, { 214, 3 }, { 160, 6 } },                 // 4 conquista (casamento etc.)
+	{ { 240, 4 }, { 190, 4 }, { 143, 12 } },                // 5 jingle: Sammy ganho (sobe)
+	{ { 330, 7 }, { 420, 7 }, { 560, 16 } },                // 6 jingle: derrota (desce)
 };
+
+static void MusicOff(void);
+void Audio_Theme(u8 t) __banked                      // 0 = predio/titulo, 1 = salas; troca so se mudou (recomeca a musica do inicio)
+{
+	if (t == s_Theme) return;
+	s_Theme = t; g_MusicPos = 0; s_Sub = 0;
+	MusicOff();
+}
 
 void Audio_Sfx(u8 id) __banked
 {
@@ -140,7 +161,7 @@ static void MusicOff(void)
 
 static void MusicStep(void)
 {
-	u8 pos = g_MusicPos, st = (u8)(pos & 7), v = k_Lead[pos];
+	u8 pos = g_MusicPos, st = (u8)(pos & 7), v = (s_Theme ? k_Lead2 : k_Lead)[pos];
 	if (v != 253)                                            // melodia: nova nota ou pausa
 	{
 		if (v == 255) { s_LOn = 0; if (g_MusicType) FmNote(0, 0, 0); }
@@ -148,15 +169,15 @@ static void MusicStep(void)
 	}
 	if (!(st & 1))                                           // baixo nos passos pares
 	{
-		u8 n = (u8)(k_Root[pos >> 2] + (((pos >> 3) & 1) ? k_PatB : k_PatA)[st >> 1]);
+		u8 n = (u8)((s_Theme ? k_Root2 : k_Root)[pos >> 2] + (((pos >> 3) & 1) ? k_PatB : k_PatA)[st >> 1]);
 		s_BOn = 1; s_BAge = 0;
 		if (g_MusicType) FmNote(1, n, 1); else { Wr(2, (u8)NotePeriod(n)); Wr(3, (u8)(NotePeriod(n) >> 8)); }
 	}
 	if (st == 2 || st == 5)                                  // acorde sincopado (terca/setima)
 	{
-		u8 n = k_Comp[pos >> 2];
+		u8 n = (s_Theme ? k_Comp2 : k_Comp)[pos >> 2];
 		s_COn = 1; s_CAge = 0;
-		if (g_MusicType) FmNote(2, n, 1); else if (s_SfxId >= 5) { Wr(4, (u8)NotePeriod(n)); Wr(5, (u8)(NotePeriod(n) >> 8)); }
+		if (g_MusicType) FmNote(2, n, 1); else if (s_SfxId >= NSFX) { Wr(4, (u8)NotePeriod(n)); Wr(5, (u8)(NotePeriod(n) >> 8)); }
 	}
 }
 
@@ -172,7 +193,7 @@ void Audio_Tick(void) __banked
 			Wr(8, v);
 			v = (u8)(s_BOn ? (u8)(9 - (s_BAge >> 1)) : 0); if (s_BOn && (v > 9 || v < 3)) v = 3;
 			Wr(9, v);
-			if (s_SfxId >= 5) { v = (u8)(s_COn && s_CAge < 12 ? (u8)(6 - (s_CAge >> 2)) : 0); Wr(10, v); }
+			if (s_SfxId >= NSFX) { v = (u8)(s_COn && s_CAge < 12 ? (u8)(6 - (s_CAge >> 2)) : 0); Wr(10, v); }
 		}
 		if (s_LAge < 250) s_LAge++;
 		if (s_BAge < 250) s_BAge++;
@@ -180,7 +201,7 @@ void Audio_Tick(void) __banked
 		if (++s_Sub >= s_Step) { s_Sub = 0; g_MusicPos = (u8)((g_MusicPos + 1) & 127); }
 	}
 	else MusicOff();
-	if (g_SndSfx && s_SfxId < 5)
+	if (g_SndSfx && s_SfxId < NSFX)
 	{
 		if (s_SfxLeft == 0)
 		{

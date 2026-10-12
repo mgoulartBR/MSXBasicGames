@@ -2,10 +2,10 @@
 
 Port/reimplementacao do **Mad TV** (Rainbow Arts, 1991) para **MSX2**, em C com [MSXgl](https://github.com/aoineko-fr/MSXgl), usando os dados do remake open source **TVTower**. O modelo de simulacao e proprio (nao e o do original); o jogo e escrito do zero para o V9938 (Screen 5).
 
-**Versao atual: 2.7.** A 2.4 foi testada em MSX2 real pelo autor (desempenho bom); o restante foi verificado apenas no openMSX (C-BIOS).
+**Versao atual: 2.8.** A 2.4 foi testada em MSX2 real pelo autor (desempenho bom); o restante foi verificado apenas no openMSX (C-BIOS).
 
 ## O que e o jogo
-Voce dirige uma emissora de TV: compra filmes (agora com elenco e estrelas) e contratos de anuncio, monta a grade de programacao, acompanha a audiencia, monta o telejornal, disputa o Image e o premio **Sammy** com FunTV e SunTV (que sabotam, levam filmes do catalogo e ampliam seu alcance), amplia a cobertura (torres, cabo, satelite), produz seus proprios filmes e corteja a Betty. Tres finais: casamento, magnata da TV ou falencia.
+Voce dirige uma emissora de TV: compra filmes (agora com elenco e estrelas) e contratos de anuncio, monta a grade de programacao, acompanha a audiencia, monta o telejornal, disputa o Image e o premio **Sammy** com FunTV e SunTV (que sabotam, levam filmes do catalogo e ampliam seu alcance), amplia a cobertura (torres, cabo, satelite), produz seus proprios filmes e corteja a Betty. Voce escolhe a emissora no titulo (MadTV equilibrada, FunTV +500k de caixa e Image -5, SunTV Image +8 e -500k). Tres finais: casamento, magnata da TV ou falencia.
 
 ## Requisitos e build
 - MSX2 com 128 KB de VRAM; ROM de **512 KB**, mapper **ASCII8** (com SRAM de 8 KB para salvar em 4 slots; sem SRAM salva por codigo de 140 caracteres). Mouse (porta 1 ou 2, autodetectado), MSX-MUSIC (FM) opcionais.

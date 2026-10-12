@@ -271,6 +271,22 @@ int main(void)
 		for (m = 0; m < DB_NUM_MOVIES; m++) if (Sim_TakenBy(m)) w2++;
 		CHECK(w1 >= 5 && w2 >= 5, "a cada janela de dias o catalogo gira (outro conjunto)");
 	}
+	// 2.8: emissora do jogador (nomes, caixa e Image iniciais, save)
+	{
+		char c[SAVE_CHARS + 2];
+		i32 m0;
+		g_Diff = 1; g_Station = 0; Sim_Init(101); m0 = g_Game.money;
+		CHECK(!strcmp(g_StationName[0], "MadTV") && !strcmp(g_StationName[1], "FunTV") && !strcmp(g_StationName[2], "SunTV") && g_Game.image[0] == 34, "MadTV: nomes e Image padrao");
+		g_Station = 1; Sim_Init(101);
+		CHECK(!strcmp(g_StationName[0], "FunTV") && !strcmp(g_StationName[1], "MadTV") && !strcmp(g_StationName[2], "SunTV"), "FunTV: o jogador e FunTV, rivais MadTV e SunTV");
+		CHECK(g_Game.money == m0 + 500 && g_Game.image[0] == 29 && g_Game.image[0] + g_Game.image[1] + g_Game.image[2] == 100, "FunTV: +500k e Image 29 (soma 100)");
+		g_Station = 2; Sim_Init(101);
+		CHECK(!strcmp(g_StationName[0], "SunTV") && !strcmp(g_StationName[2], "FunTV") && g_Game.money == m0 - 500 && g_Game.image[0] == 42, "SunTV: -500k e Image 42");
+		g_Station = 2; Sim_Init(102); Sim_SaveCode(c);
+		g_Station = 0; g_Diff = 0; Sim_Init(5);
+		CHECK(Sim_LoadCode(c) == 0 && g_Station == 2 && g_Diff == 1 && !strcmp(g_StationName[0], "SunTV"), "save guarda a emissora (e a dificuldade)");
+		g_Station = 0; g_Diff = 1;
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }

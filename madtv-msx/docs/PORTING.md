@@ -360,3 +360,10 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Escritorios dos rivais: `make_scenes.py` ganhou `rival1`/`rival2` (office.png cols 180-300 e 20-140; `inpaint_cursor` apaga a seta vermelha do DOS que vinha na captura) nos segmentos 36 e 37.
 - Historico: `git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch madtv-msx/screenshots' main..HEAD` + force-push com `--force-with-lease`; `screenshots/` esta no .gitignore.
 - Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.
+
+## 2.8: audio, grade, emissora
+- Audio: `s_Theme` escolhe `k_Lead/k_Root/k_Comp` (tema 0) ou `k_Lead2/k_Root2/k_Comp2`; troca recomeca a musica (`g_MusicPos = 0`). Efeitos agora `NSFX` = 7. Nada disso foi ouvido: so os registros no emulador.
+- Regra reaprendida: ponteiros para literais devem apontar para o codigo FIXO se forem lidos de outros segmentos (`g_StationName` apontando para o segmento 38 saiu como lixo na tela do console; corrigido com `g_StName3` em sim.c).
+- Segmentos: erro de link "Data overwrite at offset C000h" = o segmento 6 (sim_ext) passou de 8 KB. Solucao: `sim_ext2.c` + `screens_r.c` em `seg_s38_b2.c`. Os testes de PC compilam `sim_ext2.c` tambem.
+- Save: bits 6-7 de b[0] = emissora; dificuldade nos bits 4-5 (leituras antigas `b[0] >> 4` viraram `(b[0] >> 4) & 3`).
+- Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.

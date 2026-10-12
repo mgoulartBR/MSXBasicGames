@@ -63,7 +63,7 @@ static u8 SlotInfo(u8 i, u16* day, i32* money, u8* diff)
 	if (!used) return 0;
 	*day = (u16)(b[1] | (b[2] << 8));
 	*money = (i32)((u32)b[5] | ((u32)b[6] << 8) | ((u32)b[7] << 16) | ((u32)b[8] << 24));
-	*diff = (u8)(b[0] >> 4);
+	*diff = (u8)((b[0] >> 4) & 3);
 	return 1;
 }
 

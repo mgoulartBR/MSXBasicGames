@@ -110,6 +110,7 @@ void Goto(u8 scr)
 {
 	if (g_Screen == SCR_HUB && scr != SCR_HUB) Building_Leave();
 	g_Screen = scr; g_Sel = 0; g_First = 0; g_Dirty |= D_CON; g_BufScene = 0xFF;
+	Audio_Theme((u8)(scr != SCR_HUB && scr != SCR_TITLE && scr != SCR_OVER));      // predio/titulo = tema 0; salas = tema 2 (mais calmo)
 	ScreenEnter(scr);
 }
 
@@ -258,7 +259,7 @@ void main()
 	u8 ev, e, hz, fc = 0, fpm, clk;
 	// O crt0 do MSXgl NAO zera a RAM (BSS): em hardware real ela contem lixo. Todo estado e inicializado aqui.
 	{ u8 k; for (k = 0; k <= SCR_OVER; k++) g_DrawMax[k] = 0; }
-	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1;
+	g_Dirty = 0; g_Sel = 0; g_First = 0; g_RowA = g_RowB = 0xFF; g_Speed = SPEED_1; g_Screen = SCR_TITLE; g_Diff = 1; g_Station = 0; g_JingleReq = 0;
 	Ui_Init();
 	Chrome_Palette();
 	Audio_Init();
@@ -299,6 +300,7 @@ void main()
 		if (g_Splash) { if (ev || clk) { g_Splash = 0; Draw_Title(); } continue; }       // abertura: o 1o toque so passa para o titulo
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
+			if (g_Screen == SCR_TITLE && (ev & (IN_UP | IN_DOWN))) { g_Station = (u8)((g_Station + ((ev & IN_DOWN) ? 1 : 2)) % 3); Title_Opts(); continue; }     // cima/baixo: emissora
 			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Title_Opts(); continue; }
 			if (ev & IN_OK) { Audio_Sfx(3); StartGame(); }
 			else if ((ev & IN_BACK) && g_Screen == SCR_TITLE) { StartGame(); Load_Menu(); }   // Esc no titulo: carregar (slots da SRAM ou codigo)
@@ -317,6 +319,7 @@ void main()
 			fc = 0;
 			e = Sim_Tick();
 			if (e & EV_DAY) { Audio_Sfx(3); if (g_Speed != SPEED_3) { s_Prev = g_Speed; g_Speed = SPEED_PAUSE; Sim_Msg("New day: time paused. Plan it, then press P."); g_Dirty |= D_MSG; } }
+			if (g_JingleReq) { Audio_Sfx(g_JingleReq); g_JingleReq = 0; }               // jingle do Sammy sobrepoe o som de novo dia
 			g_Dirty |= D_HDR;
 			if (e & EV_MSG) g_Dirty |= D_MSG;
 			if (e & (EV_SLOT | EV_DAY))
@@ -333,7 +336,7 @@ void main()
 		}
 		ScreenInput(ev);
 		if (((ev | clk) & IN_OK) && (g_Dirty & D_MSG)) Audio_Result(g_Msg);
-		if (g_Game.game_over) { if (g_Screen == SCR_HUB) Building_Leave(); g_Screen = SCR_OVER; Draw_Over(); if (g_Game.won) Audio_Sfx(4); continue; }
+		if (g_Game.game_over) { if (g_Screen == SCR_HUB) Building_Leave(); g_Screen = SCR_OVER; Draw_Over(); Audio_Sfx(g_Game.won ? 4 : 6); continue; }
 
 		if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && !g_Splash) Scene_PreStep();     // carga incremental do cache de cenas
 		if (g_Dirty & D_HDR) Hud_Draw();

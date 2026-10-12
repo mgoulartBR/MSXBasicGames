@@ -24,8 +24,8 @@ static const Room k_Rooms[NROOMS] = {
 	{ 2,  84, COLOR_MAGENTA,     SCR_STUDIO,  "STUD", "Studios - produce your own films" },
 	{ 2, 172, COLOR_LIGHT_RED,  SCR_REALTOR, "REAL", "Realtor - towers, cable, satellite" },
 	{ 3,  84, COLOR_LIGHT_YELLOW, SCR_OFFICE, "OFFC", "Your office - grid, ratings, save" },
-	{ 3, 172, COLOR_MEDIUM_GREEN, SCR_FUN,   "FUN",  "FunTV office - spy on their schedule" },
-	{ 3, 216, COLOR_CYAN,      SCR_SUN,    "SUN",  "SunTV office - spy on their schedule" },
+	{ 3, 172, COLOR_MEDIUM_GREEN, SCR_FUN,   "FUN",  "Rival office - spy on their schedule" },
+	{ 3, 216, COLOR_CYAN,      SCR_SUN,    "SUN",  "Rival office - spy on their schedule" },
 	{ 4,  40, COLOR_DARK_RED,    SCR_BOSS,   "BOSS", "Mr. Raffer - credit" },
 	{ 4, 172, COLOR_MAGENTA,     SCR_BETTY,  "BETY", "Betty's office - gifts, marriage" },
 };
@@ -68,6 +68,18 @@ static void ArtRect(u8 sx, u8 sy, u8 w, u8 h, u8 dx, u8 dy)
 }
 
 // rotulos com a micro-fonte (chrome.c); a string e copiada para a RAM antes da chamada banked (literais deste segmento nao ficam visiveis la)
+static char s_Lbl[5];
+static const char* Lbl(const Room* r)                      // rotulo da porta: nos escritorios dos rivais, as 3 primeiras letras do nome da emissora
+{
+	u8 i;
+	const char* n;
+	if (r->scr != SCR_FUN && r->scr != SCR_SUN) return r->lbl;
+	n = g_StationName[r->scr == SCR_FUN ? 1 : 2];
+	for (i = 0; i < 3; i++) s_Lbl[i] = (char)(n[i] >= 'a' && n[i] <= 'z' ? n[i] - 32 : n[i]);
+	s_Lbl[3] = 0;
+	return s_Lbl;
+}
+
 static u8 MicroLen(const char* s) { u8 n = 0; while (s[n]) n++; return n; }
 static void Micro(u8 x, u8 y, const char* s)
 {
@@ -85,12 +97,12 @@ static void DoorBody(u8 i)
 	ArtRect((u8)(x - 14), (u8)(fy - 56), 28, 31, (u8)(x - 14), (u8)(fy - 30));       // fundo (porta, parede) desta celula
 	if (i == g_BldSel)
 	{
-		{ u8 lw = (u8)(MicroLen(r->lbl) * 4 + 4); Ui_Fill((u8)(x - lw / 2), (u8)(fy - 29), lw, 8, COLOR_LIGHT_YELLOW); }   // rotulo em destaque
+		{ u8 lw = (u8)(MicroLen(Lbl(r)) * 4 + 4); Ui_Fill((u8)(x - lw / 2), (u8)(fy - 29), lw, 8, COLOR_LIGHT_YELLOW); }   // rotulo em destaque
 		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 22, 1, COLOR_LIGHT_YELLOW);             // moldura em volta da porta
 		Ui_FillPx((u8)(x - 11), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
 		Ui_FillPx((u8)(x + 10), (u8)(fy - 23), 1, 23, COLOR_LIGHT_YELLOW);
 	}
-	Micro((u8)(x - MicroLen(r->lbl) * 2), (u8)(fy - 27), r->lbl);
+	Micro((u8)(x - MicroLen(Lbl(r)) * 2), (u8)(fy - 27), Lbl(r));
 }
 #else
 static void DoorBody(u8 i)
@@ -136,7 +148,7 @@ static void BodyAll(void)
 		}
 		SET_BANK_SEGMENT(3, prev);
 	}
-	for (i = 0; i < NROOMS; i++) { const Room* rm = &k_Rooms[i]; Micro((u8)(rm->x - MicroLen(rm->lbl) * 2), (u8)(FY(rm->floor) - 27), rm->lbl); }
+	for (i = 0; i < NROOMS; i++) { const Room* rm = &k_Rooms[i]; Micro((u8)(rm->x - MicroLen(Lbl(rm)) * 2), (u8)(FY(rm->floor) - 27), Lbl(rm)); }
 	DoorBody(g_BldSel);
 #else
 	ClearContent();

@@ -172,6 +172,7 @@ void Sim_ExtNewDay(void) __banked
 void Sim_ExtInit(void) __banked
 {
 	u8 i, st;
+	Station_Init();                                  // emissora escolhida: nomes, caixa e Image iniciais (sim_ext2.c)
 	for (i = 0; i < NEWS_POOL; i++) g_Game.news_pool[i].idx = NONE;
 	for (i = 0; i < NEWS_SLATE; i++) g_Game.news_slate[i].idx = NONE;
 	for (i = 0; i < NUM_SLOTS; i++) g_Game.news_f[i] = 70;
@@ -276,7 +277,7 @@ void Sim_SaveBytes(u8* b) __banked                                 // estado -> 
 	u16 ck;
 	u16 debt = (u16)(g_Game.debt > 65535 ? 65535 : g_Game.debt);
 	for (i = 0; i < SAVE_BYTES; i++) b[i] = 0;
-	b[n++] = (u8)(8 | (g_Diff << 4));                                 // versao do formato (nibble baixo) + dificuldade
+	b[n++] = (u8)(8 | (g_Diff << 4) | (g_Station << 6));              // versao do formato (nibble baixo) + dificuldade (bits 4-5) + emissora (bits 6-7)
 	b[n++] = (u8)g_Game.day; b[n++] = (u8)(g_Game.day >> 8);
 	b[n++] = (u8)g_Game.t;   b[n++] = (u8)(g_Game.t >> 8);
 	b[n++] = (u8)g_Game.money; b[n++] = (u8)(g_Game.money >> 8); b[n++] = (u8)(g_Game.money >> 16); b[n++] = (u8)(g_Game.money >> 24);
@@ -358,7 +359,7 @@ u8 Sim_LoadBytes(const u8* b) __banked                            // 0 ok, 2 che
 	u16 ck, day, seed;
 	ck = Fletcher16(b, SAVE_BYTES - 2);
 	if ((u8)ck != b[SAVE_BYTES - 2] || (u8)(ck >> 8) != b[SAVE_BYTES - 1]) return 2;
-	if ((b[0] & 15) != 8 || (b[0] >> 4) >= NUM_DIFF) return 3;
+	if ((b[0] & 15) != 8 || ((b[0] >> 4) & 3) >= NUM_DIFF || (b[0] >> 6) >= 3) return 3;
 	// validacao semantica antes de aplicar
 	n = 12;
 	if (b[11] + b[12] > 100) return 3;
@@ -371,7 +372,7 @@ u8 Sim_LoadBytes(const u8* b) __banked                            // 0 ok, 2 che
 	if (day == 0 || (u16)(b[3] | (b[4] << 8)) >= DAY_MINUTES) return 3;
 	seed = (u16)(b[13 + OWNED_BYTES + 1] | (b[13 + OWNED_BYTES + 2] << 8));
 	// aplica
-	g_Diff = (u8)(b[0] >> 4);
+	g_Diff = (u8)((b[0] >> 4) & 3); g_Station = (u8)(b[0] >> 6);
 	Sim_Init(seed);
 	g_Game.day = day;
 	g_Game.t = (u16)(b[3] | (b[4] << 8));
@@ -425,81 +426,3 @@ u8 Sim_LoadBytes(const u8* b) __banked                            // 0 ok, 2 che
 	return 0;
 }
 
-// Sabotagem dos rivais (fim do dia): so quem esta na frente (Image maior que a sua) age; chance sobe com a dificuldade.
-// Efeitos: campanha de difamacao (-2 Image), telejornal envelhecido (+6 h nas noticias) ou contrato de anuncio roubado (sem multa).
-void Sim_RivalDay(void) __banked
-{
-	u8 st, i, k;
-	for (st = 1; st < NUM_STATIONS; st++)
-	{
-		if (!g_Game.alive[st] || g_Game.image[st] <= g_Game.image[0]) continue;
-		if (Sim_Rnd(100) >= (u8)(SABOTAGE_PCT + 6 * g_Diff)) continue;
-		k = Sim_Rnd(3);
-		if (k == 0)
-		{
-			g_Game.image[0] = (u8)(g_Game.image[0] > 2 ? g_Game.image[0] - 2 : 0);
-			Sim_Msg("Smear campaign! Your Image -2.");
-		}
-		else if (k == 1)
-		{
-			for (i = 0; i < NEWS_SLATE; i++) if (g_Game.news_slate[i].idx != NONE) g_Game.news_slate[i].age = (u8)(g_Game.news_slate[i].age < 244 ? g_Game.news_slate[i].age + 6 : 250);
-			Sim_Msg("Rival bribed your reporters: newscast stale!");
-		}
-		else
-		{
-			for (i = 0; i < MAX_CONTRACTS; i++)
-				if (g_Game.contract[i].ad != NONE)
-				{
-					u8 s;
-					g_Game.contract[i].ad = NONE;
-					for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].ad == i) g_Game.slot[0][s].ad = NONE;
-					Sim_Msg("A rival poached one of your ad contracts!");
-					break;
-				}
-			if (i == MAX_CONTRACTS) Sim_Msg("A rival spy was seen in the lobby.");
-		}
-		return;                                  // no maximo uma sabotagem por dia
-	}
-}
-
-// Sammy (premio de melhor telejornal): a cada SAMMY_DAYS dias, no fim do dia, o telejornal do jogador (qualidade x frescor) disputa com
-// um sorteio de cada rival vivo. Vencedor: +5 Image (rival: +3); o jogador ainda recebe SAMMY_PRIZE k. Sem estado novo (o savegame nao muda).
-void Sim_SammyDay(void) __banked
-{
-	u8 q = Sim_NewsQuality(), st, best = 0, who = 0, s;
-	if (g_Game.day % SAMMY_DAYS) return;
-	for (st = 1; st < NUM_STATIONS; st++)
-		if (g_Game.alive[st])
-		{
-			s = (u8)(SAMMY_RIVAL_MIN + Sim_Rnd(SAMMY_RIVAL_SPAN) + 5 * g_Diff);
-			if (s > best) { best = s; who = st; }
-		}
-	if (!who) best = SAMMY_RIVAL_MIN;                     // sem rivais: basta um telejornal minimo
-	if (q > best)
-	{
-		g_Game.image[0] = (u8)(g_Game.image[0] + 5 > 100 ? 100 : g_Game.image[0] + 5);
-		g_Game.money += SAMMY_PRIZE; g_Game.day_income += SAMMY_PRIZE;
-		Sim_MsgNum("You won the Sammy! Image +5, prize $", SAMMY_PRIZE, "k");
-	}
-	else if (who)
-	{
-		g_Game.image[who] = (u8)(g_Game.image[who] + 3 > 100 ? 100 : g_Game.image[who] + 3);
-		Sim_Msg(who == 1 ? "FunTV won the Sammy for best news." : "SunTV won the Sammy for best news.");
-	}
-	else Sim_Msg("Nobody won the Sammy: your news were too weak.");
-}
-
-// Rivais disputam o catalogo (2.7): a cada TAKEN_WINDOW dias, uma fracao dos filmes e "levada" por FunTV ou SunTV e nao pode ser comprada.
-// Sem estado novo: e uma funcao deterministica do filme e da janela de dias (o savegame nao muda). Filmes de elenco forte sao mais disputados.
-u8 Sim_TakenBy(u8 m) __banked
-{
-	u16 x;
-	u8 who;
-	if (m >= DB_NUM_MOVIES || g_Game.owned[m]) return 0;
-	x = (u16)(m * 251u + (g_Game.day / TAKEN_WINDOW) * 97u + 13u);
-	x ^= (u16)(x >> 5); x = (u16)(x * 1231u); x ^= (u16)(x >> 7);
-	if ((u8)(x % 100) >= (u8)(TAKEN_BASE_PCT + Db_Stars(m) * TAKEN_PER_STAR)) return 0;
-	who = (u8)(1 + ((x >> 9) & 1));
-	if (!g_Game.alive[who]) who = (u8)(3 - who);
-	return g_Game.alive[who] ? who : 0;
-}

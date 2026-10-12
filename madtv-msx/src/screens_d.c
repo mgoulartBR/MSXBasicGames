@@ -139,7 +139,7 @@ static void BettyStatusBody(void)
 	for (st = 1; st < NUM_STATIONS; st++)
 	{
 		u8 y = (u8)(154 + st * 10);
-		Ui_Color(UI_BLACK); Ui_Text(8, y, st == 1 ? "FunTV" : "SunTV");
+		Ui_Color(UI_BLACK); Ui_Text(8, y, g_StationName[st]);
 		if (!g_Game.alive[st]) { Ui_Color(UI_RED); Ui_Text(56, y, "bankrupt"); continue; }
 		Ui_Bar(56, y, 100, 7, g_Game.sym[st], COLOR_MEDIUM_RED);
 		Ui_Int(162, y, g_Game.sym[st]);
@@ -214,7 +214,7 @@ static void BettyStatusBody(void)
 	for (st = 1; st < NUM_STATIONS; st++)
 	{
 		u8 y = (u8)(CONTENT_Y + 12 + st * 10);
-		Ui_Color(UI_GRAY); Ui_Text(4, y, st == 1 ? "FunTV" : "SunTV");
+		Ui_Color(UI_GRAY); Ui_Text(4, y, g_StationName[st]);
 		if (!g_Game.alive[st]) { Ui_Color(UI_RED); Ui_Text(52, y, "bankrupt"); continue; }
 		Ui_Bar(52, y, 100, 7, g_Game.sym[st], COLOR_MEDIUM_RED);
 		Ui_Int(158, y, g_Game.sym[st]);
@@ -287,12 +287,15 @@ void Porter_Draw(void) __banked
 	Ui_Text(130, CONTENT_Y + 2, "Income");   Money(190, CONTENT_Y + 2, g_Game.day_income);
 	Ui_Text(130, CONTENT_Y + 14, "Costs");   Money(190, CONTENT_Y + 14, g_Game.day_cost);
 	Ui_Text(130, CONTENT_Y + 26, "Debt");    Money(190, CONTENT_Y + 26, g_Game.debt);
-	Ui_Text(130, CONTENT_Y + 46, "Image standings");
+	Ui_Text(130, CONTENT_Y + 46, "Image / audience today");
 	for (st = 0; st < NUM_STATIONS; st++)
 	{
-		u8 yy = (u8)(CONTENT_Y + 58 + st * 10);
+		u8 yy = (u8)(CONTENT_Y + 58 + st * 10), k, cnt = 0;
+		u16 sum = 0;
 		Ui_Color(UI_BLACK); Ui_Text(130, yy, g_StationName[st]);
-		if (g_Game.alive[st]) Ui_Int(190, yy, g_Game.image[st]); else Ui_Text(190, yy, "out");
+		if (g_Game.alive[st]) Ui_Int(176, yy, g_Game.image[st]); else Ui_Text(176, yy, "out");
+		for (k = 0; k < NUM_SLOTS; k++) if (g_Game.aud_done[k]) { sum += g_Game.aud[st][k]; cnt++; }
+		if (cnt && g_Game.alive[st]) Ui_Dec1(210, yy, (u8)(sum / cnt)); else Ui_Text(210, yy, "-");
 	}
 	Chrome_Box(0, 138, 256, 48, 14, 1);
 	Ui_Color(UI_BLACK);

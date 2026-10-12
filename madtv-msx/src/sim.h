@@ -124,10 +124,15 @@ typedef struct {
 } Game;
 
 extern Game g_Game;
+extern u8 g_JingleReq;                // 0 = nada; 5 = Sammy ganho (a UI toca o jingle)
 extern u8 g_Diff;                       // dificuldade (0..2): muda caixa inicial e forca dos rivais
 extern const u8 g_Reach[NUM_STATIONS];   // alcance maximo (0,1 milhao)
 extern char g_Msg[44];                  // ultima mensagem de evento
-extern const char* const g_StationName[NUM_STATIONS];
+extern const char* const g_StName3[3];
+extern const char* g_StationName[NUM_STATIONS];
+extern u8 g_Station;                  // emissora escolhida pelo jogador: 0 MadTV, 1 FunTV, 2 SunTV
+void  Station_Apply(void) __banked;  void Station_Init(void) __banked;   // g_StationName/g_StationCol conforme g_Station
+void  Sim_MsgWho(u8 st, u8 what) __banked;   // mensagens "<emissora> ..." (0 assinou o filme, 1 faliu, 2 ganhou o Sammy)
 
 enum { EV_NONE = 0, EV_SLOT = 1, EV_DAY = 2, EV_MSG = 4 };
 

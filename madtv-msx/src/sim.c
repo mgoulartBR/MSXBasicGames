@@ -23,10 +23,12 @@ long g_StatDone, g_StatFail, g_StatIncome, g_StatPenalty, g_StatMissed, g_StatSp
 char g_Msg[44];
 const u8 g_Reach[NUM_STATIONS] = { 120, 110, 100 };
 u8 g_Diff = 1;
+u8 g_JingleReq;
 static const u8  k_RivalQ[NUM_DIFF] = { 55, RIVAL_Q, 74 };
 static const i16 k_StartMoney[NUM_DIFF] = { 3500, START_MONEY, 2000 };
 
-const char* const g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };
+const char* const g_StName3[3] = { "MadTV", "FunTV", "SunTV" };               // literais no codigo FIXO (visiveis de qualquer segmento banked)
+const char* g_StationName[NUM_STATIONS] = { "MadTV", "FunTV", "SunTV" };      // [0] = emissora do jogador (g_Station), [1] e [2] = as outras (Station_Apply)
 
 // parcela do alcance que esta com a TV ligada em cada hora (%)
 static const u8 s_TimeShare[NUM_SLOTS] = { 40, 55, 75, 90, 85, 60, 30 };
@@ -325,7 +327,7 @@ static void EndSlot(u8 s)
 		{
 			g_Game.alive[worst] = 0;
 			if (worst == 0) g_Game.game_over = 1;                       // o jogador perdeu todo o Image
-			else { Sim_Msg(worst == 1 ? "FunTV went bankrupt!" : "SunTV went bankrupt!"); }
+			else Sim_MsgWho(worst, 1);
 		}
 	}
 	for (st = 0; st < NUM_STATIONS; st++) if (g_Game.sym[st] > g_Game.image[st]) g_Game.sym[st] = g_Game.image[st];   // Betty: simpatia <= Image

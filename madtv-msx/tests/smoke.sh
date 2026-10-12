@@ -105,6 +105,12 @@ at 0.6 { shot 3b_office; dump office }
 key RET
 at 0.5 {}; key RET; at 1.2 { shot 4a_pick }; key DOWN; key RET
 at 1.2 { shot 4_grid; dump placed }
+mouse 240 31 2                                      ;# icone 2 da grade: contratos de anuncio (popup so de leitura)
+at 1.2 { shot 4b_contracts }
+key ESC; at 0.8 {}
+mouse 240 48 2                                      ;# icone 3: resumo da semana
+at 1.2 { shot 4c_summary }
+key ESC; at 0.8 {}
 back
 back
 # --- Ad agency (sala 4): assinar oferta 0

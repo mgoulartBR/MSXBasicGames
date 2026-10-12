@@ -4,7 +4,8 @@
 // ---------------------------------------------------------------- GRID
 static u8 s_GridCol;        // 0 = programa, 1 = anuncio
 static u8 s_Slot;           // slot sob o cursor
-static u8 s_Pick;           // 0 = navegando a grade, 1 = escolhendo filme, 2 = escolhendo contrato
+static u8 s_Pick;           // 0 = navegando a grade, 1 = escolhendo filme, 2 = escolhendo contrato, 3 = resumo da semana (so leitura)
+static u8 s_View;           // 1 = o menu de contratos so mostra (icone da grade): OK/Esc fecham
 static u8 s_PickList[NUM_ALL + 1];
 static u8 s_PickN;
 
@@ -12,7 +13,7 @@ static void BuildPick(void)
 {
 	u8 i;
 	s_PickN = 0;
-	s_PickList[s_PickN++] = NONE;
+	if (!s_View) s_PickList[s_PickN++] = NONE;
 	if (s_Pick == 1) { for (i = 0; i < NUM_ALL; i++) if (g_Game.owned[i]) s_PickList[s_PickN++] = i; }
 	else             { for (i = 0; i < MAX_CONTRACTS; i++) if (g_Game.contract[i].ad != NONE) s_PickList[s_PickN++] = i; }
 }
@@ -182,7 +183,7 @@ static void DrawRow_Pick_Body(u8 i)
 
 static void DrawRow_Pick(u8 i)
 {
-	if (i >= PK_ROWS) return;
+	if (i >= PK_ROWS || s_Pick == 3) return;
 	Ui_Begin();
 	DrawRow_Pick_Body(i);
 #if ART_SCENES
@@ -195,6 +196,7 @@ static void DrawRow_Pick(u8 i)
 static void DrawList_Pick(void)
 {
 	u8 i;
+	if (s_Pick == 3) return;
 	for (i = 0; i < PK_ROWS; i++) DrawRow_Pick(i);
 }
 
@@ -209,9 +211,20 @@ static void Draw_Grid_Body(void)
 	GridDetail_Body();
 	if (s_Pick == 0) { Hint("L/R:column OK:edit  icons: ratings, erase, save"); return; }
 	Chrome_Box(PK_X, 44, PK_W, 14 + PK_ROWS * ROW_H + 6, 14, 1);          // menu suspenso por cima da grade
-	Ui_Color(UI_BLACK); Ui_Text(PK_X + 8, 49, s_Pick == 1 ? "Choose programme" : "Choose ad contract");
+	Ui_Color(UI_BLACK); Ui_Text(PK_X + 8, 49, s_Pick == 1 ? "Choose programme" : s_Pick == 3 ? "Week summary" : s_View ? "Your ad contracts" : "Choose ad contract");
+	if (s_Pick == 3)
+	{
+		u8 x, left = (u8)((SAMMY_DAYS - g_Game.day % SAMMY_DAYS) % SAMMY_DAYS), st, y = 62;
+		Ui_Text(PK_X + 8, y, "Income"); Money(PK_X + 56, y, g_Game.day_income); Ui_Text(PK_X + 100, y, "Costs"); Money(PK_X + 134, y, g_Game.day_cost);
+		y += 10; Ui_Text(PK_X + 8, y, "Cash"); Money(PK_X + 56, y, g_Game.money); Ui_Text(PK_X + 100, y, "Debt"); Money(PK_X + 134, y, g_Game.debt);
+		y += 10; Ui_Text(PK_X + 8, y, "Sammy in"); x = Ui_Int(PK_X + 62, y, left); Ui_Text(x, y, left == 1 ? " day" : " days");
+		y += 12; Ui_Text(PK_X + 8, y, "Image:");
+		for (st = 0; st < NUM_STATIONS; st++) { y += 10; Ui_Text(PK_X + 14, y, g_StationName[st]); Ui_Int(PK_X + 70, y, g_Game.image[st]); }
+		Hint("OK/BACK: close");
+		return;
+	}
 	DrawList_Pick();
-	Hint("OK:place BACK:cancel");
+	Hint(s_View ? "OK/BACK: close" : "OK:place BACK:cancel");
 	return;
 #endif
 	ClearContent();
@@ -252,6 +265,7 @@ void Grid_Input(u8 ev) __banked
 		}
 		return;
 	}
+	if ((s_View || s_Pick == 3) && (ev & (IN_OK | IN_BACK))) { s_View = 0; s_Pick = 0; g_Dirty |= D_CON; return; }
 	NavApply(Nav(ev, s_PickN, PK_ROWS));
 	if (ev & IN_BACK) { s_Pick = 0; g_Dirty |= D_CON; return; }
 	if (ev & IN_OK)
@@ -435,7 +449,7 @@ void Agency_Input(u8 ev) __banked
 		u8 r = Sim_Buy(s_CatStart[s_Cat] + g_Sel);
 		if (r == 0) Sim_Msg("Movie bought - now in your archive.");
 		else if (r == 1) Sim_Msg("You already own this movie.");
-		else if (r == 3) Sim_Msg(Sim_TakenBy(s_CatStart[s_Cat] + g_Sel) == 1 ? "FunTV just signed that one!" : "SunTV just signed that one!");
+		else if (r == 3) Sim_MsgWho(Sim_TakenBy(s_CatStart[s_Cat] + g_Sel), 0);
 		else Sim_Msg("Not enough money!");
 		MarkRows(g_Sel - g_First, g_Sel - g_First);   // so a linha (marca "own"/cor)
 		g_Dirty |= D_MSG | D_HDR;
@@ -574,61 +588,8 @@ void Ads_Input(u8 ev) __banked
 	}
 }
 
-// ---------------------------------------------------------------- AUDIENCIAS / IMAGE
-static void RatingsDynLocal(void)
-{
-	u8 s, st, y;
-	Ui_Begin();
-	char b[8];
-	for (s = 0; s < NUM_SLOTS; s++)
-	{
-		y = CONTENT_Y + 24 + s * 10;
-		Ui_Fill(56, y - 1, 190, 10, UI_BG);
-		ClockStr(b, FIRST_SLOT_T + s * 60);
-		Ui_Color(UI_GRAY); Ui_Text(8, y, b);
-		for (st = 0; st < NUM_STATIONS; st++)
-		{
-			if (!g_Game.aud_done[s]) { Ui_Color(UI_GRAY); Ui_Text(64 + st * 54, y, "-"); continue; }
-			Ui_Color(g_StationCol[st]); Ui_Dec1(60 + st * 54, y, g_Game.aud[st][s]);
-			Ui_Color(UI_GRAY); Ui_Int(84 + st * 54, y, Sim_Quota(st, s));
-		}
-	}
-	Ui_End(56, (u8)(CONTENT_Y + 23), 190, 70);       // tabela (linhas sao preenchidas por inteiro antes de escrever)
-	Ui_Begin();
-	Ui_Fill(50, (u8)(CONTENT_Y + 111), 200, 32, UI_BG);
-	for (st = 0; st < NUM_STATIONS; st++)
-	{
-		y = (u8)(CONTENT_Y + 112 + st * 10);
-		Ui_Bar(50, y + 1, 160, 6, g_Game.image[st], g_StationCol[st] == UI_RED ? COLOR_MEDIUM_RED : g_StationCol[st] == UI_GREEN ? COLOR_LIGHT_GREEN : COLOR_CYAN);
-		Ui_Fill(214, y - 1, 30, 9, UI_BG);
-		Ui_Color(g_StationCol[st]); Ui_Int(216, y, g_Game.image[st]);
-	}
-	Ui_End(50, (u8)(CONTENT_Y + 111), 200, 32);
-}
-
-static void RatingsDynLocal(void);
-static void Draw_Ratings_Body(void)
-{
-	u8 st;
-	ClearContent();
-	Ui_Color(UI_YELLOW); Ui_Text(4, CONTENT_Y, "Ratings (million viewers)");
-	for (st = 0; st < NUM_STATIONS; st++) { Ui_Color(g_StationCol[st]); Ui_Text(60 + st * 54, CONTENT_Y + 12, g_StationName[st]); }
-	Ui_Color(UI_YELLOW); Ui_Text(4, (u8)(CONTENT_Y + 100), "Image");
-	for (st = 0; st < NUM_STATIONS; st++) { Ui_Color(g_StationCol[st]); Ui_Text(4, CONTENT_Y + 112 + st * 10, g_StationName[st]); }
-	RatingsDynLocal();
-	Hint("BACK:office");
-}
-
-void Ratings_Draw(void) __banked
-{
-	Ui_Begin();
-	Draw_Ratings_Body();
-	Ui_End(0, CONTENT_Y - 2, 255, 160);
-}
-
-
 // ---------------------------------------------------------------- pontos de entrada banked
-void Grid_Enter(void) __banked { s_Slot = 0; s_GridCol = 0; s_Pick = 0; s_PickN = 0; }
+void Grid_Enter(void) __banked { s_Slot = 0; s_GridCol = 0; s_Pick = 0; s_View = 0; s_PickN = 0; }
 void Grid_Row(u8 r) __banked { if (s_Pick) DrawRow_Pick(r); else DrawRow_Grid(r); }
 void Grid_List(void) __banked { if (s_Pick) DrawList_Pick(); }
 void Grid_Dyn(void) __banked { if (!s_Pick) Draw_GridRows(); }
@@ -642,8 +603,6 @@ void Ads_Enter(void) __banked { }
 void Ads_Row(u8 r) __banked { DrawRow_Ads(r); }
 void Ads_Detail(void) __banked { DrawDetail_Ads(); }
 
-void Ratings_Dyn(void) __banked { RatingsDynLocal(); }
-void Ratings_Input(u8 ev) __banked { if (ev & IN_BACK) Goto(SCR_OFFICE); }
 
 // ---------------------------------------------------------------- mouse
 #if ART_SCENES
@@ -678,7 +637,8 @@ void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
 			else if (k == 3) Goto(SCR_RATINGS);
 			else if (k == 4) GridClear();
 			else if (k == 5) Goto(SCR_SLOTS);
-			else { Sim_Msg("That tool is not in this port yet."); g_Dirty |= D_MSG; }
+			else if (k == 1) { s_View = 1; s_Pick = 2; BuildPick(); g_Sel = 0; g_First = 0; g_Dirty |= D_CON; }      // contratos de anuncio (so leitura)
+			else { s_View = 0; s_Pick = 3; g_Dirty |= D_CON; }                                              // resumo da semana
 			return;
 		}
 		r = HitRow(y, GR_Y(0), 16, NUM_SLOTS);
@@ -693,6 +653,7 @@ void Grid_Mouse(u8 x, u8 y, u8 btn) __banked
 	{
 #if ART_SCENES
 		u8 r = HitRow(y, (u8)(PK_Y(0) - 1), ROW_H, PK_ROWS);
+		if (s_Pick == 3) { if (btn) Grid_Input(IN_OK); return; }       // resumo: qualquer clique fecha
 		if (x < PK_X || x >= PK_X + PK_W) return;
 #else
 		u8 r = HitRow(y, (u8)(CONTENT_Y + 13), ROW_H, LIST_ROWS);
