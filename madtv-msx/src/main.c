@@ -7,6 +7,7 @@ u8 g_StationCol[NUM_STATIONS] = { UI_RED, UI_GREEN, UI_CYAN };
 // Medicao de desempenho: maior tempo (jiffies = interrupcoes do VDP) gasto no desenho completo de cada tela. Lido pelos testes.
 u8 g_DrawMax[SCR_OVER + 1];
 u8 g_BufScene = 0xFF;
+u8 g_Splash;                         // 1 = tela de abertura (so no boot); qualquer tecla/clique segue para o titulo
 #define JIFFY (*(volatile u16*)0xFC9E)
 
 // ---------------------------------------------------------------- utilitarios
@@ -260,7 +261,8 @@ void main()
 	Chrome_Palette();
 	Audio_Init();
 	Sram_Detect();
-	Draw_Title();
+	g_Splash = 1;
+	Splash_Draw();
 
 	for (;;)
 	{
@@ -271,17 +273,17 @@ void main()
 		if (g_InExtra && g_Screen != SCR_SAVE)                     // M: liga/desliga o mouse (na tela de codigo M e uma letra)
 		{
 			Pointer_Cycle();
-			if (g_Screen == SCR_TITLE) Title_Opts();
+			if (g_Screen == SCR_TITLE) { if (!g_Splash) Title_Opts(); }
 			else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; }
 		}
 		{
 			u8 p = Pointer_Update();
-			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) Title_Opts(); else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
+			if (g_PtrFound) { g_PtrFound = 0; if (g_Screen == SCR_TITLE) { if (!g_Splash) Title_Opts(); } else { Sim_Msg(k_MouseTxt[g_PtrMode]); g_Dirty |= D_MSG; } }
 			if (p & PTR_LEFT) clk = IN_OK;
 			if (p & PTR_RIGHT) ev |= IN_BACK;                      // botao direito = voltar ("dentro: esquerdo, fora: direito")
 			if (p & PTR_LEFT)
 			{
-				if (g_Screen == SCR_TITLE) { u8 r = Title_Click(g_PtrX, g_PtrY); if (r == 1) ev |= IN_OK; else if (r == 2) ev |= IN_BACK; }   // botoes do titulo
+				if (g_Screen == SCR_TITLE && !g_Splash) { u8 r = Title_Click(g_PtrX, g_PtrY); if (r == 1) ev |= IN_OK; else if (r == 2) ev |= IN_BACK; }   // botoes do titulo
 				else if (g_Screen == SCR_OVER) ev |= IN_OK;
 			}
 			if (g_Screen != SCR_TITLE && g_Screen != SCR_OVER && (p & (PTR_MOVED | PTR_LEFT)))
@@ -291,6 +293,7 @@ void main()
 			}
 		}
 
+		if (g_Splash) { if (ev || clk) { g_Splash = 0; Draw_Title(); } continue; }       // abertura: o 1o toque so passa para o titulo
 		if (g_Screen == SCR_TITLE || g_Screen == SCR_OVER)
 		{
 			if (g_Screen == SCR_TITLE && (ev & (IN_LEFT | IN_RIGHT))) { g_Diff = (ev & IN_RIGHT) ? (u8)((g_Diff + 1) % NUM_DIFF) : (u8)((g_Diff + NUM_DIFF - 1) % NUM_DIFF); Title_Opts(); continue; }

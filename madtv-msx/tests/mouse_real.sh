@@ -11,7 +11,8 @@ cat > /tmp/mouse_real.tcl <<T
 plug joyporta mouse
 proc press {row mask} { keymatrixdown \$row \$mask; after time 0.12 "keymatrixup \$row \$mask" }
 proc rec {tag} { set f [open /tmp/mouse_real.txt a]; puts \$f "\$tag x=[peek $PX] y=[peek $PY] mode=[peek $PM] scr=[peek $SC] sel=[peek $BS]"; close \$f }
-after time 8 { press 7 0x80 }                 ;# inicia o jogo
+after time 8 { press 7 0x04 }                 ;# abertura -> titulo
+after time 8.8 { press 7 0x80 }               ;# inicia o jogo
 after time 6.0 { screenshot -raw $PWD/screenshots/test/mouse_title.png }   ;# o cursor ja aparece no titulo (modo automatico, sem apertar M)
 after time 10.5 { rec before }
 after time 14 { rec moved; screenshot -raw $PWD/screenshots/test/mouse_cursor.png }

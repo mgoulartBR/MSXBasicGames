@@ -16,8 +16,10 @@ SCENES = [("boss", "boss.png", (4, 4, 260, 4 + H)), ("office", "office.png", (40
           ("ads", "ads.png", (70, 4, 190, 4 + H)), ("movie", "movie.png", (0, 4, 120, 4 + H)), ("script", "script.png", (100, 4, 220, 4 + H)),
           ("studio", "studio.png", (0, 4, 120, 4 + H)), ("library", "library.png", (110, 4, 230, 4 + H)), ("realty", "realestate.png", (160, 4, 280, 4 + H)),
           ("betty", "betty.png", (55, 4, 175, 4 + H)), ("porter", "porter.png", (100, 4, 220, 4 + H)), ("super", "super.png", (20, 4, 140, 4 + H)),
-          ("news", "news.png", (150, 4, 270, 4 + H))]
-FIXED_SEG = {"news": 15}     # segmento 15 estava livre: evita ROM de 512 KB
+          ("news", "news.png", (150, 4, 270, 4 + H)),
+          ("title", "../user/title.webp", (130, 10, 1456, 981))]   # tela de abertura (arte enviada pelo usuario, ampliada ~5x): reduzida para 256x196
+RESIZE = {"title": (256, 196)}
+FIXED_SEG = {"news": 15, "title": 32}     # segmento 15 estava livre: evita ROM de 512 KB
 
 def main(d):
     first_seg = 19
@@ -26,6 +28,7 @@ def main(d):
     for name, fn, box in SCENES:
         if name in FIXED_SEG: seg_save, seg = seg, FIXED_SEG[name]
         im = Image.open(d + "/" + fn).convert("RGB").crop(box)
+        if name in RESIZE: im = im.resize(RESIZE[name], Image.LANCZOS)
         w, h = im.size
         stride = w // 2
         rps = 8192 // stride
@@ -45,11 +48,13 @@ def main(d):
                 f.write("// GERADO por tools/make_scenes.py (arte do jogo original) - NAO versionar. Cena '%s', parte %d.\n#include \"msxgl.h\"\nconst u8 g_ArtScene%d[8192] = {\n" % (name, s, seg + s))
                 for i in range(0, 8192, 32): f.write("\t" + ", ".join(str(v) for v in data[i:i + 32]) + ",\n")
                 f.write("};\n")
+        if name == "title": splash_bg = nearest(Image.open(d + "/" + fn).convert("RGB").getpixel((60, 400)))
         table.append((seg, stride, h, rps))
         seg = seg_save if name in FIXED_SEG else seg + nseg
     with open("src/data/art_scenes.h", "w") as f:
         f.write("// GERADO por tools/make_scenes.py - NAO versionar.\n#define ART_SCENES 1\n")
         for i, (name, _, _) in enumerate(SCENES): f.write("#define SCN_%s %d\n" % (name.upper(), i))
+        f.write("#define SPLASH_BG %d      // cor da borda da tela de abertura\n" % splash_bg)
         f.write("#define SCN_INIT { %s }   // segmento, bytes por linha, linhas, linhas por segmento\n" % ", ".join("{%d, %d, %d, %d}" % t for t in table))
     print("ok: segmentos %d..%d" % (first_seg, seg - 1))
 

@@ -297,6 +297,22 @@ u8 Title_Click(u8 x, u8 y) __banked              // 0 nada, 1 novo jogo, 2 carre
 	return 0;
 }
 
+void Splash_Draw(void) __banked
+{
+	Ui_Begin();
+#if ART_SCENES
+	Ui_Fill(0, 0, 0, 212, SPLASH_BG);
+	Scene_Draw(SCN_TITLE, 0, 8);
+#else
+	Ui_Clear();
+	Ui_Color(UI_RED);    Ui_Text(100, 70, "MAD TV");
+	Ui_Color(UI_WHITE);  Ui_Text(64, 90, "MSX2 port - open source");
+	Ui_Color(UI_GRAY);   Ui_Text(28, 110, "Original game (c) 1991 Rainbow Arts");
+	Ui_Color(UI_GRAY);   Ui_Text(28, 120, "Data: TVTower (altered for MSX)");
+#endif
+	Ui_End(0, 0, 256, 212);
+}
+
 void Title_Draw(void) __banked
 {
 	Ui_Begin();                                  // tudo composto no buffer e copiado de uma vez: sem piscar

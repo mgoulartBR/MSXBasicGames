@@ -66,7 +66,8 @@ proc key {k} { at 0.3 "press {*}\$::$k" }
 proc room {i} { at 0.2 "poke $::SEL $i"; key RET; at 4.5 {} }              ;# escolhe a sala (indice) e viaja ate a porta (ate ~4 s)
 proc mouse {x y btn} { at 0.1 "poke $::PX $x; poke $::PY $y"; at 0.2 "poke $::INJ $btn"; at 0.3 {} }   ;# btn: 1 = so mover, 2 = clique esquerdo, 4 = direito
 proc back {} { key ESC; at 0.3 {} }
-at 0   { shot 1_title }
+at 0   { shot 0_splash }
+key ESC; at 0.6 { shot 1_title }
 key RIGHT; at 0.3 { shot 1b_title_hard }
 key LEFT; at 0.3 {}
 key RET
@@ -260,7 +261,7 @@ need(g('opt0','scr')==19 and g('opt0','snds')==1 and g('opt1','snds')==0 and g('
 need(g('navup','sfx')>g('start','sfx') and g('opt0','sfx')>g('navup','sfx'),'efeitos sonoros nao dispararam (nav/OK)')
 need(len(set(g(t,'mus') for t in ['start','navup','navdown','navright','navleft','mhover']))>=2 and all(g(t,'psg7')==0xB8 for t in ['start','navup']),'musica nao avanca / mixer do PSG != B8h')
 need(int(S['later']['direct'])-int(S['start']['direct'])<=8,'ha desenho direto na tela (apaga/reescreve) durante o jogo: %s -> %s'%(S['start']['direct'],S['later']['direct']))
-need(g('start','sbit')==32,'SRAM nao detectada (esperado bit 20h no ASCII8SRAM8 de 256 KB): %s'%g('start','sbit'))
+need(g('start','sbit')==64,'SRAM nao detectada (esperado bit 40h no ASCII8SRAM8 de 512 KB): %s'%g('start','sbit'))
 need(g('slotmod','money')==777 and g('slotsave','money')!=777 and g('slotload','money')==g('slotsave','money') and g('slotload','scr')==1,'SRAM: salvar/carregar o slot 1 nao restaurou o estado')
 need(g('refused','won')==0 and g('refused','scr')==12,'Betty: pedido sem condicoes foi aceito')
 need(g('win','won')==1 and g('win','scr')==21,'Betty: pedido com todas as condicoes nao levou ao final feliz')

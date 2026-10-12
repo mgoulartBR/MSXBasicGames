@@ -5,7 +5,7 @@ ProjSegments = "src/seg/seg";   // segmentos do mapper: src/seg/seg_s<N>_b<B>.c 
 LibModules  = [ "system", "bios", "vdp", "input", "memory" ];
 Machine     = "2";          // MSX2 (V9938) como base
 Target       = "ROM_ASCII8"; // mapper: ver docs/PORTING.md
-ROMSize      = 256;         // KB total (32 segmentos de 8 KB): 0-1 fixo, 3-4 dados, 5-14 codigo, 16-18 arte local (opcional)
+ROMSize      = 512;         // KB total (64 segmentos de 8 KB): 0-1 fixo, 3-4 dados, 5-14 codigo, 15-35 arte local (opcional); 512 KB so por causa da abertura (segmentos 32-35)
 ROMMainSegments = 2;        // segmentos 0-1 = codigo fixo (4000h-7FFFh); banco 2 (8000h) = codigo banked; banco 3 (A000h) = dados
 BankedCall      = true;
 CheckVersion    = true;

@@ -36,6 +36,8 @@ void ClockStr(char* b, u16 t);           // t = minutos desde 17:00 -> "HH:MM"
 void Money(u8 x, u8 y, i32 k);           // "$<k>k"
 void Hint(const char* s);
 void ClearContent(void);
+extern u8 g_Splash;
+void Splash_Draw(void) __banked;                   // tela de abertura (arte local ou texto)
 extern u8 g_BufScene;                              // cena que esta no buffer (0xFF = nenhuma)
 void Goto(u8 screen);                    // troca de tela (reinicia cursor e marca D_CON)
 void Header_Invalidate(void);
@@ -85,7 +87,7 @@ void Realtor_Draw(void) __banked; void Realtor_Input(u8 ev) __banked; void Realt
 void Scripts_Draw(void) __banked; void Scripts_Input(u8 ev) __banked; void Scripts_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Studio_Draw(void) __banked;  void Studio_Input(u8 ev) __banked;  void Studio_Mouse(u8 x, u8 y, u8 btn) __banked;
 void Betty_Enter(void) __banked;   void Betty_Draw(void) __banked;   void Betty_Input(u8 ev) __banked;   void Betty_Row(u8 r) __banked;
-#define VERSION_STR "2.0"
+#define VERSION_STR "2.1"
 extern const char* const k_MouseTxt[4];
 void Title_Draw(void) __banked; void Title_Opts(void) __banked; u8 Title_Click(u8 x, u8 y) __banked; void Over_Draw(void) __banked;
 

@@ -19,7 +19,8 @@ T
 }
 # --- A1: salva no slot 1 com o dinheiro alterado
 { hdr; cat <<T
-at 0 { press 7 0x80 }
+at 0 { press 7 0x04 }
+at 0.6 { press 7 0x80 }
 at 1.6 { poke [expr {\$G+[off 2]}] 0x39; poke [expr {\$G+[off 2]+1}] 0x05 }       ;# dinheiro = 1337
 at 0.3 { poke $SEL 9 }
 at 0.2 { press 7 0x80 }
@@ -31,14 +32,16 @@ T
 } > /tmp/sram_a.tcl
 # --- A2: nova execucao: Esc no titulo carrega o slot 1
 { hdr; cat <<T
-at 0 { press 7 0x04 }                                                               ;# Esc no titulo
+at 0 { press 7 0x04 }
+at 0.6 { press 7 0x04 }                                                             ;# Esc no titulo (o 1o dispensa a abertura)
 at 1.2 { press 7 0x80 }                                                             ;# slot 1 (carregar)
 at 1.0 { set f [open /tmp/sram_b.txt w]; puts \$f "sbit=[peek $SB] money=[money] scr=[peek $SCR]"; close \$f; exit }
 T
 } > /tmp/sram_b.tcl
 # --- B: sem SRAM
 { hdr; cat <<T
-at 0 { press 7 0x80 }
+at 0 { press 7 0x04 }
+at 0.6 { press 7 0x80 }
 at 1.6 { poke $SEL 9 }
 at 0.2 { press 7 0x80 }
 at 4.5 {}
@@ -48,7 +51,8 @@ T
 } > /tmp/sram_c.tcl
 # --- A3: apaga o slot 1 (menu: Erase a slot > slot 1 > OK de novo para confirmar)
 { hdr; cat <<T
-at 0 { press 7 0x80 }
+at 0 { press 7 0x04 }
+at 0.6 { press 7 0x80 }
 at 1.6 { poke $SEL 9 }
 at 0.2 { press 7 0x80 }
 at 4.5 {}
@@ -61,6 +65,7 @@ T
 # --- A4: Esc no titulo depois de apagar: nao ha slot usado, vai para a tela do codigo (scr=9)
 { hdr; cat <<T
 at 0 { press 7 0x04 }
+at 0.6 { press 7 0x04 }
 at 1.5 { set f [open /tmp/sram_e.txt w]; puts \$f "sbit=[peek $SB] scr=[peek $SCR]"; close \$f; exit }
 T
 } > /tmp/sram_e.tcl
@@ -78,8 +83,8 @@ def need(c,m):
     if not c: print('FAIL:',m); sys.exit(1)
 a,b,c,e=rd('/tmp/sram_a.txt'),rd('/tmp/sram_b.txt'),rd('/tmp/sram_c.txt'),rd('/tmp/sram_e.txt')
 need(e['scr']=='9','A3/A4: slot 1 nao foi apagado (Esc no titulo ainda abre os slots)')
-need(a['sbit']=='32' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
-need(b['sbit']=='32' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)
+need(a['sbit']=='64' and a['money']=='1337','A1: SRAM nao detectada ou dinheiro de teste nao aplicado')
+need(b['sbit']=='64' and b['money']=='1337' and b['scr']=='1','A2: o slot salvo noutra execucao nao foi carregado pelo Esc do titulo (%s)'%b)
 need(c['sbit']=='0' and c['scr']=='9','B: sem SRAM deveria abrir direto a tela do codigo (%s)'%c)
 print('PASS')
 P

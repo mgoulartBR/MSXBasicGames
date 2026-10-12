@@ -310,3 +310,9 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Finais: `g_Game.won` 1 = casamento, 2 = magnata (`TYCOON_CASH` = 10000k com os dois rivais falidos, checado no fim do dia), 0 + `game_over` = falencia / Image zerado. `Over_Draw` usa a cena da Betty, do estudio de noticias ou do chefe e um painel com dias, Image, caixa e cobertura; `main` esconde os sprites do predio ao entrar na tela final.
 - Autoplay (bot "smart", normal): sem diferenca perceptivel (o bot raramente junta caixa para cabo/satelite); o magnata e raro no bot.
 - Verificado so no emulador (openMSX, C-BIOS): os tres finais foram vistos em capturas (casamento pelo smoke; magnata e falencia por um script avulso que zera os rivais/caixa e acelera o dia).
+
+## 2.1: tela de abertura
+- `make_scenes.py` ganhou a entrada `title` (arte do usuario em `original/user/title.webp`, git-ignorada): recorte da moldura (130,10)-(1456,981), reducao LANCZOS para 256x196 (~4% mais estreita que a original) e quantizacao para a paleta global; nos segmentos 32-35 (`FIXED_SEG`), 128 bytes por linha, 64 linhas por segmento. `SPLASH_BG` = cor da borda (preenche as 8 linhas de cima e de baixo).
+- ROM de 512 KB (`ROMSize` 512): bit de SRAM 40h, achado pela sondagem; testes passaram a esperar 64. Sem a arte o espaco extra fica vazio (a ROM publica continua com 512 KB).
+- Fluxo: `g_Splash = 1` no boot; enquanto ligado, so um toque (tecla ou clique) e aceito e apenas desenha o titulo. Titulo, Esc-carregar e novo jogo ficam como antes. Testes: smoke, sram e mouse_real mandam um Esc antes de tudo para dispensar a abertura.
+- Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada (abertura em texto). Em 128 KB/256 KB reais o flash cart precisa suportar 512 KB.
