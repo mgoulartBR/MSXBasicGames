@@ -249,6 +249,12 @@ static void ArchiveDetailBody(void)
 		Ui_Text(80, 152, "Aired"); x = Ui_Int(116, 152, g_Game.plays[0][m]); Ui_Text(x, 152, "x");
 		Ui_Text(150, 152, "Stars"); Ui_Int(186, 152, Db_Stars(m));
 		Ui_Text(8, 162, "Resale value"); Money(86, 162, Sim_MovieValue(m));
+		{
+			u8 s, hold = 0;
+			for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == m && g_Game.t < FIRST_SLOT_T + (u16)s * 60 + 5) hold = 1;
+			if (hold) { Ui_Color(UI_RED); Ui_Text(150, 162, "On tonight's grid"); }     // venda bloqueada ate tirar da grade
+			else Ui_Text(150, 162, "OK sells it");
+		}
 		Chrome_CastLines(m);
 	}
 }
@@ -273,7 +279,7 @@ void Archive_Draw(void) __banked
 	for (i = 0; i < AR_ROWS; i++) ArchiveRowBody(i);
 	ArchiveDetailBody();
 	Ui_End(0, CONTENT_Y - 2, 0, 160);
-	Hint("OK:sell BACK:office");
+	Hint("OK:sell this movie  BACK:exit");
 }
 
 void Archive_List(void) __banked { u8 i; for (i = 0; i < AR_ROWS; i++) ArchiveRow(i); }
@@ -313,7 +319,7 @@ void Archive_Draw(void) __banked
 	if (!s_OwnN) { Ui_Color(UI_GRAY); Ui_Text(14, (u8)(CONTENT_Y + 14), "(no movies - buy at the Film agency)"); }
 	for (i = 0; i < LIST_ROWS; i++) ArchiveRowBody(i);
 	Ui_End(0, CONTENT_Y - 2, 255, 160);
-	Hint("OK:sell BACK:office");
+	Hint("OK:sell this movie  BACK:exit");
 }
 void Archive_List(void) __banked { u8 i; for (i = 0; i < LIST_ROWS; i++) ArchiveRow(i); }
 #endif
@@ -330,7 +336,7 @@ void Archive_Input(u8 ev) __banked
 		u16 v = Sim_MovieValue(m);
 		r = Sim_Sell(m);
 		if (r == 0) { Sim_OwnFree(m); Sim_MsgNum("Sold for $", v, "k."); }
-		else Sim_Msg("It is in today's programme grid!");
+		else Sim_Msg("Take it off tonight's grid first!");
 		BuildOwn();
 		if (g_Sel >= s_OwnN && g_Sel) g_Sel--;
 		if (g_First > g_Sel) g_First = g_Sel;

@@ -287,6 +287,17 @@ int main(void)
 		CHECK(Sim_LoadCode(c) == 0 && g_Station == 2 && g_Diff == 1 && !strcmp(g_StationName[0], "SunTV"), "save guarda a emissora (e a dificuldade)");
 		g_Station = 0; g_Diff = 1;
 	}
+	// 2.9: vender filmes (bloqueia so se ha exibicao futura na grade; as ja iniciadas saem junto)
+	g_Diff = 1; g_Station = 0; Sim_Init(111);
+	{
+		i32 m0;
+		g_Game.money = 50000; Sim_Buy(5); CHECK(g_Game.owned[5], "comprou");
+		g_Game.t = 100; Sim_PlaceMovie(0, 5);
+		CHECK(Sim_Sell(5) == 2 && g_Game.owned[5] && g_Game.slot[0][0].movie == 5, "nao vende filme com exibicao futura na grade");
+		g_Game.t = FIRST_SLOT_T + 400; m0 = g_Game.money;    // todas as horas do filme ja comecaram
+		CHECK(Sim_Sell(5) == 0 && !g_Game.owned[5] && g_Game.slot[0][0].movie == NONE && g_Game.money > m0, "vende depois da exibicao e limpa o slot");
+		g_Game.t = 0; Sim_Buy(6); CHECK(Sim_Sell(6) == 0, "vende filme fora da grade");
+	}
 	printf(fails ? "RESULT: %d FAIL(S)\n" : "RESULT: ALL PASS\n", fails);
 	return fails != 0;
 }

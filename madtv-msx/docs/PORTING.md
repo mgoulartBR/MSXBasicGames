@@ -367,3 +367,10 @@ Relatos do usuario: musica "simplória e irritante", tempo rapido demais, textos
 - Segmentos: erro de link "Data overwrite at offset C000h" = o segmento 6 (sim_ext) passou de 8 KB. Solucao: `sim_ext2.c` + `screens_r.c` em `seg_s38_b2.c`. Os testes de PC compilam `sim_ext2.c` tambem.
 - Save: bits 6-7 de b[0] = emissora; dificuldade nos bits 4-5 (leituras antigas `b[0] >> 4` viraram `(b[0] >> 4) & 3`).
 - Verificado so no emulador (openMSX, C-BIOS); a build sem arte tambem foi testada.
+
+## 2.9: elevador, venda de filmes, balanceamento, estresse
+- Elevador: `SprWrite` esconde o boneco enquanto `phase == 2` (dentro da cabine); antes ele deslizava visivel junto com a cabine.
+- `Sim_Sell`: retorna 2 so se o filme tem um bloco futuro na grade de hoje; senao limpa os slots e paga `Sim_MovieValue`. Teste em tests/saveload_test.c.
+- Balanceamento (autoplay "smart"): falencia facil 0/1/0 %, normal 2/4/0 %, dificil 14/10/18 % (MadTV/FunTV/SunTV); caixa mediano 2,1-2,6 M. Nenhum ajuste.
+- Auditoria: ponteiros para literais de segmento bancado nao cruzam bancos; saves antigos continuam validos (formato inalterado).
+- tests/fuzz.sh: entradas aleatorias com semente; nota: `set`/`lappend` com variaveis chamadas `samples` colidem com configuracoes do openMSX (usar nomes unicos como `fzlog`).

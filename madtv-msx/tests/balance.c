@@ -209,6 +209,7 @@ static Result Play(Policy pol, u16 seed, int max_days)
 	memset(&r, 0, sizeof r);
 	memset(g_ExpAud, 0, sizeof g_ExpAud);
 	g_Diff = getenv("BAL_DIFF") ? (u8)atoi(getenv("BAL_DIFF")) : 1;
+	g_Station = getenv("BAL_STATION") ? (u8)atoi(getenv("BAL_STATION")) : 0;
 	Sim_Init(seed);
 	while (!g_Game.game_over && g_Game.day <= max_days)
 	{

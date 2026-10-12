@@ -200,7 +200,10 @@ u8 Sim_Sell(u8 idx)
 {
 	u8 s;
 	if (!g_Game.owned[idx]) return 1;
-	for (s = 0; s < NUM_SLOTS; s++) if (g_Game.slot[0][s].movie == idx) return 2;
+	for (s = 0; s < NUM_SLOTS; s++)                                  // so bloqueia se ainda ha uma exibicao futura na grade de hoje
+		if (g_Game.slot[0][s].movie == idx && g_Game.t < FIRST_SLOT_T + (u16)s * 60 + 5) return 2;
+	for (s = 0; s < NUM_SLOTS; s++)                                  // exibicoes ja iniciadas saem da grade junto com a venda
+		if (g_Game.slot[0][s].movie == idx) { g_Game.slot[0][s].movie = NONE; g_Game.slot[0][s].part = 0; }
 	g_Game.money += Sim_MovieValue(idx);
 	g_Game.owned[idx] = 0;
 	return 0;

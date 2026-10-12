@@ -172,7 +172,7 @@ static void SprWrite(void)
 	// jogador/rivais: Y = pes-16 (atributo = linha visivel - 1); invisivel -> fora da tela
 	for (i = 0; i < 3; i++)
 	{
-		u8 y = s_M[i].vis ? (u8)(s_M[i].y - 23 - YSHIFT) : HIDE_Y, x = (u8)(s_M[i].x - 8), k, pn, *a = &s_Spr[i * 16];
+		u8 y = (s_M[i].vis && s_M[i].phase != 2) ? (u8)(s_M[i].y - 23 - YSHIFT) : HIDE_Y, x = (u8)(s_M[i].x - 8), k, pn, *a = &s_Spr[i * 16];
 		if (x > s_PrevX[i]) s_Dir[i] = 0; else if (x < s_PrevX[i]) s_Dir[i] = 1;          // direcao da ultima caminhada (0 = direita)
 		s_PrevX[i] = x;
 		pn = (u8)(8 + (((k_FigShape[i] * 2 + s_Dir[i]) * 2 + (s_M[i].frame ? 1 : 0)) * 4));  // 1o padrao (16x16: numero = 4 x posicao) do boneco
