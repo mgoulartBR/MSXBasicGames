@@ -52,20 +52,48 @@ static void thick_line(Canvas* cv, i8 x0, i8 y0, i8 x1, i8 y1)
 	Cv_Line(cv, x0 + 1, y0, x1 + 1, y1);
 }
 
+// Hand renderer: fixed-point DDA straight into the work canvas (profiling showed the generic
+// Bresenham + per-pixel bounds-checked Cv_Pixel cost ~70% of the frame). All pixels of a hand
+// stay inside the 40x32 canvas (centre 20,16; radius <= 15), so no clipping is needed.
+static const u8 s_HandMask[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
+
+static void hand(u8 angle, u8 len, bool thick)
+{
+	i16 dx = (i16)cos64(angle) * 2; // ~1 pixel per step in 8.8 fixed point
+	i16 dy = (i16)sin64(angle) * 2;
+	u16 ax = ((u16)CLOCK_CX << 8) + 0x80;
+	u16 ay = ((u16)CLOCK_CY << 8) + 0x80;
+	for (u8 i = 0; i < len; ++i)
+	{
+		ax += dx;
+		ay += dy;
+		u8 x = ax >> 8;
+		u8 y = ay >> 8;
+		u8* p = s_WorkBuf + ((u16)((y >> 3) * 5 + (x >> 3)) << 3) + (y & 7);
+		*p |= s_HandMask[x & 7];
+		if (thick)
+		{
+			u8 x1 = x + 1;
+			p = s_WorkBuf + ((u16)((y >> 3) * 5 + (x1 >> 3)) << 3) + (y & 7);
+			*p |= s_HandMask[x1 & 7];
+		}
+	}
+}
+
 void Clock_Draw(u8 col, u8 row, u16 time, bool alarmBlink)
 {
-	// hour hand: starts pointing down (6 o'clock) and makes one turn per day
-	u8 hourA = (u8)(16 + (u8)(((u32)time * 64) / DAY_DURATION));
-	// minute hand: starts up, 60 turns per day (one turn per second of play)
-	u8 minA = (u8)(-16 + (u8)(((u32)time * 32) / 300));
+	// hour hand: starts pointing down (6 o'clock) and makes one turn per day (time*64/36000)
+	u8 hourA = (u8)(16 + (u8)(((u32)time * 233) >> 17));
+	// minute hand: starts up, 60 turns per day = one turn per second of play (time*32/300)
+	u8 minA = (u8)(-16 + (u8)(((u32)time * 109) >> 10));
 	u8 key = hourA ^ (u8)(minA << 2) ^ (u8)(minA >> 3);
-	u8 blink = alarmBlink ? (u8)(((u32)time / 120) & 1) : 0;
+	u8 blink = alarmBlink ? (u8)((time >> 7) & 1) : 0; // ~0.2 s
 	if (key == s_LastKey && blink == s_LastBlink)
 		return;
 	s_LastKey = key;
-	Cv_Copy(&s_Work, s_FaceBuf);
-	thick_line(&s_Work, CLOCK_CX, CLOCK_CY, CLOCK_CX + scale(cos64(hourA), 11), CLOCK_CY + scale(sin64(hourA), 11));
-	Cv_Line(&s_Work, CLOCK_CX, CLOCK_CY, CLOCK_CX + scale(cos64(minA), CLOCK_R - 2), CLOCK_CY + scale(sin64(minA), CLOCK_R - 2));
+	Mem_Copy(s_FaceBuf, s_WorkBuf, sizeof(s_WorkBuf));
+	hand(hourA, 11, TRUE);
+	hand(minA, CLOCK_R - 2, FALSE);
 	Gfx_BlitCanvas(col, row, &s_Work);
 	if (blink != s_LastBlink)
 	{

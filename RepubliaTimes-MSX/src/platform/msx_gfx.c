@@ -50,15 +50,13 @@ void Gfx_FillPattern(u8 col, u8 row, u8 w, u8 h, u8 even, u8 odd)
 			VDP_FillVRAM_16K(even, PT_BASE + TILE_OFS(col, row + y), (u16)w * 8);
 		return;
 	}
-	for (y = 0; y < h; ++y)
+	// two-pattern fill (feed background checker): build one tile row in RAM, one VRAM write per row
 	{
-		for (u8 x = 0; x < w; ++x)
-		{
-			u8 r;
-			for (r = 0; r < 8; ++r)
-				s_StripBuf[r] = (r & 1) ? odd : even;
-			VDP_WriteVRAM_16K(s_StripBuf, PT_BASE + TILE_OFS(col + x, row + y), 8);
-		}
+		u16 n = (u16)w * 8;
+		for (u16 i = 0; i < n; ++i)
+			s_StripBuf[i] = (i & 1) ? odd : even;
+		for (y = 0; y < h; ++y)
+			VDP_WriteVRAM_16K(s_StripBuf, PT_BASE + TILE_OFS(col, row + y), n);
 	}
 }
 

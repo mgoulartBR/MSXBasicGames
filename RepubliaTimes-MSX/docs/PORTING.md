@@ -195,6 +195,14 @@ the animated "dragging" sprite.
 * Profiling (PC sampling in openMSX, `tests/prof.tcl`): drawing text was 70 % of CPU in the
   first prototype (~9000 cycles/char in C). The glyph blitter was rewritten in Z80 assembly
   (`glyph_blit`, documented in `msx_gfx.c`), ~5× faster. Feed redraw is now incremental.
+* v0.3 navigation smoothness (user report: text was re-printed on every selection move, causing
+  micro-stalls). Measured with PC sampling (`tests/perf_nav.tcl`, `tools/prof_report.py`): CPU busy
+  while sweeping the feed selection 96 % → 72 %, idle (no input) 76 % → 48 %. Changes: bottom panel is
+  split into three cached parts (text / size selector / hint) redrawn only when their key changes;
+  the item text is debounced (6 quiet frames) and drawn one line per frame; size highlight and feed
+  selection are colour-only updates (colour cache per entry); End Day button drawn once;
+  clock hands use a fixed-point DDA instead of Bresenham + 32-bit divisions and update at 25 Hz;
+  the two-pattern feed background is one VRAM write per row; mouse probing stops after the title.
 * Day-start page redraw measured ≈ 0.3 s worst case at 3.58 MHz (not per frame).
 * Per-frame cost in play: clock hands (160 B blit) + input handling; ISR ≈ 2–3 k cycles.
 

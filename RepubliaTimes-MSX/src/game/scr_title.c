@@ -63,6 +63,7 @@ u8 Scr_Title(void)
 		if (g_Push & IN_A)
 			break;
 	}
+	g_MouseProbe = 0; // device detection is done: stop polling the ports for a mouse every frame
 	Sfx_Play(SFX_CLICK);
 	Rand_Seed(t * 7919u + 0x1234);
 	Game_Reset();

@@ -254,10 +254,17 @@ static u8 entry_color(u8 slot, bool selected)
 	return selected ? CT_INV : CT_INK;
 }
 
+static u8 s_EntCol[MAX_DAY_ITEMS]; // colour last written for each entry (0 = unknown / must write)
+
+// Only touches the VRAM when the colour actually changes (hover/arrow moves recolour 2 entries)
 static void feed_color_entry(u8 slot)
 {
 	bool sel = (s_Mode == MODE_FEED) && (slot == s_FeedSel);
-	Gfx_FillColor(FEED_COL, entry_row(slot), FEED_W, s_Nl[slot], entry_color(slot, sel));
+	u8 c = entry_color(slot, sel);
+	if (s_EntCol[slot] == c)
+		return;
+	s_EntCol[slot] = c;
+	Gfx_FillColor(FEED_COL, entry_row(slot), FEED_W, s_Nl[slot], c);
 }
 
 // colours only (cheap): used when the selection or the mode changes
@@ -286,6 +293,7 @@ static void feed_draw_entry(u8 slot)
 			Cv_Text(&g_Strip, FEED_TEXT_X, 0, s_Label[slot] + s_Lines[l].start, s_Lines[l].len);
 		Gfx_BlitCanvas(FEED_COL, row + l, &g_Strip);
 	}
+	s_EntCol[slot] = 0; // force the colour write
 	feed_color_entry(slot);
 }
 
@@ -300,6 +308,8 @@ static void feed_draw(void)
 {
 	Gfx_FillPattern(FEED_COL, FEED_ROW, FEED_W, FEED_ROWS, 0xAA, 0x55);
 	Gfx_FillColor(FEED_COL, FEED_ROW, FEED_W, FEED_ROWS, CT_INK);
+	for (u8 i = 0; i < MAX_DAY_ITEMS; ++i)
+		s_EntCol[i] = 0;
 	for (u8 i = s_FeedTop; i < s_FeedCount; ++i)
 		if (entry_visible(i))
 			feed_draw_entry(i);
@@ -362,7 +372,10 @@ static void draw_sidebar_static(void)
 	Meter_Draw(0, 12, g_Game.loyalty);
 }
 
-static void end_button_draw(bool selected)
+static u8 s_EndSel = 0xFF;
+
+// The button frame + label are drawn once; selection is only a colour change.
+static void end_button_init(void)
 {
 	static const char label[] = "End Day";
 	// 5x3 tile button on rows 7-9: frame (top edge on the last pixel row of row 7,
@@ -377,13 +390,39 @@ static void end_button_draw(bool selected)
 	Cv_Text(&g_Strip, (40 - Text_Width(label, 7)) >> 1, 1, label, 7);
 	Gfx_BlitCanvas(0, 7, &g_Strip);
 	g_Strip.h = 1;
+	s_EndSel = 0xFF;
+}
+
+static void end_button_draw(bool selected)
+{
+	if (s_EndSel == (u8)selected)
+		return;
+	s_EndSel = selected;
 	Gfx_FillColor(0, 7, 5, 3, selected ? CT_INV : CT_INK);
 }
 
-static void panel_clear(void)
+// Bottom panel. Three independently cached parts so that moving the selection never re-renders
+// more than it has to (text rendering is the expensive operation on a 3.58 MHz Z80):
+//   text  (rows 18-21): the selected item's blurb / mode message -> redrawn only when its key changes,
+//                       and, while the selection is moving fast, only after PANEL_DELAY quiet frames
+//   size selector (row 22): drawn once; the highlighted size is a colour-only change
+//   hint  (row 23): redrawn only when the mode / device changes
+#define PANEL_DELAY 6
+#define PK_NONE 0xFF
+static u8 s_PnlText = PK_NONE;  // key of the text currently on screen
+static u8 s_PnlHint = PK_NONE;
+static u8 s_PnlSel = PK_NONE;   // 1 = selector labels on screen
+static u8 s_PnlSize = PK_NONE;  // size highlighted
+static u8 s_PnlWait;            // frames until the pending text is drawn (0 = none)
+static u8 s_PnlN, s_PnlI, s_PnlCol; // layout of the text being drawn line by line (see panel_text_begin)
+
+static void panel_reset(void)
 {
 	Gfx_FillPattern(0, 18, 32, 6, 0, 0);
 	Gfx_FillColor(0, 18, 32, 6, CT_INK);
+	s_PnlText = s_PnlHint = s_PnlSel = s_PnlSize = PK_NONE;
+	s_PnlWait = 0;
+	s_PnlN = s_PnlI = 0;
 }
 
 static void panel_line(u8 row, const char* s, u8 color)
@@ -391,58 +430,175 @@ static void panel_line(u8 row, const char* s, u8 color)
 	Gfx_TextLine(0, row, 32, 2, s, Text_Len(s), color);
 }
 
-static void panel_size_selector(void)
+static void panel_clear_rows(u8 row, u8 n)
 {
-	static const char* const names[3] = { "BIG 3x3", "MED 2x2", "SMALL 1x2" };
-	// three 7-tile blocks on row 22
-	for (u8 i = 0; i < 3; ++i)
-	{
-		bool on = (s_SelSize == i);
-		Gfx_TextCenter(1 + i * 9, 22, 8, names[i], on ? CT_INV : CT_INK);
-	}
+	Gfx_FillPattern(0, row, 32, n, 0, 0);
+	Gfx_FillColor(0, row, 32, n, CT_INK);
 }
 
-static void panel_hint(const char* s)
+// what the text area should show: 0..9 = feed slot, 0x80|slot = placing, 0xFD paper, 0xFC end day
+static u8 panel_text_key(void)
 {
-	Gfx_TextLine(0, 23, 32, 2, s, Text_Len(s), CT_INK);
+	if (s_Mode == MODE_PLACE) return 0x80 | s_PickSlot;
+	if (s_Mode == MODE_PAPER) return 0xFD;
+	if (s_FeedSel >= s_FeedCount) return 0xFC;
+	return s_FeedSel;
 }
 
-static void panel_draw(void)
+static bool panel_placeable(void)
 {
-	panel_clear();
-	if (s_Mode == MODE_PLACE)
+	return s_Mode == MODE_FEED && s_FeedSel < s_FeedCount && g_News[s_FeedItem[s_FeedSel]].head;
+}
+
+static u8 panel_hint_key(void)
+{
+	u8 id;
+	if (s_Mode == MODE_PLACE) id = 0;
+	else if (s_Mode == MODE_PAPER) id = 1;
+	else if (s_FeedSel >= s_FeedCount) id = 2;
+	else if (panel_placeable()) id = 3;
+	else id = 4;
+	return (id << 1) | (g_MouseOn ? 1 : 0);
+}
+
+// Panel text is drawn one line per frame (a 4-line blurb would otherwise block ~80 ms):
+// panel_text_begin() lays the lines out, panel_tick() renders one per call.
+typedef struct { const char* s; u8 len; u8 row; } PanelLine;
+static PanelLine s_PnlLn[4];
+
+static void panel_add(const char* s, u8 len, u8 row)
+{
+	s_PnlLn[s_PnlN].s = s;
+	s_PnlLn[s_PnlN].len = len;
+	s_PnlLn[s_PnlN].row = row;
+	++s_PnlN;
+}
+
+static void panel_text_begin(void)
+{
+	u8 key = panel_text_key();
+	panel_clear_rows(18, 4);
+	s_PnlText = key;
+	s_PnlWait = 0;
+	s_PnlN = s_PnlI = 0;
+	s_PnlCol = CT_INK;
+	if (key == 0xFD)
+		panel_add("Paper: select a placed article to pick it up", 44, 18);
+	else if (key == 0xFC)
 	{
-		panel_line(18, "Placing article. Pick a spot on the paper:", CT_INK);
-		panel_line(20, s_Label[s_PickSlot], CT_INK);
-		panel_hint(g_MouseOn ? "MOVE:aim  CLICK:drop  RIGHT CLICK:discard" : "ARROWS:move  SPACE:drop  ESC:discard");
-		return;
+		panel_add("End the day now: time runs 10x faster and", 40, 18);
+		panel_add("the paper goes to print.", 24, 19);
 	}
-	if (s_Mode == MODE_PAPER)
+	else if (key & 0x80)
 	{
-		panel_line(18, "Paper: select a placed article to pick it up", CT_INK);
-		panel_hint("ARROWS:move  SPACE:pick up  ESC:back to feed");
-		return;
-	}
-	// feed mode
-	if (s_FeedSel >= s_FeedCount)
-	{
-		panel_line(18, "End the day now: time runs 10x faster and", CT_INK);
-		panel_line(19, "the paper goes to print.", CT_INK);
-		panel_hint(g_MouseOn ? "CLICK:end day" : "UP:feed  SPACE:end day  ESC:paper");
-		return;
-	}
-	const char* t = s_Blurb[s_FeedSel];
-	u8 n = Text_Wrap(t, 244, s_Lines, 4);
-	u8 col = is_rebel_slot(s_FeedSel) ? CT_RED : CT_INK;
-	for (u8 i = 0; i < n; ++i)
-		Gfx_TextLine(0, 18 + i, 32, 2, t + s_Lines[i].start, s_Lines[i].len, col);
-	if (g_News[s_FeedItem[s_FeedSel]].head)
-	{
-		panel_size_selector();
-		panel_hint(g_MouseOn ? "POINT:item  CLICK SIZE  CLICK ITEM:place" : "UP/DN:item LT/RT:size SPACE:place ESC:paper");
+		panel_add("Placing article. Pick a spot on the paper:", 42, 18);
+		panel_add(s_Label[s_PickSlot], Text_Len(s_Label[s_PickSlot]), 20);
 	}
 	else
-		panel_hint(g_MouseOn ? "POINT:item   (no article for this message)" : "UP/DN:item   (no article for this message)");
+	{
+		const char* t = s_Blurb[key];
+		u8 n = Text_Wrap(t, 244, s_Lines, 4);
+		s_PnlCol = is_rebel_slot(key) ? CT_RED : CT_INK;
+		for (u8 i = 0; i < n; ++i)
+			panel_add(t + s_Lines[i].start, s_Lines[i].len, 18 + i);
+	}
+}
+
+static void panel_text_step(void)
+{
+	PanelLine* l = &s_PnlLn[s_PnlI++];
+	Gfx_TextLine(0, l->row, 32, 2, l->s, l->len, s_PnlCol);
+}
+
+static void panel_text_draw(void) // all lines now
+{
+	panel_text_begin();
+	while (s_PnlI < s_PnlN)
+		panel_text_step();
+}
+
+static void panel_hint_draw(u8 key)
+{
+	static const char* const pad[5] = {
+		"ARROWS:move  SPACE:drop  ESC:discard",
+		"ARROWS:move  SPACE:pick up  ESC:back to feed",
+		"UP:feed  SPACE:end day  ESC:paper",
+		"UP/DN:item LT/RT:size SPACE:place ESC:paper",
+		"UP/DN:item   (no article for this message)" };
+	static const char* const mouse[5] = {
+		"MOVE:aim  CLICK:drop  RIGHT CLICK:discard",
+		"ARROWS:move  SPACE:pick up  ESC:back to feed",
+		"CLICK:end day",
+		"POINT:item  CLICK SIZE  CLICK ITEM:place",
+		"POINT:item   (no article for this message)" };
+	const char* h = (key & 1) ? mouse[key >> 1] : pad[key >> 1];
+	Gfx_TextLine(0, 23, 32, 2, h, Text_Len(h), CT_INK);
+	s_PnlHint = key;
+}
+
+static void panel_selector_sync(void)
+{
+	static const char* const names[3] = { "BIG 3x3", "MED 2x2", "SMALL 1x2" };
+	if (!panel_placeable())
+	{
+		if (s_PnlSel != 0)
+		{
+			panel_clear_rows(22, 1);
+			s_PnlSel = 0;
+			s_PnlSize = PK_NONE;
+		}
+		return;
+	}
+	if (s_PnlSel != 1) // labels drawn once (white on white until coloured)
+	{
+		panel_clear_rows(22, 1);
+		for (u8 i = 0; i < 3; ++i)
+			Gfx_TextCenter(1 + i * 9, 22, 8, names[i], CT_INK);
+		s_PnlSel = 1;
+		s_PnlSize = PK_NONE;
+	}
+	if (s_PnlSize != s_SelSize)
+	{
+		for (u8 i = 0; i < 3; ++i)
+			Gfx_FillColor(1 + i * 9, 22, 8, 1, s_SelSize == i ? CT_INV : CT_INK);
+		s_PnlSize = s_SelSize;
+	}
+}
+
+// Bring the panel in line with the state. immediate = draw the text now (mode changes),
+// otherwise the text is debounced so holding an arrow / sweeping the mouse stays smooth.
+static void panel_sync(bool immediate)
+{
+	if (panel_text_key() != s_PnlText)
+	{
+		if (immediate)
+			panel_text_draw();
+		else if (s_PnlWait == 0)
+		{
+			panel_clear_rows(18, 4); // old text disappears at once (cheap), new text follows
+			s_PnlText = PK_NONE;
+			s_PnlN = s_PnlI = 0;
+			s_PnlWait = PANEL_DELAY;
+		}
+		else
+			s_PnlWait = PANEL_DELAY; // still moving: restart the quiet-frames countdown
+	}
+	u8 hk = panel_hint_key();
+	if (hk != s_PnlHint)
+		panel_hint_draw(hk);
+	panel_selector_sync();
+}
+
+// call once per frame
+static void panel_tick(void)
+{
+	if (s_PnlWait)
+	{
+		if (--s_PnlWait == 0)
+			panel_text_begin();
+	}
+	else if (s_PnlI < s_PnlN)
+		panel_text_step(); // one line per frame
 }
 
 //-----------------------------------------------------------------------------
@@ -487,7 +643,7 @@ static void pick_up(u8 slot, u8 size, u8 cx, u8 cy)
 	if (s_Cy + size_h(size) > GRID_H) s_Cy = GRID_H - size_h(size);
 	s_Mode = MODE_PLACE;
 	Sfx_Play(SFX_DRAG);
-	panel_draw();
+	panel_sync(TRUE);
 	feed_colors();
 	place_preview();
 }
@@ -496,7 +652,7 @@ static void to_feed_mode(void)
 {
 	fp_hide();
 	s_Mode = MODE_FEED;
-	panel_draw();
+	panel_sync(TRUE);
 	feed_colors();
 	end_button_draw(s_FeedSel >= s_FeedCount);
 }
@@ -531,7 +687,7 @@ static void handle_feed(void)
 	if (changed)
 	{
 		Sfx_Play(SFX_CLICK);
-		panel_draw();
+		panel_sync(FALSE);
 		feed_colors();
 		end_button_draw(s_FeedSel >= s_FeedCount);
 	}
@@ -561,7 +717,7 @@ static void handle_feed(void)
 		s_Mode = MODE_PAPER;
 		s_Cx = s_Cy = 0;
 		Sfx_Play(SFX_CLICK);
-		panel_draw();
+		panel_sync(TRUE);
 		feed_colors();
 		end_button_draw(FALSE);
 		paper_cursor();
@@ -699,7 +855,7 @@ static void mouse_pre(void)
 	{
 		s_FeedSel = sel;
 		Sfx_Play(SFX_CLICK);
-		panel_draw();
+		panel_sync(FALSE);
 		feed_colors();
 		end_button_draw(s_FeedSel >= s_FeedCount);
 	}
@@ -721,7 +877,7 @@ static void mouse_pre(void)
 					s_SelSize = i;
 					push &= ~IN_A;
 					Sfx_Play(SFX_CLICK);
-					panel_draw();
+					panel_sync(TRUE);
 				}
 		}
 		else if (!(tc >= FEED_COL && tc < FEED_COL + FEED_W && tr >= FEED_ROW && tr < FEED_ROW + FEED_ROWS) && !(tc < 5 && tr >= 7 && tr <= 9))
@@ -772,7 +928,9 @@ u8 Scr_Play(void)
 	Day_Generate(g_Game.day);
 
 	feed_draw();
-	panel_draw();
+	panel_reset();
+	panel_sync(TRUE);
+	end_button_init();
 	end_button_draw(TRUE);
 	Gfx_Display(TRUE);
 	Music_Play(MUSIC_NONE);
@@ -808,7 +966,8 @@ u8 Scr_Play(void)
 			Sfx_Play(SFX_DAYOVER);
 			popup_dayover();
 		}
-		Clock_Draw(0, 0, s_Time, s_Time >= (DAY_DURATION / 4) * 3);
+		if (!(g_Frames & 1) || s_Speed10) // hands move at 25 Hz (one turn per second is still smooth)
+			Clock_Draw(0, 0, s_Time, s_Time >= (DAY_DURATION / 4) * 3);
 
 		if (s_Over)
 		{
@@ -834,7 +993,7 @@ u8 Scr_Play(void)
 				feed_colors();
 				if (s_Mode == MODE_FEED)
 				{
-					panel_draw();
+					panel_sync(FALSE);
 					end_button_draw(s_FeedSel >= s_FeedCount);
 				}
 				Sfx_Play(SFX_FEED);
@@ -842,10 +1001,11 @@ u8 Scr_Play(void)
 		}
 
 		// --- input
+		panel_tick(); // debounced text of the bottom panel
 		if (g_MouseOn != s_LastMouse) // SPACE/arrows hints <-> CLICK hints
 		{
 			s_LastMouse = g_MouseOn;
-			panel_draw();
+			panel_sync(TRUE);
 		}
 		if (g_MouseOn)
 			mouse_pre();
