@@ -8,3 +8,4 @@ dist/*-d[0-9]*.map
 dist/*-dbg*
 emul/
 dist/*-mouse*
+dist/*-ascii8.*

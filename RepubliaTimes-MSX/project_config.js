@@ -1,9 +1,9 @@
 // Republia Times MSX - MSXgl build configuration (BigFive Studios port)
 ProjName    = "republia";
-ProjModules = [ "src/main", "src/platform/msx_gfx", "src/platform/msx_input", "src/platform/msx_audio", "src/platform/msx_isr", "src/game/logic", "src/game/widgets", "src/game/ui", "src/game/scr_title", "src/game/scr_morning", "src/game/scr_night", "src/game/scr_play", "src/data/font_data", "src/data/music_data" ];
+ProjModules = [ "src/main", "src/platform/msx_gfx", "src/platform/msx_input", "src/platform/msx_audio", "src/platform/msx_isr", "src/game/logic", "src/game/widgets", "src/platform/msx_seg", "src/game/ui", "src/game/scr_title", "src/game/scr_morning", "src/game/scr_night", "src/game/scr_play", "src/data/font_data", "src/data/music_data" ];
 LibModules  = [ "system", "bios", "vdp", "input", "memory", "psg", "mouse" ];
 Machine     = "1";          // MSX1 (Screen 2) - see docs/PORTING.md
-Target      = "ROM_ASCII8"; // ASCII8 mapper, code in segs 0-2, data in segs 4-5 (docs/PORTING.md)
+Target      = process.env.RT_MAPPER || "ROM_ASCII8"; // (ROM_KONAMI variant for carts without ASCII8) // ASCII8 mapper, code in segs 0-2, data in segs 4-5 (docs/PORTING.md)
 ROMSize     = 64;
 ProjSegments = "src/data/seg";
 Verbose     = true;

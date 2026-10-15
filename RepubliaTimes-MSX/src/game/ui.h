@@ -6,7 +6,7 @@
 
 #define CREDIT_PORT  "MSX port by BigFive Studios"
 #define CREDIT_ORIG  "by Lucas Pope @dukope"
-#define GAME_VERSION "0.1"
+#define GAME_VERSION "0.2"
 
 // One frame: wait for VBlank, read input, run audio sequencer.
 void Ui_Frame(void);

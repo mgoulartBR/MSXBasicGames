@@ -3,7 +3,8 @@
 Status legend: DONE / PARTIAL / TODO / BLOCKED
 
 ## Critical
-* TODO — verify on **real MSX hardware** (ASCII8 flash cart, H.TIMI hook, TMS9918 timing).
+* PARTIAL — real hardware (Sony HB-101): code runs; mapper not switching on the tested flash cart (see docs/PORTING.md). Waiting for retest of v0.2 ASCII8 / Konami ROMs.
+* TODO — mapper-free 32 KB ROM (compress bitmaps + strings) if the cart supports no mapper.
 * TODO — get the original author's permission before any public release (see LICENSES.md).
 
 ## Gameplay

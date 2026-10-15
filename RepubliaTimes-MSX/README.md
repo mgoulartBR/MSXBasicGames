@@ -10,7 +10,7 @@ the original source; graphics were converted/adapted to print on a 256×192 scre
 | | |
 |---|---|
 | Target | MSX1 or better (tested: openMSX 19.1 + C-BIOS MSX1/MSX2, 50 and 60 Hz) |
-| Format | 64 KB ROM, ASCII8 mapper (`dist/republia-msx-0.1.rom`) |
+| Format | 64 KB ROM, mapper required: **ASCII8** (`dist/republia-msx-0.2.rom`) or **Konami** without SCC (`dist/republia-msx-0.2-konami.rom`) |
 | Video | Screen 2 (256×192), black ink on white paper |
 | Audio | PSG (music A+B, SFX C) — no expansion needed |
 | RAM | 16 KB is enough (uses 6.4 KB + stack) |
@@ -49,8 +49,13 @@ Requirements: Linux/macOS, Node.js (MSXgl build scripts), Python 3 + Pillow + Nu
 (music transcription), openMSX. Details/versions: `docs/TOOLCHAIN.md`.
 Debug ROMs (jump to a day / set loyalty): `RT_TAG=x RT_DEFINES="-DDBG_START_DAY=8 -DDBG_LOYALTY=-12" ./scripts/build.sh`.
 
-Run on hardware: copy `dist/republia-msx-0.1.rom` to a cartridge/flash cart configured as
-**ASCII8**. (*Not tested on real hardware yet.*)
+Run on hardware: copy the ROM to a flash cartridge and **select the mapper in its menu/loader**
+(ASCII8 for `republia-msx-0.2.rom`, Konami [no SCC] for `…-konami.rom`). Flash carts that
+auto-detect the mapper may pick the wrong one for a 64 KB file. If the mapper does not work the
+game shows a **MAPPER ERROR** screen instead of garbage.
+*Hardware report (Sony HB-101 + USB flash cart, v0.1): code ran but data segments were not visible
+(black images, garbage text) — the cart was not switching ASCII8 banks. v0.2 adds the self-test and the
+Konami build; feedback welcome.*
 
 ## Repository layout
 ```

@@ -76,6 +76,17 @@ with noise. The main loop only posts requests, so long redraws never stall audio
 ## Formato do executável
 **ROM, ASCII8 mapper, 64 KB** (`republia-msx-0.1.rom`).
 
+## Real-hardware report (Sony HB-101, USB flash cart, v0.1)
+Fixed code ran (title text, credits, prompts) but everything read through the A000h window was
+wrong: logo/ministry image black (reads of FFh = unused segment 3 padding), briefing text missing
+and a garbage `rebelsWon` flag ("Let's Go!"), so the cart did **not** switch ASCII8 banks (it behaved as a
+linear 32 KB ROM). The emulator never showed this because tests forced `-romtype ASCII8`.
+v0.2: boot-time `Seg_SelfTest()` (marker bytes `R4`/`R5`/`R6` at the start of each segment) shows a
+MAPPER ERROR screen on failure; a Konami (K4) build is shipped; tests `scripts/test_mapper.sh`
+reproduce "cart without bank switching" by loading the first 32 KB as a plain ROM.
+Fallback if the cart cannot do any mapper: a mapper-free 32 KB ROM is possible only with ~11 KB of
+savings (deflate-class compression of bitmaps/strings gives ~10 KB; needs a streaming decoder).
+
 ## Mapper recomendado
 ASCII8 (8 KB segments, bank regs 6000h/6800h/7000h/7800h). Reason: code + data are ≈ 40 KB, more
 than a 32 KB ROM. Plain 48 KB ROMs need page-0 mapping tricks; Konami mappers waste a bank on a

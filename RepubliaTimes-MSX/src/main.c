@@ -6,6 +6,7 @@
 #include "platform/msx_audio.h"
 #include "platform/msx_isr.h"
 #include "game/ui.h"
+#include "platform/msx_seg.h"
 
 // The MSXgl crt0 copies initialised variables but does NOT clear the rest of RAM: uninitialised
 // globals/statics contain garbage at power-up. Clear [s__DATA, s__INITIALIZED) (linker area symbols)
@@ -28,10 +29,36 @@ static void clear_ram_vars(void)
 	Mem_Set(0, start, (u16)(end - start));
 }
 
+// Real-hardware diagnostic: the data segments (4-6) are not visible through the mapper window.
+static void mapper_error(u8 seg)
+{
+	char n[3] = { '0' + seg, 0, 0 };
+	Gfx_Clear(CT_INK);
+	Gfx_TextCenter(0, 3, 32, "MAPPER ERROR", CT_INV);
+	Gfx_Text(1, 6, 30, "The cartridge does not switch ROM", CT_INK);
+	Gfx_Text(1, 7, 30, "banks the way this ROM expects.", CT_INK);
+	Gfx_Text(1, 9, 30, "Failed segment:", CT_INK);
+	Gfx_Text(10, 9, 4, n, CT_INK);
+	Gfx_Text(1, 11, 30, "Use republia-msx-0.2.rom (ASCII8,", CT_INK);
+	Gfx_Text(1, 12, 30, "8KB banks) or the -konami.rom", CT_INK);
+	Gfx_Text(1, 13, 30, "build (Konami mapper, no SCC).", CT_INK);
+	Gfx_Text(1, 14, 30, "Pick that mapper in the cart menu.", CT_INK);
+	Gfx_Text(1, 17, 30, "Select the mapper in your flash", CT_INK);
+	Gfx_Text(1, 18, 30, "cartridge menu / loader.", CT_INK);
+	Gfx_TextCenter(0, 22, 32, CREDIT_PORT, CT_INK);
+	for (;;)
+		Halt();
+}
+
 void main()
 {
 	clear_ram_vars();
 	Gfx_Init();
+	{
+		u8 bad = Seg_SelfTest();
+		if (bad)
+			mapper_error(bad);
+	}
 	Input_Init();
 	Audio_Init();
 	Isr_Init();

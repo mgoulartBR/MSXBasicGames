@@ -19,3 +19,7 @@ inline u16 Seg_Set(u8 seg)
 	return old;
 }
 inline void Seg_Restore(u16 old) { SET_BANK_SEGMENT(SEG_WINDOW_BANK, old); }
+
+// Mapper self-test (boot): maps segments 4-6 and checks the "R<n>" marker at A000h.
+// Returns 0 when OK, otherwise the first failing segment number.
+u8 Seg_SelfTest(void);
