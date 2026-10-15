@@ -34,7 +34,7 @@ typedef struct {
 } SP_Table;
 
 void    SP_Init(SP_Table *t);
-void    SP_Shoot(SP_Table *t, uint8_t angle, uint8_t power); // angle 0-63 (64 = full turn), power 0-255
+void    SP_Shoot(SP_Table *t, uint8_t angle, uint8_t power); // angle 0-255 (256 = full turn), power 0-255
 uint8_t SP_Step(SP_Table *t);       // advance 1 frame; returns 1 while any ball moves
 uint8_t SP_IsMoving(const SP_Table *t);
 void    SP_PocketPosition(uint8_t i, int16_t *x, int16_t *y); // i in 0..5

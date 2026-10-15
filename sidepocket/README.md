@@ -15,4 +15,4 @@ Nenhum código ou asset da ROM original está neste repositório.
 4. Otimizar para Z80 (SDCC): trocar `int32_t` e divisões por tabelas.
 
 ## Convenções
-Posições em 12.4 (1/16 px), velocidades em 8.8 px/frame, ângulos 0–63 (64 = volta completa).
+Posições em 12.4 (1/16 px), velocidades em 8.8 px/frame, ângulos 0–255 (256 = volta completa, como no jogo original).

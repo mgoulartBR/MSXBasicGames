@@ -12,7 +12,7 @@ int main(void)
 
     // 1. A shot comes to rest and nothing leaves the table bounds
     SP_Init(&t);
-    SP_Shoot(&t, 32, 200);                  // angle 32 = towards -x (rack)
+    SP_Shoot(&t, 128, 200);                 // angle 128 = towards -x (rack)
     f = run(&t, 5000);
     CHECK(f < 5000);                        // settles
     CHECK(!SP_IsMoving(&t));
