@@ -1,1 +1,7 @@
 test/test_logic
+msx/gen/
+msx/out/
+msx/emul/
+*.rom
+*.md.bak
+__pycache__/

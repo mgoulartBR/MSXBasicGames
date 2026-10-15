@@ -1,0 +1,14 @@
+run 1300
+hold 700 703 8
+hold 760 763 8
+hold 820 823 8
+hold 880 883 8
+hold 940 943 8
+hold 1000 1003 8
+hold 1060 1063 8
+hold 730 733 1
+hold 850 853 1
+hold 970 973 1
+hold 1090 1093 1
+dump 1250 play
+shot 1250 play

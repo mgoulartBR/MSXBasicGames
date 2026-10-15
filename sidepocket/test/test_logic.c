@@ -17,7 +17,7 @@ int main(void)
     CHECK(f < 5000);                        // settles
     CHECK(!SP_IsMoving(&t));
     for (i = 0; i < SP_NUM_BALLS; i++)
-        if (t.ball[i].active) {
+        if (t.active & (1u << i)) {
             CHECK(t.ball[i].x >= SP_LEFT && t.ball[i].x <= SP_RIGHT);
             CHECK(t.ball[i].y >= SP_TOP  && t.ball[i].y <= SP_BOTTOM);
         }
@@ -25,28 +25,28 @@ int main(void)
 
     // 2. Head-on collision transfers momentum (equal masses)
     SP_Init(&t);
-    for (i = 2; i < SP_NUM_BALLS; i++) t.ball[i].active = 0;
-    t.ball[0].x = 100 << 4; t.ball[0].y = 80 << 4;
-    t.ball[1].x = 120 << 4; t.ball[1].y = 80 << 4;
-    t.ball[0].vx = 6 << 8;
+    for (i = 2; i < SP_NUM_BALLS; i++) t.active &= ~(1u << i);
+    t.ball[0].x = 100 << 8; t.ball[0].y = 80 << 8;
+    t.ball[1].x = 120 << 8; t.ball[1].y = 80 << 8;
+    t.ball[0].vx = 6 << 8; t.moving |= 1; SP_Sync(&t);
     run(&t, 5);
-    CHECK(t.ball[1].vx > (5 << 8) || t.ball[1].x > (121 << 4));
+    CHECK(t.ball[1].vx > (5 << 8) || t.ball[1].x > (121 << 8));
     CHECK(abs(t.ball[0].vx) < (1 << 8));
 
     // 3. A ball driven at a corner pocket is pocketed
     SP_Init(&t);
-    for (i = 2; i < SP_NUM_BALLS; i++) t.ball[i].active = 0;
-    t.ball[0].x = 40 << 4; t.ball[0].y = 50 << 4;
-    t.ball[0].vx = -(3 << 8); t.ball[0].vy = -(3 << 8);
-    t.ball[1].x = 200 << 4; t.ball[1].y = 100 << 4;
+    for (i = 2; i < SP_NUM_BALLS; i++) t.active &= ~(1u << i);
+    t.ball[0].x = 40 << 8; t.ball[0].y = 47 << 8;
+    t.ball[0].vx = -(3 << 8); t.ball[0].vy = -(3 << 8); t.moving |= 1; SP_Sync(&t);
+    t.ball[1].x = 200 << 8; t.ball[1].y = 100 << 8;
     run(&t, 500);
-    CHECK(t.scratch == 1 && !t.ball[0].active);
+    CHECK(t.scratch == 1 && !(t.active & 1));
 
     // 4. Rack is non-overlapping
     SP_Init(&t);
     for (i = 0; i < SP_NUM_BALLS; i++) for (f = i + 1; f < SP_NUM_BALLS; f++) {
-        long dx = t.ball[i].x - t.ball[f].x, dy = t.ball[i].y - t.ball[f].y;
-        CHECK(dx*dx + dy*dy >= (long)(2*SP_RADIUS)*(2*SP_RADIUS) - 64);
+        long dx = (long)t.ball[i].x - t.ball[f].x, dy = (long)t.ball[i].y - t.ball[f].y;
+        CHECK(dx*dx + dy*dy >= (long)(2*SP_RADIUS)*(2*SP_RADIUS) - 4096);
     }
     (void)mom0; (void)mom1;
     puts("all tests passed");
