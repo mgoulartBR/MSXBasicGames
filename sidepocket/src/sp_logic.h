@@ -21,13 +21,15 @@ typedef unsigned long  uint32_t;
 #define SP_NUM_BALLS   10                         // cue + 9 object balls
 #define SP_RADIUS      (4u << SP_POS_SHIFT)       // ball radius, 4 px
 
-// Playfield in table-image pixels (the 256x166 table crop, see tools/extract_assets.py):
-// cushion edges for ball centres are these +/- SP_RADIUS. Measured on the real table graphic.
-#define SP_LEFT        (9u   << SP_POS_SHIFT)
-#define SP_RIGHT       (247u << SP_POS_SHIFT)
-#define SP_TOP         (19u  << SP_POS_SHIFT)
-#define SP_BOTTOM      (149u << SP_POS_SHIFT)
-#define SP_POCKET_R    (9u << SP_POS_SHIFT)
+// Playfield in table-image pixels (the 256x166 table crop, see tools/extract_assets.py): the edges of the
+// flat cloth, where a ball touches the cushion (measured: cloth x 16..239, y 26..141).
+// A ball centre stays SP_RADIUS inside these.  The pockets sit in the cushions, so their capture radius
+// is larger than the pocket graphic: a ball held back by the cushion still has to reach the pocket.
+#define SP_LEFT        (15u  << SP_POS_SHIFT)
+#define SP_RIGHT       (240u << SP_POS_SHIFT)
+#define SP_TOP         (26u  << SP_POS_SHIFT)
+#define SP_BOTTOM      (142u << SP_POS_SHIFT)
+#define SP_POCKET_R    (17u << SP_POS_SHIFT)
 #define SP_CUE_X       188
 #define SP_CUE_Y       84
 

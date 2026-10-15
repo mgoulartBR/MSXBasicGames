@@ -78,7 +78,7 @@ static u8  g_BX[SP_NUM_BALLS], g_BY[SP_NUM_BALLS];
 static u16 g_Drawn;                 // bit n = ball n is currently drawn at (g_BX[n], g_BY[n])
 static u8 g_DotX[AIM_DOTS], g_DotY[AIM_DOTS], g_DotN;
 
-static void DrawCell(u8 cell, u8 x, u8 y)
+static void DoCell(u8 cell, u8 x, u8 y)
 {
 	VDP_CommandWait();
 	VDP_CommandLMMM((u16)cell * 8, STRIP_Y, x, y, 8, 8, VDP_OP_TIMP);
@@ -86,7 +86,7 @@ static void DrawCell(u8 cell, u8 x, u8 y)
 
 // A cell over perfectly flat cloth can be copied with the (much faster) byte-wise HMMM, since
 // its transparent pixels are pre-filled with the cloth colour.  LMMM+TIMP costs 3-6 ms per ball.
-static void DrawSolid(u8 cell, u8 x, u8 y)
+static void DoSolid(u8 cell, u8 x, u8 y)
 {
 	VDP_CommandWait();
 	if (x & 1) VDP_CommandHMMM((u16)cell * 10, SOLID_ODD_Y,  x - 1, y, 10, 8);
@@ -98,12 +98,42 @@ static bool Flat(u8 x, u8 y)
 	return x > FLAT_X0 && x <= FLAT_X1 - 9 && y >= TBL_Y + FLAT_Y0 && y <= TBL_Y + FLAT_Y1 - 7;
 }
 
-static void EraseSpot(u8 x, u8 y)
+static void DoErase(u8 x, u8 y)
 {
 	// byte-aligned fast copy from the clean page; 10 wide covers an odd x
 	x &= 0xFE;
 	VDP_CommandWait();
 	VDP_CommandHMMM(x, PAGE1 + y, x, y, 10, 8);
+}
+
+//-----------------------------------------------------------------------------
+// Command queue.  The game logic only *plans* what to draw; Flush() runs the VDP commands back to back,
+// right after the vertical-blank interrupt, so the beam is still above the table while balls are erased and
+// redrawn (an erase followed by milliseconds of CPU work before the redraw shows up as blinking).
+enum { OP_ERASE, OP_SOLID, OP_CELL };
+#define Q_MAX 80
+static u8 q_op[Q_MAX], q_cell[Q_MAX], q_x[Q_MAX], q_y[Q_MAX], q_n;
+
+static void Push(u8 op, u8 cell, u8 x, u8 y)
+{
+	if (q_n >= Q_MAX) return;
+	q_op[q_n] = op; q_cell[q_n] = cell; q_x[q_n] = x; q_y[q_n] = y;
+	q_n++;
+}
+static void EraseSpot(u8 x, u8 y)          { Push(OP_ERASE, 0, x, y); }
+static void DrawSolid(u8 c, u8 x, u8 y)    { Push(OP_SOLID, c, x, y); }
+static void DrawCell(u8 c, u8 x, u8 y)     { Push(OP_CELL, c, x, y); }
+
+static void Flush()
+{
+	u8 i;
+	for (i = 0; i < q_n; i++)
+	{
+		if (q_op[i] == OP_ERASE)      DoErase(q_x[i], q_y[i]);
+		else if (q_op[i] == OP_SOLID) DoSolid(q_cell[i], q_x[i], q_y[i]);
+		else                          DoCell(q_cell[i], q_x[i], q_y[i]);
+	}
+	q_n = 0;
 }
 
 // 8-bit neighbourhood test on top-left pixel coordinates (a ball is 8x8, an erase covers 10x8)
@@ -208,7 +238,7 @@ static void RefreshAim(bool show)
 		{
 			i16 d = (i16)i * 14 + 6;
 			i16 x = cx + (i16)(((i32)c * d) >> 8), y = cy + (i16)(((i32)s * d) >> 8);
-			if (x < 12 || x > 244 || y < 21 || y > 147) break;
+			if (x < 18 || x > 238 || y < 28 || y > 140) break;
 			g_DotX[g_DotN] = (u8)(x - 4); g_DotY[g_DotN] = (u8)(y - 4 + TBL_Y);
 			{
 				bool solid = Flat(g_DotX[g_DotN], g_DotY[g_DotN]);
@@ -260,6 +290,7 @@ static void NewRack()
 static void ResetPlay()
 {
 	// repaint the clean table, then draw everything again
+	Flush();                                // pending plan first, or its draws would land on the fresh table
 	VDP_CommandWait();
 	VDP_CommandHMMM(0, PAGE1 + TBL_Y, 0, TBL_Y, 256, 166);
 	g_Drawn = 0;
@@ -301,6 +332,7 @@ void main()
 	RefreshAim(TRUE);
 	DrawScore();
 	DrawPowerFrame();
+	Flush();
 	VDP_EnableDisplay(TRUE);
 
 	for (;;)
@@ -308,6 +340,7 @@ void main()
 		u8 joy, key, left, right, fire;
 
 		Halt();
+		Flush();                                  // vblank has just started: run last frame's plan
 		g_Tick++;
 
 		joy = Joystick_Read(JOY_PORT_1);

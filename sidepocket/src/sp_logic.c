@@ -249,9 +249,9 @@ uint8_t SP_Step(SP_Table *t)
         if (b->x < (SP_LEFT + 2 * SP_POCKET_R) || b->x > (SP_RIGHT - 2 * SP_POCKET_R) ||
             b->y < (SP_TOP + 2 * SP_POCKET_R)  || b->y > (SP_BOTTOM - 2 * SP_POCKET_R)) {
             for (j = 0; j < 6; j++) {
-                int16_t dx = (int16_t)(b->x - pocket_x[j]) >> 4, dy = (int16_t)(b->y - pocket_y[j]) >> 4;
-                if (dx >= 144 || dx <= -144 || dy >= 144 || dy <= -144) continue;      // 9 px in 12.4
-                if ((uint16_t)(dx * dx) + (uint16_t)(dy * dy) < (uint16_t)(144 * 144)) {
+                int16_t dx = (int16_t)(b->x - pocket_x[j]) >> 7, dy = (int16_t)(b->y - pocket_y[j]) >> 7;   // half pixels
+                if (dx >= 34 || dx <= -34 || dy >= 34 || dy <= -34) continue;                              // R = 17 px
+                if ((uint16_t)(dx * dx) + (uint16_t)(dy * dy) < (uint16_t)(34 * 34)) {
                     pocket(t, i);
                     break;
                 }
