@@ -1,0 +1,33 @@
+THE REPUBLIA TIMES - MSX port v0.4
+Port para MSX por BigFive Studios  |  Jogo original de Lucas Pope (@dukope)
+Projeto de fa nao oficial, sem fins comerciais.
+
+ARQUIVOS
+  RepubliaTimes-MSX-v0.4-ASCII8.rom   ROM de 64 KB, mapper ASCII8 (8 KB)   <- use esta primeiro
+  RepubliaTimes-MSX-v0.4-Konami.rom   ROM de 64 KB, mapper Konami sem SCC  <- se o seu cartucho so oferecer Konami
+
+REQUISITOS
+  MSX1 ou superior, 16 KB de RAM, cartucho flash ou emulador (openMSX, blueMSX, fMSX...).
+  Selecione o MAPPER correto no menu do cartucho/emulador. Se o mapper estiver errado o jogo mostra
+  a tela "MAPPER ERROR" em vez de imagens quebradas.
+  Emulador openMSX:  openmsx -machine C-BIOS_MSX1_EU -cart arquivo.rom -romtype ASCII8   (ou Konami)
+
+CONTROLES
+  Setas / joystick ........ mover e selecionar
+  ESPACO, ENTER, botao A .. confirmar, pegar, soltar
+  ESC, TAB, botao B ....... cancelar / descartar / trocar feed e jornal
+  M ....................... liga/desliga som
+  Mouse MSX (porta 1 ou 2): ligue antes de iniciar e deixe parado na tela de titulo.
+  Passe o mouse sobre a noticia, clique no tamanho (BIG/MED/SMALL), clique na noticia para pega-la,
+  clique no jornal para soltar, botao direito descarta.
+
+STATUS CONHECIDO
+  Testado em emulador (openMSX + C-BIOS, 50 e 60 Hz, MSX1 com 16 KB de RAM).
+  Em hardware real (Sony HB-101 com cartuchos flash USB-Mapper e Pico) foram relatados problemas
+  graficos e travamentos nesta versao; estamos investigando. Relatos sao bem-vindos.
+
+CREDITOS
+  Jogo, arte, textos e musica originais: Lucas Pope (@dukope)
+  Port MSX, engine e ferramentas: BigFive Studios
+  Engine: MSXgl (Aoineko, CC BY-SA 4.0)  |  Compilador: SDCC  |  Teste: openMSX, C-BIOS
+Veja LICENSES.md.
