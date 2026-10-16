@@ -42,7 +42,7 @@ static void mapper_error(u8 seg)
 	Gfx_Text(1, 7, 30, "banks the way this ROM expects.", CT_INK);
 	Gfx_Text(1, 9, 30, "Failed segment:", CT_INK);
 	Gfx_Text(10, 9, 4, n, CT_INK);
-	Gfx_Text(1, 11, 30, "Use republia-msx-0.3.rom (ASCII8,", CT_INK);
+	Gfx_Text(1, 11, 30, "Use republia-msx-0.4.rom (ASCII8,", CT_INK);
 	Gfx_Text(1, 12, 30, "8KB banks) or the -konami.rom", CT_INK);
 	Gfx_Text(1, 13, 30, "build (Konami mapper, no SCC).", CT_INK);
 	Gfx_Text(1, 14, 30, "Pick that mapper in the cart menu.", CT_INK);

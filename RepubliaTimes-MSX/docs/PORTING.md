@@ -96,6 +96,14 @@ window checksums vs the expected values, bank-switch latency, RAM, VRAM read-bac
 VBlank hook on screen. Lesson found while building it: fixed code must end below A000h; `build.sh` now
 fails the build otherwise (game margin is only ~200 bytes).
 
+### Third report (PicoVerse, 16 KB RAM machine) and v0.4 hardening
+Diagnostic ROMs on the Pico: ASCII8 build reset the machine, Konami build froze on a half-drawn screen.
+RAM size was ruled out: openMSX machine with 16 KB RAM (page 3 only, TMS9929A 16 KB VRAM) runs the game
+and both diagnostic ROMs correctly. v0.4 changes that do not depend on the root cause: the VBlank hook is
+now a direct `JP` (no BIOS CALSLT) to a trampoline that saves all registers incl. IX/IY and the alternate
+set; no `EI` inside the ISR (INPUT_USE_ISR_PROTECTION off; the hook is the only PSG/PPI user); the diagnostic
+ROM prints a 16-block map per segment with the first bad bytes.
+
 ## Mapper recomendado
 ASCII8 (8 KB segments, bank regs 6000h/6800h/7000h/7800h). Reason: code + data are ≈ 40 KB, more
 than a 32 KB ROM. Plain 48 KB ROMs need page-0 mapping tricks; Konami mappers waste a bank on a

@@ -18,6 +18,6 @@ Optim = "SIZE";
 // Optional debug defines, e.g. RT_DEFINES="-DDBG_START_DAY=8 -DDBG_FAST=5" scripts/build.sh
 // Workaround for an MSXgl v1.5.0 quirk (no patch to the library): engine/src/mouse.c uses INPUT_DI /
 // INPUT_EI inside __asm blocks but never includes input.h, so the macros stay unexpanded and the
-// assembler fails. Defining them on the command line (same values as input.h with
-// INPUT_USE_ISR_PROTECTION=TRUE) fixes it. See docs/TOOLCHAIN.md.
-CompileOpt = "-DINPUT_DI=di -DINPUT_EI=ei " + (process.env.RT_DEFINES || "");
+// assembler fails. Defining them (empty: INPUT_USE_ISR_PROTECTION is FALSE because every port access
+// happens inside the VBlank hook, which already runs with interrupts disabled) fixes it.
+CompileOpt = "-DINPUT_DI= -DINPUT_EI= " + (process.env.RT_DEFINES || "");

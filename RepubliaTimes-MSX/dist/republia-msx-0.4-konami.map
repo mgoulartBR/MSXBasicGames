@@ -1,0 +1,694 @@
+ASxxxx Linker V05.50.4-SDLD,  page 1.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     00000000  .__.ABS.                           divsigned
+     00000000  _g_SUBRID                          seg_s6_b3
+     00000000  l__BSEG                         
+     00000000  l__BSS                          
+     00000000  l__CABS                         
+     00000000  l__DABS                         
+     00000000  l__GSFINAL                      
+     00000000  l__HEADER                       
+     00000000  l__HEADER0                      
+     00000000  l__HEAP                         
+     00000000  l__RODATA                       
+     00000000  s__CABS                         
+     00000000  s__DABS                         
+     00000000  s__HEADER                       
+     00000000  s__HEADER0                      
+     00000002  _g_STRSRC                          seg_s6_b3
+     00000004  _g_CGTABL                          vdp
+     00000005  l__GSINIT                       
+     00000006  _g_VDP_DR                          vdp
+     00000007  _g_VDP_DW                          vdp
+     00000026  l__INITIALIZED                  
+     00000026  l__INITIALIZER                  
+     0000002B  _g_BASRVN                          vdp
+     0000002B  _g_ROMVersion                      vdp
+     0000002D  _g_MSXVER                          vdp
+     0000002E  _g_MSXMID                          vdp
+     00000034  _g_CHAR_16                         vdp
+     000001F6  l__HOME                         
+     000018FE  l__SEG6                         
+     0000191A  l__DATA                         
+     00001B32  l__SEG5                         
+     00001BAE  l__SEG4                         
+     00004000  s__CODE                         
+     00005B0C  l__CODE                         
+     00009B0C  s__HOME                         
+     00009D02  s__INITIALIZER                  
+     00009D02  s__RODATA                       
+     00009D28  s__GSINIT                       
+     00009D2D  s__GSFINAL                      
+     0000C000  s__DATA                         
+     0000D91A  s__INITIALIZED                  
+     0000D940  s__BSEG                         
+     0000D940  s__BSS                          
+     0000D940  s__HEAP                         
+     0000F30F  _g_KANJTABLE                       seg_s6_b3
+     0000F323  _g_DISKVE                          seg_s6_b3
+     0000F325  _g_BREAKV                          seg_s6_b3
+     0000F341  _g_RAMAD0                          seg_s6_b3
+     0000F342  _g_RAMAD1                          seg_s6_b3
+     0000F343  _g_RAMAD2                          seg_s6_b3
+ASxxxx Linker V05.50.4-SDLD,  page 2.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000F344  _g_RAMAD3                          seg_s6_b3
+     0000F348  _g_MASTER                          seg_s6_b3
+     0000F37D  _g_BDOS                            seg_s6_b3
+     0000F380  _g_RDPRIM                          vdp
+     0000F385  _g_WRPRIM                          vdp
+     0000F38C  _g_CLPRIM                          vdp
+     0000F39A  _g_USRTAB                          vdp
+     0000F3AE  _g_LINL40                          vdp
+     0000F3AF  _g_LINL32                          vdp
+     0000F3B0  _g_LINLEN                          vdp
+     0000F3B1  _g_CRTCNT                          vdp
+     0000F3B2  _g_CLMLST                          vdp
+     0000F3B3  _g_TXTNAM                          vdp
+     0000F3B5  _g_TXTCOL                          vdp
+     0000F3B7  _g_TXTCGP                          vdp
+     0000F3B9  _g_TXTATR                          vdp
+     0000F3BB  _g_TXTPAT                          vdp
+     0000F3BD  _g_T32NAM                          vdp
+     0000F3BF  _g_T32COL                          vdp
+     0000F3C1  _g_T32CGP                          vdp
+     0000F3C3  _g_T32ATR                          vdp
+     0000F3C5  _g_T32PAT                          vdp
+     0000F3C7  _g_GRPNAM                          vdp
+     0000F3C9  _g_GRPCOL                          vdp
+     0000F3CB  _g_GRPCGP                          vdp
+     0000F3CD  _g_GRPATR                          vdp
+     0000F3CF  _g_GRPPAT                          vdp
+     0000F3D1  _g_MLTNAM                          vdp
+     0000F3D3  _g_MLTCOL                          vdp
+     0000F3D5  _g_MLTCGP                          vdp
+     0000F3D7  _g_MLTATR                          vdp
+     0000F3D9  _g_MLTPAT                          vdp
+     0000F3DB  _g_CLIKSW                          vdp
+     0000F3DC  _g_CSRY                            vdp
+     0000F3DD  _g_CSRX                            vdp
+     0000F3DE  _g_CNSDFG                          vdp
+     0000F3DF  _g_RG0SAV                          vdp
+     0000F3E0  _g_RG1SAV                          vdp
+     0000F3E1  _g_RG2SAV                          vdp
+     0000F3E2  _g_RG3SAV                          vdp
+     0000F3E3  _g_RG4SAV                          vdp
+     0000F3E4  _g_RG5SAV                          vdp
+     0000F3E5  _g_RG6SAV                          vdp
+     0000F3E6  _g_RG7SAV                          vdp
+     0000F3E7  _g_STATFL                          vdp
+     0000F3E8  _g_TRGFLG                          vdp
+     0000F3E9  _g_FORCLR                          vdp
+     0000F3EA  _g_BAKCLR                          vdp
+     0000F3EB  _g_BDRCLR                          vdp
+     0000F3EC  _g_MAXUPD                          vdp
+     0000F3EF  _g_MINUPD                          vdp
+ASxxxx Linker V05.50.4-SDLD,  page 3.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000F3F2  _g_ATRBYT                          vdp
+     0000F3F3  _g_QUEUES                          vdp
+     0000F3F5  _g_FRCNEW                          vdp
+     0000F3F6  _g_SCNCNT                          vdp
+     0000F3F7  _g_REPCNT                          vdp
+     0000F3F8  _g_PUTPNT                          vdp
+     0000F3FA  _g_GETPNT                          vdp
+     0000F3FC  _g_CS120                           vdp
+     0000F401  _g_CS240                           vdp
+     0000F406  _g_LOW                             vdp
+     0000F408  _g_HIGH                            vdp
+     0000F40A  _g_HEADER                          vdp
+     0000F40B  _g_ASPCT1                          vdp
+     0000F40D  _g_ASPCT2                          vdp
+     0000F87F  _g_FNKSTR                          vdp
+     0000F92A  _g_CLOC                            vdp
+     0000F92C  _g_CMASK                           vdp
+     0000F959  _g_QUETAB                          vdp
+     0000F971  _g_QUEBAK                          vdp
+     0000F975  _g_VOICAQ                          vdp
+     0000F9F5  _g_VOICBQ                          vdp
+     0000FA75  _g_VOICCQ                          vdp
+     0000FAF5  _g_DPPAGE                          vdp
+     0000FAF5  _g_RS2IQ                           vdp
+     0000FAF6  _g_ACPAGE                          vdp
+     0000FAF7  _g_AVCSAV                          vdp
+     0000FAF8  _g_EXBRSA                          vdp
+     0000FAF9  _g_CHRCNT                          vdp
+     0000FAFA  _g_ROMA                            vdp
+     0000FAFC  _g_MODE                            vdp
+     0000FAFD  _g_NORUSE                          vdp
+     0000FAFE  _g_XSAVE                           vdp
+     0000FB00  _g_YSAVE                           vdp
+     0000FB02  _g_LOGOPR                          vdp
+     0000FB03  _g_RSTMP                           vdp
+     0000FB03  _g_TOCNT                           vdp
+     0000FB04  _g_RSFCB                           vdp
+     0000FB06  _g_RSIQLN                          vdp
+     0000FB07  _g_MEXBIh                          vdp
+     0000FB0C  _g_OLDINT                          vdp
+     0000FB0C  _g_OLDSTT                          vdp
+     0000FB16  _g_DEVNUM                          vdp
+     0000FB17  _g_DATCNT                          vdp
+     0000FB1A  _g_ERRORS                          vdp
+     0000FB1B  _g_FLAGS                           vdp
+     0000FB1C  _g_ESTBLS                          vdp
+     0000FB1D  _g_COMMSK                          vdp
+     0000FB1E  _g_LSTCOM                          vdp
+     0000FB1F  _g_LSTMOD                          vdp
+     0000FB35  _g_PRSCNT                          vdp
+     0000FB36  _g_SAVSP                           vdp
+ASxxxx Linker V05.50.4-SDLD,  page 4.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000FB38  _g_VOICEN                          vdp
+     0000FB39  _g_SAVVOL                          vdp
+     0000FB3B  _g_MCLLEN                          vdp
+     0000FB3C  _g_MCLPTR                          vdp
+     0000FB3E  _g_QUEUEN                          vdp
+     0000FB3F  _g_MUSICF                          vdp
+     0000FB40  _g_PLYCNT                          vdp
+     0000FB41  _g_VCBA                            vdp
+     0000FB66  _g_VCBB                            vdp
+     0000FB8B  _g_VCBC                            vdp
+     0000FBB0  _g_ENSTOP                          vdp
+     0000FBB1  _g_BASROM                          vdp
+     0000FBB2  _g_LINTTB                          vdp
+     0000FBCA  _g_FSTPOS                          vdp
+     0000FBCC  _g_CODSAV                          vdp
+     0000FBCD  _g_FNKSWI                          vdp
+     0000FBCE  _g_FNKFLG                          vdp
+     0000FBD8  _g_ONGSBF                          vdp
+     0000FBD9  _g_CLIKFL                          vdp
+     0000FBDA  _g_OLDKEY                          vdp
+     0000FBE5  _g_NEWKEY                          vdp
+     0000FBF0  _g_KEYBUF                          vdp
+     0000FC18  _g_LINWRK                          vdp
+     0000FC40  _g_PATWRK                          vdp
+     0000FC48  _g_BOTTOM                          vdp
+     0000FC4A  _g_HIMEM                           vdp
+     0000FC4C  _g_TRPTBL                          vdp
+     0000FC9A  _g_RTYCNT                          vdp
+     0000FC9B  _g_INTFLG                          vdp
+     0000FC9C  _g_PADY                            vdp
+     0000FC9D  _g_PADX                            vdp
+     0000FC9E  _g_JIFFY                           vdp
+     0000FCA0  _g_INTVAL                          vdp
+     0000FCA2  _g_INTCNT                          vdp
+     0000FCA4  _g_LOWLIM                          vdp
+     0000FCA5  _g_WINWID                          vdp
+     0000FCA6  _g_GRPHED                          vdp
+     0000FCA7  _g_ESCCNT                          vdp
+     0000FCA8  _g_INSFLG                          vdp
+     0000FCA9  _g_CSRSW                           vdp
+     0000FCAA  _g_CSTYLE                          vdp
+     0000FCAB  _g_CAPST                           vdp
+     0000FCAC  _g_KANAST                          vdp
+     0000FCAD  _g_KANAMD                          vdp
+     0000FCAE  _g_FLBMEM                          vdp
+     0000FCAF  _g_SCRMOD                          vdp
+     0000FCB0  _g_OLDSCR                          vdp
+     0000FCB1  _g_CASPRV                          vdp
+     0000FCB2  _g_BRDATR                          vdp
+     0000FCB3  _g_GXPOS                           vdp
+     0000FCB5  _g_GYPOS                           vdp
+ASxxxx Linker V05.50.4-SDLD,  page 5.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000FCB7  _g_GRPACX                          vdp
+     0000FCB9  _g_GRPACY                          vdp
+     0000FCBB  _g_DRWFLG                          vdp
+     0000FCBC  _g_DRWSCL                          vdp
+     0000FCBD  _g_DRWANG                          vdp
+     0000FCC1  _g_EXPTBL                          vdp
+     0000FCC1  _g_MNROM                           vdp
+     0000FCC5  _g_SLTTBL                          vdp
+     0000FCC9  _g_SLTATR                          vdp
+     0000FD09  _g_SLTWRK                          vdp
+     0000FD89  _g_PROCNM                          vdp
+     0000FFE7  _g_RG08SAV                         vdp
+     0000FFE8  _g_RG09SAV                         vdp
+     0000FFE9  _g_RG10SAV                         vdp
+     0000FFEA  _g_RG11SAV                         vdp
+     0000FFEB  _g_RG12SAV                         vdp
+     0000FFEC  _g_RG13SAV                         vdp
+     0000FFED  _g_RG14SAV                         vdp
+     0000FFEE  _g_RG15SAV                         vdp
+     0000FFEF  _g_RG16SAV                         vdp
+     0000FFF0  _g_RG17SAV                         vdp
+     0000FFF1  _g_RG18SAV                         vdp
+     0000FFF2  _g_RG19SAV                         vdp
+     0000FFF3  _g_RG20SAV                         vdp
+     0000FFF4  _g_RG21SAV                         vdp
+     0000FFF5  _g_RG22SAV                         vdp
+     0000FFF6  _g_RG23SAV                         vdp
+     0000FFF7  _g_MINROM                          vdp
+     0000FFF8  _g_SVFFF8                          vdp
+     0000FFFA  _g_RG25SAV                         vdp
+     0000FFFB  _g_RG26SAV                         vdp
+     0000FFFC  _g_RG27SAV                         vdp
+     0000FFFD  _g_SVFFFD                          vdp
+     0000FFFF  _g_SLTSL                           vdp
+     0004A000  s__SEG4                         
+     0005A000  s__SEG5                         
+     0006A000  s__SEG6                         
+ASxxxx Linker V05.50.4-SDLD,  page 6.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_CODE                               00004000    00005B0C =       23308. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     00004000  _g_FirstAddr                       crt0
+     00004000  _g_HeaderAddr                      crt0
+     00004000  crt0_rom_header                    crt0
+     0000401F  crt0_p1_to_p2                      crt0
+     0000403D  ctr0_init_mapper                   crt0
+     00004056  crt0_init_globals                  crt0
+     000042F8  _main                              main
+     00004301  _Gfx_Init                          msx_gfx
+     0000438A  _Gfx_Display                       msx_gfx
+     0000439A  _Gfx_Clear                         msx_gfx
+     000043B4  _Gfx_FillPattern                   msx_gfx
+     0000454E  _Gfx_FillColor                     msx_gfx
+     000045BB  _Gfx_Blit                          msx_gfx
+     00004634  _Gfx_BlitCanvas                    msx_gfx
+     00004681  _Cv_Clear                          msx_gfx
+     000046A7  _Cv_Copy                           msx_gfx
+     00004705  _Cv_Pixel                          msx_gfx
+     00004762  _Cv_Line                           msx_gfx
+     000048B3  _Cv_HLine                          msx_gfx
+     000048EC  _Cv_VLine                          msx_gfx
+     00004925  _Cv_FillRect                       msx_gfx
+     00004A0E  _Cv_Invert                         msx_gfx
+     00004A42  _Text_Width                        msx_gfx
+     00004BED  _Cv_Text                           msx_gfx
+     00004C1A  _Cv_TextKnock                      msx_gfx
+     00004C48  _Text_Wrap                         msx_gfx
+     00004E79  _Gfx_TextLine                      msx_gfx
+     00004ECE  _Gfx_TextCenter                    msx_gfx
+     00004F45  _Text_Len                          msx_gfx
+     00004F55  _Gfx_Text                          msx_gfx
+     00004F89  _Gfx_TextRight                     msx_gfx
+     00004FF3  _Pointer_Update                    msx_gfx
+     0000508E  _Input_Init                        msx_input
+     00005233  _Input_Sample                      msx_input
+     00005378  _Input_Update                      msx_input
+     000054D9  _Audio_Init                        msx_audio
+     0000550D  _Audio_Mute                        msx_audio
+     00005511  _Audio_IsMuted                     msx_audio
+     00005515  _Sfx_Play                          msx_audio
+     0000551E  _Music_Play                        msx_audio
+     00005707  _Audio_Update                      msx_audio
+     0000586A  _Isr_Hook                          msx_isr
+     00005895  _Isr_Init                          msx_isr
+     000058A6  _Rand_Seed                         logic
+     000058B1  _Rand16                            logic
+     000058DF  _Rand8                             logic
+     00005938  _Goal_TargetDay                    logic
+     0000594F  _Goal_TargetLoyalty                logic
+     0000595B  _Goal_TargetReaders                logic
+     0000596A  _Goal_ForDay                       logic
+ASxxxx Linker V05.50.4-SDLD,  page 7.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_CODE                               00004000    00005B0C =       23308. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000598B  _Goal_IsMet                        logic
+     000059E2  _Game_LoyaltyDelta                 logic
+     000059EA  _Game_ReadersDelta                 logic
+     000059F8  _Goal_Status                       logic
+     00005A98  _Game_Reset                        logic
+     00005ACF  _Str_Expand                        logic
+     00005B9C  _News_IsWeather                    logic
+     00005BF9  _News_IsRebel                      logic
+     00005C12  _News_MarkUsed                     logic
+     00005C1C  _News_Blurb                        logic
+     00005D00  _News_Head                         logic
+     00005D2F  _Day_Generate                      logic
+     00005FEC  _Summary_Init                      logic
+     00006002  _Summary_Add                       logic
+     000060AC  _Readership_Apply                  logic
+     000063F8  _Clock_Init                        widgets
+     00006638  _Clock_Draw                        widgets
+     000067F5  _Meter_Draw                        widgets
+     0000690F  _Readers_Draw                      widgets
+     000069B5  _Seg_SelfTest                      msx_seg
+     00006A0D  _Ui_Frame                          ui
+     00006A31  _Ui_WaitRelease                    ui
+     00006ADD  _Ui_ShowPages                      ui
+     00006C6E  _Ui_Credits                        ui
+     00006E0A  _Scr_Title                         scr_title
+     00006FE7  _Scr_Morning                       scr_morning
+     00007179  _Scr_Night                         scr_night
+     00008C05  _Scr_Play                          scr_play
+     00008EF5  _g_Font_Silk                       font_data
+     0000924C  _g_Sprite_Cursor                   font_data
+     0000940A  _g_MusicTracks                     music_data
+     00009412  ___muluint2ulong                   __muluint2slong
+     00009429  _Input_Detect                      input
+     00009444  _Joystick_Read                     input
+     00009453  _Mouse_Read                        input
+     000094B6  _Keyboard_Read                     input
+     000094C1  _VDP_SetModeFlag                   vdp
+     000094EA  _VDP_SetModeGraphic2               vdp
+     0000950D  _VDP_ClearVRAM                     vdp
+     00009519  _VDP_WriteVRAM_16K                 vdp
+     00009542  _VDP_FillVRAM_16K                  vdp
+     00009561  _VDP_ReadVRAM_16K                  vdp
+     00009589  _VDP_Peek_16K                      vdp
+     00009597  _VDP_Poke_16K                      vdp
+     000095A9  _VDP_Initialize                    vdp
+     000095BA  _VDP_SetMode                       vdp
+     000095E9  _VDP_GetVersion                    vdp
+     00009638  _VDP_RegWrite                      vdp
+     00009644  _VDP_RegWriteBak                   vdp
+     00009657  _VDP_RegWriteBakMask               vdp
+     0000967A  _VDP_ReadDefaultStatus             vdp
+ASxxxx Linker V05.50.4-SDLD,  page 8.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_CODE                               00004000    00005B0C =       23308. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000967D  _VDP_SetLayoutTable                vdp
+     0000968D  _VDP_SetColorTable                 vdp
+     000096A4  _VDP_SetPatternTable               vdp
+     000096BF  _VDP_SetSpriteAttributeTable       vdp
+     000096DC  _VDP_SetSpritePatternTable         vdp
+     000096ED  _VDP_LoadSpritePattern             vdp
+     00009718  _VDP_SetSpriteSM1                  vdp
+     00009750  _VDP_SetSprite                     vdp
+     00009785  _VDP_SetSpritePosition             vdp
+     000097B2  _VDP_SetSpritePositionX            vdp
+     000097C3  _VDP_SetSpritePositionY            vdp
+     000097D3  _VDP_SetSpritePattern              vdp
+     000097E5  _VDP_SetSpriteColorSM1             vdp
+     000097F9  _VDP_DisableSpritesFrom            vdp
+     000097FE  _VDP_LoadPattern_GM2               vdp
+     00009859  _VDP_LoadColor_GM2                 vdp
+     000098B4  _VDP_WriteLayout_GM2               vdp
+     00009913  _VDP_FillLayout_GM2                vdp
+     0000995A  __moduchar                         modunsigned
+     00009961  __moduint                          modunsigned
+     00009966  __divuchar                         divunsigned
+     00009968  __divu8                            divunsigned
+     0000996B  __divu16                           divunsigned
+     0000996B  __divuint                          divunsigned
+     0000999A  __mulint                           mul
+     0000999C  __mul16                            mul
+     000099B1  _PSG_SetRegister                   psg
+     000099B7  _PSG_GetRegister                   psg
+     000099BC  _PSG_SetTone                       psg
+     000099CB  _PSG_SetNoise                      psg
+     000099D4  _PSG_SetMixer                      psg
+     000099DE  _PSG_SetVolume                     psg
+     000099E6  _PSG_SetEnvelope                   psg
+     000099F5  _PSG_SetShape                      psg
+     000099FE  _PSG_EnableTone                    psg
+     00009A1A  _PSG_EnableNoise                   psg
+     00009A36  _PSG_EnableEnvelope                psg
+     00009A47  _PSG_Mute                          psg
+     00009A60  _PSG_Resume                        psg
+     00009A76  _memset                            _memset
+     00009A8C  ___sdcc_enter_ix                   
+     00009A96  __modschar                         modsigned
+     00009A9E  __modsint                          modsigned
+     00009AA4  ___mulsint2slong                   __mulsint2slong
+     00009AD2  __divschar                         divsigned
+     00009AD4  __div8                             divsigned
+     00009AD8  __div_signexte                     divsigned
+     00009ADC  __div16                            divsigned
+     00009ADC  __divsint                          divsigned
+     00009B02  __get_remainder                    divsigned
+
+ASxxxx Linker V05.50.4-SDLD,  page 9.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_HOME                               00009B0C    000001F6 =         502. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     00009B0C  __divslong                         _divslong
+     00009B9C  __divulong                         _divulong
+     00009C1F  __mullong                          _mullong
+ASxxxx Linker V05.50.4-SDLD,  page 10.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_INITIALIZER                        00009D02    00000026 =          38. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+ASxxxx Linker V05.50.4-SDLD,  page 11.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_GSINIT                             00009D28    00000005 =           5. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+ASxxxx Linker V05.50.4-SDLD,  page 12.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_GSFINAL                            00009D2D    00000000 =           0. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     00009D2D  _g_LastAddr                        crt0
+
+ASxxxx Linker V05.50.4-SDLD,  page 13.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_DATA                               0000C000    0000191A =        6426. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000C000  _g_HeapStartAddress                crt0
+     0000C002  _g_ROMSlotID                       crt0
+     0000C003  _g_Bank0Segment                    crt0
+     0000C004  _g_Bank1Segment                    crt0
+     0000C005  _g_Bank2Segment                    crt0
+     0000C005  _g_CurrentSegment                  crt0
+     0000C006  _g_Bank3Segment                    crt0
+     0000C007  _clr_start                         main
+     0000C009  _clr_end                           main
+     0000C10B  _gl_src                            msx_gfx
+     0000C10D  _gl_dst                            msx_gfx
+     0000C10F  _gl_off                            msx_gfx
+     0000C110  _gl_mode                           msx_gfx
+     0000C114  _g_Held                            msx_input
+     0000C115  _g_Push                            msx_input
+     0000C11D  _g_MouseOn                         msx_input
+     0000C11E  _g_MouseBtn                        msx_input
+     0000C139  _g_Frames                          msx_isr
+     0000C13A  _g_Game                            logic
+     0000C144  _g_Day                             logic
+     0000D8E6  _g_Mouse_OffsetX                   input
+     0000D8E7  _g_Mouse_OffsetY                   input
+     0000D8E8  _g_Mouse_Buttons                   input
+     0000D8E9  _g_VDP_REGSAV                      vdp
+     0000D905  _g_VDP_Data                        vdp
+     0000D907  _g_VDP_Sprite                      vdp
+     0000D90B  _g_ScreenLayoutLow                 vdp
+     0000D90D  _g_ScreenColorLow                  vdp
+     0000D90F  _g_ScreenPatternLow                vdp
+     0000D911  _g_SpriteAttributeLow              vdp
+     0000D913  _g_SpritePatternLow                vdp
+     0000D915  _g_SpriteColorLow                  vdp
+     0000D917  _g_PSG_VolumeBackup                psg
+ASxxxx Linker V05.50.4-SDLD,  page 14.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_INITIALIZED                        0000D91A    00000026 =          38. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0000D91A  _g_Strip                           msx_gfx
+     0000D91E  _g_MouseX                          msx_input
+     0000D91F  _g_MouseY                          msx_input
+     0000D920  _g_MouseProbe                      msx_input
+     0000D93F  _g_VDPInitilized                   vdp
+
+ASxxxx Linker V05.50.4-SDLD,  page 15.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_SEG4                               0004A000    00001BAE =        7086. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0004A000  _g_SegMagic4                       seg_s4_b3
+     0004A002  _g_News                            seg_s4_b3
+
+ASxxxx Linker V05.50.4-SDLD,  page 16.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_SEG5                               0005A000    00001B32 =        6962. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0005A000  _g_SegMagic5                       seg_s5_b3
+     0005A002  _g_Gfx_logo                        seg_s5_b3
+     0005A602  _g_Gfx_logo2                       seg_s5_b3
+     0005AC02  _g_Gfx_logo_small                  seg_s5_b3
+     0005AD82  _g_Gfx_logo_small2                 seg_s5_b3
+     0005AF02  _g_Gfx_ministry                    seg_s5_b3
+     0005B2AA  _g_Gfx_presses                     seg_s5_b3
+     0005BA6A  _g_Gfx_meter                       seg_s5_b3
+
+ASxxxx Linker V05.50.4-SDLD,  page 17.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_SEG6                               0006A000    000018FE =        6398. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0006A012  _g_SegMagic6                       seg_s6_b3
+     0006A80C  _Text_Morning                      seg_s6_b3
+     0006B61B  _Text_Night                        seg_s6_b3
+ASxxxx Linker V05.50.4-SDLD,  page 18.
+
+Files Linked                              [ module(s) ]
+
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/crt0_rom_mapper.rel
+                                          [ crt0 ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/main.rel
+                                          [ main ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/diag.rel
+                                          [ diag ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msx_gfx.rel
+                                          [ msx_gfx ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msx_input.rel
+                                          [ msx_input ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msx_audio.rel
+                                          [ msx_audio ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msx_isr.rel
+                                          [ msx_isr ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/logic.rel
+                                          [ logic ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/widgets.rel
+                                          [ widgets ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msx_seg.rel
+                                          [ msx_seg ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/ui.rel
+                                          [ ui ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/scr_title.rel
+                                          [ scr_title ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/scr_morning.rel
+                                          [ scr_morning ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/scr_night.rel
+                                          [ scr_night ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/scr_play.rel
+                                          [ scr_play ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/font_data.rel
+                                          [ font_data ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/music_data.rel
+                                          [ music_data ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/seg_s4_b3.rel
+                                          [ seg_s4_b3 ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/seg_s5_b3.rel
+                                          [ seg_s5_b3 ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/seg_s6_b3.rel
+                                          [ seg_s6_b3 ]
+
+
+Libraries Linked                          [ object file ]
+
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ __muluint2ulong.rel ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
+                                          [ input.rel ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
+                                          [ vdp.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ modunsigned.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ divunsigned.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ mul.rel ]
+/home/user/MSXBasicGames/RepubliaTimes-MSX/out/msxgl.lib
+                                          [ psg.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ _divslong.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ _divulong.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ _memset.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ crtenter.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ _mullong.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ modsigned.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ __mulsint2slong.rel ]
+/tmp/claude-0/MSXgl/tools/sdcc/lib/z80/z80.lib
+                                          [ divsigned.rel ]
+
+ASxxxx Linker V05.50.4-SDLD,  page 19.
+
+User Base Address Definitions
+
+_CODE = 0x4000
+_DATA = 0xc000
+_SEG4=0x0004A000
+_SEG5=0x0005A000
+_SEG6=0x0006A000
+
+
