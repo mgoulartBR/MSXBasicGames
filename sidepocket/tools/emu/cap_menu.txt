@@ -1,0 +1,13 @@
+run 1800
+shot 570 title_bg
+shot 870 title
+hold 1200 1203 8
+shot 1450 menu0
+hold 1500 1503 20
+shot 1530 menu1
+hold 1560 1563 20
+shot 1590 menu2
+hold 1620 1623 20
+shot 1650 menu3
+hold 1680 1683 20
+shot 1710 menu4

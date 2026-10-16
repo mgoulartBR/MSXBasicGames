@@ -1,406 +1,226 @@
-// Side Pocket-style pool for MSX2 (MSXGL, Screen 5).
-// Page 0: visible screen.  Page 1: clean copy of the table (to erase) + ball cell strip.
+// Side Pocket for MSX2 (MSXGL, Screen 5): title, main menu, game modes.  Screens come from the ROM blob.
 #include "msxgl.h"
-#include "font/font_mgl_sample6.h"
-#include "gen/assets.h"
-#include "../src/sp_logic.h"
+#include "gen/blob.h"
+#include "blob_io.h"
+#include "text.h"
+#include "gfx.h"
+#include "game.h"
+#include "../src/tricks.h"
 
-#define TBL_Y        46                 // screen line where the 166-line table image starts
-#define PAGE1        256                // first line of page 1
-#define STRIP_Y      (PAGE1 + 216)      // transparent 12x(8x8) ball cells, page 1 (for LMMM)
-#define SOLID_EVEN_Y (PAGE1 + 224)      // same cells with the cloth colour in the corners (HMMM, even x)
-#define SOLID_ODD_Y  (PAGE1 + 232)      // 10-wide cells [cloth|ball|cloth] (HMMM, odd x)
-#define CELL_DOT     10
-#define CELL_RING    11
-#define AIM_DOTS     6
-#define JIFFY        (*(volatile u16*)0xFC9E)   // BIOS 60 Hz (50 Hz on PAL) tick counter
+#define TRICK_X(c)   (LAY_TRICK_GX + (c) * LAY_TRICK_GW / 5)
+#define TRICK_Y(r)   (LAY_TRICK_GY + (r) * LAY_TRICK_GH / 4)
 
-enum { ST_AIM, ST_ROLL };
-
-static SP_Table g_Table;
-static u8  g_State;
-static u8  g_Angle;
-static u8  g_Power;
-static u8  g_Charging;
-static u16 g_Score;
-static u8  g_Row[128];
-u16 g_Tick;   // debug: main-loop iterations (read from the emulator)
-static u8  g_Col, g_RowIdx;
+static u8 CenterX(const c8* s, u8 charW) { return (u8)((256 - Text_Width(s) / 6 * charW) / 2) & 0xFE; }
 
 //-----------------------------------------------------------------------------
-// Table loading (RLE -> both pages)
-static void Emit(u8 v)
+// Title: the original picture, with PRESS START BUTTON blinking
+static void Title(void)
 {
-	g_Row[g_Col++] = v;
-	if (g_Col == 128)
+	u8 t = 0, on = 1;
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_TITLE_SEG, BLOB_TITLE_OFF, 0, 0);
+	Gfx_Show(TRUE);
+	do
 	{
-		u16 addr = (u16)(TBL_Y + g_RowIdx) * 128;
-		VDP_WriteVRAM(g_Row, addr, 0, 128);
-		VDP_WriteVRAM(g_Row, 0x8000 + addr, 0, 128);
-		g_Col = 0;
-		g_RowIdx++;
-	}
-}
-
-static void LoadTable()
-{
-	const u8* p = g_TableRLE;
-	const u8* end = g_TableRLE + TABLE_RLE_SIZE;
-	g_Col = 0; g_RowIdx = 0;
-	while (p < end)
-	{
-		u8 c = *p++;
-		u8 n;
-		if (c & 0x80)
+		Frame();
+		if (++t == 40)
 		{
-			u8 v = *p++;
-			for (n = (c & 0x7F) + 1; n; n--) Emit(v);
+			t = 0; on ^= 1;
+			if (on) Blob_LoadImage(BLOB_TITLE_ON_SEG, BLOB_TITLE_ON_OFF, 0, 0);
+			else    Blob_LoadImage(BLOB_TITLE_OFF_SEG, BLOB_TITLE_OFF_OFF, 0, 0);
 		}
-		else
-			for (n = c + 1; n; n--) Emit(*p++);
-	}
-}
-
-static void LoadStrip()
-{
-	u8 y;
-	for (y = 0; y < 8; y++)
-	{
-		VDP_WriteVRAM(g_BallStrip + y * 48,        0x8000 + (u16)(STRIP_Y - PAGE1 + y) * 128, 0, 48);
-		VDP_WriteVRAM(g_BallStrip + 384 + y * 48,  0x8000 + (u16)(SOLID_EVEN_Y - PAGE1 + y) * 128, 0, 48);
-		VDP_WriteVRAM(g_BallStrip + 768 + y * 60,  0x8000 + (u16)(SOLID_ODD_Y - PAGE1 + y) * 128, 0, 60);
-	}
+	} while (!g_Press.fire);
 }
 
 //-----------------------------------------------------------------------------
-// Drawing. Balls are redrawn only when they (or a neighbour they touch) changed.
-static u8  g_BX[SP_NUM_BALLS], g_BY[SP_NUM_BALLS];
-static u16 g_Drawn;                 // bit n = ball n is currently drawn at (g_BX[n], g_BY[n])
-static u8 g_DotX[AIM_DOTS], g_DotY[AIM_DOTS], g_DotN;
-
-static void DoCell(u8 cell, u8 x, u8 y)
+// Main menu: the portrait with the original panel; the five highlight states are preloaded off screen
+static void Menu_Patch(u8 k)
 {
-	VDP_CommandWait();
-	VDP_CommandLMMM((u16)cell * 8, STRIP_Y, x, y, 8, 8, VDP_OP_TIMP);
+	Gfx_Copy(IMG_MENU_S0_XB * 2, 256 + k * IMG_MENU_S0_H, IMG_MENU_S0_XB * 2, IMG_MENU_S0_Y, IMG_MENU_S0_W * 2, IMG_MENU_S0_H);
 }
 
-// A cell over perfectly flat cloth can be copied with the (much faster) byte-wise HMMM, since
-// its transparent pixels are pre-filled with the cloth colour.  LMMM+TIMP costs 3-6 ms per ball.
-static void DoSolid(u8 cell, u8 x, u8 y)
+static u8 s_MenuSel, s_TrickSel;          // (initialised in main: the RAM is not cleared at startup)
+
+static u8 Menu(void)
 {
-	VDP_CommandWait();
-	if (x & 1) VDP_CommandHMMM((u16)cell * 10, SOLID_ODD_Y,  x - 1, y, 10, 8);
-	else       VDP_CommandHMMM((u16)cell * 8,  SOLID_EVEN_Y, x,     y, 8,  8);
-}
+	u8 sel = s_MenuSel;
+	static const u16 seg[5] = { BLOB_MENU_S0_SEG, BLOB_MENU_S1_SEG, BLOB_MENU_S2_SEG, BLOB_MENU_S3_SEG, BLOB_MENU_S4_SEG };
+	static const u16 off[5] = { BLOB_MENU_S0_OFF, BLOB_MENU_S1_OFF, BLOB_MENU_S2_OFF, BLOB_MENU_S3_OFF, BLOB_MENU_S4_OFF };
+	u8 k;
 
-static bool Flat(u8 x, u8 y)
-{
-	return x > FLAT_X0 && x <= FLAT_X1 - 9 && y >= TBL_Y + FLAT_Y0 && y <= TBL_Y + FLAT_Y1 - 7;
-}
-
-static void DoErase(u8 x, u8 y)
-{
-	// byte-aligned fast copy from the clean page; 10 wide covers an odd x
-	x &= 0xFE;
-	VDP_CommandWait();
-	VDP_CommandHMMM(x, PAGE1 + y, x, y, 10, 8);
-}
-
-//-----------------------------------------------------------------------------
-// Command queue.  The game logic only *plans* what to draw; Flush() runs the VDP commands back to back,
-// right after the vertical-blank interrupt, so the beam is still above the table while balls are erased and
-// redrawn (an erase followed by milliseconds of CPU work before the redraw shows up as blinking).
-enum { OP_ERASE, OP_SOLID, OP_CELL };
-#define Q_MAX 80
-static u8 q_op[Q_MAX], q_cell[Q_MAX], q_x[Q_MAX], q_y[Q_MAX], q_n;
-
-static void Push(u8 op, u8 cell, u8 x, u8 y)
-{
-	if (q_n >= Q_MAX) return;
-	q_op[q_n] = op; q_cell[q_n] = cell; q_x[q_n] = x; q_y[q_n] = y;
-	q_n++;
-}
-static void EraseSpot(u8 x, u8 y)          { Push(OP_ERASE, 0, x, y); }
-static void DrawSolid(u8 c, u8 x, u8 y)    { Push(OP_SOLID, c, x, y); }
-static void DrawCell(u8 c, u8 x, u8 y)     { Push(OP_CELL, c, x, y); }
-
-static void Flush()
-{
-	u8 i;
-	for (i = 0; i < q_n; i++)
-	{
-		if (q_op[i] == OP_ERASE)      DoErase(q_x[i], q_y[i]);
-		else if (q_op[i] == OP_SOLID) DoSolid(q_cell[i], q_x[i], q_y[i]);
-		else                          DoCell(q_cell[i], q_x[i], q_y[i]);
-	}
-	q_n = 0;
-}
-
-// 8-bit neighbourhood test on top-left pixel coordinates (a ball is 8x8, an erase covers 10x8)
-#define NEAR8(ax, ay, bx, by)  ((u8)((ax) - (bx) + 11) < 23 && (u8)((ay) - (by) + 9) < 19)
-
-static u8 g_NX[SP_NUM_BALLS], g_NY[SP_NUM_BALLS];
-static u8 g_P[2 * SP_NUM_BALLS];            // final top-left position of every ball: x[10] then y[10], 0xFF = none
-
-// Index of the first ball (>= start) whose rectangle touches the one at (x, y), or 0xFF.
-static u8 NextNear(u8 start, u8 x, u8 y)
-{
-	sp_scan_px = g_P;
-	sp_scan_xl = (u8)(x - 11); sp_scan_wx = 23;
-	sp_scan_yl = (u8)(y - 9);  sp_scan_wy = 19;
-	return SP_ScanWindow(start);
-}
-
-static void RefreshBalls()
-{
-	u16 m = g_Table.moved, bit, mv = 0, dr = 0, uns = 0;
-	u8 i, j, x, y;
-
-	g_Table.moved = 0;
-	if (!m) return;                                    // the physics touched nothing
-
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-	{
-		if (m & bit)
-		{
-			if (g_Table.active & bit)
-			{
-				x = (u8)(SP_PX(g_Table.ball[i].x) - 4);
-				y = (u8)(SP_PX(g_Table.ball[i].y) - 4 + TBL_Y);
-				g_NX[i] = x; g_NY[i] = y;
-				if (!(g_Drawn & bit) || x != g_BX[i] || y != g_BY[i]) mv |= bit;
-			}
-			else if (g_Drawn & bit) mv |= bit;          // just pocketed: erase only
-		}
-	}
-	if (!mv) return;
-
-	// where every ball will be once this refresh ends
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-	{
-		if (!(g_Table.active & bit)) { g_P[i] = g_P[i + SP_NUM_BALLS] = 0xFF; }
-		else if (mv & bit)           { g_P[i] = g_NX[i]; g_P[i + SP_NUM_BALLS] = g_NY[i]; }
-		else                         { g_P[i] = g_BX[i]; g_P[i + SP_NUM_BALLS] = g_BY[i]; }
-	}
-
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-		if ((mv & bit) && (g_Drawn & bit)) EraseSpot(g_BX[i], g_BY[i]);
-
-	// redraw the moved balls and every ball whose pixels the erase / the new draw may have touched
-	dr = mv & g_Table.active;
-	for (j = 0, bit = 1; j < SP_NUM_BALLS; j++, bit <<= 1)
-	{
-		if (!(mv & bit)) continue;
-		if (g_Drawn & bit)
-			for (i = NextNear(0, g_BX[j], g_BY[j]); i != 0xFF; i = NextNear(i + 1, g_BX[j], g_BY[j]))
-				dr |= (u16)(1u << i);
-		if (g_Table.active & bit)
-			for (i = NextNear(0, g_NX[j], g_NY[j]); i != 0xFF; i = NextNear(i + 1, g_NX[j], g_NY[j]))
-				dr |= (u16)(1u << i);
-	}
-
-	// solid (fast) draws first, then the transparent ones on top of them
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-	{
-		if (!(dr & bit)) continue;
-		x = g_P[i]; y = g_P[i + SP_NUM_BALLS];
-		if (!Flat(x, y)) { uns |= bit; continue; }
-		for (j = NextNear(0, x, y); j != 0xFF; j = NextNear(j + 1, x, y))
-			if (j != i) { uns |= bit; break; }
-		if (!(uns & bit)) DrawSolid(i, x, y);
-	}
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-		if (uns & bit) DrawCell(i, g_P[i], g_P[i + SP_NUM_BALLS]);
-
-	for (i = 0, bit = 1; i < SP_NUM_BALLS; i++, bit <<= 1)
-		if (mv & bit)
-		{
-			if (g_Table.active & bit) { g_BX[i] = g_NX[i]; g_BY[i] = g_NY[i]; g_Drawn |= bit; }
-			else g_Drawn &= ~bit;
-		}
-}
-
-// Aim guide: erase the old dots (redrawing any ball they covered), then draw the new ones.
-static void RefreshAim(bool show)
-{
-	u8 i, j;
-	for (i = 0; i < g_DotN; i++) EraseSpot(g_DotX[i], g_DotY[i]);
-	for (j = 0; j < SP_NUM_BALLS; j++)
-		if ((g_Drawn >> j) & 1)
-			for (i = 0; i < g_DotN; i++)
-				if (NEAR8(g_BX[j], g_BY[j], g_DotX[i], g_DotY[i])) { DrawCell(j, g_BX[j], g_BY[j]); break; }
-	g_DotN = 0;
-	if (show && (g_Table.active & 1))
-	{
-		i16 cx = SP_PX(g_Table.ball[0].x), cy = SP_PX(g_Table.ball[0].y);
-		i16 c = SP_Cos(g_Angle), s = SP_Sin(g_Angle);
-		for (i = 1; i <= AIM_DOTS; i++)
-		{
-			i16 d = (i16)i * 14 + 6;
-			i16 x = cx + (i16)(((i32)c * d) >> 8), y = cy + (i16)(((i32)s * d) >> 8);
-			if (x < 18 || x > 238 || y < 28 || y > 140) break;
-			g_DotX[g_DotN] = (u8)(x - 4); g_DotY[g_DotN] = (u8)(y - 4 + TBL_Y);
-			{
-				bool solid = Flat(g_DotX[g_DotN], g_DotY[g_DotN]);
-				for (j = 0; solid && j < SP_NUM_BALLS; j++)
-					if (((g_Drawn >> j) & 1) && NEAR8(g_DotX[g_DotN], g_DotY[g_DotN], g_BX[j], g_BY[j])) solid = FALSE;
-				if (solid) DrawSolid(CELL_DOT, g_DotX[g_DotN], g_DotY[g_DotN]);
-				else       DrawCell(CELL_DOT, g_DotX[g_DotN], g_DotY[g_DotN]);
-			}
-			g_DotN++;
-		}
-	}
-}
-
-static void DrawScore()
-{
-	VDP_CommandWait();
-	VDP_CommandHMMV(8, 8, 120, 8, 0);
-	Print_SetPosition(8, 8);
-	Print_DrawText("SCORE ");
-	Print_DrawInt(g_Score);
-}
-
-static void DrawPowerFrame()
-{
-	VDP_CommandWait();
-	VDP_CommandHMMV(8, 28, 130, 10, 0);
-	VDP_CommandWait();
-	VDP_CommandLMMV(8, 28, 130, 1, 15, VDP_OP_IMP);
-	VDP_CommandWait();
-	VDP_CommandLMMV(8, 37, 130, 1, 15, VDP_OP_IMP);
-}
-
-static void DrawPower()      // fill only up to the current power (the bar only grows while charging)
-{
-	u16 w = (u16)(g_Power >> 1) & ~1u;       // HMMV works on byte pairs: even width, colour = two pixels
-	if (!w) return;
-	VDP_CommandWait();
-	VDP_CommandHMMV(10, 30, w, 6, 0xCC);
-}
-
-//-----------------------------------------------------------------------------
-// Game
-static void NewRack()
-{
-	SP_Init(&g_Table);
-	g_Angle = 128; g_Power = 0; g_Charging = 0; g_State = ST_AIM;
-}
-
-static void ResetPlay()
-{
-	// repaint the clean table, then draw everything again
-	Flush();                                // pending plan first, or its draws would land on the fresh table
-	VDP_CommandWait();
-	VDP_CommandHMMM(0, PAGE1 + TBL_Y, 0, TBL_Y, 256, 166);
-	g_Drawn = 0;
-	g_DotN = 0;
-	NewRack();
-	RefreshBalls();
-	RefreshAim(TRUE);
-}
-
-void main()
-{
-	u8 held = 0, i;
-	u16 lastJiffy = JIFFY;
-
-	VDP_SetMode(VDP_MODE_SCREEN5);
-	VDP_SetLineCount(VDP_LINE_212);
-	VDP_EnableDisplay(FALSE);
-	VDP_EnableSprite(FALSE);                     // no hardware sprites: VDP commands run faster
-	VDP_SetColor(0);
-	VDP_SetPalette(g_Palette + 2);              // MSXGL loads entries 1..15
-	VDP_SetPaletteEntry(0, 0);                   // entry 0 = black (transparent colour of the ball blits)
-	VDP_CommandHMMV(0, 0, 256, 512, 0);
-	VDP_CommandWait();
-	LoadTable();
-	LoadStrip();
-
-	Print_SetBitmapFont(g_Font_MGL_Sample6);
-	Print_SetColor(15, 0);
-	Print_SetPosition(8, 0);
-	Print_DrawText("SIDE POCKET  MSX2");
-	Print_SetPosition(8, 18);
-	Print_DrawText("ARROWS AIM   SPACE SHOOT");
-
-	g_Score = 0;
-	g_Drawn = 0;
-	g_DotN = 0;
-	NewRack();
-	RefreshBalls();
-	RefreshAim(TRUE);
-	DrawScore();
-	DrawPowerFrame();
-	Flush();
-	VDP_EnableDisplay(TRUE);
-
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_MENU_SEG, BLOB_MENU_OFF, 0, 0);
+	for (k = 0; k < 5; k++)
+		Blob_LoadImage((u8)seg[k], off[k], 256 + k * IMG_MENU_S0_H - IMG_MENU_S0_Y, 0);
+	Menu_Patch(sel);
+	Gfx_Show(TRUE);
 	for (;;)
 	{
-		u8 joy, key, left, right, fire;
+		Frame();
+		if (g_Press.down) { sel = sel == 4 ? 0 : sel + 1; Menu_Patch(sel); }
+		if (g_Press.up)   { sel = sel == 0 ? 4 : sel - 1; Menu_Patch(sel); }
+		if (g_Press.fire) { s_MenuSel = sel; return sel; }
+	}
+}
 
-		Halt();
-		Flush();                                  // vblank has just started: run last frame's plan
-		g_Tick++;
+//-----------------------------------------------------------------------------
+// Stage introduction (Pocket Game): portrait, stage number and target score
+void Screen_StageIntro(u8 stage, u16 target)
+{
+	c8 buf[3];
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_STAGE1_SEG, BLOB_STAGE1_OFF, 0, 0);
+	Gfx_Fill(106, 0, 150, 212, LAY_ST_BLACK);
+	buf[0] = stage >= 10 ? '0' + stage / 10 : ' '; buf[1] = '0' + stage % 10; buf[2] = 0;
+	Text_DrawBig(134, 20, "STAGE", LAY_ST_WHITE, LAY_ST_BLACK);
+	Text_DrawBig(210, 20, buf, LAY_ST_RED, LAY_ST_BLACK);
+	if (stage == 1) { Text_DrawBig(134, 56, "LOS", LAY_ST_WHITE, LAY_ST_BLACK); Text_DrawBig(134, 76, "ANGELES", LAY_ST_WHITE, LAY_ST_BLACK); }
+	Text_DrawBig(134, 112, "TARGET", LAY_ST_WHITE, LAY_ST_BLACK);
+	Text_DrawBig(134, 130, "SCORE", LAY_ST_WHITE, LAY_ST_BLACK);
+	Text_DrawNum(150, 156, target, 5, LAY_ST_RED, LAY_ST_BLACK);
+	Text_Draw(184, 156, "PTS", LAY_ST_WHITE, LAY_ST_BLACK);
+	Text_Draw(150, 196, "PRESS FIRE", LAY_ST_WHITE, LAY_ST_BLACK);
+	Gfx_Show(TRUE);
+	do Frame(); while (!g_Press.fire);
+}
 
-		joy = Joystick_Read(JOY_PORT_1);
-		key = Keyboard_Read(8);
-		left  = ((joy & JOY_INPUT_DIR_LEFT)  == 0) || ((key & (1 << 4)) == 0);
-		right = ((joy & JOY_INPUT_DIR_RIGHT) == 0) || ((key & (1 << 7)) == 0);
-		fire  = ((joy & JOY_INPUT_TRIGGER_A) == 0) || ((key & 1) == 0);
+//-----------------------------------------------------------------------------
+// 2P match screens.  Nine ball: choose the race (3 / 7 / 15 racks).  Pocket: 5 set match.
+static u8 Screen_Vs(u8 pocket)
+{
+	static const u16 seg[3] = { BLOB_VS_R3_SEG, BLOB_VS_R7_SEG, BLOB_VS_R15_SEG };
+	static const u16 off[3] = { BLOB_VS_R3_OFF, BLOB_VS_R7_OFF, BLOB_VS_R15_OFF };
+	static const u8 race[3] = { 3, 7, 15 };
+	u8 sel = 0, k;
 
-		if (g_State == ST_AIM)
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_VS_SEG, BLOB_VS_OFF, 0, 0);
+	if (pocket) Blob_LoadImage(BLOB_VS_POCKET_SEG, BLOB_VS_POCKET_OFF, 0, 0);
+	else for (k = 0; k < 3; k++)
+		Blob_LoadImage((u8)seg[k], off[k], 256 + k * 24 - IMG_VS_R3_Y, 0);
+	Gfx_Show(TRUE);
+	for (;;)
+	{
+		Frame();
+		if (g_Press.back) return 0;
+		if (g_Press.fire) return pocket ? 1 : race[sel];
+		if (!pocket && (g_Press.right || g_Press.left))
 		{
-			u8 changed = 0;
-			if (left)  { g_Angle -= (held > 20) ? 2 : 1; changed = 1; }
-			if (right) { g_Angle += (held > 20) ? 2 : 1; changed = 1; }
-			held = (left || right) ? (held < 255 ? held + 1 : held) : 0;
-
-			if (fire)
-			{
-				if (g_Power < 252) { g_Power += 3; DrawPower(); }
-				g_Charging = 1;
-			}
-			else if (g_Charging)
-			{
-				u8 p = (g_Power < 24) ? 24 : g_Power;
-				SP_Shoot(&g_Table, g_Angle, p);
-				g_Power = 0; g_Charging = 0;
-				DrawPowerFrame();
-				RefreshAim(FALSE);
-				g_State = ST_ROLL;
-				lastJiffy = JIFFY;
-				changed = 0;
-			}
-			if (changed) RefreshAim(TRUE);
+			if (g_Press.right) sel = sel == 2 ? 0 : sel + 1; else sel = sel == 0 ? 2 : sel - 1;
+			Gfx_Copy(IMG_VS_R3_XB * 2, 256 + sel * 24, IMG_VS_R3_XB * 2, IMG_VS_R3_Y, IMG_VS_R3_W * 2, IMG_VS_R3_H);
 		}
-		else // ST_ROLL
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Trick game: pick one of the 19 tricks (the last cell is EXIT)
+static void TrickCell(u8 idx, u8 col)
+{
+	u8 c = idx % 5, r = idx / 5;
+	u16 x = TRICK_X(c) & ~1u, y = TRICK_Y(r), w = (LAY_TRICK_GW / 5 + 2) & ~1u, h = LAY_TRICK_GH / 4;
+	Gfx_Outline(x, y, w, h, col);
+}
+
+static void TrickRestore(u8 idx)
+{
+	u8 c = idx % 5, r = idx / 5;
+	u16 x = (TRICK_X(c) - 2) & ~1u, y = TRICK_Y(r) - 1, w = (LAY_TRICK_GW / 5 + 6) & ~1u, h = LAY_TRICK_GH / 4 + 2;
+	Gfx_Copy(x, 256 + y, x, y, w, h);
+}
+
+static void TrickMarks(void)
+{
+	u8 i;
+	for (i = 0; i < TRICK_COUNT; i++)
+		if (g_TrickDone[i >> 3] & (1 << (i & 7)))
+			Gfx_Fill(TRICK_X(i % 5) + LAY_TRICK_GW / 10 - 2, TRICK_Y(i / 5) + LAY_TRICK_GH / 8 - 2, 5, 5, LAY_TK_YELLOW);
+}
+
+static u8 TrickSelect(void)
+{
+	u8 sel = s_TrickSel;
+	c8 lab[12];
+	u8 old;
+
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_TRICK_SEG, BLOB_TRICK_OFF, 0, 1);          // page 1 keeps a clean copy for the cursor
+	TrickMarks();
+	Gfx_Show(TRUE);
+	for (;;)
+	{
+		if (sel == 19) { lab[0] = 'E'; lab[1] = 'X'; lab[2] = 'I'; lab[3] = 'T'; lab[4] = 0; }
+		else { lab[0] = 'T'; lab[1] = 'R'; lab[2] = 'I'; lab[3] = 'C'; lab[4] = 'K'; lab[5] = ' '; lab[6] = '0' + (sel + 1) / 10; lab[7] = '0' + (sel + 1) % 10; lab[8] = 0; }
+		Text_Draw(CenterX(lab, 6), 200, lab, LAY_TK_WHITE, LAY_TK_BLACK);
+		TrickCell(sel, LAY_TK_GREEN);
+		old = sel;
+		do
 		{
-			// Simulate one step per elapsed 1/60 s (BIOS JIFFY), so a slow frame never slows the game.
-			u8 moving = 1, steps = (u8)(JIFFY - lastJiffy);
-			lastJiffy = JIFFY;
-			if (steps == 0) steps = 1;
-			if (steps > 3) steps = 3;
-			while (steps-- && moving) moving = SP_Step(&g_Table);
-			RefreshBalls();
-			if (!moving)
-			{
-				u8 cnt = 0, left_over = 0;
-				u8 m = g_Table.pocketed_mask_lo;
-				for (i = 1; i < 8; i++) if (m & (1 << i)) cnt++;
-				cnt += (g_Table.pocketed_mask_hi & 1) + ((g_Table.pocketed_mask_hi >> 1) & 1);
-				g_Score += (u16)cnt * 100;
-				for (i = 1; i < SP_NUM_BALLS; i++) if (SP_ACTIVE(&g_Table, i)) left_over++;
-				if (g_Table.scratch)
-				{
-					SP_PlaceCue(&g_Table);
-					g_Score = (g_Score >= 50) ? g_Score - 50 : 0;
-					RefreshBalls();
-				}
-				DrawScore();
-				if (left_over == 0) ResetPlay();
-				else { g_State = ST_AIM; RefreshAim(TRUE); }
-			}
+			Frame();
+			if (g_Press.back) return 0xFF;
+			if (g_Press.fire) { s_TrickSel = sel; return sel == 19 ? 0xFF : sel; }
+			if (g_Press.right) sel = (sel % 5 == 4) ? sel - 4 : sel + 1;
+			if (g_Press.left)  sel = (sel % 5 == 0) ? sel + 4 : sel - 1;
+			if (g_Press.down)  sel = sel >= 15 ? sel - 15 : sel + 5;
+			if (g_Press.up)    sel = sel < 5 ? sel + 15 : sel - 5;
+		} while (sel == old);
+		TrickRestore(old);
+		TrickMarks();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Jukebox: the real track list (21 songs).  There is no sound engine yet.
+static const c8* const s_Songs[21] = {
+	"Whispers", "The Lounge", "Groovin'", "Cue Ball Boogie", "Play'n It Cool!", "Las Vegas", "Come on Over",
+	"Sunny Morning", "Midnight Kiss", "Lazy Afternoon", "Natural Shot!", "Slow Down, Dude", "Ace In The Hole",
+	"Meteor-Man", "Round And Round", "Dinner for Two", "Stylin'", "Fight It Out", "Chillin'", "California Lemonade",
+	"Don't Go, Baby"
+};
+
+static void SongName(const c8* s)
+{
+	Gfx_Fill(LAY_JK_X, LAY_JK_Y, LAY_JK_W, LAY_JK_H, LAY_JK_BG);
+	Text_Draw((u8)(LAY_JK_X + (LAY_JK_W - Text_Width(s)) / 2) & 0xFE, LAY_JK_Y, s, LAY_JK_FG, LAY_JK_BG);
+}
+
+static void Jukebox(void)
+{
+	u8 sel = 0;
+	Gfx_Show(FALSE);
+	Blob_LoadImage(BLOB_JUKE_SEG, BLOB_JUKE_OFF, 0, 0);
+	SongName(s_Songs[0]);
+	Gfx_Show(TRUE);
+	for (;;)
+	{
+		Frame();
+		if (g_Press.back) return;
+		if (g_Press.right) { sel = sel == 20 ? 0 : sel + 1; SongName(s_Songs[sel]); }
+		if (g_Press.left)  { sel = sel == 0 ? 20 : sel - 1; SongName(s_Songs[sel]); }
+		if (g_Press.fire)  { SongName("(NO SOUND ENGINE YET)"); WaitFrames(90); SongName(s_Songs[sel]); }
+	}
+}
+
+//-----------------------------------------------------------------------------
+void main()
+{
+	u8 sel, r, k;
+
+	Gfx_Init();
+	EnableInterrupt();
+	g_TrickDone[0] = g_TrickDone[1] = g_TrickDone[2] = 0;
+	s_MenuSel = s_TrickSel = 0;
+	g_Held.up = g_Held.down = g_Held.left = g_Held.right = g_Held.fire = g_Held.back = 0;
+	for (;;)
+	{
+		Title();
+		for (;;)
+		{
+			sel = Menu();
+			if (sel == 0) Game_Pocket(1);
+			else if (sel == 1) { if (Screen_Vs(1)) Game_Pocket(2); }
+			else if (sel == 2) { r = Screen_Vs(0); if (r) Game_Nine(r); }
+			else if (sel == 3) { for (;;) { k = TrickSelect(); if (k == 0xFF) break; Game_Trick(k); } }
+			else Jukebox();
 		}
 	}
 }

@@ -1,0 +1,12 @@
+run 2700
+hold 1200 1203 8
+hold 1500 1503 20
+hold 1530 1533 20
+hold 1560 1563 20
+hold 1590 1593 20
+hold 1700 1703 1
+shot 1900 juke0
+hold 1950 1953 80
+shot 2000 juke1
+hold 2050 2053 80
+shot 2100 juke2

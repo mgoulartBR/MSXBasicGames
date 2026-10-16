@@ -74,31 +74,83 @@ void SP_PlaceCue(SP_Table *t)
     t->px8[0] = SP_CUE_X; t->py8[0] = SP_CUE_Y;
 }
 
-void SP_Init(SP_Table *t)
+void SP_Clear(SP_Table *t)
 {
     uint8_t i;
-    uint16_t cx = 82u << SP_POS_SHIFT, cy = (uint16_t)SP_CUE_Y << SP_POS_SHIFT;
-    uint16_t dx = (2 * 4 + 2) << SP_POS_SHIFT;      // rack spacing: ball diameter + 2 px
-    uint8_t n = 1, col, row;
+    for (i = 0; i < SP_NUM_BALLS; i++) { t->ball[i].vx = t->ball[i].vy = 0; t->px8[i] = t->py8[i] = 0xFF; }
+    t->active = 0; t->moving = 0;
+    t->pocketed_mask_lo = t->pocketed_mask_hi = t->scratch = 0;
+    t->first_hit = 0xFF;
+    t->moved = 0x3FF;
+}
 
-    for (i = 0; i < SP_NUM_BALLS; i++)
-        t->ball[i].vx = t->ball[i].vy = 0;
-    t->active = (1u << SP_NUM_BALLS) - 1;
-    t->moving = 0;
+void SP_Place(SP_Table *t, uint8_t ball, uint8_t xpx, uint8_t ypx)
+{
+    t->ball[ball].x = (uint16_t)xpx << SP_POS_SHIFT;
+    t->ball[ball].y = (uint16_t)ypx << SP_POS_SHIFT;
+    t->ball[ball].vx = t->ball[ball].vy = 0;
+    t->px8[ball] = xpx; t->py8[ball] = ypx;
+    t->active |= (uint16_t)(1u << ball);
+    t->moving &= ~(uint16_t)(1u << ball);
+    t->moved |= (uint16_t)(1u << ball);
+}
+
+void SP_Remove(SP_Table *t, uint8_t ball)
+{
+    t->active &= ~(uint16_t)(1u << ball);
+    t->moving &= ~(uint16_t)(1u << ball);
+    t->px8[ball] = t->py8[ball] = 0xFF;
+    t->moved |= (uint16_t)(1u << ball);
+}
+
+// Diamond rack 1-2-3-2-1 with the apex towards the cue ball.  order[slot] = ball number, slots run
+// column by column (apex, then the 2 of the next column, ...).
+void SP_Rack(SP_Table *t, const uint8_t *order)
+{
+    uint8_t n = 0, col, row, rows;
+    SP_Clear(t);
     SP_PlaceCue(t);
-
-    // Diamond rack: 1-2-3-2-1 = 9 balls, apex towards the cue ball.
-    for (col = 0; col < 5 && n < SP_NUM_BALLS; col++) {
-        uint8_t rows = (col < 3) ? col + 1 : 5 - col;
-        for (row = 0; row < rows && n < SP_NUM_BALLS; row++) {
-            t->ball[n].x = cx - (uint16_t)(((uint32_t)dx * col * 7) >> 3);
-            t->ball[n].y = cy + (int16_t)(((int16_t)row * 2 - (rows - 1)) * (int16_t)(dx >> 1));
-            n++;
+    for (col = 0; col < 5; col++) {
+        rows = (col < 3) ? col + 1 : 5 - col;
+        for (row = 0; row < rows; row++) {
+            // spacing: ball diameter + 2 px (10 px); columns are 7/8 of that apart
+            uint8_t x = (uint8_t)(82 - (uint8_t)((10 * col * 7) >> 3));
+            uint8_t y = (uint8_t)(SP_CUE_Y + ((int8_t)(row * 2) - (int8_t)(rows - 1)) * 5);
+            SP_Place(t, order[n++], x, y);
         }
     }
-    for (i = 1; i < SP_NUM_BALLS; i++) { t->px8[i] = SP_PX(t->ball[i].x); t->py8[i] = SP_PX(t->ball[i].y); }
-    t->pocketed_mask_lo = t->pocketed_mask_hi = t->scratch = 0;
-    t->moved = 0x3FF;
+}
+
+void SP_Init(SP_Table *t)
+{
+    static const uint8_t order[9] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    SP_Rack(t, order);
+}
+
+// Deterministic pseudo-random scatter (LCG), keeping 14 px between balls and 24 px from the cue ball.
+void SP_RackScatter(SP_Table *t, uint8_t seed)
+{
+    uint16_t r = 0x9E37u + (uint16_t)seed * 0x0101u;
+    uint8_t b, tries, i, ok, x, y;
+    SP_Clear(t);
+    SP_PlaceCue(t);
+    for (b = 1; b < SP_NUM_BALLS; b++) {
+        for (tries = 0; tries < 200; tries++) {
+            r = r * 25173u + 13849u; x = (uint8_t)(30 + ((r >> 8) % 190));
+            r = r * 25173u + 13849u; y = (uint8_t)(38 + ((r >> 8) % 92));
+            ok = 1;
+            for (i = 0; i < b; i++) {
+                if (!((t->active >> i) & 1)) continue;
+                {
+                    int16_t dx = (int16_t)x - t->px8[i], dy = (int16_t)y - t->py8[i];
+                    uint8_t lim = (i == 0) ? 24 : 14;
+                    if (dx < lim && dx > -(int16_t)lim && dy < lim && dy > -(int16_t)lim) { ok = 0; break; }
+                }
+            }
+            if (ok) break;
+        }
+        SP_Place(t, b, x, y);
+    }
 }
 
 void SP_Shoot(SP_Table *t, uint8_t angle, uint8_t power)
@@ -108,6 +160,7 @@ void SP_Shoot(SP_Table *t, uint8_t angle, uint8_t power)
     t->ball[0].vy = (int16_t)((speed * SP_Sin(angle)) >> 8);
     if (t->ball[0].vx | t->ball[0].vy) t->moving |= 1;
     t->pocketed_mask_lo = t->pocketed_mask_hi = t->scratch = 0;
+    t->first_hit = 0xFF;
 }
 
 uint8_t SP_IsMoving(const SP_Table *t) { return t->moving != 0; }
@@ -135,6 +188,7 @@ static void collide(SP_Table *t, uint8_t ia, uint8_t ib)
     k = (nx * push) >> 4;  a->x -= k;  b->x += k;
     k = (ny * push) >> 4;  a->y -= k;  b->y += k;
     t->moved |= (uint16_t)((1u << ia) | (1u << ib));
+    if (t->first_hit == 0xFF && (ia == 0 || ib == 0)) t->first_hit = (uint8_t)(ia ? ia : ib);
     t->px8[ia] = SP_PX(a->x); t->py8[ia] = SP_PX(a->y);
     t->px8[ib] = SP_PX(b->x); t->py8[ib] = SP_PX(b->y);
 

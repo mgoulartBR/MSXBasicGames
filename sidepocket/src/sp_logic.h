@@ -51,6 +51,7 @@ typedef struct {
     uint8_t  pocketed_mask_lo;    // bit n = ball n pocketed this shot (balls 0-7)
     uint8_t  pocketed_mask_hi;    // balls 8-9 in bits 0-1
     uint8_t  scratch;             // cue ball pocketed this shot
+    uint8_t  first_hit;           // first object ball the cue ball touched this shot (0xFF = none)
 } SP_Table;
 
 #define SP_PX(v)  ((uint8_t)((v) >> 8))   // pixel coordinate of a 8.8 position
@@ -71,6 +72,11 @@ uint8_t SP_ScanWindow(uint8_t start) __z88dk_fastcall;   // first j >= start ins
 #else
 uint8_t SP_ScanWindow(uint8_t start);
 #endif
+void    SP_Rack(SP_Table *t, const uint8_t *order);            // diamond rack; order[slot] = ball number (9 entries)
+void    SP_RackScatter(SP_Table *t, uint8_t seed);             // 9 balls scattered over the cloth (deterministic per seed)
+void    SP_Clear(SP_Table *t);                                 // table with no balls at all
+void    SP_Place(SP_Table *t, uint8_t ball, uint8_t xpx, uint8_t ypx);   // put a ball on the table
+void    SP_Remove(SP_Table *t, uint8_t ball);                  // take a ball off the table
 void    SP_Sync(SP_Table *t);       // rebuild px8/py8 after editing positions or the active mask by hand
 void    SP_PlaceCue(SP_Table *t);   // put the cue ball back on the head spot
 

@@ -80,23 +80,23 @@
 #define VDP_UNIT					VDP_UNIT_X16
 
 // VDP screen modes (additionnal limitations come from the selected MSX_VERSION)
-#define VDP_USE_MODE_T1				TRUE	// MSX1		Screen 0 Width 40
-#define VDP_USE_MODE_G1				TRUE	// MSX1		Screen 1
-#define VDP_USE_MODE_G2				TRUE	// MSX1		Screen 2
-#define VDP_USE_MODE_MC				TRUE	// MSX1		Screen 3
-#define VDP_USE_MODE_T2				TRUE	// MSX2		Screen 0 Width 80
-#define VDP_USE_MODE_G3				TRUE	// MSX2		Screen 4
+#define VDP_USE_MODE_T1				FALSE	// MSX1		Screen 0 Width 40
+#define VDP_USE_MODE_G1				FALSE	// MSX1		Screen 1
+#define VDP_USE_MODE_G2				FALSE	// MSX1		Screen 2
+#define VDP_USE_MODE_MC				FALSE	// MSX1		Screen 3
+#define VDP_USE_MODE_T2				FALSE	// MSX2		Screen 0 Width 80
+#define VDP_USE_MODE_G3				FALSE	// MSX2		Screen 4
 #define VDP_USE_MODE_G4				TRUE	// MSX2		Screen 5
-#define VDP_USE_MODE_G5				TRUE	// MSX2		Screen 6
-#define VDP_USE_MODE_G6				TRUE	// MSX2		Screen 7
-#define VDP_USE_MODE_G7				TRUE	// MSX2/2+	Screen 8, 10, 11 & 12
+#define VDP_USE_MODE_G5				FALSE	// MSX2		Screen 6
+#define VDP_USE_MODE_G6				FALSE	// MSX2		Screen 7
+#define VDP_USE_MODE_G7				FALSE	// MSX2/2+	Screen 8, 10, 11 & 12
 
 #define VDP_USE_VRAM16K				FALSE	// Use 16K VRAM access functions on MSX2
 #define VDP_USE_SPRITE				TRUE	// Use sprite handling functions
 #define VDP_USE_COMMAND				TRUE	// Use VDP commands wrapper functions
 #define VDP_USE_CUSTOM_CMD			FALSE	// Use custom VDP commands through data buffer
 #define VDP_AUTO_INIT				TRUE	// Call VDP_Initialize() at the first call to VDP_SetMode()
-#define VDP_USE_UNDOCUMENTED		TRUE	// Allow the use of undocumented screen mode (WIP)
+#define VDP_USE_UNDOCUMENTED		FALSE	// Allow the use of undocumented screen mode (WIP)
 #define VDP_USE_VALIDATOR			TRUE	// Handle some option specific for each VDP mode (highly recommended)
 #define VDP_USE_DEFAULT_PALETTE		FALSE	// Add data for default MSX2 palette
 #define VDP_USE_MSX1_PALETTE		FALSE	// Add data for default MSX1 palette
@@ -109,7 +109,7 @@
 // - VDP_ISR_SAFE_NONE ............ No ISR protection (for program not using VDP interruption)
 // - VDP_ISR_SAFE_DEFAULT ......... Protect only VDP register pair writing (default behavior; ISR can read/write registers but VRAM ones)
 // - VDP_ISR_SAFE_ALL ............. Protect all VDP writing process
-#define VDP_ISR_SAFE_MODE			VDP_ISR_SAFE_DEFAULT
+#define VDP_ISR_SAFE_MODE			VDP_ISR_SAFE_ALL
 
 // Initial screen mode setting
 // - VDP_INIT_OFF ................. Force option to be disable

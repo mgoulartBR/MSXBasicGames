@@ -1,0 +1,5 @@
+run 2300
+hold 1200 1203 8
+hold 1700 1703 1
+shot 1820 stage1
+shot 2100 stage1b

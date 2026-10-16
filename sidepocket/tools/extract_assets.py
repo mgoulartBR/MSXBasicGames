@@ -11,8 +11,9 @@ Outputs (never commit these; they derive from the original game's graphics):
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'emu'))
+sys.path.insert(0, os.path.dirname(__file__))
 from mdvdp import load, compose, cram_colors, tile_px
-from PIL import Image
+from PIL import Image, ImageDraw
 
 CROP = (32, 56, 288, 222)                 # 256 x 166
 CUE = 160
@@ -24,7 +25,15 @@ def snap3(c): return tuple(round(v * 7 / 255) for v in c)       # MD/MSX2 both h
 def main(prefix, outdir):
     vram, cram, vsram, reg = load(prefix)
     cols = cram_colors(cram, 'le')
-    bg = compose(vram, cram, vsram, reg, layers=('B', 'A')).convert('RGB').crop(CROP)
+    scr = compose(vram, cram, vsram, reg, layers=('B', 'A')).convert('RGB')
+    bg = scr.crop(CROP)
+    # HUD (top 56 MD lines) scaled 0.8 -> 256x45; the dynamic parts are blanked so the game can draw them
+    hs = scr.crop((0, 0, 320, 56)); d = ImageDraw.Draw(hs)
+    d.rectangle((64, 12, 92, 28), fill=(0, 0, 0))        # score digits
+    d.rectangle((22, 30, 90, 41), fill=(0, 0, 0))        # cream shot lamps
+    d.rectangle((182, 5, 227, 17), fill=(0, 0, 0))       # NEXT ball box
+    hud = hs.resize((256, 45), Image.LANCZOS)
+    full = Image.new('RGB', (256, 212), (0, 0, 0)); full.paste(hud, (0, 0)); full.paste(bg, (0, 46))
 
     # ball cells from tile data (palette line 0). value 0 = transparent
     cells = [CUE] + NUMBERED + [DOT, RING]
@@ -44,7 +53,7 @@ def main(prefix, outdir):
                 alpha[(i * 8 + x, y)] = v != 0
 
     # joint 16-colour palette over table + balls (opaque pixels), 3 bits per channel
-    sample = Image.new('RGB', (256, 166 + 8)); sample.paste(bg, (0, 0)); sample.paste(strip, (0, 166))
+    sample = Image.new('RGB', (256, 212 + 8)); sample.paste(full, (0, 0)); sample.paste(strip, (0, 212))
     q = sample.quantize(colors=16, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
     pal = [snap3(tuple(q.getpalette()[i * 3:i * 3 + 3])) for i in range(16)]
     pal += [(0, 0, 0)] * (16 - len(pal))
@@ -55,8 +64,8 @@ def main(prefix, outdir):
         c3 = snap3(c)
         return min(range(1 if skip0 else 0, 16), key=lambda i: sum((a - b) ** 2 for a, b in zip(pal[i], c3)))
 
-    tbl = bytearray(); tp = bg.load()
-    for y in range(166):
+    tbl = bytearray(); tp = full.load()
+    for y in range(212):
         row = [nearest(tp[x, y]) for x in range(256)]
         tbl += bytes((row[i] << 4) | row[i + 1] for i in range(0, 256, 2))
     bls = bytearray(); bp = strip.load()
@@ -64,7 +73,7 @@ def main(prefix, outdir):
         row = [(nearest(bp[x, y], skip0=True) if alpha[(x, y)] else 0) for x in range(8 * len(cells))]
         bls += bytes((row[i] << 4) | row[i + 1] for i in range(0, len(row), 2))
     # --- fast-blit variants: transparent pixels replaced by the cloth colour (valid on flat cloth only)
-    idx_tbl = [[(tbl[y * 128 + x // 2] >> (4 if x % 2 == 0 else 0)) & 15 for x in range(256)] for y in range(166)]
+    idx_tbl = [[(tbl[y * 128 + x // 2] >> (4 if x % 2 == 0 else 0)) & 15 for x in range(256)] for y in range(46, 212)]
     from collections import Counter
     cloth = Counter(idx_tbl[y][x] for y in range(70, 100) for x in range(100, 160)).most_common(1)[0][0]
     # largest centred rectangle of cloth (a few stray spot pixels per edge are tolerated)
@@ -94,21 +103,29 @@ def main(prefix, outdir):
     open(os.path.join(outdir, 'flat.txt'), 'w').write('%d %d %d %d %d\n' % (x0, x1, y0, y1, cloth))
     pb = bytearray()
     for r, g, b in pal: pb += bytes(((r << 4) | b, g))
+    named = {'WHITE': (7, 7, 7), 'CREAM': (7, 7, 4), 'DIM': (2, 2, 2), 'RED': (6, 0, 0), 'GOLD': (7, 5, 0), 'BLACK': (0, 0, 0), 'DARK': (1, 1, 1)}
+    with open(os.path.join(outdir, 'colors.txt'), 'w') as cf:
+        for nm, c in named.items(): cf.write('%s %d\n' % (nm, min(range(16), key=lambda i: sum((a - b) ** 2 for a, b in zip(pal[i], c)))))
 
     os.makedirs(outdir, exist_ok=True)
     open(os.path.join(outdir, 'table.bin'), 'wb').write(tbl)
     open(os.path.join(outdir, 'balls.bin'), 'wb').write(bls_all)
     open(os.path.join(outdir, 'palette.bin'), 'wb').write(pb)
+    # .asset files for tools/make_blob.py: image container = [w bytes][h][flags][LZSS rows]
+    import lzss
+    open(os.path.join(outdir, 'table.asset'), 'wb').write(bytes((128, 212, 0, 0, 0)) + lzss.compress(bytes(tbl)))
+    open(os.path.join(outdir, 'balls.asset'), 'wb').write(bls_all)
+    open(os.path.join(outdir, 'palette.asset'), 'wb').write(pb)
 
-    prev = Image.new('RGB', (256, 166 + 12)); pp = prev.load()
-    for y in range(166):
+    prev = Image.new('RGB', (256, 212 + 12)); pp = prev.load()
+    for y in range(212):
         for x in range(256):
             v = (tbl[y * 128 + x // 2] >> (4 if x % 2 == 0 else 0)) & 15; pp[x, y] = tuple(min(255, c * 255 // 7) for c in pal[v])
     for y in range(8):
         for x in range(8 * len(cells)):
-            v = (bls[y * (len(cells) * 4) + x // 2] >> (4 if x % 2 == 0 else 0)) & 15; pp[x, 168 + y] = tuple(min(255, c * 255 // 7) for c in pal[v])
-    prev.resize((768, (166 + 12) * 3), Image.NEAREST).save(os.path.join(outdir, 'preview.png'))
-    print('table %d B, balls %d B, flat cloth rect x %d..%d y %d..%d (colour %d)' % (len(tbl), len(bls_all), x0, x1, y0, y1, cloth))
+            v = (bls[y * (len(cells) * 4) + x // 2] >> (4 if x % 2 == 0 else 0)) & 15; pp[x, 214 + y] = tuple(min(255, c * 255 // 7) for c in pal[v])
+    prev.resize((768, (212 + 12) * 3), Image.NEAREST).save(os.path.join(outdir, 'preview.png'))
+    print('table %d B (incl. HUD), balls %d B, flat cloth rect x %d..%d y %d..%d (colour %d)' % (len(tbl), len(bls_all), x0, x1, y0, y1, cloth))
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])

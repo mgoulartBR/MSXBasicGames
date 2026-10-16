@@ -1,0 +1,13 @@
+run 2700
+hold 1200 1203 8
+hold 1500 1503 20
+hold 1530 1533 20
+hold 1560 1563 20
+hold 1700 1703 1
+shot 1900 trick0
+hold 1950 1953 80
+shot 2000 trick1
+hold 2050 2053 20
+shot 2100 trick2
+hold 2150 2153 80
+shot 2200 trick3
