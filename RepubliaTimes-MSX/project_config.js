@@ -1,11 +1,15 @@
 // Republia Times MSX - MSXgl build configuration (BigFive Studios port)
 ProjName    = "republia";
-ProjModules = [ "src/main", "src/platform/msx_gfx", "src/platform/msx_input", "src/platform/msx_audio", "src/platform/msx_isr", "src/game/logic", "src/game/widgets", "src/platform/msx_seg", "src/game/ui", "src/game/scr_title", "src/game/scr_morning", "src/game/scr_night", "src/game/scr_play", "src/data/font_data", "src/data/music_data" ];
+ProjModules = [ "src/main", "src/diag", "src/platform/msx_gfx", "src/platform/msx_input", "src/platform/msx_audio", "src/platform/msx_isr", "src/game/logic", "src/game/widgets", "src/platform/msx_seg", "src/game/ui", "src/game/scr_title", "src/game/scr_morning", "src/game/scr_night", "src/game/scr_play", "src/data/font_data", "src/data/music_data" ];
 LibModules  = [ "system", "bios", "vdp", "input", "memory", "psg", "mouse" ];
 Machine     = "1";          // MSX1 (Screen 2) - see docs/PORTING.md
 Target      = process.env.RT_MAPPER || "ROM_ASCII8"; // (ROM_KONAMI variant for carts without ASCII8) // ASCII8 mapper, code in segs 0-2, data in segs 4-5 (docs/PORTING.md)
 ROMSize     = 64;
 ProjSegments = "src/data/seg";
+// Diagnostic build (scripts/build_diag.sh): only the platform layer, no game screens, so that the
+// fixed code stays well below A000h (the bank window).
+if (process.env.RT_DIAG_MODULES)
+	ProjModules = [ "src/main", "src/diag", "src/platform/msx_gfx", "src/platform/msx_input", "src/platform/msx_audio", "src/platform/msx_isr", "src/platform/msx_seg", "src/game/logic", "src/data/font_data", "src/data/music_data" ];
 Verbose     = true;
 DoRun       = false;
 AppSignature = false;

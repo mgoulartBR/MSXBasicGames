@@ -2,9 +2,9 @@
 
 // Marker bytes defined at the start of each data segment (src/data/seg_s*_b3.c).
 // Read through their link addresses (inside the A000h window), not a fixed address.
-extern const u8 g_SegMagic4[2];
-extern const u8 g_SegMagic5[2];
-extern const u8 g_SegMagic6[2];
+
+
+
 
 u8 Seg_SelfTest(void)
 {

@@ -87,6 +87,15 @@ reproduce "cart without bank switching" by loading the first 32 KB as a plain RO
 Fallback if the cart cannot do any mapper: a mapper-free 32 KB ROM is possible only with ~11 KB of
 savings (deflate-class compression of bitmaps/strings gives ~10 KB; needs a streaming decoder).
 
+### Second report (USB-Mapper + PicoVerse, v0.3 ASCII8 and Konami, Sony HB-101)
+Both mappers are now detected (no MAPPER ERROR), the game starts, but everything read through the A000h
+window (logo, ministry building, dial, feed headlines) shows as coloured noise, intermittently on
+the Pico (logo clean, then stripes) and the old ROM / Konami-on-Pico hang. Text drawn from fixed ROM is fine.
+Not reproducible in openMSX. `scripts/build_diag.sh` builds a diagnostic ROM (per mapper) that reports
+window checksums vs the expected values, bank-switch latency, RAM, VRAM read-back (display on/off) and the
+VBlank hook on screen. Lesson found while building it: fixed code must end below A000h; `build.sh` now
+fails the build otherwise (game margin is only ~200 bytes).
+
 ## Mapper recomendado
 ASCII8 (8 KB segments, bank regs 6000h/6800h/7000h/7800h). Reason: code + data are ≈ 40 KB, more
 than a 32 KB ROM. Plain 48 KB ROMs need page-0 mapping tricks; Konami mappers waste a bank on a

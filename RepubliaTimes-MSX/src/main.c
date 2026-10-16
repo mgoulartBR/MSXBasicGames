@@ -5,7 +5,9 @@
 #include "platform/msx_input.h"
 #include "platform/msx_audio.h"
 #include "platform/msx_isr.h"
+#ifndef RT_DIAG
 #include "game/ui.h"
+#endif
 #include "platform/msx_seg.h"
 
 // The MSXgl crt0 copies initialised variables but does NOT clear the rest of RAM: uninitialised
@@ -29,6 +31,7 @@ static void clear_ram_vars(void)
 	Mem_Set(0, start, (u16)(end - start));
 }
 
+#ifndef RT_DIAG
 // Real-hardware diagnostic: the data segments (4-6) are not visible through the mapper window.
 static void mapper_error(u8 seg)
 {
@@ -50,10 +53,8 @@ static void mapper_error(u8 seg)
 		Halt();
 }
 
-void main()
+static void game_main(void)
 {
-	clear_ram_vars();
-	Gfx_Init();
 	{
 		u8 bad = Seg_SelfTest();
 		if (bad)
@@ -74,4 +75,20 @@ void main()
 		case ST_NIGHT:   state = Scr_Night();   break;
 		}
 	}
+}
+#endif
+
+#ifdef RT_DIAG
+void Diag_Main(void);
+#endif
+
+void main()
+{
+	clear_ram_vars();
+	Gfx_Init();
+#ifdef RT_DIAG
+	Diag_Main(); // never returns (scripts/build_diag.sh)
+#else
+	game_main();
+#endif
 }
