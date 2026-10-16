@@ -21,7 +21,6 @@ void Gfx_Init(void)
 	VDP_EnableDisplay(FALSE);
 	VDP_EnableSprite(FALSE);                     // no hardware sprites: VDP commands run faster
 	VDP_SetColor(0);
-	VDP_EnableTransparency(FALSE);               // TP=1: colour 0 is drawn with its palette entry (images use it)
 }
 
 void Gfx_Show(bool on) { VDP_EnableDisplay(on); }
