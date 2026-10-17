@@ -43,7 +43,55 @@ Verificado: título de LIB1 item 0 bate **pixel a pixel** com o screenshot do jo
   antes de compressão; com RLE similar ao original, ~170–250 KB: cabe em MegaROM de 512 KB).
 - Carros em camadas + cor de pintura por paleta: encaixa bem com a paleta de 512 cores do V9938.
 
+## Física e estrada (SRSE.EXE desempacotado; DS real = imagem+0x3E960, **não** 0x3E830)
+
+### Tempo
+- PIT canal 0, modo 3, divisor 0x4000 -> **72,8 Hz**. A ISR (img 0x1FE2) incrementa o contador de 32 bits em DS:0x05F8.
+- A física roda **por tick** (dt = contador - último contador); o desenho espera 9 ticks por frame
+  (`0x282EE`, `add ax,9`) -> **teto de ~8,1 fps** no original (cai se o desenho demorar mais).
+
+### Motor / câmbio (rotina por tick em img 0xD29D)
+- `rpm += aceleração_do_segmento_da_curva_de_torque` (DS:0x79F0 += 0x79F6); teto DS:0x6CBA.
+- Curva de torque por marcha: entradas de 8 bytes em DS:0x7A26 (24 bytes por marcha = 3 segmentos
+  {rpm_min, rpm_max, aceleração}); razão da marcha em DS:0x7A16.
+- `velocidade = rpm / razão[marcha]` (DS:0x79E2); troca de marcha quando rpm passa do teto
+  (rpm := velocidade * razão[nova marcha]).
+- Modo "Cruising in town" (img 0x8EA8): aceleração por marcha {42,26,12,8,4}, razões {_,200,125,71,56},
+  troca automática a 4500 rpm, teto 4700 -> velocidade máx. ~83 mph na 4ª.
+- Dados de peças (motor, câmbio, carburador, pneus) alteram esses arrays em tempo de execução
+  (carregados de HOT_DATA e das partes do carro).
+
+### Avanço na pista
+- Posição = segmento (`DS:0x7D30`) + subposição 0..7 (`0x7D32`); 8 subunidades por segmento.
+- Avanço por tick a partir da velocidade (img 0xD544):
+  - estrada (modo >= 4): limiares de mph {13,27,41,55,69,83,97,101,105,109,113,117,121,125,129} -> 1..16 subunidades;
+  - arrancada (modo < 4): v<=71 -> v/8+1, senão v/4-8.
+- Oponente: mesma lógica (DS:0x7E8A pos, 0x7E8C sub, 0x7E8E passo). IA com "rubber banding":
+  diferença de posição > 12 acelera/freia o oponente; < 5 segmentos ele colabora/bloqueia;
+  alvo lateral do oponente muda por flags do segmento (curvas) e se aproxima 1/8 por tick.
+- Largura/limites laterais: 0x5DC..0xCE4 (÷8 ≈ 187..409 px), faixa extra 0x7D0..0xAF0; lateral do jogador
+  inicia em 0xA00; centro 0x960. Colisão com borda = flags 0x1000/0xF000 por segmento.
+
+### Desenho da estrada (img 0x2834C -> 0x282EE; cálculo em 0x27B6D..0x2833C; desenho em 0x2645:0x4B8C)
+- **Pseudo-3D por segmentos**, ~23 linhas de projeção por frame: 1+14 linhas distantes (z = 4, depois
+  (12-sub)+8k) e 1+7 linhas próximas (z = 8, depois sub+8+8k).
+- Projeção horizontal: `x = 0xA0 - ((deslocamento_lateral*4)/z)`; com curva acumulada
+  `off += z * curva[seg] / 4`. Vertical (colinas): `y = 0x3C + ((altura[seg]-altura_câmera)*4)/z`
+  (ou 0x118 - .. para o lado do chão). São 6 trilhas projetadas por linha:
+  borda esq., borda dir., acostamentos (0xE74 e 0x44C), faixa central (0x76C) e a altura.
+- Tabelas por segmento (word cada): flags (bits 0x80/0x20 largura, 0xF000 obstáculos/cenário),
+  curvatura, altura, cenário esq./dir. Pista de estrada tem até 0x3FC (1020) segmentos; arrancada 0x17C (380).
+  (As tabelas de pista são geradas/carregadas em tempo de execução: no EXE estão zeradas.)
+- O desenho final usa listas de coordenadas por linha + rotina assembly EGA/CGA com panning por CRTC.
+
+### Implicações para o MSX2
+- 23 linhas x (grama/pista/acostamento/faixa) = ~90–140 comandos VDP (LMMV/HMMV) por frame, ou menos
+  reusando fundo pré-desenhado: cabe com folga em Screen 5.
+- Física a 72,8 Hz pode ser reamostrada para 50/60 Hz (tick do VDP) sem mudar o gameplay:
+  integrar com dt fixo e usar tabelas pré-calculadas (rpm -> velocidade) em 8/16 bits.
+- Meta realista: **10–15 fps** na estrada (acima dos ~8 fps do original).
+
 ## Pendências
-1. Extrair HOT_DATA (carros à venda) e as tabelas de peças/preços do EXE.
-2. Localizar a física de corrida (drag/road) e a lógica da estrada em pseudo-3D.
-3. Renderizar as LIBs CGA (2 bpp) e mapear qual item é qual (garagem, cockpit, peças).
+1. Achar o gerador/carregador das tabelas de pista (curvatura, altura, flags, cenário).
+2. Decodificar HOT_DATA (13 blocos: 396,260,260,312,520,156,1850,2,200,18,18,24,48 bytes) e os dados de peças.
+3. Mapear qual item das LIBs é qual (garagem, cockpit, peças) e renderizar as LIBs CGA.
