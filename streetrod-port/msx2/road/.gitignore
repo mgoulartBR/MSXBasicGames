@@ -1,0 +1,12 @@
+*.rel
+*.lst
+*.sym
+*.asm
+*.ihx
+*.map
+*.lk
+*.noi
+*.rom
+config.inc
+main_bench.c
+main_v.c
