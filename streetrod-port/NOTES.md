@@ -94,7 +94,21 @@ Verificado: título de LIB1 item 0 bate **pixel a pixel** com o screenshot do jo
 ## Protótipo MSX2 da estrada
 Ver `msx2/road/README.md`: Screen 5, ~7 fps (janela 256x112) a ~16 fps (160x56), medidos no openMSX.
 
+## Dados do jogo (`tools/hotdata.py` extrai tudo para CSV/JSON; validado contra os preços nos textos)
+HOT_DATA = 13 blocos consecutivos (tamanhos 396,260,260,312,520,156,1850,2,200,18,18,24,48), carregados em DS:
+| Bloco | Tamanho | Conteúdo |
+|---|---|---|
+| 0 | 22 x 18 B | pilotos oponentes: `[1]`,`[2]` = parâmetros (somam 30), `[6..7]` = offset do nome no pool; `[8..9]` = carro (-1, preenchido em execução); `[10]` ... última = "The King" |
+| 1 | 26 x 10 B | carros à venda: `u16 preço, u8 desempenho(0-8), u8 índice da figura, u16 flags, u16 offset do nome, u16 ptr atributos` (25 carros + slot extra) |
+| 2 | 26 x 10 B | por carro: contagem + 4 ids de peças/atributos (DS:0x04xx = pequenos vetores de cor/variante) |
+| 3,4,5 | 312 / 520 / 156 B | geometria/camadas das figuras (retângulos por carro); formato ainda não decodificado |
+| 6 | 1850 B | pool de texto: `\x02`+nome do carro, descrição com `$preço`; `\x01`+nomes (22 pilotos, "The King", "The Geek", "1963 Corvette") |
+| 8 | 200 B | textos do placar ("USA 1", "Eagle", "Not 4 sale") |
+| 9,10,11 | 18/18/24 B | tabelas de words usadas pela decisão do oponente aceitar/recusar a aposta |
+- **Catálogo de peças**: 43 entradas de 8 bytes em DS:0x4808: `variante, máscara de marca (1 GM, 2 Ford, 4 Chrysler, 7 todas), categoria (0 motor, 1 câmbio, 2 carburador, 3 coletor, 4 pneus), 0, ptr texto (DS:0x2C02+ptr), ...`; o **preço é o word em DS:0x4806+8k**.
+- Os 25 carros e 43 peças do EXE têm preços idênticos aos escritos nos textos (validação 100%).
+
 ## Pendências
 1. Achar o gerador/carregador das tabelas de pista (curvatura, altura, flags, cenário).
-2. Decodificar HOT_DATA (13 blocos: 396,260,260,312,520,156,1850,2,200,18,18,24,48 bytes) e os dados de peças.
-3. Mapear qual item das LIBs é qual (garagem, cockpit, peças) e renderizar as LIBs CGA.
+2. Efeito das peças nas curvas de torque (arrays DS:0x7A16/0x7A26 montados em execução) e a fórmula do desempenho do carro.
+3. Decodificar blocos 3/4/5 (camadas das figuras) e mapear itens das LIBs (garagem, cockpit, carros).
