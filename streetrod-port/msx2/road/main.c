@@ -28,6 +28,9 @@
 #ifndef VIEW_X1
 #define VIEW_X1 256
 #endif
+#ifndef JIFFY_HZ
+#define JIFFY_HZ 60
+#endif
 #define HZ 36
 #define CMD_MAX 700
 
@@ -39,6 +42,9 @@ volatile __at(0xF002) u16 dbg_cmds;
 volatile __at(0xF004) u16 dbg_fps10;
 volatile __at(0xF006) u16 dbg_speed;
 volatile __at(0xF008) u16 dbg_pos;
+volatile __at(0xF00A) u16 dbg_t60;      /* jiffies desde o inicio ate 60 mph */
+volatile __at(0xF00C) u16 dbg_t100;
+volatile __at(0xF00E) u16 dbg_top;
 volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
@@ -71,8 +77,6 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 u16 pos;  u8 sub;
 i16 P;                      /* lateral da camera (0 = centro da pista) */
 static u16 rpm; static u8 gear; static u16 speed;
-static const u16 accel_tab[5] = {0, 42, 26, 12, 8};
-static const u16 ratio_tab[5] = {0, 200, 125, 71, 56};
 static u8 tick_frac;
 
 i16 XC[N_ROWS], Y[N_ROWS];
@@ -86,17 +90,23 @@ static u8 step_of(u16 v) {
     return i + 1;
 }
 
-/* um tick do jogo (72,8 Hz no original) */
+/* um tick de fisica: o original roda a 72,826/12 = 6,0688 Hz (tempo exibido = ticks / 6,0688) */
+#define PHYS_HZ_X256 ((u16)(6.0688 * 256 + 0.5))
 static void physics_tick(void) {
-    u8 st;
+    u16 hi, ac;
+    u8 s;
     i16 steer, target;
-    rpm += accel_tab[gear];
-    if (rpm > 4700) rpm = 4700;
-    speed = rpm / ratio_tab[gear];
-    if (rpm > 4500 && gear < 4) { gear++; rpm = speed * ratio_tab[gear]; }
-    st = step_of(speed);
-    sub += st;
-    while (sub >= 8) { sub -= 8; pos++; }
+    hi = pt_hi0[gear];
+    s = 0;
+    if (rpm >= hi) { s = 1; if (rpm >= pt_hi1[gear]) s = 2; }
+    ac = pt_acc[gear * 3 + s];
+    rpm += ac;
+    if (rpm > 5300) rpm = 5300;
+    speed = rpm / pt_ratio[gear];
+    if (gear < PT_NGEARS) {
+        u16 lim = gear ? (u16)((PT_REDLINE < 5300 ? PT_REDLINE : 5300) / 100 * 97) : 2900;
+        if (rpm >= lim) { gear++; rpm = speed * pt_ratio[gear]; }
+    }
     /* piloto automatico: segue o centro da pista alguns segmentos a frente */
     target = xoff_ahead >> 1;
     steer = (target - P) >> 3;
@@ -104,6 +114,14 @@ static void physics_tick(void) {
     P += steer;
     P -= ((i16)curve_tab[pos & 255] * (i16)(speed >> 2)) >> 4;   /* forca centrifuga */
     if (P > 1400) P = 1400; if (P < -1400) P = -1400;
+}
+
+/* avanco na pista por frame: o original anda step(speed) subunidades por frame a ~8,09 fps (limite do jogo) */
+static void advance(u16 dj) {
+    static u16 adv_acc;
+    u8 st = step_of(speed);
+    adv_acc += st * dj * ((u16)(8.09 * 256 / JIFFY_HZ + 0.5));
+    while (adv_acc >= 256) { adv_acc -= 256; sub++; if (sub >= 8) { sub = 0; pos++; } }
 }
 
 static void project(void) { project_asm(); }
@@ -179,8 +197,9 @@ static void init_static(void) {
 }
 
 void main(void) {
-    u16 last_j, t, dj, j0, fr0, tickacc = 0, nt;
+    u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0, k;
+    dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 #ifdef DRY
     g_dry = 1;
@@ -188,23 +207,27 @@ void main(void) {
     set_screen5();
     vdp_reg(8, *(volatile u8 *)0xFFE7 | 0x02);          /* sprites off: comandos do VDP mais rapidos */
     pal_load();
-    gear = 1; rpm = 800; pos = 0; sub = 0; P = 0;
+    gear = 0; rpm = 1500; pos = 0; sub = 0; P = 0;
     init_static();
     ybase = 256;
     vdp_reg(2, 0x1F);
-    last_j = JIFFY; j0 = last_j; fr0 = 0;
+    last_j = JIFFY; j0 = last_j; fr0 = 0; start_j = last_j;
     for (;;) {
         t = JIFFY; dj = t - last_j; last_j = t;
-        if (dj > 6) dj = 6;
+        if (dj > 12) dj = 12;
 #ifndef NOSTICK
         read_stick();
 #endif
-        /* 72.8 ticks/s vs 60 jiffies/s -> 1.2137 ticks por jiffy */
-        tickacc += dj * 311;
+        /* fisica a 6,0688 Hz: acumula 6,0688/JIFFY_HZ ticks por jiffy (8.8) */
+        tickacc += dj * (u16)(6.0688 * 256 / JIFFY_HZ + 0.5);
         nt = tickacc >> 8; tickacc &= 255;
+        advance(dj);
 #ifndef NOPHYS
         while (nt--) physics_tick();
 #endif
+        if (!dbg_t60 && speed >= 60) dbg_t60 = (u16)(JIFFY - start_j);
+        if (!dbg_t100 && speed >= 100) dbg_t100 = (u16)(JIFFY - start_j);
+        if (speed > dbg_top) dbg_top = speed;
         cmd_n = 0; cp = cmd_buf;
 #ifndef NOPROJ
         project();

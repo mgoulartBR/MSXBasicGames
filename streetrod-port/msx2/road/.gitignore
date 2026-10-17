@@ -10,3 +10,4 @@
 config.inc
 main_bench.c
 main_v.c
+tables.h

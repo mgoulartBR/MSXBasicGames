@@ -49,5 +49,30 @@ pal = [(0,0,0), (2,5,7), (0,3,0), (1,5,0), (2,2,2), (3,3,3), (6,0,0), (7,7,7),
 flat = []
 for c in pal: flat += list(rgb(*c))
 out.append('const uint8_t palette[32] = {%s};' % ','.join(map(str, flat)))
+# --- powertrain do carro escolhido (modelo extraido de SRSE.EXE; precisa de SRSE_EXE e HOT_DATA; senao usa valores padrao)
+import os, struct, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tools'))
+CAR = int(os.environ.get('CAR', '17'))
+try:
+    from powertrain import Model, stock_variants
+    from hotdata import SIZES
+    exe, hot = os.environ['SRSE_EXE'], os.environ['HOT_DATA']
+    b1 = open(hot, 'rb').read()[SIZES[0]:SIZES[0] + SIZES[1]]
+    price, perf, idx, flags, noff = struct.unpack('<HBBHH', b1[10 * CAR:10 * CAR + 8])
+    v = stock_variants(flags)
+    pt = Model(exe).build(perf, v['engine'], v['trans'], v['manifold'], v['carb'], v['tires'])
+    src = 'carro %d' % CAR
+except Exception as e:                       # sem os arquivos do jogo: curva generica (Thunderbird aproximado)
+    sys.stderr.write('powertrain padrao (%s)\n' % e)
+    mk = lambda r, a: dict(ratio=r, segs=[dict(lo=0, hi=2900, accel=a[0]), dict(lo=2900, hi=5200, accel=a[1]), dict(lo=5200, hi=5700, accel=a[2])])
+    pt = dict(n_gears=4, redline=5200, gears=[mk(28500, (573, 573, 57)), mk(153, (573, 435, 43)), mk(91, (72, 72, 7)), mk(57, (26, 26, 2)), mk(45, (17, 17, 1))])
+    src = 'padrao'
+out.append('/* powertrain: %s */' % src)
+out.append('const uint16_t pt_ratio[5] = {%s};' % ','.join(str(x['ratio']) for x in pt['gears']))
+out.append('const uint16_t pt_hi0[5] = {%s};' % ','.join(str(x['segs'][0]['hi']) for x in pt['gears']))
+out.append('const uint16_t pt_hi1[5] = {%s};' % ','.join(str(x['segs'][1]['hi']) for x in pt['gears']))
+out.append('const uint16_t pt_acc[15] = {%s};' % ','.join(str(s['accel']) for x in pt['gears'] for s in x['segs']))
+out.append('#define PT_NGEARS %d' % pt['n_gears'])
+out.append('#define PT_REDLINE %d' % pt['redline'])
 open('tables.h', 'w').write('\n'.join(out) + '\n')
 print('tables.h ok; curve range', min(curve), max(curve), 'hill range', min(hill), max(hill))

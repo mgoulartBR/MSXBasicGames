@@ -17,6 +17,21 @@ Flags: `DRAW_MODE` (0 = gramado em retângulo por faixa + zebra/pista; 2 = cada 
 4 = só pista, supõe fundo estático), `STEP_SH` (log2 de scanlines por retângulo), `VIEW_BOT`,
 `VIEW_X0/X1` (janela), `DRY` (não emite comandos ao VDP: mede só a CPU).
 
+## Física do carro (modelo real do jogo)
+`gen_tables.py` lê o modelo de desempenho extraído do EXE (`../../tools/powertrain.py`) e gera as tabelas de marchas/curva de
+torque do carro escolhido: `CAR=17 SRSE_EXE=... HOT_DATA=... ./build.sh ...` (sem os arquivos usa uma curva padrão).
+A física roda a **6,0688 Hz** como no original (72,826/12 Hz) e a pista avança como o original a ~8,09 fps equivalentes.
+Medido no openMSX (câmbio automático simples):
+
+| Carro | 0-60 mph | 0-100 mph | máxima |
+|---|---|---|---|
+| 1960 Ford Thunderbird | 3,6 s | 6,6 s | 117 mph |
+| 1953 Buick Skylark Conv. | 3,9 s | 7,5 s | 115 mph |
+| 1934 Ford Woodie | 4,4 s | 8,3 s | 108 mph |
+| 1939 Pontiac 2-dr coupe | 16,7 s | - | 81 mph |
+
+(a simulação em Python `tools/physsim.py` prevê 3,2 s / 16 s para Thunderbird / Pontiac)
+
 ## Medições (openMSX, tempo emulado, 20 s)
 O original ficava limitado a **~8 fps** (relógio de 72,8 Hz, 9 ticks por frame).
 
