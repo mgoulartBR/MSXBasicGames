@@ -108,7 +108,34 @@ HOT_DATA = 13 blocos consecutivos (tamanhos 396,260,260,312,520,156,1850,2,200,1
 - **Catálogo de peças**: 43 entradas de 8 bytes em DS:0x4808: `variante, máscara de marca (1 GM, 2 Ford, 4 Chrysler, 7 todas), categoria (0 motor, 1 câmbio, 2 carburador, 3 coletor, 4 pneus), 0, ptr texto (DS:0x2C02+ptr), ...`; o **preço é o word em DS:0x4806+8k**.
 - Os 25 carros e 43 peças do EXE têm preços idênticos aos escritos nos textos (validação 100%).
 
+## Modelo de desempenho do carro (`tools/powertrain.py`, porte de SRSE.EXE img 0xDCBE)
+**Peças de fábrica a partir dos `flags` do carro** (u16 do registro de carro): `bits 1-3` = marca (0 GM, 1 Ford, 2 Chrysler),
+`4-5` pneus (0 comum, 1 marca, 2 slicks), `6-7` câmbio (0 automático, 1 3 marchas, 2 4 marchas, 3 corrida),
+`8-10` motor (0 V-6, 1 V-8 pequeno, 2 V-8 grande), `11-13` coletor (0-4), `14-15` carburador (0 2brl, 1 4brl, 2 racing).
+Confere com as descrições ("V-8 3sp", "4 brl. 4sp", "Racing slicks").
+
+**Fórmula** (tudo em ponto flutuante duplo no original; tabelas em DS:0x54B2..0x556E):
+```
+acc  = 0,09*f1 + 0,05*f2 + 0,01*f3            # avarias (bits de dano do carro)
+     + T_corpo[perf]*0,1/88                    # T_corpo = 40,44,48,60,64,68,80,84,88
+     + T_combo[5*carb+coletor]*0,15/100       # 0,0,100,0,0 | 0,50,0,100,75 | 0,0,0,50,100
+     + T_motor[motor]*0,25/100                # 0,50,100
+     + T_cambio[cambio]*0,15/100              # 0,33,66,100
+     + (1 - |trim/8|)*0,2                     # trim do carburador -8..8
+acc *= (10000 - desgaste_motor)/10000
+B = (0,8 se automático senão 1)*acc*0,3 + 0,7 ;  A = min(130, 130*B)
+por marcha g = 0..4:
+  razão[g] = int(5700 / (T_razao[5*cambio+g]*A/100))        # 0 -> x = 0,2 (marcha neutra/inexistente)
+  v = int(T_acel[5*motor+g]*B)                               # 500,600,300,100,70 | 600,700,350,120,90 | 600,760,380,140,90
+  curva: 3 segmentos [0,w1) [w1,w2) [w2,5700)  com (w1,w2) = (2900,4500) (2900,5000) (2500,5200) por motor
+  aceleração: seg0 = v/(g?5:1) * (g==1 ? (slicks ? 3 : 2) : 1); seg1 = v; seg2 = v/(g?10:1)
+velocidade (mph) = rpm / razão ; rotação de corte = 4500/5000/5200 ; nº de marchas = 3,3,4,4
+```
+Resultado típico: 1939 Pontiac potência 98,7 (razões 231/115/57 -> ~100 mph); T-bird Roadster 124,1 (153/91/57/45 -> ~126 mph).
+Desgaste dos pneus -> risco de falha: DS:0x54B2 (5 níveis por tipo de pneu: 2,5,8,11,14 | 0,2,4,6,8 | 0,0,1,2,4 %).
+Limitação: transcrito do código; **não** comparado com execução do original (só consistência com preços/descrições dos 25 carros).
+
 ## Pendências
-1. Achar o gerador/carregador das tabelas de pista (curvatura, altura, flags, cenário).
-2. Efeito das peças nas curvas de torque (arrays DS:0x7A16/0x7A26 montados em execução) e a fórmula do desempenho do carro.
-3. Decodificar blocos 3/4/5 (camadas das figuras) e mapear itens das LIBs (garagem, cockpit, carros).
+1. Gerador/carregador das tabelas de pista (curvatura, altura, flags, cenário) - ou desenhar pistas próprias.
+2. Unidade de tempo da física (quanto vale 1 tick de aceleração) e calibrar contra as velocidades máximas acima.
+3. Blocos 3/4/5 do HOT_DATA (camadas das figuras) e mapa das LIBs (garagem, cockpit, carros).
