@@ -314,6 +314,7 @@ static void draw_gear(void) {
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
+#ifdef DEBUG_HUD
 static void draw_hud(void) {                /* escrito nas duas paginas, 1x por segundo */
     u8 pg;
     clip_l = 0; clip_r = 256;
@@ -327,6 +328,8 @@ static void draw_hud(void) {                /* escrito nas duas paginas, 1x por 
     }
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
+
+#endif
 
 static void init_static(void) {
     u8 pg;
@@ -501,8 +504,10 @@ void main(void) {
         if ((u16)(JIFFY - j0) >= jhz) {
             dbg_fps10 = (u16)(((u16)(dbg_frames - fr0) * (10u * jhz)) / (u16)(JIFFY - j0));
             fr0 = dbg_frames; j0 = JIFFY;
-            draw_hud();
+#ifdef DEBUG_HUD
+            draw_hud();                                 /* contadores de depuracao: ~90 comandos VDP em 2 paginas = engasgo visivel */
             ybase = shown ? 0 : 256;
+#endif
         }
     }
 }
