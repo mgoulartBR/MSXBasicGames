@@ -19,6 +19,19 @@ Câmbio automático (carros com câmbio "Auto") troca sozinho. Fora da pista (|P
 a pista seguem as curvas da pista de teste. `-DAUTOPILOT=1` liga o piloto automático (usado nos benchmarks).
 Teste automatizado dos controles no openMSX: `control_test.tcl` (acelera, troca marchas, vira e freia).
 
+## Corrida (arrancada contra um oponente)
+- **Largada:** semáforo (vermelho, vermelho, verde em 3 s). Engatar a 1ª marcha antes do verde = **largada falsa** (derrota).
+  Depois do verde a 1ª marcha entra sozinha ao passar de 2900 rpm. Câmbio automático em carros "Auto".
+- **Pista:** 380 segmentos (arrancada, como no original). Vence quem cruza primeiro.
+- **Resultado:** tela com `YOU WIN`/`YOU LOSE`, tempo (décimos de segundo), velocidade média; ESPAÇO reinicia.
+- **Oponente:** mesmo modelo de carro/peças do jogo; câmbio manual troca em `rotação de corte - 100*habilidade` (parâmetro `a` do
+  piloto, 20 = Mike ... 10 = The King), alivia nas curvas e não deixa a vantagem passar de ~9 segmentos (IA simplificada do original).
+  Aparece na pista a partir de 2 segmentos à frente, na faixa da direita.
+- Escolha: `CAR=17 OPP_CAR=12 OPP=0 SRSE_EXE=... HOT_DATA=... ./build.sh` (`OPP_CAR`: carro do oponente; `OPP`: piloto 0-21).
+- Testes automatizados no openMSX: `race_test.tcl` (corrida com piloto automático `-DAUTOPILOT=1`) e `race_manual.tcl`
+  (largada falsa → reinício com ESPAÇO → corrida completa com trocas manuais).
+- Medido: ~9,5 fps com oponente na pista (janela 192x80). Corrida de exemplo (Thunderbird vs Mike): vitória em 21,7 s, média 99 mph.
+
 ## Como rodar
 ```
 sudo apt install sdcc openmsx xvfb          # + C-BIOS (já vem com o openmsx)
