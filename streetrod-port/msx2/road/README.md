@@ -6,10 +6,23 @@ Pista pseudo-3D (projeção por segmentos, modelo extraído de `SRSE.EXE`, ver `
 
 ![Screen 5](docs/road_screen5.png)
 
+## Controles (jogável)
+| Tecla / joystick 1 | Ação |
+|---|---|
+| ↑ | acelerar |
+| ↓ | frear |
+| ← / → | direção |
+| ESPAÇO ou botão A | subir marcha (câmbio manual) |
+| SHIFT ou botão B | descer marcha |
+
+Câmbio automático (carros com câmbio "Auto") troca sozinho. Fora da pista (|P| > 950) o motor perde potência. A zebra e
+a pista seguem as curvas da pista de teste. `-DAUTOPILOT=1` liga o piloto automático (usado nos benchmarks).
+Teste automatizado dos controles no openMSX: `control_test.tcl` (acelera, troca marchas, vira e freia).
+
 ## Como rodar
 ```
 sudo apt install sdcc openmsx xvfb          # + C-BIOS (já vem com o openmsx)
-./build.sh -DDRAW_MODE=2 -DSTEP_SH=2        # gera road.rom
+CAR=17 SRSE_EXE=SRSE.EXE HOT_DATA=HOT_DATA ./build.sh   # gera road.rom (janela 192x80, modo 2, passo 4)
 ./bench.sh "-DDRAW_MODE=2 -DSTEP_SH=2" saida.png   # mede fps no openMSX (C-BIOS MSX2, 60 Hz) e salva a tela
 ./matrix.sh < configs.txt                    # várias configurações (linha: descricao|flags)
 ```

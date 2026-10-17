@@ -5,6 +5,8 @@
 	.globl _g_reg
 	.globl _g_val
 	.globl _g_stick
+	.globl _g_trig
+	.globl _g_row6
 	.globl _palette
 	.globl _g_a
 	.globl _g_b
@@ -114,10 +116,33 @@ _set_screen5::
 	call 0x005F
 	ret
 
+; _read_input: g_stick = cursores/joystick 1 (1..8); g_trig bit0 = espaco, bit1 = joy A, bit2 = joy B; g_row6 = linha 6 do teclado (bit0 = SHIFT, 0 = apertado)
 _read_stick::
+_read_input::
 	xor a,a
 	call 0x00D5
+	ld b,a
+	ld a,#1
+	call 0x00D5
+	or a,b
 	ld (_g_stick),a
+	xor a,a
+	call 0x00D8              ; GTTRIG(0): espaco
+	and a,#1
+	ld c,a
+	ld a,#1
+	call 0x00D8              ; GTTRIG(1): joystick 1 botao A
+	and a,#2
+	or a,c
+	ld c,a
+	ld a,#3
+	call 0x00D8              ; GTTRIG(3): joystick 1 botao B
+	and a,#4
+	or a,c
+	ld (_g_trig),a
+	ld a,#6
+	call 0x0141              ; SNSMAT linha 6
+	ld (_g_row6),a
 	ret
 
 ; ---------------------------------------------------------------------

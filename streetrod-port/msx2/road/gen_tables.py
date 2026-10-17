@@ -62,6 +62,7 @@ try:
     v = stock_variants(flags)
     pt = Model(exe).build(perf, v['engine'], v['trans'], v['manifold'], v['carb'], v['tires'])
     src = 'carro %d' % CAR
+    pt['trans'] = v['trans']
 except Exception as e:                       # sem os arquivos do jogo: curva generica (Thunderbird aproximado)
     sys.stderr.write('powertrain padrao (%s)\n' % e)
     mk = lambda r, a: dict(ratio=r, segs=[dict(lo=0, hi=2900, accel=a[0]), dict(lo=2900, hi=5200, accel=a[1]), dict(lo=5200, hi=5700, accel=a[2])])
@@ -74,5 +75,6 @@ out.append('const uint16_t pt_hi1[5] = {%s};' % ','.join(str(x['segs'][1]['hi'])
 out.append('const uint16_t pt_acc[15] = {%s};' % ','.join(str(s['accel']) for x in pt['gears'] for s in x['segs']))
 out.append('#define PT_NGEARS %d' % pt['n_gears'])
 out.append('#define PT_REDLINE %d' % pt['redline'])
+out.append('#define PT_AUTO %d' % (1 if pt.get('trans', 1) == 0 else 0))
 open('tables.h', 'w').write('\n'.join(out) + '\n')
 print('tables.h ok; curve range', min(curve), max(curve), 'hill range', min(hill), max(hill))
