@@ -10,24 +10,40 @@ Os arquivos originais do jogo **não** estão no repositório (copyright). Só a
 | LIB1 / LIB1C | 76.662 / 23.412 | Biblioteca de imagens tela cheia: **EGA/Tandy (4bpp)** / **CGA (2bpp)** |
 | LIB2 / LIB2C | 334.794 / 333.734 | Biblioteca de sprites/peças (EGA / CGA), centenas de itens |
 
-## Fatos confirmados
-- Modos de vídeo suportados: CGA, EGA 320x200x16, VGA 320x200x16, Hercules (n/d), Tandy 320x200x16.
-- Cabeçalho das LIBs (little-endian): `u16 n_itens, u16 largura_max, u16 altura_max, u16 bytes_max`.
-  - LIB1: 9 itens, 320x200, 32000 B (=4bpp). LIB1C: 4 itens, 320x200, 16000 B (=2bpp).
-  - LIB2: 268 itens, 184x26, 2392 B. LIB2C: 273 itens, 296x189.
-- Depois do cabeçalho vem um bloco de 22 bytes (tabela de ~16 símbolos ordenados, parece
-  dicionário de compressão) e então registros por imagem com
-  `[u16 ?][u16 largura][u16 altura][u16 bytes descomprimidos][tabela]...[dados]`.
-  Os dados têm entropia 6.1–7.1 bits/byte, ou seja, **são comprimidos**. O algoritmo ainda não foi identificado.
-- `hot_data` é lido em registros de 0x17 (23) bytes (rotina em 0x160A5 da imagem, DS base ≈ 0x3E830).
-- O jogo tem toda a economia em texto: ~200 strings de regras (compra/venda, barganha, apostas,
-  quebra de motor/câmbio/pneus, multa por velocidade, "pink slips", calendário até o fim do verão).
+## Formato das LIBs (decifrado, valida os 554 itens)
+Rotina original: `SRSE.EXE` desempacotado, offset 0xE926 (chamada em 0x1592E). Implementação: `tools/srlib.py`.
+
+```
+u16 n_itens
+n_itens x 30 bytes: u16 largura, u16 altura, u16 bytes_descomprimidos, u8 flag,
+                    u8 tab[16], u8 ?, u32 offset, u16 tam_comprimido-1
+dados: cada item começa e termina com 0xBC
+```
+Descompressão (entre os dois 0xBC):
+- `00` ou `FF` + N  -> N+1 cópias do byte;
+- byte presente em `tab[i]` -> corrida pré-definida i (contagens 1,1,2,3,4,2,3,5,6,6,4,7,7,5,8,8;
+  valores 00,FF,00,00,00,FF,FF,00,FF,00,FF,FF,00,FF,FF,00 — constantes em DS:0x501E/0x502E);
+- qualquer outro byte -> literal.
+
+Resultado em EGA: **4 planos sequenciais** (plano0 depois plano1... cada um `altura x ceil(largura/8)` bytes);
+`flag 2` = um plano só (máscara). CGA (LIB1C/LIB2C): 2 bpp, mesma compressão (ainda não renderizado).
+Verificado: título de LIB1 item 0 bate **pixel a pixel** com o screenshot do jogo.
+
+## Conteúdo
+- LIB1 (9 telas): logo California Dreams, créditos, "King Street Rodders" (ranking), retratos
+  da garota, lábios, jukebox (seleção de cores), tela de vitória. Item 0 = título.
+- LIB2 (268 itens, 857 KB descomprimidos / 326 KB comprimidos): painéis do cockpit, carros
+  (corpo, rodas, capô, teto em camadas; a camada ciano é a máscara de cor da pintura), rodas,
+  carta DMV, semáforos, bombas, catálogo de peças, botões.
+- Outras fatos: modos de vídeo CGA/EGA/VGA/Tandy; ~200 strings de regras no EXE
+  (barganha, apostas $10–$100, pink slips, quebras de motor/câmbio/pneus, multa, calendário).
 
 ## Relevância para o port MSX2
-- Mecânicas = máquina de estados de menus + tabelas. Cabe fácil em Z80.
-- Arte original é CGA/EGA 320x200; o MSX2 Screen 5 é 256x212 -> reamostrar ou redesenhar.
+- Dados: 857 KB em 4bpp/planar; reamostrar 320x200 -> 256x212 (Screen 5, 4bpp = metade desse volume, ~430 KB
+  antes de compressão; com RLE similar ao original, ~170–250 KB: cabe em MegaROM de 512 KB).
+- Carros em camadas + cor de pintura por paleta: encaixa bem com a paleta de 512 cores do V9938.
 
 ## Pendências
-1. Achar a rotina de descompressão das LIBs (disassembly em torno do carregador de `?:lib1`).
-2. Extrair imagens para PNG para dimensionar o trabalho de conversão.
-3. Decodificar HOT_DATA (campos dos carros) e as tabelas de física/corrida em SRSE.EXE.
+1. Extrair HOT_DATA (carros à venda) e as tabelas de peças/preços do EXE.
+2. Localizar a física de corrida (drag/road) e a lógica da estrada em pseudo-3D.
+3. Renderizar as LIBs CGA (2 bpp) e mapear qual item é qual (garagem, cockpit, peças).
