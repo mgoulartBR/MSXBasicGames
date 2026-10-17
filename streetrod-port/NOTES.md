@@ -91,6 +91,9 @@ Verificado: título de LIB1 item 0 bate **pixel a pixel** com o screenshot do jo
   integrar com dt fixo e usar tabelas pré-calculadas (rpm -> velocidade) em 8/16 bits.
 - Meta realista: **10–15 fps** na estrada (acima dos ~8 fps do original).
 
+## Protótipo MSX2 da estrada
+Ver `msx2/road/README.md`: Screen 5, ~7 fps (janela 256x112) a ~16 fps (160x56), medidos no openMSX.
+
 ## Pendências
 1. Achar o gerador/carregador das tabelas de pista (curvatura, altura, flags, cenário).
 2. Decodificar HOT_DATA (13 blocos: 396,260,260,312,520,156,1850,2,200,18,18,24,48 bytes) e os dados de peças.

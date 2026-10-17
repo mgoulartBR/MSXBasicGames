@@ -540,7 +540,7 @@ dr_loop:
 	ld (_s_gc),a
 4$:	ld a,#DRAW_MODE
 	ld (_s_mode),a
-	and a,#2
+	and a,#6                 ; bit1 = gramado por scanline, bit2 = sem gramado (fundo estatico)
 	jr nz,5$
 	; modo 0: gramado da faixa inteira em um unico retangulo
 	ld hl,#0
