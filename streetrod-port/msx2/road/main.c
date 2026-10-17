@@ -28,9 +28,6 @@
 #ifndef VIEW_X1
 #define VIEW_X1 224
 #endif
-#ifndef JIFFY_HZ
-#define JIFFY_HZ 60
-#endif
 #define HZ 36
 #define CMD_MAX 700
 
@@ -53,11 +50,12 @@ volatile __at(0xF018) u16 dbg_result;   /* 1 venceu, 2 perdeu, 3 largada falsa *
 volatile __at(0xF01A) u16 dbg_time10;   /* tempo da corrida em decimos de segundo */
 volatile __at(0xF01C) u16 dbg_avg;
 volatile __at(0xF01E) u16 dbg_ospeed;
+volatile __at(0xF020) u16 dbg_in;       /* bit0 espaco, bit1 up_held, bit2 largada falsa, bits4+ marcha */
 volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
-u8 g_trig, g_row6;
+u8 g_trig, g_row6, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
 i16 g_a, g_r, g_fx, g_fy, g_fw, g_fh; u16 g_b;
 extern void mul12(void);
@@ -93,7 +91,9 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 #ifndef OPP_START
 #define OPP_START 0            /* teste: posicao inicial do oponente (segmentos) */
 #endif
-#define GO_J (JIFFY_HZ * 3)     /* semaforo: 3 s ate o verde */
+static u8 jhz = 60;                    /* 50 ou 60 Hz (detectado em execucao) */
+static u16 tick_inc, adv_k, go_j;
+#define GO_J go_j               /* semaforo: 3 s ate o verde */
 u16 pos;  u8 sub;
 i16 P;                      /* lateral da camera (0 = centro da pista) */
 static u16 vrpm[2], vspd[2];            /* 0 = jogador, 1 = oponente */
@@ -128,6 +128,17 @@ static void set_gear(u8 c, u8 ng) {    /* troca de marcha: a velocidade e mantid
     if (ng && r > 5700) { if (ng > vgear[c]) { r = 5700; } else return; }   /* reducao com rotacao excessiva: recusada */
     vgear[c] = ng; vrpm[c] = (u16)r;
     if (c == 0) gear_changed = 1;
+}
+
+extern volatile u8 ev_space, ev_shift;
+extern void install_hook(void);
+
+static void combine_input(void) {
+    u8 e;
+    g_stick = g_st0 ? g_st0 : g_st1;
+    g_trig = (g_t0 ? 1 : 0) | (g_t1 ? 2 : 0) | (g_t3 ? 4 : 0);
+    e = ev_space; if (e) { ev_space = 0; g_trig |= 1; }       /* toque curto travado pela interrupcao */
+    e = ev_shift; if (e) { ev_shift = 0; g_trig |= 4; }
 }
 
 static void handle_input(void) {
@@ -213,7 +224,7 @@ static void steer_frame(u16 dj) {
 
 /* avanco na pista por frame: step(speed) subunidades por frame a ~8,09 fps equivalentes */
 static u16 adv_acc[2];
-#define ADV_K ((u16)(8.09 * 256 / JIFFY_HZ + 0.5))
+#define ADV_K adv_k
 static void advance(u16 dj) {
     adv_acc[0] += step_drag(vspd[0]) * dj * ADV_K;
     while (adv_acc[0] >= 256) { adv_acc[0] -= 256; sub++; if (sub >= 8) { sub = 0; pos++; } }
@@ -286,7 +297,9 @@ static void draw_num(i16 x, i16 y, u16 v, u8 digits) {
 static void draw_text(i16 x, i16 y, const char *s, u8 c) {
     for (; *s; s++, x += 8) {
         if (*s >= 'A' && *s <= 'Z') draw_glyph(x, y, letters[*s - 'A'], c);
+        else if (*s >= '0' && *s <= '9') draw_glyph(x, y, font[*s - '0'], c);
         else if (*s == '.') push_fill(x + 2, y + 8, 2, 2, c);
+        else if (*s == '-') push_fill(x, y + 4, 6, 2, c);
     }
 }
 
@@ -356,12 +369,43 @@ static void show_result(void) {               /* tela de resultado, nas duas pag
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
+static void show_title(void) {
+    u8 pg;
+    clip_l = 0; clip_r = 256;
+    for (pg = 0; pg < 2; pg++) {
+        ybase = pg ? 256 : 0;
+        push_fill(0, 0, 256, 212, 0);
+        draw_text(56, 16, "STREET ROD MSX2", 13);
+        draw_text(72, 32, "DRAG RACE DEMO", 7);
+        draw_text(16, 64, "UP", 8);       draw_text(80, 64, "GAS", 7);
+        draw_text(16, 78, "DOWN", 8);     draw_text(80, 78, "BRAKE", 7);
+        draw_text(16, 92, "LEFT RIGHT", 8); draw_text(112, 92, "STEER", 7);
+        draw_text(16, 106, "SPACE", 8);   draw_text(80, 106, "SHIFT UP", 7);
+        draw_text(16, 120, "SHIFT", 8);   draw_text(80, 120, "SHIFT DOWN", 7);
+        draw_text(16, 134, "JOY BUTTON A-B", 8);
+        draw_text(40, 160, "PRESS SPACE TO START", 13);
+        draw_text(28, 182, "DONT SHIFT BEFORE GREEN", 6);
+        vdp_wait();
+    }
+    clip_l = VIEW_X0; clip_r = VIEW_X1;
+}
+
+static void wait_start(void) {            /* espera ESPACO / botao A (ignora tecla ja apertada no boot) */
+    u8 held = 1, go;
+    for (;;) {
+        read_input(); combine_input();
+        go = (g_trig & 3) != 0;
+        if (go && !held) return;
+        held = go;
+    }
+}
+
 static void new_race(void) {
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
     launched[0] = launched[1] = 0; adv_acc[0] = adv_acc[1] = 0;
     state = 0; cd_t = 0; result = 0; false_start = 0; race_ticks = 0; sum_spd = 0;
-    opp_wait = OPP_B * 3 + 6; gear_changed = 1; go_held = 1;
+    opp_wait = OPP_B * 3 + 6; gear_changed = 1; go_held = 1; up_held = dn_held = 1;   /* tecla ainda apertada nao conta como troca */
     dbg_t60 = dbg_t100 = dbg_top = 0;
 }
 
@@ -374,17 +418,23 @@ void main(void) {
     g_dry = 1;
 #endif
     set_screen5();
+    jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */
+    tick_inc = jhz == 50 ? 31 : 26; adv_k = jhz == 50 ? 41 : 35; go_j = 3 * jhz;
     vdp_reg(8, *(volatile u8 *)0xFFE7 | 0x02);          /* sprites off: comandos do VDP mais rapidos */
     pal_load();
+    install_hook();
+    show_title();
+    vdp_reg(2, 0x1F);
+    dbg_state = 9;                                      /* 9 = tela inicial pronta (aguardando ESPACO) */
+    wait_start();
     new_race();
     init_static();
     ybase = 256;
-    vdp_reg(2, 0x1F);
     last_j = JIFFY; j0 = last_j; fr0 = 0; start_j = last_j;
     for (;;) {
         t = JIFFY; dj = t - last_j; last_j = t;
         if (dj > 12) dj = 12;
-        read_input();
+        read_input(); combine_input();
         if (state == 2) {                                   /* resultado: espera ESPACO / botao A */
             u8 go = (g_trig & 3) != 0;
             if (go && !go_held) { new_race(); init_static(); tickacc = 0; last_j = JIFFY; start_j = last_j; ybase = 256; vdp_reg(2, 0x1F); continue; }
@@ -392,6 +442,7 @@ void main(void) {
             continue;
         }
         handle_input();
+        dbg_in = (g_t0 ? 1 : 0) | (up_held << 1) | (false_start << 2) | (gear << 4);
         if (state == 0) {
             cd_t += dj;
             if (false_start) { result = 3; state = 2; show_result(); continue; }
@@ -400,7 +451,7 @@ void main(void) {
             if (opp_wait > dj) opp_wait -= dj; else { opp_wait = 0; launched[1] = 1; }
         }
         /* fisica a 6,0688 Hz: acumula 6,0688/JIFFY_HZ ticks por jiffy (8.8) */
-        tickacc += dj * (u16)(6.0688 * 256 / JIFFY_HZ + 0.5);
+        tickacc += dj * tick_inc;
         nt = tickacc >> 8; tickacc &= 255;
         if (state == 1) { advance(dj); steer_frame(dj); }
         while (nt--) {
@@ -447,8 +498,8 @@ void main(void) {
         ybase = shown ? 0 : 256;
         dbg_frames++;
         if (gear_changed) { gear_changed = 0; { u16 sv = ybase; draw_gear(); ybase = sv; } }
-        if ((u16)(JIFFY - j0) >= 60) {
-            dbg_fps10 = (u16)(((u16)(dbg_frames - fr0) * 600u) / (u16)(JIFFY - j0));
+        if ((u16)(JIFFY - j0) >= jhz) {
+            dbg_fps10 = (u16)(((u16)(dbg_frames - fr0) * (10u * jhz)) / (u16)(JIFFY - j0));
             fr0 = dbg_frames; j0 = JIFFY;
             draw_hud();
             ybase = shown ? 0 : 256;

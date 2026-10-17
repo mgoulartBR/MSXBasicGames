@@ -1,11 +1,19 @@
 	.module vdpasm
 	.include "config.inc"
+	.globl _ev_space
+	.globl _ev_shift
+	.globl _install_hook
 	.globl _cmd_buf
 	.globl _cmd_n
 	.globl _g_reg
 	.globl _g_val
 	.globl _g_stick
 	.globl _g_trig
+	.globl _g_st0
+	.globl _g_st1
+	.globl _g_t0
+	.globl _g_t1
+	.globl _g_t3
 	.globl _g_row6
 	.globl _palette
 	.globl _g_a
@@ -112,37 +120,40 @@ _pal_load::
 	ret
 
 _set_screen5::
+	push ix
+	push iy
 	ld a,#5
 	call 0x005F
+	pop iy
+	pop ix
 	ret
 
-; _read_input: g_stick = cursores/joystick 1 (1..8); g_trig bit0 = espaco, bit1 = joy A, bit2 = joy B; g_row6 = linha 6 do teclado (bit0 = SHIFT, 0 = apertado)
+; _read_input: le teclado/joystick pela BIOS. Resultados vao para a memoria (a BIOS pode destruir qualquer registrador, inclusive IX/IY).
+; g_st0/g_st1 = GTSTCK cursores/joystick 1 (0..8); g_t0/g_t1/g_t3 = GTTRIG espaco/joy A/joy B; g_row6 = SNSMAT linha 6 (bit0 = SHIFT, 0 = apertado)
 _read_stick::
 _read_input::
+	push ix
+	push iy
 	xor a,a
 	call 0x00D5
-	ld b,a
+	ld (_g_st0),a
 	ld a,#1
 	call 0x00D5
-	or a,b
-	ld (_g_stick),a
+	ld (_g_st1),a
 	xor a,a
-	call 0x00D8              ; GTTRIG(0): espaco
-	and a,#1
-	ld c,a
+	call 0x00D8
+	ld (_g_t0),a
 	ld a,#1
-	call 0x00D8              ; GTTRIG(1): joystick 1 botao A
-	and a,#2
-	or a,c
-	ld c,a
+	call 0x00D8
+	ld (_g_t1),a
 	ld a,#3
-	call 0x00D8              ; GTTRIG(3): joystick 1 botao B
-	and a,#4
-	or a,c
-	ld (_g_trig),a
+	call 0x00D8
+	ld (_g_t3),a
 	ld a,#6
-	call 0x0141              ; SNSMAT linha 6
+	call 0x0141
 	ld (_g_row6),a
+	pop iy
+	pop ix
 	ret
 
 ; ---------------------------------------------------------------------
@@ -659,3 +670,74 @@ _cpu_bench::
 	or a,c
 	jr nz,1$
 	ret
+
+; ---------------------------------------------------------------------
+; Gancho H.TIMI (0xFD9F): le o teclado (linhas 8 e 6 da matriz) a cada interrupcao de vblank e trava as bordas de
+; subida de ESPACO e SHIFT em _ev_space/_ev_shift (o jogo roda a ~10 fps e perderia toques curtos).
+	.area _DATA
+_ev_space::	.ds 1
+_ev_shift::	.ds 1
+_k_prev::	.ds 1
+_old_timi::	.ds 5
+	.area _CODE
+_install_hook::
+	di
+	ld hl,#0xFD9F
+	ld de,#_old_timi
+	ld bc,#5
+	ldir
+	xor a,a
+	ld (_ev_space),a
+	ld (_ev_shift),a
+	ld (_k_prev),a
+	ld a,#0xC3
+	ld (0xFD9F),a
+	ld hl,#_key_isr
+	ld (0xFDA0),hl
+	ei
+	ret
+
+_key_isr:
+	push af
+	push bc
+	in a,(#0xAA)
+	ld c,a                   ; guarda porta C do PPI
+	and a,#0xF0
+	or a,#8
+	out (#0xAA),a
+	in a,(#0xA9)             ; linha 8: bit0 = espaco (0 = apertado)
+	cpl
+	and a,#1
+	ld b,a                   ; b bit0 = espaco agora
+	ld a,c
+	and a,#0xF0
+	or a,#6
+	out (#0xAA),a
+	in a,(#0xA9)             ; linha 6: bit0 = shift
+	cpl
+	and a,#1
+	add a,a                  ; bit1 = shift
+	or a,b                   ; a = estado agora
+	ld b,a
+	ld a,(_k_prev)
+	cpl
+	and a,b                  ; bordas de subida
+	ld (_k_edge),a
+	rra
+	jr nc,1$
+	ld a,#1
+	ld (_ev_space),a
+1$:	ld a,(_k_edge)
+	and a,#2
+	jr z,2$
+	ld (_ev_shift),a
+2$:	ld a,b
+	ld (_k_prev),a
+	ld a,c
+	out (#0xAA),a            ; restaura porta C
+	pop bc
+	pop af
+	jp _old_timi
+	.area _DATA
+_k_edge:	.ds 1
+	.area _CODE
