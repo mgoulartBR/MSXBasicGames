@@ -102,3 +102,9 @@ Primeira versão em C puro: **3,4 fps** (janela 256x112).
   limpo (página 2) e `LINE` desenha o ponteiro; o oponente é um `LMMM` com TIMP (cor 0 transparente) da folha de sprites.
 - A ROM de 32 KB usa ENASLT no início para mapear o cartucho também na página 2 da CPU.
 - `./shot.sh "<flags>" "t1 t2" prefixo` salva capturas de tela (VRAM→PNG) no openMSX.
+
+## Semáforo e som
+- Semáforo: item 13 do `LIB2` (duas cabeças de 24x32) em 3 estados gerados por recolorização (apagado, vermelho, verde), copiado por HMMM da folha de
+  sprites; some ao fim de ~2 s da largada (a região é restaurada da cópia limpa do cockpit).
+- Som no PSG (escrita direta nas portas 0xA0/0xA1): motor = 2 tons (canais A/B) com frequência `rpm/15` Hz e volume maior com acelerador; bipes do
+  semáforo no canal C (2 graves e 1 agudo e longo na largada). O mixer escreve `0xB8` (bit 7 = porta B como saída, necessária à BIOS para ler joystick).

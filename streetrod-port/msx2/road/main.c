@@ -59,6 +59,7 @@ u8 g_trig, g_row6, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
 u16 g_lzsrc, g_vlo; u8 g_vhi, g_vpg;
 extern void lz_unpack(void);
+extern void psg_w(void);
 extern void vram_blit(void);
 i16 g_a, g_r, g_fx, g_fy, g_fw, g_fh; u16 g_b;
 extern void mul12(void);
@@ -279,11 +280,43 @@ static void draw_opp(void) {
 #endif
 }
 
-static void draw_lights(void) {         /* semaforo: vermelho, vermelho, verde */
-    u8 lit = cd_t < GO_J / 3 ? 0 : cd_t < 2 * GO_J / 3 ? 1 : cd_t < GO_J ? 2 : 3;
-    push_fill(138, SKY_TOP, 8, 8, lit >= 1 ? 6 : 4);
-    push_fill(156, SKY_TOP, 8, 8, lit >= 2 ? 6 : 4);
-    push_fill(174, SKY_TOP, 8, 8, lit >= 3 ? 13 : 4);
+#define LIGHT_X 136
+#define LIGHT_TOP 24
+static u8 light_rest;                    /* quadros restantes para apagar o semaforo (2 paginas) */
+static void draw_lights(u8 on) {         /* semaforo (LIB2 item 13): apagado, vermelho (1/3 da contagem), verde (largada) */
+    u8 st = cd_t < GO_J / 3 ? 0 : cd_t < GO_J ? 1 : 2;
+    if (on) {
+        vc_w(0, st * 48); vc_w(2, LIGHT_Y);
+        light_rest = 2;
+    } else {
+        if (!light_rest) return;
+        vc_w(0, LIGHT_X); vc_w(2, 512 + LIGHT_TOP);                  /* copia limpa do cockpit */
+        light_rest--;
+    }
+    vc_w(4, LIGHT_X); vc_w(6, ybase + LIGHT_TOP - WIN_Y);
+    vc_w(8, 48); vc_w(10, 32); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+}
+
+/* ---- som (PSG): motor nos canais A/B (tom segue a rotacao), bipes do semaforo no canal C ---- */
+static u16 beep_end; static u8 beep_on, beep_stage;
+static void psg(u8 r, u8 v) { g_reg = r; g_val = v; psg_w(); }
+static void snd_init(void) {
+    psg(7, 0xB8); psg(8, 0); psg(9, 0); psg(10, 0);       /* tons A,B,C ligados, ruido desligado; bit 7 = porta B como saida (selecao de joystick da BIOS) */
+}
+static void beep(u16 period, u8 jf) {
+    psg(4, (u8)period); psg(5, (u8)(period >> 8)); psg(10, 12);
+    beep_end = JIFFY + jf; beep_on = 1;
+}
+static void snd_engine(u8 on) {
+    u16 r = rpm < 600 ? 600 : rpm, per;
+    if (beep_on && (i16)(JIFFY - beep_end) >= 0) { psg(10, 0); beep_on = 0; }
+    if (!on) { psg(8, 0); psg(9, 0); return; }
+    per = (u16)(1677900UL / r);                            /* frequencia = rpm/15 Hz */
+    psg(0, (u8)per); psg(1, (u8)(per >> 8));
+    per = per - (per >> 2);                                /* B: quarta acima, mais baixa em volume */
+    psg(2, (u8)per); psg(3, (u8)(per >> 8));
+    psg(8, in_throttle ? 12 : 8); psg(9, in_throttle ? 7 : 4);
 }
 
 /* ---- HUD: digitos e letras 3x5 em escala 2x2 ---- */
@@ -404,6 +437,7 @@ static void draw_t10(i16 x, i16 y, u16 t10, u8 c) {
 
 static void show_result(void) {               /* tela de resultado, nas duas paginas */
     u8 pg;
+    psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0;
     u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0;
     clip_l = 0; clip_r = 256;
     dbg_time10 = t10; dbg_avg = avg; dbg_result = result; dbg_state = state;
@@ -459,6 +493,7 @@ static void new_race(void) {
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
     launched[0] = launched[1] = 0; adv_acc[0] = adv_acc[1] = 0;
     state = 0; cd_t = 0; result = 0; false_start = 0; race_ticks = 0; sum_spd = 0;
+    beep_stage = 0; light_rest = 0;
     opp_wait = OPP_B * 3 + 6; gear_changed = 1; go_held = 1; up_held = dn_held = 1;   /* tecla ainda apertada nao conta como troca */
     dbg_t60 = dbg_t100 = dbg_top = 0;
 }
@@ -479,6 +514,7 @@ void main(void) {
     vdp_reg(7, 0);                                       /* cor de fundo/borda = 0 */
     pal_load();
     install_hook();
+    snd_init();
     show_title();
     vdp_reg(2, 0x1F);
     dbg_state = 9;                                      /* 9 = tela inicial pronta (aguardando ESPACO) */
@@ -498,11 +534,16 @@ void main(void) {
             continue;
         }
         handle_input();
+        snd_engine(1);
+        if (state == 0) {
+            if (beep_stage == 0 && cd_t >= GO_J / 3) { beep_stage = 1; beep(254, 9); }
+            else if (beep_stage == 1 && cd_t >= 2 * GO_J / 3) { beep_stage = 2; beep(254, 9); }
+        }
         dbg_in = (g_t0 ? 1 : 0) | (up_held << 1) | (false_start << 2) | (gear << 4);
         if (state == 0) {
             cd_t += dj;
             if (false_start) { result = 3; state = 2; show_result(); continue; }
-            if (cd_t >= GO_J) { state = 1; launched[0] = 1; start_j = JIFFY; }
+            if (cd_t >= GO_J) { state = 1; launched[0] = 1; start_j = JIFFY; beep(127, 24); }
         } else {
             if (opp_wait > dj) opp_wait -= dj; else { opp_wait = 0; launched[1] = 1; }
         }
@@ -537,7 +578,7 @@ void main(void) {
         push_fill(0, SKY_TOP, 256, Y[N_ROWS - 1] - SKY_TOP, 0);
         draw_road_asm();
         draw_opp();
-        if (state == 0) draw_lights();
+        draw_lights(state == 0 || (state == 1 && (u16)(JIFFY - start_j) < 2 * jhz));
 #if HAVE_COCKPIT
 #ifndef NO_OV
         /* cockpit por cima da estrada. (1) coluna esquerda: HMMM de retangulos justos da copia limpa (pagina 2);

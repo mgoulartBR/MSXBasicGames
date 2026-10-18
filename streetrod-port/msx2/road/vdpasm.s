@@ -5,6 +5,7 @@
 	.globl _g_vhi
 	.globl _g_vpg
 	.globl _lz_unpack
+	.globl _psg_w
 	.globl _vc
 	.globl _vdp_cmd15
 	.globl _vram_blit
@@ -863,5 +864,15 @@ _vdp_cmd15::
 	ld hl,#_vc
 	ld bc,#0x0F9B
 	otir
+	ei
+	ret
+
+; _psg_w: escreve g_val no registrador g_reg do PSG (AY-3-8910), portas 0xA0/0xA1
+_psg_w::
+	ld a,(_g_reg)
+	di
+	out (#0xA0),a
+	ld a,(_g_val)
+	out (#0xA1),a
 	ei
 	ret

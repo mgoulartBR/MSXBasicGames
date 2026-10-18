@@ -128,6 +128,25 @@ def overlay_rects(ov, band=2, gap=4):
             else: rects.append([s, y0, e - s, min(band, h - y0)])
     return rects
 
+LIGHT_Y = 850
+def light_sheet(lib2):
+    """Semaforo (item 13: duas cabecas de 24x32, lampada vermelha na da direita, verde na da esquerda) em 3 estados: apagado, vermelho, verde."""
+    import srlib
+    it = srlib.load(lib2)[13]
+    p = np.frombuffer(it.decode(), np.uint8).reshape(4, it.h, (it.w + 7) // 8)
+    b = np.unpackbits(p, axis=2)[:, :, :it.w]
+    idx = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
+    L, R = idx[:, :24].copy(), idx[:, 24:].copy()
+    green = np.isin(L, (9, 13)); red = np.isin(R, (10, 11))
+    dark = L.copy(); dark[green] = 1
+    redh = dark.copy(); redh[red] = R[red]
+    states = [dark, redh, L]
+    sheet = np.zeros((32, 256), np.uint8)
+    for k, h in enumerate(states):
+        m = np.array(MAP, np.uint8)[np.hstack([h, h])]
+        sheet[:, k * 48:k * 48 + 48] = m
+    return sheet
+
 def rear_sprite(lib2, item):
     """Carro visto por tras (LIB2): fundo (preto ligado a borda) vira transparente (0); pretos internos viram cor 11 (quase preto)."""
     import srlib
@@ -175,6 +194,8 @@ def main():
         orects = overlay_rects(ov[:OV_BY], band=8, gap=4)          # coluna esquerda: retangulos HMMM tight
         wsheet = ov[OV_BY:OV_CY]
         add((wsheet[:, 0::2] << 4 | wsheet[:, 1::2]).astype(np.uint8).tobytes(), OV_SY * 128, 1)   # faixa do volante: TIMP
+        ls = light_sheet(lib2)
+        add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         col = rear_sprite(lib2, int(os.environ.get('OPP_SPRITE', '248')))
         sheet = np.zeros((SPR_W[-1] * col.shape[0] // col.shape[1] + 2, 256), np.uint8)
         xs = []; x = 0
@@ -202,7 +223,7 @@ def main():
         f.write('static const uint8_t asset_pg[%d] = {%s};\n' % (n, ','.join(str(e[2]) for e in ents) or '0'))
         f.write('static const uint8_t asset_cp[%d] = {%s};\n' % (n, ','.join(str(e[3]) for e in ents) or '0'))
         f.write(sprh)
-        f.write('#define OV_N %d\n' % len(orects))
+        f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
         f.write('static const uint8_t ov_w[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[2] // 2) for r in orects) or '0'))
