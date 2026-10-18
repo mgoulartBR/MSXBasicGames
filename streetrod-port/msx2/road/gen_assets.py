@@ -299,6 +299,8 @@ def main():
         cal = garage_pixels(lib2, 221)                           # calendario AGO/SET (item 221, 135x150) no centro de uma tela preta (grupo 242)
         calscr = np.zeros((190, 256), np.uint8); calscr[CAL_Y0:CAL_Y0 + cal.shape[0], CAL_X0:CAL_X0 + cal.shape[1]] = cal
         add((calscr[:, 0::2] << 4 | calscr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=242)
+        gus = garage_pixels(lib2, 90)                            # posto "Gus' Gas" (item 90, grupo 243)
+        add((gus[:, 0::2] << 4 | gus[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=243)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

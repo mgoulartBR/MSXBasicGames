@@ -302,3 +302,9 @@ Clicar no calendário da parede abre a **página AGO/SET** da LIB2 (item 221, 13
 o **15 de setembro já vem circulado na arte** — por isso o fim do verão passou a ser **15/set** (`END_DAY` = 46: "YOU'RE DONE FER THE SUMMER" quando chega o dia 46), em vez de 1º/out como eu tinha suposto.
 Qualquer clique, ESC ou o botão **EXIT** da barra de status voltam à garagem. Item 219 (JUN/JUL) existe na LIB2 mas não é usado. Teste: `cal_test.tcl` (`-DSTART_DAY=n -DCUR_X=245 -DCUR_Y=60`).
 `garage_pixels` agora aceita itens com largura diferente de 320.
+
+## Posto Gus' Gas (M7, parte 9)
+Clicar no **galão verde** (WANNA TANK?) leva ao **posto Gus' Gas** (LIB2 item 90, grupo 243): o seu carro **entra pela esquerda** e para ao lado da bomba (`gas_station`; rodas em y=162, animação como a da garagem), clique na **bomba**
+(ou em qualquer lugar da bomba/frente do posto à esquerda) para abrir **GUS' GAS**: **FILL IT UP $x** (completa o tanque de 20 galões), **5 GALLONS $y** ou **NO THANKS**; preço = 1 dólar por 3 galões, como antes.
+Depois de abastecer (ou EXIT/ESC) o carro **sai para a frente** e você volta à garagem. "GAS UP" no menu do carro continua existindo. Teste: `gas_test.tcl` (`-DCUR_X=240 -DCUR_Y=174 -DGAS_CUR_X=36 -DGAS_CUR_Y=130`).
+Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 KB — o próximo recurso precisa mover código para o BANK3 antes.

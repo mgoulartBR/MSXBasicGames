@@ -1468,7 +1468,51 @@ static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 
 #endif
 #ifdef OLD_MENU
 static void calendar_screen(void) {}
+static void gas_station(void) {}
 #else
+static u8 gas_menu(void) {                     /* 1 = abasteceu */
+    static char b1[26], b2[26];
+    const char *it[3]; u8 n, gal = 20 - gc[cur].fuel, five, k, g; u16 cost;
+    if (!gal) { ui_note("YOU'VE GOT", "A FULL TANK!"); return 0; }
+    five = gal > 5 ? 5 : gal;
+    n = 0; put_str(b1, &n, "FILL IT UP  $"); put_num(b1, &n, (gal + 2) / 3); b1[n] = 0;
+    n = 0; put_num(b2, &n, five); put_str(b2, &n, " GALLONS  $"); put_num(b2, &n, (five + 2) / 3); b2[n] = 0;
+    it[0] = b1; it[1] = b2; it[2] = "NO THANKS";
+    k = ui_pick("GUS' GAS", it, 3, 0);
+    if (k >= 2) return 0;
+    g = k == 0 ? gal : five; cost = (g + 2) / 3;
+    if (money < cost) { ui_note("GAS AIN'T FREE!", "YOU'RE BROKE"); return 0; }
+    money -= cost; gc[cur].fuel += g;
+    ui_note("FILL 'ER UP!", "TANK FILLED");
+    return 1;
+}
+static const Hot gas_hot[2] = {{14, 90, 60, 172, 0}, {214, 201, 250, 211, 3}};
+static void gas_station(void) {                /* o posto Gus' Gas (LIB2 item 90): o carro entra pela esquerda e para ao lado da bomba; clique na bomba para abastecer; sai para a frente */
+    u8 id, r, p, done = 0; i16 xl;
+    if (!nown) { ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); return; }
+    id = gc[cur].id; cvar = gc[cur].roof | (gc[cur].bump << 1); cstk = gc[cur].stick; chead = 255;
+    g_group = 243; load_assets();
+    bar_news = 2; cur_ymax = 210; car_floor = 162;
+    cmd_n = 0; cp = cmd_buf; hub_status(); band_save();
+    car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
+    xl = 256 - car_w[id] - 2; if (xl > 50) xl = 50;
+    car_slide(id, -(i16)car_w[id], xl);
+    for (p = 0; p < 2; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
+    vdp_wait(); vdp_reg(2, 0x1F);
+#ifdef GAS_CUR_X
+    cur_x = GAS_CUR_X; cur_y = GAS_CUR_Y;
+#endif
+    while (!done) {
+        hs = gas_hot; hn = 2; lab_mode = 1; pick_tick = 0;
+        r = pick_hot(1);
+        if (r == 254 || r == 3) break;
+        done = gas_menu();
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status(); car_blit(0, id, xl); vdp_wait();
+    }
+    car_slide(id, xl, 256);                                                   /* sai para a frente */
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; car_floor = CAR_FLOOR;
+    load_garage(); band_save();
+}
 static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c);
 static const Hot cal_hot[2] = {{0, 0, 255, 189, 0}, {214, 201, 250, 211, 3}};
 static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 item 221) com a data de hoje marcada e o dia final (15/set) circulado na arte; qualquer clique/ESC/EXIT volta */
@@ -1616,7 +1660,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         else if (r == 2) calendar_screen();
         else if (r == 3) jingle();
         else if (r == 7) body_shop();
-        else if (r == 4) { if (!nown) ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); else { gcar = &gc[cur]; gas_up(); } }
+        else if (r == 4) gas_station();
         else if (r == 5) {
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
             else if (gc[cur].brk) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
