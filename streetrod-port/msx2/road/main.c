@@ -475,7 +475,8 @@ void main(void) {
     set_screen5();
     jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */
     tick_inc = jhz == 50 ? 31 : 26; adv_k = jhz == 50 ? 41 : 35; go_j = 3 * jhz;
-    vdp_reg(8, *(volatile u8 *)0xFFE7 | 0x02);          /* sprites off: comandos do VDP mais rapidos */
+    vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20);   /* sprites off (comandos mais rapidos); TP=0: cor 0 e preta, nao transparente (WebMSX/BIOS reais deixam TP=1) */
+    vdp_reg(7, 0);                                       /* cor de fundo/borda = 0 */
     pal_load();
     install_hook();
     show_title();
