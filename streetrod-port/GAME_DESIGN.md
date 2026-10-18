@@ -28,7 +28,7 @@ ou apostando o *pink slip*) e tenta virar o **King of the County**. O jogo acaba
 | M4 | **Pronto** — Bob's | Escolha do oponente (22 pilotos), tipos de corrida, apostas, pink slip, aceita/recusa; corrida real |
 | M5 | **Pronto** — Consequências | Quebra de motor/câmbio/pneus, perda de carro, prêmios, calendário e fim de jogo |
 | M6 | **Pronto** — Rua | Cruzeiro até o Bob's com consumo de gasolina, multas |
-| M7 (em andamento: **garagem clicável + carro desenhado prontos**) | Acabamento | Telas do `LIB1`/`LIB2`, ranking, música, ajuste da pista de corrida de estrada |
+| M7 (em andamento: **garagem clicável, carro, fonte/janelas, pintura e adereços prontos**) | Acabamento | Telas do `LIB1`/`LIB2`, ranking, música, ajuste da pista de corrida de estrada |
 
 ## Restrições técnicas
 - ROM ASCII16 (múltiplos de 16 KB); código ≤ 32 KB fixo, assets em bancos 2+ carregados pelo carregador da página 1.

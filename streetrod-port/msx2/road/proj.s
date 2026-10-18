@@ -18,7 +18,7 @@ p_r:	.ds 1
 p_z:	.ds 1
 p_s:	.ds 1
 
-	.area _CODE
+	.area BANK1
 
 ; HL = min(HL, DE) (com sinal)
 smin:	push hl

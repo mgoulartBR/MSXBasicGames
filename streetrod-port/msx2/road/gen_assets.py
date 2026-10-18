@@ -157,7 +157,7 @@ def overlay_rects(ov, band=2, gap=4):
     return rects
 
 LIGHT_Y = 940
-CAR_Y0 = 856; WHEEL_Y0 = 930; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
+CAR_Y0 = 852; WHEEL_Y0 = 920; STK_Y0 = 948; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
 EGA_PAL = [(0,0,0),(0,0,0),(85,85,85),(170,170,170),(255,255,255),(170,170,170),(0,0,0),(85,255,255),
            (0,170,170),(0,170,0),(170,0,0),(255,85,85),(170,0,170),(85,255,85),(170,85,0),(255,255,85)]
 def garage_pixels(lib2):
@@ -222,7 +222,7 @@ def scale_sprite(col, w):
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    ABASE = int(os.environ.get('ASSET_BANK0', '4'))     # primeiro banco de assets (antes dele: nucleo + bancos de codigo)
+    ABASE = int(os.environ.get('ASSET_BANK0', '6'))     # primeiro banco de assets (antes dele: nucleo + bancos de codigo)
     banks = [bytearray()]; ents = []       # banco de 16 KB por vez (a partir do banco 2 da ROM); ents: (banco, endereco 0x8000+, vaddr, paginas_256, copias)
     lib2 = os.environ.get('LIB2')
     def add(raw, vaddr, copies, group=0):
@@ -257,15 +257,22 @@ def main():
         def packrows(a, wpx):
             raw = np.zeros((a.shape[0], 256), np.uint8); raw[:, :a.shape[1]] = a
             return (raw[:, 0::2] << 4 | raw[:, 1::2]).astype(np.uint8).tobytes()
-        for i, c in enumerate(carart): add(packrows(c['body'], c['w']), CAR_Y0 * 128, 1, group=2 + i)
+        varart = [cars_art.variants(c) for c in carart]              # 4 corpos por carro: v = teto rebaixado + 2 * sem para-choques
+        for i, c in enumerate(carart):
+            for v in range(4): add(packrows(varart[i][v][0], c['w']), CAR_Y0 * 128, 1, group=2 + i if v == 0 else 100 + i * 3 + v - 1)
         for t, wh in enumerate(wheelart): add(packrows(wh, wh.shape[1]), WHEEL_Y0 * 128, 1, group=28 + t)
-        carh = ('#define CAR_Y0 %d\n#define WHEEL_Y0 %d\n#define BAND_COPY_Y %d\n#define WH_W %d\n#define WH_H %d\n'
+        stkart = cars_art.stickers(lib2)
+        for s_, st in enumerate(stkart): add(packrows(st, st.shape[1]), STK_Y0 * 128, 1, group=180 + s_)
+        flat = lambda f: ','.join(str(f(i, v)) for v in range(4) for i in range(len(carart)))
+        carh = ('#define CAR_Y0 %d\n#define WHEEL_Y0 %d\n#define STK_Y0 %d\n#define BAND_COPY_Y %d\n#define WH_W %d\n#define WH_H %d\n'
                 'static const uint8_t car_w[%d] = {%s};\nstatic const uint8_t car_h[%d] = {%s};\nstatic const uint8_t car_wx0[%d] = {%s};\n'
-                'static const uint8_t car_wx1[%d] = {%s};\nstatic const uint8_t car_wy[%d] = {%s};\n') % (
-            CAR_Y0, WHEEL_Y0, BAND_COPY_Y, wheelart[0].shape[1], wheelart[0].shape[0],
-            len(carart), ','.join(str(c['w']) for c in carart), len(carart), ','.join(str(c['h']) for c in carart),
-            len(carart), ','.join(str(c['wx'][0]) for c in carart), len(carart), ','.join(str(c['wx'][1]) for c in carart),
-            len(carart), ','.join(str(c['wy']) for c in carart))
+                'static const uint8_t car_wx1[%d] = {%s};\nstatic const uint8_t car_wy[%d] = {%s};\n'
+                'static const uint8_t stk_w[8] = {%s};\nstatic const uint8_t stk_h[8] = {%s};\n') % (
+            CAR_Y0, WHEEL_Y0, STK_Y0, BAND_COPY_Y, wheelart[0].shape[1], wheelart[0].shape[0],
+            len(carart), ','.join(str(c['w']) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][0].shape[0]),
+            len(carart), ','.join(str(c['wx'][0]) for c in carart),
+            len(carart), ','.join(str(c['wx'][1]) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][1]),
+            ','.join(str(st.shape[1]) for st in stkart), ','.join(str(st.shape[0]) for st in stkart))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

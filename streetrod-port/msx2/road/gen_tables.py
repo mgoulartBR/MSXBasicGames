@@ -15,6 +15,7 @@ out = []
 out.append('/* gerado por gen_tables.py - nao editar */')
 out.append('#include <stdint.h>')
 out.append('#define HZ %d' % HZ)
+out.append('#pragma codeseg BANK1')       # tabelas da estrada: so a corrida (C + asm no BANK1) as usa; a paleta volta para o nucleo
 open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'layout.inc'), 'w').write('\t.equ HZ, %d\n' % HZ)
 out.append('const uint16_t recip_tab[%d] = {%s};' % (ZMAX, ','.join(str(recip(z)) for z in range(ZMAX))))
 out.append('const uint16_t hw_tab[%d] = {%s};' % (ZMAX, ','.join(str(round(WIDE * HALF_ROAD * recip(z)) >> 12) for z in range(ZMAX))))
@@ -53,6 +54,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from palette_def import PAL as pal
 flat = []
 for c in pal: flat += list(rgb(*c))
+out.append('#pragma codeseg CODE')
 out.append('const uint8_t palette[32] = {%s};' % ','.join(map(str, flat)))
 # --- powertrain de todos os carros (modelo extraido de SRSE.EXE), nomes e pilotos: cars.h. O carro/piloto escolhidos vem de um menu.
 import os, struct, sys, re

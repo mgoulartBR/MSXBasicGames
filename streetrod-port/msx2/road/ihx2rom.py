@@ -3,7 +3,7 @@
 Banco 0 = nucleo em 0x4000-0x7FFF (pagina 1, fixo). Bancos de codigo 1..ABASE-1: enderecos virtuais (banco<<16)|0x8000 -> janela 0x8000-0xBFFF.
 Bancos ABASE.. = assets.bin (16 KB cada). Arquivo preenchido ate potencia de 2 (>= 64 KB)."""
 import sys, os
-ABASE = int(os.environ.get('ASSET_BANK0', '4'))
+ABASE = int(os.environ.get('ASSET_BANK0', '6'))
 img = bytearray(b'\xff' * (ABASE * 0x4000))
 used = {}
 ext = 0

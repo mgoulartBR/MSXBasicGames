@@ -60,3 +60,44 @@ def compose(c, wheel, pal):
                 if wh[y, x] and 0 <= Y < cv.shape[0] and 0 <= X < w: cv[Y, X] = wh[y, x]
     cv[:h][a != 0] = a[a != 0]
     return np.array(pal, np.uint8)[cv]
+
+
+STICKER = [186, 187, 188, 189, 190, 191, 192, 193]      # banana club, explosive, (estrela), N.E.D., veteran, for sale, aguia, USA 1
+
+def chop(a, wy):
+    """teto rebaixado: tira k linhas dos montantes (entre a capota e a linha da cintura). Devolve (imagem, wy novo)."""
+    h, w = a.shape
+    nz = (a != 0).sum(axis=1)
+    top = int(np.nonzero(nz)[0][0])
+    belt = top + 1
+    while belt < h - 1 and nz[belt] < 0.5 * w: belt += 1                     # primeira linha larga: capo/porta-malas
+    cap = top + 1
+    while cap < belt and nz[cap] > 0.6 * max(nz[top:top + 4]): cap += 1      # fim da capota
+    span = belt - cap
+    k = max(2, min(7, span // 2))
+    cut = cap + (span + k) // 2
+    return np.concatenate([a[:cut - k], a[cut:]], axis=0), wy - k
+
+def strip(a):
+    """sem para-choques: apaga o cromado (cinzas/branco) nas pontas, na parte baixa"""
+    h, w = a.shape; b = a.copy()
+    nz = (a != 0).sum(axis=1); top = int(np.nonzero(nz)[0][0])
+    y0 = top + int(0.5 * (h - top)); e = max(10, w // 9)
+    for x in list(range(0, e)) + list(range(w - e, w)):
+        for y in range(y0, h):
+            if b[y, x] in (2, 3, 4, 5): b[y, x] = 0
+    return b
+
+def variants(c):
+    """4 corpos por carro: v = teto_rebaixado + 2*sem_para_choques -> (imagem, wy)"""
+    out = []
+    for v in range(4):
+        a, wy = c['body'], c['wy']
+        if v & 2: a = strip(a)
+        if v & 1: a, wy = chop(a, wy)
+        out.append((a, wy))
+    return out
+
+def stickers(lib2):
+    items = srlib.load(lib2)
+    return [_scale(_img(items[k])) for k in STICKER]

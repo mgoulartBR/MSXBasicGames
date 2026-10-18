@@ -5,9 +5,9 @@ proc tap {row mask} { keymatrixdown $row $mask; after time 0.12 [list keymatrixu
 set ::log [open $::env(OUT) w]
 proc say {s} { puts $::log "t=[format %5.1f [machine_info time]] state=[w 0xF014] pos=[w 0xF01E] money=[w 0xF030] | $s"; flush $::log }
 proc snap {name} { save_debuggable VRAM $::env(VRAM).$name; set f [open $::env(VRAM).$name.r2 w]; puts $f [debug read "VDP regs" 2]; close $f }
-foreach {at k} {8 space 12 space 15 space} { after time $at { tap 8 0x01 } }
-after time 16 { say "dirigindo"; snap drive }
-after time 35 { say "dirigindo2"; snap drive2 }
+foreach {at k} {8 space 14 space 18 space 22 space 26 space} { after time $at { tap 8 0x01 } }
+after time 20 { say "dirigindo"; snap drive }
+after time 45 { say "dirigindo2"; snap drive2 }
 after time 60 { say "depois"; snap after }
 after time 64 { tap 8 0x01 }
 after time 70 { say "fim"; snap end; close $::log; exit }

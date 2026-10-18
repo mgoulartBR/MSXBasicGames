@@ -186,6 +186,7 @@ _read_input::
 	ret
 
 ; ---------------------------------------------------------------------
+	.area BANK1
 ; _mul12: g_r = ((i16)g_a * (u16)g_b) >> 12
 _mul12::
 	ld bc,(_g_a)
@@ -239,6 +240,7 @@ _mul12::
 5$:	ld (_g_r),hl
 	ret
 
+	.area _CODE
 ; _fill_g: entrada para C. Usa g_fx,g_fy,g_fw,g_fh,g_fc, g_ybase.
 _fill_g::
 	ld hl,(_g_fh)
@@ -330,6 +332,7 @@ fill_regs:
 	ld (_cmd_n),hl
 6$:	ret
 
+	.area BANK1
 ; _strip_run: percorre as scanlines de uma faixa gerando os retangulos (zebra+pista e opcionalmente gramado).
 ; Entradas: s_yt, s_rem (u8), s_xlf (= centro xc em 4 bits fracionarios), s_sl2 (incremento por grupo),
 ; s_rc, s_kc, s_gc (cores), s_mode (bit0 = zebras separadas, bit1 = gramado por scanline).
@@ -518,7 +521,7 @@ d_yn:	.ds 2
 d_yt:	.ds 2
 d_yb:	.ds 2
 d_sl:	.ds 2
-	.area _CODE
+	.area BANK1
 _draw_road_asm::
 	ld a,#NROWS-1
 	ld (d_r),a
@@ -689,6 +692,7 @@ dr_next:
 	jp nz,dr_loop
 	ret
 
+	.area _CODE
 _vdp_wait::
 	jp ex_wait
 

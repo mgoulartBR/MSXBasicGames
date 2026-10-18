@@ -2,7 +2,7 @@
 """bankify.py main.asm main.c out.asm
 Distribui as funcoes/tabelas de main.asm em areas BANKn conforme os `#pragma codeseg` do fonte (por linha do .c) e confere que
 nenhuma referencia cruza bancos de codigo sem passar por uma funcao __banked (o nucleo = area _CODE, na pagina 1, e visivel de todos)."""
-import re, sys
+import os, re, sys
 asm_p, c_p, out_p = sys.argv[1:4]
 regs = []
 for i, l in enumerate(open(c_p, errors='replace').read().split('\n'), 1):
@@ -14,6 +14,22 @@ def region(n):
         if ln <= n: r = name
     return r
 clines = open(c_p, errors='replace').read().split('\n')
+hdrs = []        # (nome, linhas, linha do #include em main.c)
+for i, l in enumerate(open(c_p, errors='replace').read().split('\n'), 1):
+    m = re.match(r'#include "(\w+\.h)"', l)
+    if m and os.path.exists(os.path.join(os.path.dirname(os.path.abspath(c_p)), m.group(1))):
+        hdrs.append((m.group(1), open(os.path.join(os.path.dirname(os.path.abspath(c_p)), m.group(1)), errors='replace').read().split('\n'), i))
+def hdr_region(name):
+    pat = re.compile(r'\b%s\s*[\[=(;]' % re.escape(name[1:]))
+    for hn, hl, inc in hdrs:
+        for i, l in enumerate(hl, 1):
+            if pat.search(l) and not l.startswith('#'):
+                r = region(inc)
+                for k in range(i):
+                    m = re.match(r'#pragma codeseg (\w+)', hl[k])
+                    if m: r = m.group(1)
+                return r
+    return None
 def decl_line(name):
     pat = re.compile(r'^(static |const |extern )*[\w ]+[ *]\*?%s\s*[\[(=;]' % re.escape(name[1:]))
     for i, l in enumerate(clines, 1):
@@ -36,7 +52,8 @@ for l in lines:
         m = lab.match(l)
         if m:
             name = m.group(1).rstrip(':')
-            cur = region(decl_line(name) or srcline) if not name.startswith('___str') else region(srcline); sym_bank[name] = cur; fn = name
+            dl = None if name.startswith('___str') else decl_line(name)
+            cur = region(dl) if dl else ((hdr_region(name) if not name.startswith('___str') else None) or region(srcline)); sym_bank[name] = cur; fn = name
             out.append('\t.area %s' % ('_CODE' if cur == 'CODE' else cur))
         elif fn and not l.startswith(('\t.globl', ';')):
             for t in re.findall(r'(?<![\w$])(_\w+|___str_\d+)\b', l):

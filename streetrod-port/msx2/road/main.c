@@ -120,15 +120,18 @@ static u16 race_len = RACE_LEN;
 #define STREET_LEN 420
 #endif
 #define STREET_LIMIT 45                              /* mph: acima disso o guarda multa */
-static u8 shown_id = 255, shown_tir, shown_paint;       /* carro desenhado agora na garagem (255 = vazia) */
+static u8 shown_id = 255, shown_tir, shown_paint, shown_var, shown_stk;       /* carro desenhado agora na garagem (255 = vazia) */
+static u8 cvar, cstk;                                   /* variante (teto rebaixado + 2 * sem para-choques) e adesivo do carro sendo desenhado */
 static u8 street_mode, street_res, street_cop;       /* street_res: 0 chegou ao Bobs, 1 desistiu (ESC) */
 static u16 street_fine; static u8 street_tix;
 static const u16 cop_at[3] = {110, 230, 350};
 i8 curve_ram[256], hill_ram[256];                 /* pista da corrida atual (proj.s le estes arrays) */
+#pragma codeseg BANK1
 static void set_track(u8 road) {                  /* arrancada: reta e plana; estrada: a pista sintetica */
     u16 i;
     for (i = 0; i < 256; i++) { curve_ram[i] = road ? curve_tab[i] : 0; hill_ram[i] = road ? hill_tab[i] : 0; }
 }
+#pragma codeseg CODE
 #ifndef OPP_START
 #define OPP_START 0            /* teste: posicao inicial do oponente (segmentos) */
 #endif
@@ -136,7 +139,7 @@ static void set_track(u8 road) {                  /* arrancada: reta e plana; es
 static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
 static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
 #define MAXCARS 4
-typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; u8 fuel, brk, tp, paint; } Car;   /* carro do jogador: variantes instaladas, ajuste do ponto, desgaste (0..10000) */
+typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; u8 fuel, brk, tp, paint, roof, bump, stick; } Car;   /* carro do jogador: variantes instaladas, ajuste do ponto, desgaste (0..10000) */
 static u16 money; static u8 day, nown, cur; static Car gc[MAXCARS];     /* estado do jogo */
 static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 #define MAXSPARE 12
@@ -154,7 +157,7 @@ static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
 static void car_stock(Car *c, u8 id) {      /* configuracao de fabrica a partir do campo flags do HOT_DATA */
     u16 f = car_flags[id];
     c->id = id; c->tir = (f >> 4) & 3; c->trn = (f >> 6) & 3; c->eng = (f >> 8) & 7; c->man = (f >> 11) & 7; c->carb = (f >> 14) & 3;
-    c->trim = 0; c->wear = 0; c->fuel = 10; c->brk = 0; c->tp = 0; c->paint = (u8)((id * 3 + 1) & 7);      /* fuel em galoes (max 20); brk: 1 motor, 2 cambio, 4 pneus; tp: desgaste dos pneus 0..100 */
+    c->trim = 0; c->wear = 0; c->fuel = 10; c->brk = 0; c->tp = 0; c->paint = (u8)((id * 3 + 1) & 7); c->roof = c->bump = c->stick = 0;      /* fuel em galoes (max 20); brk: 1 motor, 2 cambio, 4 pneus; tp: desgaste dos pneus 0..100 */
 }
 static void load_pt(u8 slot, const Car *c) { pt_build(slot, car_perf[c->id], c->eng, c->trn, c->man, c->carb, c->tir, c->wear, c->trim, 0); }
 static void load_car(u8 slot, u8 id) { Car t; car_stock(&t, id); load_pt(slot, &t); }
@@ -623,7 +626,7 @@ static void lmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
     vdp_cmd15();
 }
 /* ---- fonte da garagem: a fonte 6x8 da BIOS (CGTBL) copiada para a pagina 3 da VRAM (preta e branca) e desenhada por LMMM ---- */
-#define FONT_Y 960
+#define FONT_Y 976
 #define HC_K 1          /* preto */
 static void font_init(void) {
     const u8 *cg = (const u8 *)(*(volatile u16 *)0x0004);
@@ -640,7 +643,7 @@ static void font_init(void) {
             }
         }
     }
-    g_vlo = 0xE000; g_vhi = 1; g_vpg = 24; vram_blit();
+    g_vlo = 0xE800; g_vhi = 1; g_vpg = 24; vram_blit();
 }
 static void gtext(i16 x, i16 y, const char *s, u8 c) {      /* c: 0 = preto, 1 = branco; avanca 6 px por letra */
     i16 sy0 = FONT_Y + c * 24; u8 ch;
@@ -760,11 +763,13 @@ static u8 part_find(u8 cat, u8 var, u8 maker) {         /* id do catalogo da pec
     for (i = 0; i < NPARTS; i++) if (part_cat[i] == cat && part_var[i] == var && (part_mk[i] & maker)) return i;
     return 255;
 }
+#pragma codeseg CODE
 static void put_str(char *d, u8 *n, const char *s) { while (*s) d[(*n)++] = *s++; }
 static void put_num(char *d, u8 *n, u16 v) {
     u16 p = 10000; u8 on = 0;
     for (; p; p /= 10) { u8 dg = (v / p) % 10; if (dg || on || p == 1) { d[(*n)++] = '0' + dg; on = 1; } }
 }
+#pragma codeseg BANK2
 static Car *gcar;                                       /* carro em edicao */
 static u8 gcat, gsp[MAXSPARE], gsn;
 static const char *inst_get(u8 cat) {                   /* "ENGINE        GM V-8 283 CI" */
@@ -803,10 +808,12 @@ static void car_parts(void) {
         change_part(c);
     }
 }
+#pragma codeseg CODE
 static u8 try_pay(u16 price) {            /* confere o dinheiro; mensagem se faltar */
     if (money < price) { ui_note("NO GO, HOT SHOT", fmt_short(price - money)); return 0; }
     money -= price; return 1;
 }
+#pragma codeseg BANK2
 static u16 repair_cost(const Car *c) {                  /* motor/cambio/pneus quebrados: preco das pecas atuais */
     u16 t = 0;
     if (c->brk & 1) t += PART_PRICE(part_find(0, c->eng, car_maker(c)));
@@ -814,6 +821,7 @@ static u16 repair_cost(const Car *c) {                  /* motor/cambio/pneus qu
     if (c->brk & 4) t += PART_PRICE(part_find(4, c->tir, 7));
     return t;
 }
+#pragma codeseg CODE
 static u16 scrap_value(const Car *c) { return car_price[c->id] / 10; }
 static void remove_car(u8 ci) {
     u8 n;
@@ -822,6 +830,7 @@ static void remove_car(u8 ci) {
     if (cur >= nown) cur = nown ? nown - 1 : 0; else if (cur > ci) cur--;
     if (nown) sel_car = gc[cur].id;
 }
+#pragma codeseg BANK2
 static u16 num_title(char *d, const char *pre, u16 v) { u8 n = 0; put_str(d, &n, pre); put_num(d, &n, v); d[n] = 0; return v; }
 static u8 fix_car(u8 ci) {                              /* 1 = o carro saiu da lista (sucata) */
     static const char *const it[3] = {"FIX IT", "JUNK IT", "FORGET IT"};
@@ -853,8 +862,10 @@ static void gas_up(void) {
     ui_note("FILL 'ER UP!", "TANK FILLED");
 }
 static u16 car_power(const Car *c) { return pt_power(car_perf[c->id], c->eng, c->trn, c->man, c->carb, c->wear, c->trim, 0); }
+#pragma codeseg CODE
 static char info_buf[7][30];
 static const char *info_get(u8 i) { return info_buf[i]; }
+#pragma codeseg BANK2
 static void car_info(void) {
     u8 n; u16 p = car_power(gcar);
     dbg_power = p; dbg_t1 = (u16)pt_quality(car_perf[gcar->id], gcar->eng, gcar->trn, gcar->man, gcar->carb, gcar->wear, gcar->trim, 0); dbg_t2 = gcar->wear; dbg_t3 = car_perf[gcar->id] * 256 + gcar->eng * 16 + gcar->trn;
@@ -1036,6 +1047,23 @@ static void newspaper(void) {
     }
 }
 /* ---- Bob's Drive-In: desafiar um piloto (arrancada / estrada / so por diversao / pink slip), apostas ---- */
+#pragma codeseg BANK3
+static const char *const paint_name[12] = {"PURPLE", "RED", "BLUE", "GREEN", "YELLOW", "SILVER", "ORANGE", "TURQUOISE", "BLACK", "WHITE", "PINK", "BROWN"};
+static const char *const stk_name[9] = {"NO STICKER", "BANANA CLUB", "EXPLOSIVE", "STAR COP", "N.E.D.", "VETERAN", "FOR SALE", "EAGLE", "USA 1"};
+static void body_shop(void) BK {                 /* pintura, adesivos, teto rebaixado, para-choques (uma compra por visita: o carro e redesenhado ao sair) */
+    static const char *it[5];
+    Car *c; u8 r, k;
+    if (!nown) { ui_note("NO CAR TO WORK ON", "BUY ONE FIRST!"); return; }
+    c = &gc[cur];
+    it[0] = "NEW PAINT JOB $20"; it[1] = "STICKERS $5"; it[2] = c->roof ? "REBUILD ROOF $70" : "CHOP ROOF $70";
+    it[3] = c->bump ? "RESTORE BUMPERS $15" : "STRIP BUMPERS $15"; it[4] = "BACK";
+    r = ui_pick("PAINT AND BODY", it, 5, 0);
+    if (r == 255 || r == 4) return;
+    if (r == 0) { k = ui_pick("NEW PAINT JOB", paint_name, 12, c->paint); if (k != 255 && try_pay(20)) c->paint = k; }
+    else if (r == 1) { k = ui_pick("STICKERS", stk_name, 9, c->stick); if (k != 255 && k != c->stick && (k == 0 || try_pay(5))) c->stick = k; }
+    else if (r == 2) { if (try_pay(70)) c->roof ^= 1; }
+    else if (try_pay(15)) c->bump ^= 1;
+}
 static u8 race_type, opp_ok;                 /* 0 arrancada, 1 estrada, 2 so por diversao, 3 pink slip */
 static u16 bet;
 
@@ -1060,7 +1088,7 @@ static u8 refuses(u8 pct) {                  /* 1 = o oponente recusa (pct = cha
     return (u8)(rnd16() >> 8) % 100 >= pct;
 #endif
 }
-static u8 bobs(void) {                       /* 1 = a corrida vai comecar */
+static u8 bobs(void) BK {                       /* 1 = a corrida vai comecar */
     static const char *const types[5] = {"DRAG RACE", "ROAD RACE", "JUST FOR KICKS", "PINK SLIPS", "BACK"};
     static const char *const betm[5] = {"BET $10", "BET $25", "BET $50", "BET $100", "BACK"};
     u8 p = 0, t = 0, b;
@@ -1161,6 +1189,7 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
+#pragma codeseg BANK2
 static void run_race(void) BK;
 static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu (ESC) */
     Car *c = &gc[cur]; u8 gas = 1;
@@ -1199,33 +1228,39 @@ static void band_cmd(i16 sy, i16 dy) {
     vdp_cmd15();
 }
 static void band_save(void) { band_cmd(512 + BAND_Y, BAND_COPY_Y); }
+static const u8 pcol_rb[12] = {0x55, 0x60, 0x16, 0x01, 0x70, 0x66, 0x70, 0x05, 0x11, 0x77, 0x75, 0x42};    /* cores da pintura (R<<4|B) e G: as 8 primeiras = as dos oponentes */
+static const u8 pcol_g[12]  = {0, 0, 2, 4, 6, 6, 3, 5, 1, 7, 3, 2};
 static void set_paint(u8 p) {                   /* indice 6 da paleta = pintura, 7 = reflexo (mais claro) */
-    u8 rb = paint_rb[p], g = paint_g[p], r = (rb >> 4) & 7, b = rb & 7;
+    u8 rb = pcol_rb[p], g = pcol_g[p], r = (rb >> 4) & 7, b = rb & 7;
     g_reg = 6; g_val = rb; g_sh = g; pal_one();
     r = r > 5 ? 7 : r + 2; b = b > 5 ? 7 : b + 2; g = g > 5 ? 7 : g + 2;
     g_reg = 7; g_val = (u8)(r << 4 | b); g_sh = g; pal_one();
 }
-static void car_art(u8 id, u8 tir) {                    /* descomprime o corpo e a roda no rascunho da pagina 3 */
+#define CH(id) car_h[cvar * NCARS + (id)]
+#define CWY(id) car_wy[cvar * NCARS + (id)]
+static void car_art(u8 id, u8 tir) {                    /* descomprime o corpo (variante cvar), a roda e o adesivo no rascunho da pagina 3 */
     if (tir > 2) tir = 2;
-    g_group = 2 + id; load_assets();
+    g_group = cvar ? 100 + id * 3 + cvar - 1 : 2 + id; load_assets();
     g_group = 28 + tir; load_assets();
+    if (cstk) { g_group = 179 + cstk; load_assets(); }
 }
 static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM recortado nas bordas da tela */
     if (dx < 0) { sx -= dx; w += dx; dx = 0; }
     if (dx + w > 256) w = 256 - dx;
     if (w > 0) lmmm(sx, sy, dx, dy, w, h);
 }
-static i16 car_yt(u8 id) { return CAR_FLOOR - (car_wy[id] + (WH_H >> 1)); }
+static i16 car_yt(u8 id) { return CAR_FLOOR - (CWY(id) + (WH_H >> 1)); }
 static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV) */
     vc_w(4, xa); vc_w(6, y); vc_w(8, xb - xa); vc_w(10, h); vc[12] = HC_K; vc[13] = 0; vc[14] = 0x80;
     vdp_cmd15();
 }
 static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pagina); rodas por baixo, corpo por cima */
-    i16 yt = base + car_yt(id), wy = yt + car_wy[id] - (WH_H >> 1), fl = base + CAR_FLOOR, x1 = xl + car_w[id];
+    i16 yt = base + car_yt(id), wy = yt + CWY(id) - (WH_H >> 1), fl = base + CAR_FLOOR, x1 = xl + car_w[id];
     cshadow(xl + 6, fl - 5, x1 - 6, 2); cshadow(xl + 2, fl - 3, x1 - 2, 3); cshadow(xl + 14, fl, x1 - 14, 2);     /* sombra elíptica sob o carro */
     clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
-    clmmm(0, CAR_Y0, xl, yt, car_w[id], car_h[id]);
+    clmmm(0, CAR_Y0, xl, yt, car_w[id], CH(id));
+    if (cstk) clmmm(0, STK_Y0, xl + ((car_w[id] - stk_w[cstk - 1]) >> 1), yt + (CH(id) * 3) / 5 - (stk_h[cstk - 1] >> 1), stk_w[cstk - 1], stk_h[cstk - 1]);
 }
 static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (8 px por quadro), desenhando na pagina oculta e trocando a pagina */
     i16 x = x0, d = x1 > x0 ? 8 : -8; u8 pg = 1; u16 j;
@@ -1244,26 +1279,27 @@ static void draw_car(void) {                    /* mostra o carro atual (com a a
     u8 p, id = nown ? gc[cur].id : 255;
     i16 xl;
     if (shown_id != 255 && shown_id != id) {                       /* o carro antigo sai de re (para a esquerda) */
-        car_art(shown_id, shown_tir); set_paint(shown_paint);
+        cvar = shown_var; cstk = shown_stk; car_art(shown_id, shown_tir); set_paint(shown_paint);
         car_slide(shown_id, (256 - car_w[shown_id]) >> 1, -(i16)car_w[shown_id]);
     }
     for (p = 0; p < 3; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y);
     car_on = 0;
     if (id == 255) { vdp_wait(); shown_id = 255; vdp_reg(2, 0x1F); return; }
+    cvar = gc[cur].roof | (gc[cur].bump << 1); cstk = gc[cur].stick;
     car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
     xl = (256 - car_w[id]) >> 1;
     if (shown_id == 255) car_slide(id, -(i16)car_w[id], xl);       /* garagem vazia: o carro entra */
     for (p = 0; p < 3; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
     vdp_wait(); vdp_reg(2, 0x1F);
-    shown_id = id; shown_tir = gc[cur].tir; shown_paint = gc[cur].paint;
-    car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = car_yt(id); car_y1 = car_y0 + car_h[id];
+    shown_id = id; shown_tir = gc[cur].tir; shown_paint = gc[cur].paint; shown_var = cvar; shown_stk = cstk;
+    car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = car_yt(id); car_y1 = car_y0 + CH(id);
 }
 typedef struct { u8 x0, y0, x1, y1, id; } Hot;
-static const char *const hot_name[7] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "CATCH SOME TUNES", "WANNA TANK?", "HIT THE STREET", "TIME TO QUIT"};
-#define NHOT 8
+static const char *const hot_name[8] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "CATCH SOME TUNES", "WANNA TANK?", "HIT THE STREET", "TIME TO QUIT", "PAINT AND BODY"};
+#define NHOT 9
 static const Hot hot[NHOT] = {
     {78, 68, 95, 88, 0}, {108, 156, 136, 187, 0}, {10, 156, 40, 180, 1}, {236, 40, 254, 90, 2}, {204, 48, 232, 64, 3},
-    {226, 160, 252, 188, 4}, {0, 66, 30, 134, 5}, {124, 50, 150, 74, 6}};
+    {226, 160, 252, 188, 4}, {0, 66, 30, 134, 5}, {124, 50, 150, 74, 6}, {178, 158, 208, 188, 7}};
 static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8, 0xD8, 0x18, 0x0C, 0x0C};
 #ifndef CUR_X
 #define CUR_X 128
@@ -1371,6 +1407,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         else if (r == 1) newspaper();
         else if (r == 2) calendar_note();
         else if (r == 3) jingle();
+        else if (r == 7) body_shop();
         else if (r == 4) { if (!nown) ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); else { gcar = &gc[cur]; gas_up(); } }
         else if (r == 5) {
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");

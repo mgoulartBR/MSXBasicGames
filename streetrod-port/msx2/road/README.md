@@ -225,3 +225,16 @@ está com ~14,5 KB de 16 KB — o próximo grande bloco de código deve ir para 
 ### Ajuste de posição do carro (referência: captura do jogo original)
 Base das rodas em y=152 (`CAR_FLOOR`), centralizado, com sombra elíptica preta sob o carro (`cshadow`); faixa de restauração y=80..164 (`BAND_Y/BAND_H`); rascunho da página 3 em `CAR_Y0=856`/`WHEEL_Y0=930`.
 Os objetos do chão (jornal, macaco, compressor, galão) ficam livres abaixo do carro, como no original.
+
+## Pintura e adereços (M7, parte 4)
+Clicar no **compressor roxo** (chão, à direita) abre **PAINT AND BODY**: **NEW PAINT JOB $20** (12 cores: as 8 do jogo + preto, branco, rosa, marrom; o índice 6 da paleta é a pintura e o 7 o reflexo),
+**STICKERS $5** (8 adesivos da LIB2, itens 186-193, desenhados na porta), **CHOP ROOF / REBUILD ROOF $70** (teto rebaixado) e **STRIP / RESTORE BUMPERS $15**. Uma compra por visita; o carro é
+redesenhado ao sair. O `Car` ganhou `roof`, `bump`, `stick` (e `paint` 0..11). Os preços são os das strings do original; as cores e adesivos são escolhas minhas.
+**Variantes:** `cars_art.py` gera 4 corpos por carro (`variants`: teto rebaixado = tira linhas dos montantes entre a capota e a cintura; sem para-choques = apaga o cromado nas pontas) — grupos de assets
+2+id (normal) e 100+3·id+v-1; adesivos = grupos 180+n; página 3 da VRAM: 768 cópia limpa da faixa, 852 corpo, 920 roda, 948 adesivo, 976 fonte.
+
+### Reorganização dos bancos
+O núcleo estava estourando (a ROM só roda com o núcleo em 0x4000-0x7FFF). Agora: **BANK1** (corrida) também leva as rotinas em assembly da estrada (`strip_run`, `draw_road_asm`, `mul12`, `mul16x8`, `project_asm`:
+áreas `BANK1` dentro de `vdpasm.s`/`proj.s`) e as **tabelas da estrada** (`tables.h` tem `#pragma codeseg BANK1`; `bankify.py` agora lê os `#pragma` dos cabeçalhos); **BANK3** = Bob's, fim de corrida/jogo e a oficina;
+`ASSET_BANK0` = 6 (bancos 1..5 livres para código). Núcleo: 13,2 KB de 16 KB. A ROM tem 512 KB (as 4 variantes × 26 carros + adesivos viraram ~11 bancos de assets).
+`street_test.tcl`/`body_test.tcl` (`-DCUR_X/-DCUR_Y` no compressor) são os testes desta parte.
