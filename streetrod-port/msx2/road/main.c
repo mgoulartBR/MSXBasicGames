@@ -1252,7 +1252,7 @@ static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma lin
     b[0] = '$'; n += num_str(b + 1, score); b[n] = 0;
     cmd_n = 0; cp = cmd_buf;
     if (you) { push_fill(32, y - 1, 134, 10, 15); vdp_wait(); }
-    gtext(36, y, name, 0); gtext(162 - 6 * n, y, b, 0);
+    gtext(36, y, name, !you); gtext(162 - 6 * n, y, b, !you);
 }
 static void victory_and_ranking(void) {
     static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "SPEEDY", "BOBBY", "MOUSE", "LEFTY"};
