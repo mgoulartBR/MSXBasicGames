@@ -249,3 +249,7 @@ Outros itens de arte já localizados na LIB2 (para as próximas telas): 90 (post
 ### Jornal: sem a faixa de manchetes
 A faixa inferior (manchete do dia, itens 22-26) foi retirada: o texto dela é pré-renderizado ilegível e competia com a etiqueta e a barra de status. A página (item 21) fica no alto e o resto da tela é preto
 (grupo 190; os grupos 191-195 deixaram de existir).
+
+### Animação do carro sem piscar a barra de status
+A animação alterna as páginas 0 e 1; a barra de status só existia na página 0 e "piscava" a cada quadro. `hub_status` agora desenha a barra nas **duas** páginas, e o hub a chama **antes** de `draw_car`.
+`cshadow` também recorta a sombra fora da tela (carro entrando/saindo).

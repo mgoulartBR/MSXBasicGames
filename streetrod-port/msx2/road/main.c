@@ -660,13 +660,18 @@ static u8 num_str(char *d, u16 v) {         /* decimal sem zeros a esquerda; dev
 }
 static void hub_status(void) {              /* barra branca: dinheiro, data e carro (texto preto, como o visor da cena) */
     static const char mon[2][4] = {"AUG", "SEP"};
-    char b[24]; u8 mo = day >= 31, n = 0;
+    char b[24]; u8 mo = day >= 31, n = 0, pg;
+    for (pg = 0; pg < 2; pg++) {                    /* nas paginas 0 e 1: a animacao do carro alterna as duas, e a barra nao pode piscar */
+    ybase = pg ? 256 : 0;
+    n = 0;
     push_fill(0, 190, 256, 22, HC_W);
     b[n++] = '$'; n += num_str(b + n, money); b[n] = 0; gtext(6, 192, b, 0);
     n = 0; b[n++] = mon[mo][0]; b[n++] = mon[mo][1]; b[n++] = mon[mo][2]; b[n++] = ' '; n += num_str(b + n, mo ? day - 30 : day + 1);
     b[n++] = ','; b[n++] = ' '; b[n++] = '1'; b[n++] = '9'; b[n++] = '6'; b[n++] = '3'; b[n] = 0; gtext(96, 192, b, 0);
     gtext(6, 203, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", 0);
     vdp_wait();
+    }
+    ybase = 0;
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
 #define UI_X 8
@@ -1253,6 +1258,9 @@ static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM r
 }
 static i16 car_yt(u8 id) { return CAR_FLOOR - (CWY(id) + (WH_H >> 1)); }
 static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV) */
+    if (xa < 0) xa = 0;
+    if (xb > 256) xb = 256;
+    if (xb <= xa) return;                                   /* fora da tela (carro entrando/saindo) */
     vc_w(4, xa); vc_w(6, y); vc_w(8, xb - xa); vc_w(10, h); vc[12] = HC_K; vc[13] = 0; vc[14] = 0x80;
     vdp_cmd15();
 }
@@ -1446,7 +1454,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             else if (street_trip() && bobs()) return 0;
         }
         else { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
-        cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); draw_car(); hub_status();
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car();
     }
 }
 
