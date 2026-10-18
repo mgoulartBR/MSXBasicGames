@@ -7,6 +7,12 @@
 	.globl _lz_unpack
 	.globl _load_assets
 	.globl _bank_copy
+	.globl _spr_put
+	.globl _read_mouse
+	.globl _g_mdx
+	.globl _g_mdy
+	.globl _g_sx
+	.globl _g_sy
 	.globl _g_bk_bank
 	.globl _g_bk_src
 	.globl _g_bk_dst
@@ -1018,4 +1024,69 @@ get_bank::
 set_bank::
 	ld (_cur_bank),a
 	ld (0x7000),a
+	ret
+
+; _spr_put: atualiza o cursor (2 sprites 16x16: plano 0 = miolo, plano 1 = contorno, padroes 0 e 4) na tabela de atributos em 0x7600; g_sy = 0xD8 esconde
+	.area _DATA
+_g_sx::
+	.ds 1
+_g_sy::
+	.ds 1
+	.area _CODE
+_spr_put::
+	di
+	ld a,#1                   ; A16..A14 = 0,0,1 (0x7600 = A14)
+	out (#0x99),a
+	ld a,#0x8E
+	out (#0x99),a
+	xor a,a
+	out (#0x99),a
+	ld a,#0x76
+	out (#0x99),a
+	ld a,(_g_sy)
+	cp a,#0xD8
+	jr z,1$
+	out (#0x98),a
+	ld a,(_g_sx)
+	out (#0x98),a
+	xor a,a
+	out (#0x98),a
+	out (#0x98),a
+	ld a,(_g_sy)
+	out (#0x98),a
+	ld a,(_g_sx)
+	out (#0x98),a
+	ld a,#4
+	out (#0x98),a
+	xor a,a
+	out (#0x98),a
+	ld a,#0xD8
+1$:	out (#0x98),a             ; fim da lista de sprites
+	xor a,a
+	out (#0x99),a
+	ld a,#0x8E
+	out (#0x99),a
+	ei
+	ret
+
+; _read_mouse: deslocamento do mouse na porta 1 (GTPAD da BIOS: 12 = ler, 13 = X, 14 = Y); g_mdx/g_mdy em complemento de 2 (0 sem mouse)
+	.area _DATA
+_g_mdx::
+	.ds 1
+_g_mdy::
+	.ds 1
+	.area _CODE
+_read_mouse::
+	push ix
+	push iy
+	ld a,#12
+	call 0x00DB
+	ld a,#13
+	call 0x00DB
+	ld (_g_mdx),a
+	ld a,#14
+	call 0x00DB
+	ld (_g_mdy),a
+	pop iy
+	pop ix
 	ret

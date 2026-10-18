@@ -69,6 +69,10 @@ u8 g_trig, g_row6, g_row7, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
 u16 g_lzsrc, g_vlo, g_palp, g_bk_src, g_bk_dst; u8 g_vhi, g_vpg, g_group, g_bk_bank, g_bk_len;
 extern void bank_copy(void);
+extern void spr_put(void);
+extern u8 g_sx, g_sy;
+extern void read_mouse(void);
+extern i8 g_mdx, g_mdy;
 static char nbc[28], nbp[21], nbd[11];
 static const char *txt(char *buf, u16 ofs, u8 len) { g_bk_bank = TEXT_BANK; g_bk_src = 0x8000 + TEXT_BASE + ofs; g_bk_dst = (u16)buf; g_bk_len = len; bank_copy(); return buf; }
 #define CARN(i) txt(nbc, TXT_CAR_OFS + (i) * 28, 28)
@@ -1120,6 +1124,9 @@ static void run_race(void) BK;
 static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu (ESC) */
     Car *c = &gc[cur]; u8 gas = 1;
     u16 avg;
+#ifdef SKIP_STREET
+    return 1;
+#endif
     ui_note("CRUISING IN TOWN...", "MAX SPEED 45 MPH"); ui_nohint = 0;
     street_mode = 1; race_type = 1; street_res = 1;
     run_race();
@@ -1140,29 +1147,127 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
     if (c->fuel < 3) { ui_note("YOU'RE LOW ON GAS!", "FILL UP AT THE GARAGE"); cmd_n = 0; cp = cmd_buf; hub_status(); return 0; }
     return 1;
 }
-static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
+/* ---- garagem clicavel: cursor (sprite 16x16) movido por setas/joystick; ESPACO/botao A clica no objeto sob a ponta ---- */
+typedef struct { u8 x0, y0, x1, y1, id; } Hot;
+static const char *const hot_name[7] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "CATCH SOME TUNES", "WANNA TANK?", "HIT THE STREET", "TIME TO QUIT"};
+#define NHOT 8
+static const Hot hot[NHOT] = {
+    {78, 68, 95, 88, 0}, {108, 156, 136, 187, 0}, {10, 156, 40, 180, 1}, {236, 40, 254, 90, 2}, {204, 48, 232, 64, 3},
+    {226, 160, 252, 188, 4}, {0, 66, 30, 134, 5}, {124, 50, 150, 74, 6}};
+static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8, 0xD8, 0x18, 0x0C, 0x0C};
+#ifndef CUR_X
+#define CUR_X 128
+#define CUR_Y 110
+#endif
+static u8 cur_x = CUR_X, cur_y = CUR_Y;
+static void cursor_init(void) {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
+    u8 f[18], i, o;
+    for (i = 0; i < 18; i++) f[i] = 0;
+    for (i = 0; i < 12; i++) f[i + 1] = cur_shape[i] >> 1;
+    for (i = 0; i < 255; i++) cmd_buf[i] = 0;
+    cmd_buf[255] = 0;
+    for (i = 0; i < 16; i++) {
+        o = f[i] | f[i + 1] | (i ? f[i - 1] : 0); o |= (u8)(o >> 1) | (u8)(o << 1);
+        cmd_buf[i] = f[i]; cmd_buf[32 + i] = o;
+    }
+    g_vlo = 0x7800; g_vhi = 0; g_vpg = 1; vram_blit();
+    for (i = 0; i < 32; i++) cmd_buf[i] = 0;
+    for (i = 0; i < 16; i++) { cmd_buf[i] = HC_W; cmd_buf[16 + i] = 1; }
+    g_vlo = 0x7400; vram_blit();
+}
+static void spr_on(void) {
+#ifdef NO_SPR
+    return;
+#endif
+    vdp_reg(1, *(volatile u8 *)0xF3E0 | 0x02); vdp_reg(8, *(volatile u8 *)0xFFE7 & ~0x22); }
+static void spr_off(void) { g_sy = 0xD8; spr_put(); vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20); }
+static u8 hot_at(u8 x, u8 y) {
+    u8 i;
+    for (i = 0; i < NHOT; i++) if (x >= hot[i].x0 && x <= hot[i].x1 && y >= hot[i].y0 && y <= hot[i].y1) return hot[i].id;
+    return 255;
+}
+static void hot_label(u8 h) {
+    cmd_n = 0; cp = cmd_buf;
+    hub_restore(0, 22, 256, 16);
+    if (h != 255) { u8 n = 0; while (hot_name[h][n]) n++; push_fill(4, 24, 8 + 9 * n, 12, 0); draw_text(8, 26, hot_name[h], HC_Y); }
+    vdp_wait(); cmd_n = 0; cp = cmd_buf;
+}
+#ifdef OLD_MENU                                /* testes automaticos: o menu de texto antigo (ver README) */
+static u8 scene_pick(void) {
     static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
-    u8 sel = 2, r;
+    static const u8 map[4] = {0, 1, 5, 6};
+    static u8 sel = 2;
+    u8 r;
+    dbg_state = 7;
+    for (;;) { ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0; if (r != 255) { sel = r; return map[r]; } }
+}
+#else
+static u8 scene_pick(void) {                   /* devolve o indice do objeto clicado */
+    u8 held = 1, prev = 0xFE, hit, hold = 0, st, step, go;
+    u16 j;
+    dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
+    spr_on();
+    for (;;) {
+        j = JIFFY; while (JIFFY == j) ;
+        read_input(); combine_input();
+        st = g_stick; go = (g_trig & 3) != 0;
+        if (st) {
+            step = 1 + (hold >> 3); if (step > 6) step = 6; if (hold < 255) hold++;
+            if (st >= 2 && st <= 4 && cur_x + step < 255) cur_x += step;
+            if (st >= 6 && st <= 8 && cur_x > step) cur_x -= step;
+            if ((st == 8 || st == 1 || st == 2) && cur_y > step) cur_y -= step;
+            if (st >= 4 && st <= 6 && cur_y + step < 188) cur_y += step;
+        } else hold = 0;
+        read_mouse();
+        if (!st && (g_mdx || g_mdy) && g_mdx > -64 && g_mdx < 64 && g_mdy > -64 && g_mdy < 64) {      /* mouse na porta 1: deslocamento relativo */
+            i16 nx = cur_x + g_mdx, ny = cur_y + g_mdy;
+            cur_x = nx < 1 ? 1 : nx > 254 ? 254 : (u8)nx; cur_y = ny < 0 ? 0 : ny > 187 ? 187 : (u8)ny;
+        }
+        hit = hot_at(cur_x, cur_y);
+        if (hit != prev) { prev = hit; spr_off(); hot_label(hit); spr_on(); }
+        g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
+        if (go && !held && hit != 255) { spr_off(); return hit; }
+        held = go;
+    }
+}
+#endif
+static void calendar_note(void) {
+    static char cbuf[28];
+    u8 mo = day >= 31, n = 0, m = 0;
+    put_str(pbuf, &n, mo ? "SEP " : "AUG "); put_num(pbuf, &n, mo ? day - 30 : day + 1); put_str(pbuf, &n, ", 1963"); pbuf[n] = 0;
+    put_num(cbuf, &m, day < 61 ? 61 - day : 0); put_str(cbuf, &m, " DAYS LEFT"); cbuf[m] = 0;
+    ui_note(pbuf, cbuf);
+}
+static void jingle(void) {
+    static const u16 nt[8] = {478, 380, 319, 239, 319, 380, 319, 478};
+    u8 i;
+    for (i = 0; i < 8; i++) { beep(nt[i], 7); while ((i16)(JIFFY - beep_end) < 0) ; psg(10, 0); beep_on = 0; }
+}
+static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
+    static const char *const yn[2] = {"YES", "NO"};
+    u8 r;
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
+    cursor_init();
     cmd_n = 0; cp = cmd_buf; hub_status();
     if (pm1) { ui_note(pm1, pm2); pm1 = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
     for (;;) {
         if (game_end) return 1;
         if (!nown && money < 300 && !nspare) { game_end = 3; return 1; }
-        ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0;
-        if (r == 255) continue;
-        sel = r;
+        r = scene_pick();
         if (r == 0) cars_screen();
         else if (r == 1) newspaper();
-        else if (r == 2) {
+        else if (r == 2) calendar_note();
+        else if (r == 3) jingle();
+        else if (r == 4) { if (!nown) ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); else { gcar = &gc[cur]; gas_up(); } }
+        else if (r == 5) {
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
             else if (gc[cur].brk) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
             else if (gc[cur].fuel < 3) ui_note("YOU DON'T GOT ENOUGH GAS", "TO CRUISE DOWN TO BOBS");
             else if (street_trip() && bobs()) return 0;
         }
-        else return 1;
-        cmd_n = 0; cp = cmd_buf; hub_status();
+        else { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status();
     }
 }
 

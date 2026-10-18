@@ -193,3 +193,14 @@ oponente/semáforo, 420 segmentos) até o Bob's. Três **radares** (nos segmento
 TICKET(S)!", "FINE $x", descontada do dinheiro). **Gasolina:** 1 galão por trajeto (2 se a média passar de 50 mph); com menos de 3 galões depois do trajeto avisa
 "YOU'RE LOW ON GAS!" e não abre o Bob's (a corrida gasta 3). **ESC/SHIFT** desiste e volta à garagem sem gastar. Implementado com `street_mode` em `run_race`
 (BANK1) e `street_trip` (BANK2). Teste: `street_test.tcl` (`-DAUTOPILOT=1 -DSTART_CAR=16`). As multas e o consumo são regras minhas.
+
+## Garagem clicável (M7, parte 1)
+O menu principal virou a própria cena da garagem com um **cursor** (sprite 16x16 de 2 planos: miolo branco + contorno preto, padrões em 0x7800, cores 0x7400, atributos 0x7600 — a
+sobra da página 0 da VRAM; `spr_put` em `vdpasm.s`). Setas/joystick movem (aceleram ao segurar), **ESPAÇO / botão A clica**, e um **mouse na porta 1** é lido via
+`GTPAD` da BIOS (`read_mouse`; ativa só quando chega deslocamento sem direção do joystick — não testado em mouse real, o openMSX não injeta movimento).
+Objetos (retângulos em `hot[]`, o nome aparece no alto da cena): prancheta e macaco = **YOUR CARS**, jornal no chão = **NEWSPAPER**, calendário = datas/dias
+restantes, rádio = **CATCH SOME TUNES** (jingle de 8 notas no PSG), galão verde = **WANNA TANK?** (gasolina), abertura da garagem à esquerda = **HIT THE STREET**
+(rua → Bob's), relógio = **TIME TO QUIT** (confirma). Sprites só ficam ligados no hub (R#8 bit 1); nos menus/notas o cursor some.
+Testes automáticos: `-DOLD_MENU -DSKIP_STREET` recompõe o menu de texto antigo e pula a rua (todos os `*_test.tcl` antigos); `click_test.tcl`/`click2_test.tcl`
+(`-DCUR_X/-DCUR_Y` posicionam o cursor) e `vram2png.py ... garage spr` (renderiza os sprites; o `screenshot` do openMSX sai preto em modo sem throttle).
+Pendente no M7: telas de título/jornal/Bob's/resultado com a arte da LIB1/LIB2, o carro desenhado na garagem, pintura/adereços, música, ranking.
