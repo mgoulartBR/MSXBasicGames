@@ -57,6 +57,26 @@ def _refine(a, cx, cy, wh_w=32, wh_h=28):
     if not row: return cx, cy
     return (min(row) + max(row)) // 2, min(bottom, ytop + r + 1) if ytop + r + 1 <= bottom + 3 else cy
 
+def _arch(a, cx, cy, thr=4):
+    """largura da arcada: por coluna, o 'teto' = primeiro pixel do corpo subindo a partir da base da roda; a arcada e' o trecho de colunas cujo teto fica acima do centro da roda
+    (+thr). Devolve o centro x do trecho que contem cx (ou None se a medida nao for plausivel: largura fora de 22..52 ou deslocamento > 10 px)."""
+    h, w = a.shape; base = min(h - 1, cy + 14)
+    ok = np.zeros(w, bool)
+    for x in range(max(0, cx - 34), min(w, cx + 35)):
+        for y in range(base, -1, -1):
+            if a[y, x] != 0: ok[x] = y <= cy + thr; break
+        else: ok[x] = True
+    if not ok[cx]:
+        c = [xx for xx in range(max(0, cx - 12), min(w, cx + 13)) if ok[xx]]
+        if not c: return cx
+        x = min(c, key=lambda v: abs(v - cx))
+    else: x = cx
+    l = r = x
+    while l - 1 >= 0 and ok[l - 1]: l -= 1
+    while r + 1 < w and ok[r + 1]: r += 1
+    m = (l + r) // 2
+    return m if 22 <= r - l + 1 <= 52 and abs(m - cx) <= 10 else cx
+
 def load(lib2):
     items = srlib.load(lib2)
     cars = []
@@ -68,11 +88,7 @@ def load(lib2):
             assert r is not None, k
             cx1, cx2, cy = (runs[0][0] + runs[0][1]) // 2, (runs[1][0] + runs[1][1]) // 2, r
         if k not in MANUAL:
-            ox1, ox2, oy = cx1, cx2, cy
-            (cx1, cy1), (cx2, cy2) = _refine(a, cx1, cy), _refine(a, cx2, cy)
-            clamp = lambda v, o, d: max(o - d, min(o + d, v))                 # a refinacao so ajusta: no maximo +-8 px em x e -1..+3 em y
-            cx1, cx2 = clamp(cx1, ox1, 8), clamp(cx2, ox2, 8)
-            cy = oy                                                       # vertical mantido (so o x e' recentralizado)
+            cx1, cx2 = _arch(a, cx1, cy), _arch(a, cx2, cy)
         cars.append(dict(item=k, body=a, w=w, h=h, wx=(cx1, cx2), wy=cy))
     wheels = [_scale(_img(items[k])) for k in WHEEL]
     return cars, wheels

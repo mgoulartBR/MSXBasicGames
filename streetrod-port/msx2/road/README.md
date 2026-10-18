@@ -271,3 +271,7 @@ Obs.: o clique no título "Los Angeles News" (vender peças avulsas) não tem et
 ### Rodas centralizadas nas arcadas
 `cars_art._refine`: depois da detecção grosseira, o centro x de cada roda é recalculado pelo vão da arcada (flood-fill dos pixels transparentes a partir do centro, limitado a ±24 px; centro = meio do vão à
 altura do meio da roda), com ajuste máximo de ±8 px; o y não muda (carros com arcadas abertas, como o Lincoln, ficavam com a roda baixa demais).
+
+### Rodas: dianteira também
+A medida pelo flood-fill era limitada e só acertava a traseira. Agora `cars_art._arch` mede a largura da arcada pelo "teto" de cada coluna (primeiro pixel do corpo subindo a partir da base da roda; a arcada = colunas cujo teto está acima do centro da roda) e centraliza a roda;
+medidas implausíveis (largura fora de 22..52 px ou deslocamento > 10 px) são ignoradas (posição anterior). A roda dianteira andou ~8 px para a frente na maioria dos carros.
