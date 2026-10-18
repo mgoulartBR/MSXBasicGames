@@ -1036,6 +1036,7 @@ static void sell_parts(void) {
         sel = r > 0 ? r - 1 : 0;
     }
 }
+#ifdef OLD_MENU
 static void newspaper(void) {
     static const char *const items[4] = {"USED CARS", "AUTO PARTS", "SELL SPARE PARTS", "BACK"};
     u8 r, sel = 0;
@@ -1046,6 +1047,7 @@ static void newspaper(void) {
         if (r == 0) used_cars(); else if (r == 1) parts_shop(); else sell_parts();
     }
 }
+#endif
 /* ---- Bob's Drive-In: desafiar um piloto (arrancada / estrada / so por diversao / pink slip), apostas ---- */
 #pragma codeseg BANK3
 static const char *const paint_name[12] = {"PURPLE", "RED", "BLUE", "GREEN", "YELLOW", "SILVER", "ORANGE", "TURQUOISE", "BLACK", "WHITE", "PINK", "BROWN"};
@@ -1327,16 +1329,23 @@ static void spr_on(void) {
 #endif
     vdp_reg(1, *(volatile u8 *)0xF3E0 | 0x02); vdp_reg(8, *(volatile u8 *)0xFFE7 & ~0x22); }
 static void spr_off(void) { g_sy = 0xD8; spr_put(); vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20); }
+static const Hot *hs; static u8 hn, lab_mode;            /* objetos clicaveis da tela atual; lab_mode 0 = garagem (visor), 1 = jornal (faixa no pe da pagina) */
+static const char *const *hnames;
 static u8 hot_at(u8 x, u8 y) {
     u8 i;
-    if (car_on && x >= car_x0 && x < car_x1 && y >= car_y0 && y < car_y1) return 0;          /* o carro desenhado: YOUR CARS */
-    for (i = 0; i < NHOT; i++) if (x >= hot[i].x0 && x <= hot[i].x1 && y >= hot[i].y0 && y <= hot[i].y1) return hot[i].id;
+    if (!lab_mode && car_on && x >= car_x0 && x < car_x1 && y >= car_y0 && y < car_y1) return 0;          /* o carro desenhado: YOUR CARS */
+    for (i = 0; i < hn; i++) if (x >= hs[i].x0 && x <= hs[i].x1 && y >= hs[i].y0 && y <= hs[i].y1) return hs[i].id;
     return 255;
 }
 static void hot_label(u8 h) {
+    u8 n = 0;
     cmd_n = 0; cp = cmd_buf;
-    hub_restore(56, 33, 162, 15);                 /* o visor branco no alto da cena mostra o nome do objeto sob o cursor */
-    if (h != 255) { u8 n = 0; while (hot_name[h][n]) n++; gtext(137 - 3 * n, 37, hot_name[h], 0); }
+    if (lab_mode) hub_restore(0, 176, 256, 14); else hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
+    if (h != 255) {
+        while (hnames[h][n]) n++;
+        if (lab_mode) { push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 12, HC_W); push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 1, HC_K); gtext(128 - 3 * n, 180, hnames[h], 0); }
+        else gtext(137 - 3 * n, 37, hnames[h], 0);
+    }
     vdp_wait(); cmd_n = 0; cp = cmd_buf;
 }
 #ifdef OLD_MENU                                /* testes automaticos: o menu de texto antigo (ver README) */
@@ -1349,8 +1358,8 @@ static u8 scene_pick(void) {
     for (;;) { ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0; if (r != 255) { sel = r; return map[r]; } }
 }
 #else
-static u8 scene_pick(void) {                   /* devolve o indice do objeto clicado */
-    u8 held = 1, prev = 0xFE, hit, hold = 0, st, step, go;
+static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado (254 = voltar, se allow_back) */
+    u8 held = 1, bheld = 1, prev = 0xFE, hit, hold = 0, st, step, go;
     u16 j;
     dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
     spr_on();
@@ -1373,10 +1382,13 @@ static u8 scene_pick(void) {                   /* devolve o indice do objeto cli
         hit = hot_at(cur_x, cur_y);
         if (hit != prev) { prev = hit; spr_off(); hot_label(hit); spr_on(); }
         g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
+        if (allow_back && want_back() && !bheld) { spr_off(); return 254; }
+        bheld = allow_back && want_back();
         if (go && !held && hit != 255) { spr_off(); return hit; }
         held = go;
     }
 }
+static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 0; return pick_hot(0); }
 #endif
 static void calendar_note(void) {
     static char cbuf[28];
@@ -1390,6 +1402,24 @@ static void jingle(void) {
     u8 i;
     for (i = 0; i < 8; i++) { beep(nt[i], 7); while ((i16)(JIFFY - beep_end) < 0) ; psg(10, 0); beep_on = 0; }
 }
+#ifndef OLD_MENU
+static const Hot news_hot[3] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}};
+static const char *const news_name[3] = {"AUTO PARTS", "USED CARS", "SELL SPARE PARTS"};
+static void newspaper(void) {                  /* a primeira pagina do "Los Angeles News" (LIB2 itens 21 + manchete do dia 22-26): clique em AUTO PARTS / USED CARS; o titulo vende pecas avulsas */
+    u8 r;
+    g_group = 190; load_assets(); g_group = 191 + day % 5; load_assets();
+    cmd_n = 0; cp = cmd_buf; hub_status();
+    for (;;) {
+        hs = news_hot; hn = 3; hnames = news_name; lab_mode = 1;
+        r = pick_hot(1);
+        if (r == 254) break;
+        if (r == 0) parts_shop(); else if (r == 1) used_cars(); else sell_parts();
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status();
+    }
+    lab_mode = 0;
+    load_garage(); band_save();                  /* de volta a garagem: o hub redesenha o carro */
+}
+#endif
 static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const yn[2] = {"YES", "NO"};
     u8 r;

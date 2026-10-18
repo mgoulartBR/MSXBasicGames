@@ -919,11 +919,11 @@ _pal_one::
 ; (copias = 1: so no destino; 3: paginas 0, 1 e 2). Tem de ficar na pagina 1 (nao trocada), como lz_unpack e vram_blit.
 	.include "assets.inc"
 _load_assets::
-	ld a,#ASSET_N
-	or a,a
+	ld bc,#ASSET_N            ; contador de 16 bits (>255 faixas)
+	ld a,b
+	or a,c
 	ret z
 	ld hl,#asset_tab
-	ld b,#ASSET_N
 la_next:
 	push bc
 	ld a,(_g_group)
@@ -985,7 +985,10 @@ la_go:
 	pop hl
 la_done:
 	pop bc
-	djnz la_next
+	dec bc
+	ld a,b
+	or a,c
+	jr nz,la_next
 	ld a,(_cur_bank)
 	ld (0x7000),a             ; volta o banco de codigo corrente em 0x8000
 	ret

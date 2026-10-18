@@ -238,3 +238,10 @@ O núcleo estava estourando (a ROM só roda com o núcleo em 0x4000-0x7FFF). Ago
 áreas `BANK1` dentro de `vdpasm.s`/`proj.s`) e as **tabelas da estrada** (`tables.h` tem `#pragma codeseg BANK1`; `bankify.py` agora lê os `#pragma` dos cabeçalhos); **BANK3** = Bob's, fim de corrida/jogo e a oficina;
 `ASSET_BANK0` = 6 (bancos 1..5 livres para código). Núcleo: 13,2 KB de 16 KB. A ROM tem 512 KB (as 4 variantes × 26 carros + adesivos viraram ~11 bancos de assets).
 `street_test.tcl`/`body_test.tcl` (`-DCUR_X/-DCUR_Y` no compressor) são os testes desta parte.
+
+## Jornal com a arte original (M7, parte 5)
+Clicar no jornal no chão da garagem mostra a **primeira página do "Los Angeles News"** (LIB2 item 21, 320x136 → 256x136) com a **manchete do dia** (itens 22-26, 54 linhas; `day % 5`) — 190 linhas no total.
+Cursor como na garagem: **AUTO PARTS** (faixa de cima) e **USED CARS** (faixa do meio) abrem as listas de sempre (janelas brancas sobre a página); o **título "Los Angeles News"** vende peças avulsas;
+o nome do objeto aparece numa etiqueta no pé da página; **ESC** volta (recarrega a garagem). `pick_hot` virou o seletor genérico de objetos (`hs/hn/hnames/lab_mode`). Grupos de assets 190 (página) e 191-195 (manchetes).
+**Bug corrigido:** o carregador de assets contava as faixas em 8 bits (`djnz`); com 261 faixas só as 5 primeiras eram lidas — agora usa contador de 16 bits.
+Outros itens de arte já localizados na LIB2 (para as próximas telas): 90 (posto "Gus' Gas"), 93 (**Bob's Drive-In**), 219/221 (calendários JUN-JUL e AUG-SEP), 15 (carteira de motorista DMV), 16 (livro da Highway Patrol), 14 (cockpit).
