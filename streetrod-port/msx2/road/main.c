@@ -404,6 +404,7 @@ static void snd_engine(u8 on) {
 }
 
 /* ---- HUD: digitos e letras 3x5 em escala 2x2 ---- */
+#pragma codeseg BANK1
 static const u8 font[10][5] = {
     {7,5,5,5,7},{2,6,2,2,7},{7,1,7,4,7},{7,1,7,1,7},{5,5,7,1,1},
     {7,4,7,1,7},{7,4,7,5,7},{7,1,1,1,1},{7,5,7,5,7},{7,5,7,1,7}};
@@ -442,6 +443,13 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
         else if (*s == '\'') draw_glyph(x, y, sym[8], c);
     }
 }
+static char rk_buf[20]; static u8 rk_x, rk_y, rk_c;
+static void rank_line(void) BK {                 /* escreve rk_buf em (rk_x, rk_y) com a fonte 3x5 (usada na tabela "King Street Rodders") */
+    cmd_n = 0; cp = cmd_buf; clip_l = 0; clip_r = 256; ybase = 0;
+    draw_text(rk_x, rk_y, rk_buf, rk_c);
+    vdp_wait();
+}
+#pragma codeseg CODE
 
 /* instrumentos do cockpit: ponteiros (LINE) sobre o fundo restaurado da pagina 2 (HMMM); so redesenha quando o valor muda
    (cache por pagina, pois ha 2 paginas alternadas) */
@@ -519,58 +527,25 @@ static void init_static(void) {
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
-static void draw_t10(i16 x, i16 y, u16 t10, u8 c) {
-    draw_num(x, y, t10 / 10, 3);
-    push_fill(x + 24, y + 8, 2, 2, c);
-    draw_digit(x + 28, y, t10 % 10, 8);
-}
-
-static void show_result(void) {               /* tela de resultado, nas duas paginas */
-    u8 pg;
-    psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0;
-    u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0;
-    clip_l = 0; clip_r = 256;
-    dbg_time10 = t10; dbg_avg = avg; dbg_result = result; dbg_state = state;
-    for (pg = 0; pg < 2; pg++) {
-        ybase = pg ? 256 : 0;
-        push_fill(40, 20, 176, 100, 0);
-        if (result == 1) draw_text(96, 28, "YOU WIN", 13);
-        else if (result == 2) draw_text(92, 28, "YOU LOSE", 6);
-        else draw_text(56, 28, "JUMPED THE LIGHT", 6);
-        if (result != 3) {
-            draw_text(60, 52, "TIME", 7); draw_t10(110, 52, t10, 7);
-            draw_text(60, 72, "AVG MPH", 7); draw_num(128, 72, avg, 3);
-        }
-        draw_text(64, 98, "PRESS SPACE", 8);
-        vdp_wait();
-    }
-    clip_l = VIEW_X0; clip_r = VIEW_X1;
-}
+static void race_silence(void) { psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; }
 
 #pragma codeseg BANK2
-static void show_title(void) BK {
-    u8 pg;
-    clip_l = 0; clip_r = 256;
-    for (pg = 0; pg < 2; pg++) {
-        ybase = pg ? 256 : 0;
-        push_fill(0, 0, 256, 212, 0);
-        draw_text(56, 16, "STREET ROD MSX2", 13);
-        draw_text(72, 32, "DRAG RACE DEMO", 7);
-        draw_text(16, 64, "UP", 8);       draw_text(80, 64, "GAS", 7);
-        draw_text(16, 78, "DOWN", 8);     draw_text(80, 78, "BRAKE", 7);
-        draw_text(16, 92, "LEFT RIGHT", 8); draw_text(112, 92, "STEER", 7);
-        draw_text(16, 106, "SPACE", 8);   draw_text(80, 106, "SHIFT UP", 7);
-        draw_text(16, 120, "SHIFT", 8);   draw_text(80, 120, "SHIFT DOWN", 7);
-        draw_text(16, 134, "JOY BUTTON A-B", 8);
-        draw_text(40, 160, "PRESS SPACE TO START", 13);
-        draw_text(28, 182, "DONT SHIFT BEFORE GREEN", 6);
-        vdp_wait();
+static void title_screen(void) BK {            /* "California Dreams presents" (LIB1 item 2) e o titulo (item 0), paleta EGA; segue com clique/ESPACO */
+    u8 rg1 = *(volatile u8 *)0xF3E0, held = 1, go; u16 j;
+    clip_l = 0; clip_r = 256; ybase = 0;
+    vdp_reg(1, rg1 & ~0x40);
+    g_palp = (u16)pal_ega; pal_load2();
+    g_group = 250; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    j = JIFFY;
+    while ((u16)(JIFFY - j) < 2 * (u16)jhz) {                       /* 2 s ou um clique */
+        read_input(); combine_input(); go = (g_trig & 3) != 0;
+        if (go && !held) break;
+        held = go;
     }
+    vdp_reg(1, rg1 & ~0x40); g_group = 251; load_assets(); vdp_reg(1, rg1 | 0x40);
     clip_l = VIEW_X0; clip_r = VIEW_X1;
-}
-
-static void wait_start(void) BK {            /* espera ESPACO / botao A (ignora tecla ja apertada no boot) */
-    u8 held = 1, go;
+    dbg_state = 9;                                                   /* 9 = tela inicial pronta (aguardando ESPACO) */
+    held = 1;
     for (;;) {
         read_input(); combine_input();
         go = (g_trig & 3) != 0;
@@ -588,6 +563,9 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #ifndef START_DAY
 #define START_DAY 0
 #endif
+#ifndef START_END
+#define START_END 0
+#endif
 #ifndef START_MONEY
 #define START_MONEY 1000
 #endif
@@ -597,18 +575,13 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_R 11
 #pragma codeseg BANK2
 static void new_game(void) BK {
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255;
 #ifdef START_CAR
     car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
 }
 
 #pragma codeseg CODE
-static void draw_nz(i16 x, i16 y, u16 v, u8 digits, u8 c) {      /* numero sem zeros a esquerda */
-    u16 p = 1; u8 i;
-    for (i = 1; i < digits; i++) p *= 10;
-    for (i = 0; i < digits; i++, p /= 10) { if (v >= p || i == digits - 1) { draw_digit(x + i * 8, y, (v / p) % 10, c); } }
-}
 static void font_init(void);
 static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
     u8 rg1 = *(volatile u8 *)0xF3E0;
@@ -738,7 +711,7 @@ static void ui_row(u8 i, i16 y0, u8 top, u8 sel) {
     push_fill(UI_X + 4, y - 2, UI_W - 8, UI_RH, i == sel ? HC_K : HC_W);          /* selecionado: barra preta, texto branco */
     gtext(UI_X + 10, y, ui_get(i), i == sel);
 }
-static u8 ul_n, ul_vis, ul_top, ul_sel; static i16 ul_y0;
+static u8 ul_n, ul_vis, ul_top, ul_sel, ui_dbg = 7;     /* ui_dbg: valor de dbg_state enquanto a janela esta aberta (2 = resultado da corrida, para os testes) */ static i16 ul_y0;
 static void ui_box(i16 x, i16 y, i16 w, i16 h, const char *t) {          /* botao: moldura preta, fundo branco */
     push_fill(x, y, w, h, HC_K); push_fill(x + 1, y + 1, w - 2, h - 2, HC_W); gtext(x + 4, y + 1, t, 0);
 }
@@ -762,7 +735,7 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
     h = 24 + UI_RH * ul_vis; y0 = 186 - h; ul_y0 = y0;        /* o menu fica no chao da garagem (a parte baixa da cena) */
     if (!n) return 255;
     if (sel >= ul_vis) ul_top = sel - ul_vis + 1;
-    clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
+    clip_l = 0; clip_r = 256; ybase = 0; dbg_state = ui_dbg; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
     cmd_n = 0; cp = cmd_buf;
     hub_restore(0, 22, 256, 168);                /* apaga o menu anterior */
     push_fill(UI_X, y0, UI_W, h, HC_K);                         /* janela: moldura preta, fundo branco, titulo sublinhado */
@@ -840,6 +813,7 @@ static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
 
 /* ---- garagem: carros, pecas, ajuste do ponto, informacoes, venda ---- */
 #pragma codeseg BANK2
+#pragma codeseg BANK4
 static const char *const cat_label[5] = {"ENGINE", "TRANS", "CARB", "MANIFOLD", "TIRES"};
 static u8 *car_var(Car *c, u8 cat) { return cat == 0 ? &c->eng : cat == 1 ? &c->trn : cat == 2 ? &c->carb : cat == 3 ? &c->man : &c->tir; }
 static u8 car_maker(const Car *c) { return car_flags[c->id] & 7; }        /* 1 = GM, 2 = Ford, 4 = Chrysler (mesma mascara das pecas) */
@@ -854,7 +828,7 @@ static void put_num(char *d, u8 *n, u16 v) {
     u16 p = 10000; u8 on = 0;
     for (; p; p /= 10) { u8 dg = (v / p) % 10; if (dg || on || p == 1) { d[(*n)++] = '0' + dg; on = 1; } }
 }
-#pragma codeseg BANK2
+#pragma codeseg BANK4
 static Car *gcar;                                       /* carro em edicao */
 static u8 gcat, gsp[MAXSPARE], gsn;
 static const char *inst_get(u8 cat) {                   /* "ENGINE        GM V-8 283 CI" */
@@ -898,7 +872,7 @@ static u8 try_pay(u16 price) {            /* confere o dinheiro; mensagem se fal
     if (money < price) { ui_note("NO GO, HOT SHOT", fmt_short(price - money)); return 0; }
     money -= price; return 1;
 }
-#pragma codeseg BANK2
+#pragma codeseg BANK4
 static u16 repair_cost(const Car *c) {                  /* motor/cambio/pneus quebrados: preco das pecas atuais */
     u16 t = 0;
     if (c->brk & 1) t += PART_PRICE(part_find(0, c->eng, car_maker(c)));
@@ -915,7 +889,7 @@ static void remove_car(u8 ci) {
     if (cur >= nown) cur = nown ? nown - 1 : 0; else if (cur > ci) cur--;
     if (nown) sel_car = gc[cur].id;
 }
-#pragma codeseg BANK2
+#pragma codeseg BANK4
 static u16 num_title(char *d, const char *pre, u16 v) { u8 n = 0; put_str(d, &n, pre); put_num(d, &n, v); d[n] = 0; return v; }
 static u8 fix_car(u8 ci) {                              /* 1 = o carro saiu da lista (sucata) */
     static const char *const it[3] = {"FIX IT", "JUNK IT", "FORGET IT"};
@@ -950,7 +924,7 @@ static u16 car_power(const Car *c) { return pt_power(car_perf[c->id], c->eng, c-
 #pragma codeseg CODE
 static char info_buf[7][30];
 static const char *info_get(u8 i) { return info_buf[i]; }
-#pragma codeseg BANK2
+#pragma codeseg BANK4
 static void car_info(void) {
     u8 n; u16 p = car_power(gcar);
     dbg_power = p; dbg_t1 = (u16)pt_quality(car_perf[gcar->id], gcar->eng, gcar->trn, gcar->man, gcar->carb, gcar->wear, gcar->trim, 0); dbg_t2 = gcar->wear; dbg_t3 = car_perf[gcar->id] * 256 + gcar->eng * 16 + gcar->trn;
@@ -1021,7 +995,7 @@ static const char *carlist_get(u8 i) {
     tb[n] = 0;
     return tb;
 }
-static void cars_screen(void) {
+static void cars_screen(void) BK {
     u8 r, sel = 0;
     for (;;) {
         if (!nown) { ui_note("YOUR CARS", "BUY A CAR FIRST!"); return; }
@@ -1035,6 +1009,7 @@ static void cars_screen(void) {
 
 /* ---- jornal: carros usados ---- */
 #define NOFFERS 6
+#pragma codeseg BANK2
 static u8 offer[NOFFERS], offer_pct[NOFFERS], offer_mask;
 static void make_offers(void) {            /* ofertas do dia: sorteio deterministico por dia; vendidos/recusados ficam marcados */
     u16 r = day * 2713u + 4219u; u8 i, j, id;
@@ -1268,10 +1243,41 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     if (day >= END_DAY && !game_end) game_end = 1;
     dbg_money = money; dbg_day = day;
 }
+static void wait_click(void) {
+    u8 held = 1, go;
+    for (;;) { read_input(); combine_input(); go = (g_trig & 3) != 0; if ((go && !held) || (want_back() && !held)) return; held = go || want_back(); }
+}
+static void full_screen(u8 grp, u8 wait) {      /* tela cheia da LIB1 (paleta EGA) ate um clique */
+    u8 rg1 = *(volatile u8 *)0xF3E0;
+    clip_l = 0; clip_r = 256; ybase = 0;
+    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_ega; pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    if (wait) wait_click();
+}
+static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela: posicao, nome e dinheiro */
+    u8 n = 0;
+    while (name[n] && n < 10) { rk_buf[n] = name[n]; n++; }
+    while (n < 11) rk_buf[n++] = ' ';
+    rk_buf[n++] = '$'; { u16 v = score; char t[6]; u8 k = 0; do { t[k++] = '0' + v % 10; v /= 10; } while (v); while (k) rk_buf[n++] = t[--k]; }
+    rk_buf[n] = 0; rk_x = 36; rk_y = 63 + 11 * pos; rk_c = you ? 14 : 15;
+    rank_line();
+}
+static void victory_and_ranking(void) {
+    static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "SPEEDY", "BOBBY", "MOUSE", "LEFTY"};
+    static const u16 base[9] = {2900, 2300, 1800, 1500, 1200, 1000, 800, 650, 500};
+    u8 i, k = 0, you = 0;
+    if (game_end == 2) full_screen(253, 1);                        /* "Well, you've done it, you've beaten the king..." */
+    full_screen(252, 0);
+    for (i = 0; i < 10; i++) {
+        if (!you && (k >= 9 || money >= base[k])) { put_rank(i, "YOU", money, 1); you = 1; }
+        else { put_rank(i, nm[k], base[k], 0); k++; }
+    }
+    wait_click();
+}
 static void end_screen(void) BK {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
     static const char *const l1[4] = {"", "YOU'RE DONE FER", "YOU DESERVE TO BE", "YOU'RE OUTTA DOUGH."};
     static const char *const l2[4] = {"", "THE SUMMER!", "KING OF THE COUNTY!", "LOOKS LIKE YOU'RE DONE"};
     u8 n;
+    victory_and_ranking();
     load_garage(); ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
     ui_note(l1[game_end], l2[game_end]);
@@ -1650,6 +1656,21 @@ static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): o
 #ifdef OLD_MENU
 static u8 bobs_front(void) { return bobs(); }
 #endif
+static void race_result(void) BK {              /* resultado da corrida: janela sobre a lanchonete (tempo e velocidade media) */
+    static char tb1[22], tb2[22];
+    const char *it[2]; u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0; u8 n;
+    load_garage(); g_group = 197; load_assets();
+    ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
+    cmd_n = 0; cp = cmd_buf; hub_status();
+    ui_dbg = 2; dbg_result = result;
+    if (result == 3) { ui_note("YA JUMPED THE LIGHT,", "SPEEDY!"); ui_dbg = 7; return; }
+    n = 0; put_str(tb1, &n, "TIME  "); put_num(tb1, &n, t10 / 10); tb1[n++] = '.'; put_num(tb1, &n, t10 % 10); put_str(tb1, &n, " SEC"); tb1[n] = 0;
+    n = 0; put_str(tb2, &n, "AVERAGE  "); put_num(tb2, &n, avg); put_str(tb2, &n, " MPH"); tb2[n] = 0;
+    it[0] = tb1; it[1] = tb2;
+    ui_nohint = 0;
+    ui_pick(result == 1 ? "YOU WIN!" : "YOU LOSE!", it, 2, 0);
+    ui_dbg = 7;
+}
 static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const yn[2] = {"YES", "NO"};
     u8 r;
@@ -1716,12 +1737,6 @@ static void run_race(void) BK {
         t = JIFFY; dj = t - last_j; last_j = t;
         if (dj > 12) dj = 12;
         read_input(); combine_input();
-        if (state == 2) {                                   /* resultado: espera ESPACO / botao A */
-            u8 go = (g_trig & 3) != 0;
-            if (go && !go_held) return;                     /* volta ao hub */
-            go_held = go;
-            continue;
-        }
         handle_input();
         snd_engine(1);
         if (state == 0) {
@@ -1731,7 +1746,7 @@ static void run_race(void) BK {
         dbg_in = (g_t0 ? 1 : 0) | (up_held << 1) | (false_start << 2) | (gear << 4);
         if (state == 0) {
             cd_t += dj;
-            if (false_start) { result = 3; state = 2; show_result(); continue; }
+            if (false_start) { result = 3; state = 2; dbg_state = 2; race_silence(); return; }
             if (cd_t >= GO_J) { state = 1; launched[0] = 1; start_j = JIFFY; beep(127, 24); }
         } else {
             if (opp_wait > dj) opp_wait -= dj; else { opp_wait = 0; launched[1] = 1; }
@@ -1766,9 +1781,8 @@ static void run_race(void) BK {
 #ifdef TEST_LOSE
                 result = 2;
 #endif
-                state = 2; show_result();
-                dbg_state = state;
-                continue;
+                state = 2; dbg_state = 2; race_silence();
+                return;                                     /* o resultado aparece no Bob's (race_result) */
             }
         }
         dbg_rpm = rpm; dbg_gear = gear; dbg_state = state; dbg_opos = opos; dbg_ospeed = vspd[1];
@@ -1829,16 +1843,12 @@ void main(void) {
     install_hook();
     snd_init();
     for (;;) {
-        pal_load();
-        clip_l = VIEW_X0; clip_r = VIEW_X1;
-        show_title();
-        vdp_reg(2, 0x1F);
-        dbg_state = 9;                                  /* 9 = tela inicial pronta (aguardando ESPACO) */
-        wait_start();
+        title_screen();
         new_game();
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();
             run_race();
+            race_result();
             settle_race();
         }
         if (game_end) end_screen();                    /* o jogo acabou: depois do aviso, volta ao titulo */

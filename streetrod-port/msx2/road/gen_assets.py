@@ -159,6 +159,18 @@ def overlay_rects(ov, band=2, gap=4):
 LIGHT_Y = 940
 NEWS_BODY_TOP = [(16, 30), (30, 30), (16, 16), (30, 30), (30, 30)]   # linha (na faixa de 54) onde comeca o corpo do texto de cada coluna, por manchete
 CAL_X0 = 60; CAL_Y0 = 20
+EGA16 = [(0,0,0),(0,0,170),(0,170,0),(0,170,170),(170,0,0),(170,0,170),(170,85,0),(170,170,170),(85,85,85),(85,85,255),(85,255,85),(85,255,255),(255,85,85),(255,85,255),(255,255,85),(255,255,255)]
+def lib1_screen(path, k):
+    import srlib
+    it = srlib.load(path)[k]
+    p = np.frombuffer(it.decode(), np.uint8)[:4 * it.h * ((it.w + 7) // 8)].reshape(4, it.h, (it.w + 7) // 8)
+    b = np.unpackbits(p, axis=2)[:, :, :it.w]
+    a = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
+    a = a[:, [x for x in range(it.w) if x % 5 != 4]]
+    out = np.zeros((212, 256), np.uint8)
+    y0 = (212 - a.shape[0]) // 2; x0 = (256 - a.shape[1]) // 2 & ~1
+    out[y0:y0 + a.shape[0], x0:x0 + a.shape[1]] = a[:212, :256]
+    return out
 HEAD_ITEMS = [194, 195, 196, 197, 198, 199] + list(range(202, 218))
 def bob_raw(lib2, k):
     import srlib
@@ -301,6 +313,10 @@ def main():
         add((calscr[:, 0::2] << 4 | calscr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=242)
         gus = garage_pixels(lib2, 90)                            # posto "Gus' Gas" (item 90, grupo 243)
         add((gus[:, 0::2] << 4 | gus[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=243)
+        lib1 = os.path.join(os.path.dirname(lib2), 'LIB1')        # telas da LIB1 (paleta EGA padrao): 250 intro, 251 titulo, 252 ranking, 253 vitoria, 254 creditos; 256x200 (320 -> 256) centradas
+        for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3)):
+            scr = lib1_screen(lib1, it_)
+            add((scr[:, 0::2] << 4 | scr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=grp_)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -339,6 +355,9 @@ def main():
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
+        pe = []
+        for r, g_, b_ in EGA16: pe += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
+        f.write('static const uint8_t pal_ega[32] = {%s};\n' % ','.join(map(str, pe)))
         f.write(sprh); f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))

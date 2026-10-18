@@ -26,6 +26,6 @@ foreach s $::seq {
     }
 }
 # resultado: o jogo volta a garagem sozinho com Espaco
-proc poll {} { if {[w 0xF014] == 2} { after time 1.5 { tap 8 0x01 } ; after time 6 { say "na garagem (msg do resultado)"; snap msg }; return }; after time 0.3 poll }
+proc poll {} { if {[w 0xF014] == 2} { after time 4.5 { tap 8 0x01 } ; after time 9 { say "na garagem (msg do resultado)"; snap msg }; return }; after time 0.3 poll }
 after time 20 poll
 after time 100 { say "fim"; close $::log; exit }

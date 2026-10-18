@@ -13,7 +13,7 @@ proc poll {} {
         switch $st {
             9 { after time 1 { tap 8 0x01 } }
             7 { after time 3 hubkeys }
-            2 { incr ::laps; after time 1.5 { tap 8 0x01 } }
+            2 { incr ::laps; after time 4.5 { tap 8 0x01 } }
         }
     }
     if {$::laps >= $::env(LAPS)} { say "fim"; close $::log; exit }

@@ -15,7 +15,7 @@ proc poll {} {
         switch $st {
             9 { after time 1 { tap 8 0x01 } }
             7 { if {$::laps == 0} { after time 3 hubkeys } }
-            2 { incr ::laps; after time 1.5 { tap 8 0x01 }; after time 7 { snap msg; say "mensagem" } }
+            2 { incr ::laps; after time 4.5 { tap 8 0x01 }; after time 7 { snap msg; say "mensagem" } }
         }
     }
     if {$::laps >= 1 && $st == 7 && $::last == 7} { }

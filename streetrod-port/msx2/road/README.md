@@ -311,3 +311,11 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 ### Posto: o carro passa entre a bomba e a construção
 `car_blit` ganhou "objetos na frente" (`fr_n`, `fr_x/fr_w`, `FR_Y/FR_H`): depois de desenhar o carro, os retângulos das **duas bombas** (x 0-12 e 24-54, y 92-174) são restaurados da cópia limpa (página 2) por cima dele, então o carro entra, para e sai passando **atrás das bombas e na frente da construção**. Só o posto liga `fr_n`.
+
+## M7: telas de titulo, resultado e fim de jogo
+
+- `title_screen()`: intro "California Dreams presents" (LIB1 item 2, grupo 250) por ~2 s e titulo (item 0, grupo 251), ambos com a paleta EGA (`pal_ega`); Espaco/botao/clique segue.
+- `race_result()`: o resultado da corrida e uma janela sobre a cena do Bob's (YOU WIN!/YOU LOSE!, tempo e media em MPH; "YA JUMPED THE LIGHT" na queima de largada).
+- `victory_and_ranking()`: se venceu o Rei, a tela de vitoria (item 8, grupo 253); depois a tabela "King Street Rodders" (item 4, grupo 252) com 10 linhas: pilotos ficticios fixos + o jogador (amarelo) inserido pelo dinheiro final. Os nomes/valores dos rivais sao inventados (o ranking original nao foi extraido). Teste: `-DSTART_END=2 -DSTART_MONEY=1700` + `rank_test.tcl`.
+- `-DSTART_END=n` forca `game_end` ao iniciar (teste).
+- Banco 4 agora guarda o menu de carros da garagem; texto da corrida foi para o banco 1.
