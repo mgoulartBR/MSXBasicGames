@@ -15,7 +15,7 @@
 #define KERB_MERGE 1    /* 1 = zebra desenhada como um retangulo largo sob a pista */
 #endif
 #ifndef VIEW_BOT
-#define VIEW_BOT 80     /* altura da janela da estrada */
+#define VIEW_BOT 88     /* altura da janela da estrada */
 #endif
 #ifndef N_ROWS
 #define N_ROWS 15       /* linhas projetadas (original: 14 distantes + proximas) */
@@ -29,7 +29,6 @@
 #ifndef VIEW_X1
 #define VIEW_X1 256
 #endif
-#define HZ 36
 #define CMD_MAX 700
 
 typedef uint32_t u32; typedef int16_t i16; typedef uint16_t u16; typedef uint8_t u8; typedef int32_t i32;
@@ -246,8 +245,6 @@ static void push_fill_v(i16 x, i16 y, i16 w, i16 h, u8 c) {
     push_fill(x, y, w, h, c);
 }
 
-#define OV_AW 56               /* largura da coluna esquerda (porta/coluna A) */
-#define OV_BY 36               /* a partir desta linha do overlay ha painel em toda a largura */
 u8 vc[15];
 extern void vdp_cmd15(void);
 static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }

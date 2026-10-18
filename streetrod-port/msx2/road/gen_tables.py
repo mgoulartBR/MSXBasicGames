@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Gera tables.h (tabelas const em ROM) para o protótipo da estrada MSX2.
 Modelo de projeção baseado em SRSE.EXE (img 0x27BBF/0x27C01): x = cx + ((off - P)*k)/z, y = HZ + (camH - h)*k/z."""
-import math
+import math, os
 
+HZ = 30                  # linha do horizonte na janela da estrada
+WIDE = 1.5               # fator visual de largura da pista (so desenho; a fisica continua com HALF_ROAD)
 HALF_ROAD = 900          # metade da largura da pista (unidades do jogo original: 0x5DC..0xCE4 / 2)
-CAM_K = 1000             # constante vertical: y = HZ + CAM_K/z
+CAM_K = 1320             # constante vertical: y = HZ + CAM_K/z
 ZMAX = 128
 
 def recip(z): return min(65535, round(8192 / z)) if z else 0
@@ -12,14 +14,16 @@ def recip(z): return min(65535, round(8192 / z)) if z else 0
 out = []
 out.append('/* gerado por gen_tables.py - nao editar */')
 out.append('#include <stdint.h>')
+out.append('#define HZ %d' % HZ)
+open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'layout.inc'), 'w').write('\t.equ HZ, %d\n' % HZ)
 out.append('const uint16_t recip_tab[%d] = {%s};' % (ZMAX, ','.join(str(recip(z)) for z in range(ZMAX))))
-out.append('const uint16_t hw_tab[%d] = {%s};' % (ZMAX, ','.join(str((HALF_ROAD * recip(z)) >> 12) for z in range(ZMAX))))
-out.append('const uint8_t rc8_tab[%d] = {%s};' % (ZMAX, ','.join(str(min(255, round(1024 / z)) if z else 255) for z in range(ZMAX))))
-hwy = [max(0, round((y - 36) * 2 * HALF_ROAD / CAM_K)) for y in range(256)]
+out.append('const uint16_t hw_tab[%d] = {%s};' % (ZMAX, ','.join(str(round(WIDE * HALF_ROAD * recip(z)) >> 12) for z in range(ZMAX))))
+out.append('const uint8_t rc8_tab[%d] = {%s};' % (ZMAX, ','.join(str(min(255, round(WIDE * 1024 / z)) if z else 255) for z in range(ZMAX))))
+hwy = [max(0, round((y - HZ) * 2 * WIDE * HALF_ROAD / CAM_K)) for y in range(256)]
 out.append('const uint16_t hwy_tab[256] = {%s};' % ','.join(map(str, hwy)))
 out.append('const uint8_t kwy_tab[256] = {%s};' % ','.join(str(max(1, h // 9)) for h in hwy))
 out.append('const uint8_t ytab[%d] = {%s};' % (ZMAX, ','.join(str(min(255, round(CAM_K / z)) if z else 255) for z in range(ZMAX))))
-out.append('const uint8_t kw_tab[%d] = {%s};' % (ZMAX, ','.join(str(max(1, ((HALF_ROAD * recip(z)) >> 12) // 9)) for z in range(ZMAX))))
+out.append('const uint8_t kw_tab[%d] = {%s};' % (ZMAX, ','.join(str(max(1, (round(WIDE * HALF_ROAD * recip(z)) >> 12) // 9)) for z in range(ZMAX))))
 
 out.append('const uint16_t rdy_tab[256] = {%s};' % ','.join(str(min(65535, 65536 // d) if d else 65535) for d in range(256)))
 

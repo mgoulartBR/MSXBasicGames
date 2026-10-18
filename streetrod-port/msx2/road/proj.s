@@ -1,6 +1,6 @@
 	.module proj
 	.include "config.inc"
-	.equ HZ, 36
+	.include "layout.inc"
 	.globl _pos, _sub, _P, _xoff_ahead
 	.globl _XC, _Y, _PAR
 	.globl _rc8_tab, _ytab, _curve_tab, _hill_tab
