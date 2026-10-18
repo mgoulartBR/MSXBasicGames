@@ -157,7 +157,7 @@ def overlay_rects(ov, band=2, gap=4):
     return rects
 
 LIGHT_Y = 940
-CAR_Y0 = 848; WHEEL_Y0 = 924; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
+CAR_Y0 = 856; WHEEL_Y0 = 930; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
 EGA_PAL = [(0,0,0),(0,0,0),(85,85,85),(170,170,170),(255,255,255),(170,170,170),(0,0,0),(85,255,255),
            (0,170,170),(0,170,0),(170,0,0),(255,85,85),(170,0,170),(85,255,85),(170,85,0),(255,255,85)]
 def garage_pixels(lib2):

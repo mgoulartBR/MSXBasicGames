@@ -1190,9 +1190,9 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
 }
 /* ---- garagem clicavel: cursor (sprite 16x16) movido por setas/joystick; ESPACO/botao A clica no objeto sob a ponta ---- */
 /* ---- o carro do jogador desenhado na garagem (corpo + rodas, LIB2; ver cars_art.py) ---- */
-#define BAND_Y 112                              /* faixa do chao que o carro ocupa (nas paginas 0-2); a copia limpa fica na pagina 3 */
-#define BAND_H 78
-#define CAR_FLOOR 190                          /* y da base das rodas */
+#define BAND_Y 80                               /* faixa do chao que o carro ocupa (nas paginas 0-2); a copia limpa fica na pagina 3 */
+#define BAND_H 84
+#define CAR_FLOOR 152                          /* y da base das rodas */
 static u8 car_on, car_x0, car_x1, car_y0, car_y1;
 static void band_cmd(i16 sy, i16 dy) {
     vc_w(0, 0); vc_w(2, sy); vc_w(4, 0); vc_w(6, dy); vc_w(8, 256); vc_w(10, BAND_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
@@ -1216,8 +1216,13 @@ static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM r
     if (w > 0) lmmm(sx, sy, dx, dy, w, h);
 }
 static i16 car_yt(u8 id) { return CAR_FLOOR - (car_wy[id] + (WH_H >> 1)); }
+static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV) */
+    vc_w(4, xa); vc_w(6, y); vc_w(8, xb - xa); vc_w(10, h); vc[12] = HC_K; vc[13] = 0; vc[14] = 0x80;
+    vdp_cmd15();
+}
 static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pagina); rodas por baixo, corpo por cima */
-    i16 yt = base + car_yt(id), wy = yt + car_wy[id] - (WH_H >> 1);
+    i16 yt = base + car_yt(id), wy = yt + car_wy[id] - (WH_H >> 1), fl = base + CAR_FLOOR, x1 = xl + car_w[id];
+    cshadow(xl + 6, fl - 5, x1 - 6, 2); cshadow(xl + 2, fl - 3, x1 - 2, 3); cshadow(xl + 14, fl, x1 - 14, 2);     /* sombra elíptica sob o carro */
     clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, CAR_Y0, xl, yt, car_w[id], car_h[id]);

@@ -221,3 +221,7 @@ está com ~14,5 KB de 16 KB — o próximo grande bloco de código deve ir para 
   **Janelas:** moldura preta, fundo branco, título sublinhado, linhas de 12 px, item selecionado = barra preta com texto branco; os textos cabem nas janelas (até ~36 letras).
 - **Carro:** base das rodas no chão (y=190). Ao trocar de carro: garagem vazia → o carro novo entra pela esquerda; garagem cheia → o antigo sai de ré (para a esquerda) e o novo aparece no lugar.
   A animação desenha na página oculta e troca a página (sem cintilação), 8 px por quadro (`car_slide`). `new_game` zera `shown_id`; ao voltar de uma corrida o mesmo carro não é reanimado.
+
+### Ajuste de posição do carro (referência: captura do jogo original)
+Base das rodas em y=152 (`CAR_FLOOR`), centralizado, com sombra elíptica preta sob o carro (`cshadow`); faixa de restauração y=80..164 (`BAND_Y/BAND_H`); rascunho da página 3 em `CAR_Y0=856`/`WHEEL_Y0=930`.
+Os objetos do chão (jornal, macaco, compressor, galão) ficam livres abaixo do carro, como no original.
