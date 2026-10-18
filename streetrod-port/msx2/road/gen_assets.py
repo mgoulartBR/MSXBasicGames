@@ -273,11 +273,9 @@ def main():
             len(carart), ','.join(str(c['wx'][0]) for c in carart),
             len(carart), ','.join(str(c['wx'][1]) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][1]),
             ','.join(str(st.shape[1]) for st in stkart), ','.join(str(st.shape[0]) for st in stkart))
-        news = garage_pixels(lib2, 21)                           # jornal "Los Angeles News" (item 21: AUTO PARTS / USED CARS / titulo) + manchete do dia (itens 22-26, 54 linhas)
+        news = garage_pixels(lib2, 21)                           # jornal "Los Angeles News" (item 21: AUTO PARTS / USED CARS / titulo), sobre fundo preto ate a linha 190
+        news = np.vstack([news, np.zeros((190 - news.shape[0], news.shape[1]), np.uint8)])
         add((news[:, 0::2] << 4 | news[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=190)
-        for k_ in range(5):
-            hl = garage_pixels(lib2, 22 + k_)
-            add((hl[:, 0::2] << 4 | hl[:, 1::2]).astype(np.uint8).tobytes(), news.shape[0] * 128, 3, group=191 + k_)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

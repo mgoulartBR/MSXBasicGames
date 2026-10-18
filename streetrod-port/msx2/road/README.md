@@ -245,3 +245,7 @@ Cursor como na garagem: **AUTO PARTS** (faixa de cima) e **USED CARS** (faixa do
 o nome do objeto aparece numa etiqueta no pé da página; **ESC** volta (recarrega a garagem). `pick_hot` virou o seletor genérico de objetos (`hs/hn/hnames/lab_mode`). Grupos de assets 190 (página) e 191-195 (manchetes).
 **Bug corrigido:** o carregador de assets contava as faixas em 8 bits (`djnz`); com 261 faixas só as 5 primeiras eram lidas — agora usa contador de 16 bits.
 Outros itens de arte já localizados na LIB2 (para as próximas telas): 90 (posto "Gus' Gas"), 93 (**Bob's Drive-In**), 219/221 (calendários JUN-JUL e AUG-SEP), 15 (carteira de motorista DMV), 16 (livro da Highway Patrol), 14 (cockpit).
+
+### Jornal: sem a faixa de manchetes
+A faixa inferior (manchete do dia, itens 22-26) foi retirada: o texto dela é pré-renderizado ilegível e competia com a etiqueta e a barra de status. A página (item 21) fica no alto e o resto da tela é preto
+(grupo 190; os grupos 191-195 deixaram de existir).

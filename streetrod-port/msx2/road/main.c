@@ -1405,9 +1405,9 @@ static void jingle(void) {
 #ifndef OLD_MENU
 static const Hot news_hot[3] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}};
 static const char *const news_name[3] = {"AUTO PARTS", "USED CARS", "SELL SPARE PARTS"};
-static void newspaper(void) {                  /* a primeira pagina do "Los Angeles News" (LIB2 itens 21 + manchete do dia 22-26): clique em AUTO PARTS / USED CARS; o titulo vende pecas avulsas */
+static void newspaper(void) {                  /* a primeira pagina do "Los Angeles News" (LIB2 item 21): clique em AUTO PARTS / USED CARS; o titulo vende pecas avulsas */
     u8 r;
-    g_group = 190; load_assets(); g_group = 191 + day % 5; load_assets();
+    g_group = 190; load_assets();
     cmd_n = 0; cp = cmd_buf; hub_status();
     for (;;) {
         hs = news_hot; hn = 3; hnames = news_name; lab_mode = 1;
