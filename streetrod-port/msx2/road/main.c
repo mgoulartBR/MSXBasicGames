@@ -1260,7 +1260,7 @@ static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pag
     clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, CAR_Y0, xl, yt, car_w[id], CH(id));
-    if (cstk) clmmm(0, STK_Y0, xl + ((car_w[id] - stk_w[cstk - 1]) >> 1), yt + (CH(id) * 3) / 5 - (stk_h[cstk - 1] >> 1), stk_w[cstk - 1], stk_h[cstk - 1]);
+    if (cstk) clmmm(0, STK_Y0, xl + ((car_wx0[id] + car_wx1[id] - stk_w[cstk - 1]) >> 1) + 4, yt + (CH(id) * 3) / 5 - (stk_h[cstk - 1] >> 1), stk_w[cstk - 1], stk_h[cstk - 1]);
 }
 static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (8 px por quadro), desenhando na pagina oculta e trocando a pagina */
     i16 x = x0, d = x1 > x0 ? 8 : -8; u8 pg = 1; u16 j;
