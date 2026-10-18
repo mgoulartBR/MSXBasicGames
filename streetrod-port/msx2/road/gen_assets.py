@@ -131,7 +131,7 @@ def overlay(a):
         if os.environ.get('DBG_CUTS'): print(list(zip(range(XA, w), cuts[XA:], sm[XA:]))[50:90], file=sys.stderr)
         for x in range(XA, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
-    return out, cuts
+    return out, cuts, (sm if GLASS_MODE != 'flat' else None)
 
 def overlay_rects(ov, band=2, gap=4):
     """Retangulos (x, y, w, h) que cobrem os pixels opacos do overlay, em faixas de `band` linhas (x e w pares, para HMMM)."""
@@ -220,7 +220,10 @@ def main():
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
-        ov, cuts = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
+        ov, cuts, sm = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
+        if sm is not None:                          # completa o contorno ciano do capo (no original e tracejado): linha continua de 1 px
+            a = a.copy()
+            for x in range(ARC_X0, 256): a[WIN_Y + SKY_TOP + int(sm[x]), x] = 1
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
         orects = overlay_rects(ov[:, :ARC_X0] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
