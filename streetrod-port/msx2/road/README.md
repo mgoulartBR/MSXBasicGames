@@ -279,3 +279,8 @@ medidas implausíveis (largura fora de 22..52 px ou deslocamento > 10 px) são i
 ### Roda dianteira: ajuste visual
 A dianteira (lado direito) fica `FRONT_BACK = 4` px atrás do centro medido da arcada (`cars_art.py`), pedido por revisão visual; para ajustar mais/menos, mude esse valor e rode `build.sh`.
 A traseira (lado esquerdo) fica `REAR_FWD = 4` px à frente do centro medido, em todos os carros (inclusive os de posição manual).
+
+## Bob's Drive-In com a arte original (M7, parte 7)
+Depois da rua, aparece a **lanchonete** (LIB2 item 93, grupo 197): clique no cara encostado, nos carros ou no botão **CHALLENGE** da barra de status para abrir o desafio (as listas de sempre, agora sobre a arte do Bob's);
+**EXIT**/ESC/botão direito voltam à garagem. O nome do alvo ("LOOK FOR OPPONENT") aparece na faixa preta sob a lanchonete. O fluxo de aposta/corrida (`bobs()`, BANK3) não mudou; `bobs_front()` (BANK2) é a tela.
+`bar_news` virou modo da barra de status (1 = jornal, 2 = Bob's). Teste: `bobsfront_test.tcl` (`-DSKIP_STREET -DCUR_X=20 -DCUR_Y=100`).

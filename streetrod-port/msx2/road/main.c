@@ -670,7 +670,8 @@ static void hub_status(void) {              /* barra branca: dinheiro, data e ca
     n = 0; b[n++] = mon[mo][0]; b[n++] = mon[mo][1]; b[n++] = mon[mo][2]; b[n++] = ' '; n += num_str(b + n, mo ? day - 30 : day + 1);
     b[n++] = ','; b[n++] = ' '; b[n++] = '1'; b[n++] = '9'; b[n++] = '6'; b[n++] = '3'; b[n] = 0; gtext(96, 192, b, 0);
     if (bar_news) {
-        push_fill(132, 201, 76, 10, HC_K); push_fill(133, 202, 74, 8, HC_W); gtext(136, 202, "SELL PARTS", 0);
+        if (bar_news == 1) { push_fill(132, 201, 76, 10, HC_K); push_fill(133, 202, 74, 8, HC_W); gtext(136, 202, "SELL PARTS", 0); }
+        else { push_fill(120, 201, 88, 10, HC_K); push_fill(121, 202, 86, 8, HC_W); gtext(124, 202, "CHALLENGE", 0); }
         push_fill(214, 201, 36, 10, HC_K); push_fill(215, 202, 34, 8, HC_W); gtext(226, 202, "EXIT", 0);
     } else gtext(6, 203, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", 0);
     vdp_wait();
@@ -1400,12 +1401,16 @@ static u8 hot_at(u8 x, u8 y) {
 static void hot_label(u8 h) {
     u8 n = 0;
     cmd_n = 0; cp = cmd_buf;
-    if (lab_mode) { vdp_wait(); cmd_n = 0; cp = cmd_buf; return; }                           /* jornal: as faixas ja dizem o que sao */
+    if (lab_mode == 1) { vdp_wait(); cmd_n = 0; cp = cmd_buf; return; }                       /* jornal: as faixas ja dizem o que sao */
+    if (lab_mode == 2) {                                                                         /* Bob's: o nome na faixa preta sob a lanchonete */
+        hub_restore(0, 124, 256, 16);
+        if (h != 255 && h < 3) { while (hnames[h][n]) n++; gtext(128 - 3 * n, 128, hnames[h], 1); }
+        vdp_wait(); cmd_n = 0; cp = cmd_buf; return;
+    }
     hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
     if (h != 255) {
         while (hnames[h][n]) n++;
-        if (lab_mode) { push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 12, HC_W); push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 1, HC_K); gtext(128 - 3 * n, 180, hnames[h], 0); }
-        else gtext(137 - 3 * n, 37, hnames[h], 0);
+        gtext(137 - 3 * n, 37, hnames[h], 0);
     }
     vdp_wait(); cmd_n = 0; cp = cmd_buf;
 }
@@ -1490,6 +1495,26 @@ static void newspaper(void) {                  /* a primeira pagina do "Los Ange
     lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     load_garage(); band_save();                  /* de volta a garagem: o hub redesenha o carro */
 }
+static const Hot bobs_hot[5] = {{155, 72, 177, 122, 0}, {178, 80, 249, 120, 0}, {4, 80, 72, 120, 0}, {120, 201, 208, 211, 0}, {214, 201, 250, 211, 3}};
+static const char *const bobs_name[4] = {"LOOK FOR OPPONENT", "", "", "EXIT"};
+static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): clique no cara, nos carros ou em CHALLENGE para desafiar; EXIT/ESC volta. 1 = a corrida vai comecar */
+    u8 r;
+    g_group = 197; load_assets();
+    cmd_n = 0; cp = cmd_buf; bar_news = 2; cur_ymax = 210; hub_status();
+    for (;;) {
+        hs = bobs_hot; hn = 5; hnames = bobs_name; lab_mode = 2;
+        r = pick_hot(1);
+        if (r == 254 || r == 3) break;
+        if (bobs()) { lab_mode = 0; bar_news = 0; cur_ymax = 187; return 1; }
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status();
+    }
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+    load_garage(); band_save();
+    return 0;
+}
+#endif
+#ifdef OLD_MENU
+static u8 bobs_front(void) { return bobs(); }
 #endif
 static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const yn[2] = {"YES", "NO"};
@@ -1514,7 +1539,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
             else if (gc[cur].brk) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
             else if (gc[cur].fuel < 3) ui_note("YOU DON'T GOT ENOUGH GAS", "TO CRUISE DOWN TO BOBS");
-            else if (street_trip() && bobs()) return 0;
+            else if (street_trip() && bobs_front()) return 0;
         }
         else { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car();

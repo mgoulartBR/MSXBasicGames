@@ -282,6 +282,8 @@ def main():
                 hl[top:54, 0 if c_ == 0 else 128:128 if c_ == 0 else 256] = 4
                 hl[top:54, 127] = 1                                # filete entre as colunas
             add((hl[:, 0::2] << 4 | hl[:, 1::2]).astype(np.uint8).tobytes(), news.shape[0] * 128, 3, group=191 + k_)
+        bobs = garage_pixels(lib2, 93)                           # Bob's Drive-In (item 93)
+        add((bobs[:, 0::2] << 4 | bobs[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=197)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
