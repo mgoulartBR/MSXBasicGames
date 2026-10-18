@@ -25,7 +25,7 @@ ou apostando o *pink slip*) e tenta virar o **King of the County**. O jogo acaba
 | M1 | **Pronto** — Estado do jogo + hub | Dinheiro, data, carros possuídos; tela da garagem (arte original) com menu: garagem, rua, jornal, Bob's |
 | M2 | **Pronto** — Jornal | Carros usados (25) e catálogo de peças (43) com preços, compra/venda, limites de espaço |
 | M3 | **Pronto** (pintura/adereços → M7, gasolina → M6) — Garagem | Trocar de carro, vender, instalar peças (recalcula o *powertrain* por carro+peças), pintura/adereços, gasolina |
-| M4 | Bob's | Escolha do oponente (22 pilotos), tipos de corrida, apostas, pink slip, aceita/recusa; corrida real |
+| M4 | **Pronto** — Bob's | Escolha do oponente (22 pilotos), tipos de corrida, apostas, pink slip, aceita/recusa; corrida real |
 | M5 | Consequências | Quebra de motor/câmbio/pneus, perda de carro, prêmios, calendário e fim de jogo |
 | M6 | Rua | Cruzeiro até o Bob's com consumo de gasolina, multas |
 | M7 | Acabamento | Telas do `LIB1`/`LIB2`, ranking, música, ajuste da pista de corrida de estrada |
