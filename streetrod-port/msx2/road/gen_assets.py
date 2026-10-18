@@ -83,7 +83,7 @@ def cockpit_pixels(lib2):
 STRIP = 4096
 WIN_Y, SKY_TOP = 24, 22
 VIEW_BOT = int(os.environ.get('VIEW_BOT', '86'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
-STRIP_W = 8
+STRIP_TOL = 1
 GLASS_MODE = os.environ.get('GLASS_MODE', 'dash')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
@@ -109,14 +109,18 @@ def overlay(a):
     else:
         cut = np.full(w, h)
         for x in range(54, w):
-            hit = np.nonzero(np.isin(sub[98 - y0:, x], (4, 5, 7, 15)))[0]
-            if len(hit): cut[x] = 98 - y0 + hit[0]
+            lit = np.isin(sub[96 - y0:, x], (4, 5, 7, 15))
+            thick = lit[:-2] & lit[1:-1] & lit[2:]                  # borda do volante/painel = 3 linhas claras seguidas (ignora tracos finos do capo)
+            hit = np.nonzero(thick)[0]
+            if len(hit): cut[x] = 96 - y0 + hit[0]
         sm = cut.copy()
-        for x in range(54, w):                      # contorno suave (mediana de 21 colunas): ignora as linhas finas do painel
-            win = np.sort(cut[max(54, x - 10):x + 11]); sm[x] = win[len(win) // 2] - 1
-        cuts = sm.copy()
-        for x0 in range(54, w, STRIP_W):            # em faixas de STRIP_W colunas: o painel comeca na linha mais alta da faixa (nunca sobra estrada sobre o painel)
-            cuts[x0:x0 + STRIP_W] = sm[x0:x0 + STRIP_W].min()
+        for x in range(54, w):                      # mediana de 15 colunas: ignora as linhas finas isoladas do painel
+            win = np.sort(cut[max(54, x - 7):x + 8]); sm[x] = win[len(win) // 2] - 1
+        cuts = sm.copy(); x0 = 54
+        while x0 < w:                               # faixas adaptativas: a faixa segue o contorno arredondado com tolerancia de TOL px
+            x1 = x0 + 2; lo = hi = sm[x0]
+            while x1 < w and max(hi, sm[x1]) - min(lo, sm[x1]) <= STRIP_TOL: lo = min(lo, sm[x1]); hi = max(hi, sm[x1]); x1 += 1
+            cuts[x0:x1] = lo; x0 = x1
         for x in range(54, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     return out, cuts
@@ -212,9 +216,12 @@ def main():
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
         orects = overlay_rects(ov[:, :54] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
-            for x0 in range(54, 256, STRIP_W):
-                x1 = min(256, x0 + STRIP_W); c = int(cuts[x0])
-                if c < ov.shape[0]: orects.append([x0, c, x1 - x0, ov.shape[0] - c])
+            x0 = 54
+            while x0 < 256:
+                x1 = x0 + 2
+                while x1 < 256 and cuts[x1] == cuts[x0]: x1 += 1
+                if cuts[x0] < ov.shape[0]: orects.append([x0, int(cuts[x0]), x1 - x0, ov.shape[0] - int(cuts[x0])])
+                x0 = x1
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
