@@ -1244,7 +1244,7 @@ static void wait_click(void) {
 static void full_screen(u8 grp, u8 wait) {      /* tela cheia da LIB1 (paleta EGA) ate um clique */
     u8 rg1 = *(volatile u8 *)0xF3E0;
     clip_l = 0; clip_r = 256; ybase = 0;
-    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_ega; pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)(grp == 252 ? pal_rank : pal_ega); pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
     if (wait) wait_click();
 }
 static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela, na fonte do jogo: nome a esquerda, dinheiro a direita */
@@ -1252,7 +1252,7 @@ static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma lin
     b[0] = '$'; n += num_str(b + 1, score); b[n] = 0;
     cmd_n = 0; cp = cmd_buf;
     if (you) { push_fill(32, y - 1, 134, 10, 15); vdp_wait(); }
-    gtext(36, y, name, you ? 0 : 1); gtext(162 - 6 * n, y, b, you ? 0 : 1);
+    gtext(36, y, name, 0); gtext(162 - 6 * n, y, b, 0);
 }
 static void victory_and_ranking(void) {
     static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "SPEEDY", "BOBBY", "MOUSE", "LEFTY"};

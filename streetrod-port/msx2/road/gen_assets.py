@@ -358,6 +358,11 @@ def main():
         pe = []
         for r, g_, b_ in EGA_PAL: pe += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_ega[32] = {%s};\n' % ','.join(map(str, pe)))
+        RANK_PAL = [(255,255,255),(0,0,0),(170,85,0),(0,170,170),(85,85,255),(255,85,255),(255,170,0),(0,170,170),
+                    (120,120,120),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(255,255,85)]   # muro de grafite: 0 branco, 1 preto, 15 amarelo (destaque)
+        pr = []
+        for r, g_, b_ in RANK_PAL: pr += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
+        f.write('static const uint8_t pal_rank[32] = {%s};\n' % ','.join(map(str, pr)))
         f.write(sprh); f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
