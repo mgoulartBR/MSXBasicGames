@@ -115,6 +115,7 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 #define RACE_LEN 380            /* arrancada: 380 segmentos (como no original) */
 #endif
 #define ROAD_LEN 520            /* corrida de estrada (pista com curvas e ladeiras) */
+#define END_DAY 46                                  /* o calendario do original circula 15 de setembro: o verao acaba ali */
 static u16 race_len = RACE_LEN;
 #ifndef STREET_LEN
 #define STREET_LEN 420
@@ -1264,7 +1265,7 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
         } else money = money > bet ? money - bet : 0;
     }
     if (day < 62) day++;
-    if (day >= 61 && !game_end) game_end = 1;
+    if (day >= END_DAY && !game_end) game_end = 1;
     dbg_money = money; dbg_day = day;
 }
 static void end_screen(void) BK {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
@@ -1465,12 +1466,22 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
 }
 static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; return pick_hot(0); }
 #endif
-static void calendar_note(void) {
-    static char cbuf[28];
-    u8 mo = day >= 31, n = 0, m = 0;
-    put_str(pbuf, &n, mo ? "SEP " : "AUG "); put_num(pbuf, &n, mo ? day - 30 : day + 1); put_str(pbuf, &n, ", 1963"); pbuf[n] = 0;
-    put_num(cbuf, &m, day < 61 ? 61 - day : 0); put_str(cbuf, &m, " DAYS LEFT"); cbuf[m] = 0;
-    ui_note(pbuf, cbuf);
+static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c);
+static const Hot cal_hot[2] = {{0, 0, 255, 189, 0}, {214, 201, 250, 211, 3}};
+static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 item 221) com a data de hoje marcada e o dia final (15/set) circulado na arte; qualquer clique/ESC/EXIT volta */
+    static const u8 colx[7] = {35, 50, 63, 77, 91, 106, 120};
+    u8 mo = day >= 31, dm = mo ? day - 30 : day + 1, first = mo ? 0 : 4, k = first + dm - 1, col = k % 7, row = k / 7;   /* agosto comeca na quinta (coluna 4), setembro no domingo */
+    i16 cx, cy;
+    g_group = 242; load_assets();
+    cx = CAL_X0 + colx[col]; cy = CAL_Y0 + (mo ? 110 : 19) + row * 7 - (mo ? 0 : 0);
+    cmd_n = 0; cp = cmd_buf;
+    cfill(cx - 8, cy - 4, 17, 1, 9); cfill(cx - 8, cy + 6, 17, 1, 9); cfill(cx - 8, cy - 4, 1, 11, 9); cfill(cx + 8, cy - 4, 1, 11, 9);     /* moldura verde em volta de hoje */
+    vdp_wait();
+    bar_news = 2; cur_ymax = 210; hub_status();
+    hs = cal_hot; hn = 2; lab_mode = 1; pick_tick = 0;
+    pick_hot(1);
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+    load_garage(); band_save();
 }
 static void jingle(void) {
     static const u16 nt[8] = {478, 380, 319, 239, 319, 380, 319, 478};
@@ -1598,7 +1609,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         r = scene_pick();
         if (r == 0) cars_screen();
         else if (r == 1) newspaper();
-        else if (r == 2) calendar_note();
+        else if (r == 2) calendar_screen();
         else if (r == 3) jingle();
         else if (r == 7) body_shop();
         else if (r == 4) { if (!nown) ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); else { gcar = &gc[cur]; gas_up(); } }

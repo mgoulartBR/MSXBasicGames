@@ -169,7 +169,7 @@ copiados por `bank_copy` (rotina na página 1) — liberou ~1,7 KB de código. T
 - **Destruição:** perdendo a mais de 90 mph há 6% de chance de perder o carro (sucata = 10% do preço): "LUCKY YOU WEREN'T KILLED!".
 - **Garagem:** no menu do carro, **FIX OR JUNK IT** ("DAMN. IT'LL COST $x": preço das peças quebradas; consertar zera o desgaste do motor/pneus; sucatear paga a sucata) e
   **GAS UP** (3 galões por dólar). CAR INFO mostra combustível, desgaste dos pneus e o que está quebrado.
-- **Fim de jogo:** acabou o verão (dia 61 = 1º de outubro) → "YOU'RE DONE FER THE SUMMER!"; venceu The King numa corrida real → "YOU DESERVE TO BE KING OF THE COUNTY!";
+- **Fim de jogo:** acabou o verão (dia 46 = 15 de setembro, circulado no calendário) → "YOU'RE DONE FER THE SUMMER!"; venceu The King numa corrida real → "YOU DESERVE TO BE KING OF THE COUNTY!";
   sem carro, sem peças e com menos de $300 → "YOU'RE OUTTA DOUGH.". Mostra o resumo (dinheiro, carros, vitórias) e volta ao título.
 - Testes: `cons_test.tcl` (`-DTEST_BRK=1`: quebra de motor forçada, Bob's recusa, FIX IT), fim do verão com `-DSTART_DAY=59 -DTEST_BRK=0`.
 Os números (percentuais, custos) são regras minhas inspiradas nas mensagens do original; a tabela de pneus é a do jogo.
@@ -296,3 +296,9 @@ teve os dois carros pintados apagados na geração (copiando faixas limpas da pa
 Os carros pintados (verde e vermelho) e o cara encostado **são cenário** (voltaram; só o oponente entra/sai). As **cabeças dos pilotos** são os retratos da LIB2 (itens 194-199 e 202-217 = 22 retratos, um por piloto, grupos 220+piloto):
 `car_blit` desenha o retrato por baixo do corpo, então ele aparece só pela janela (como no original). Posição: atrás do meio do carro (`head_x/head_y`), clicável ±14×12 px. O carro estaciona com as rodas em y=157 (`car_floor`);
 a etiqueta da barra de status mostra "NOME - CLICK TO CHALLENGE". Obs.: o rascunho do retrato reutiliza `STK_Y0` (adesivos não são usados no Bob's).
+
+## Calendário (M7, parte 8)
+Clicar no calendário da parede abre a **página AGO/SET** da LIB2 (item 221, 135x150, grupo 242, centralizada numa tela preta) com **a data de hoje marcada por uma moldura verde** (agosto de 1963 começa numa quinta, setembro num domingo);
+o **15 de setembro já vem circulado na arte** — por isso o fim do verão passou a ser **15/set** (`END_DAY` = 46: "YOU'RE DONE FER THE SUMMER" quando chega o dia 46), em vez de 1º/out como eu tinha suposto.
+Qualquer clique, ESC ou o botão **EXIT** da barra de status voltam à garagem. Item 219 (JUN/JUL) existe na LIB2 mas não é usado. Teste: `cal_test.tcl` (`-DSTART_DAY=n -DCUR_X=245 -DCUR_Y=60`).
+`garage_pixels` agora aceita itens com largura diferente de 320.

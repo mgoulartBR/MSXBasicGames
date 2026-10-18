@@ -158,6 +158,7 @@ def overlay_rects(ov, band=2, gap=4):
 
 LIGHT_Y = 940
 NEWS_BODY_TOP = [(16, 30), (30, 30), (16, 16), (30, 30), (30, 30)]   # linha (na faixa de 54) onde comeca o corpo do texto de cada coluna, por manchete
+CAL_X0 = 60; CAL_Y0 = 20
 HEAD_ITEMS = [194, 195, 196, 197, 198, 199] + list(range(202, 218))
 def bob_raw(lib2, k):
     import srlib
@@ -175,7 +176,7 @@ def garage_pixels(lib2, k=32):
     p = np.frombuffer(it.decode(), np.uint8).reshape(4, it.h, (it.w + 7) // 8)
     b = np.unpackbits(p, axis=2)[:, :, :it.w]
     idx = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
-    return idx[:, [x for x in range(320) if x % 5 != 4]]
+    return idx[:, [x for x in range(it.w) if x % 5 != 4]]
 
 def light_sheet(lib2):
     """Semaforo (item 13: duas cabecas de 24x32, lampada vermelha na da direita, verde na da esquerda) em 3 estados: apagado, vermelho, verde."""
@@ -295,6 +296,9 @@ def main():
         headart = [bob_raw(lib2, k_) for k_ in HEAD_ITEMS]        # retratos dos pilotos (LIB2 itens 194-199, 202-217): aparecem na janela do carro (grupos 220+piloto, rascunho STK_Y0)
         for p_, h_ in enumerate(headart): add(packrows(h_, h_.shape[1]), STK_Y0 * 128, 1, group=220 + p_)
         headh = 'static const uint8_t head_w[%d] = {%s};\nstatic const uint8_t head_h[%d] = {%s};\n' % (len(headart), ','.join(str(h_.shape[1]) for h_ in headart), len(headart), ','.join(str(h_.shape[0]) for h_ in headart))
+        cal = garage_pixels(lib2, 221)                           # calendario AGO/SET (item 221, 135x150) no centro de uma tela preta (grupo 242)
+        calscr = np.zeros((190, 256), np.uint8); calscr[CAL_Y0:CAL_Y0 + cal.shape[0], CAL_X0:CAL_X0 + cal.shape[1]] = cal
+        add((calscr[:, 0::2] << 4 | calscr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=242)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -333,7 +337,7 @@ def main():
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
-        f.write(sprh); f.write(carh); f.write(headh)
+        f.write(sprh); f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
