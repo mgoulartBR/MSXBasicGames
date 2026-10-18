@@ -76,7 +76,7 @@ try:
     hd = open(hot, 'rb').read()
     b0 = hd[:SIZES[0]]; b1 = hd[SIZES[0]:SIZES[0] + SIZES[1]]; pool = hd[sum(SIZES[:6]):sum(SIZES[:7])]
     M = Model(exe)
-    model_tabs = [('pm_ratio', M.t_ratio), ('pm_accel', M.t_accel), ('pm_rpm', M.t_rpm), ('pm_combo', M.t_combo), ('pm_eng', M.t_eng), ('pm_trans', M.t_trans), ('pm_redline', M.t_redline), ('pm_gears', M.t_gears), ('pm_body', M.t_body)]
+    model_tabs = [('pm_ratio', M.t_ratio), ('pm_accel', M.t_accel), ('pm_rpm', M.t_rpm), ('pm_combo', M.t_combo), ('pm_eng', M.t_eng), ('pm_trans', M.t_trans), ('pm_redline', M.t_redline), ('pm_gears', M.t_gears), ('pm_body', M.t_body), ('pm_wtire', M.t_wear_tire)]
     carperf, carflags = [], []
     for cid in range(NCARS):
         price, perf, idx, flags, noff = struct.unpack('<HBBHH', b1[10 * cid:10 * cid + 8])
@@ -105,7 +105,7 @@ try:
 except Exception as e:                       # sem os arquivos do jogo: curvas genericas
     sys.stderr.write('powertrain padrao (%s)\n' % e)
     pts = [default_pt(4, 5200 - 100 * (i % 5)) for i in range(NCARS)]
-    model_tabs = [('pm_ratio', [0,100,60,40,30]*4), ('pm_accel', [50,40,30,20,10]*3), ('pm_rpm', [2900,5200]*3), ('pm_combo', [0]*15), ('pm_eng', [0,5,10]), ('pm_trans', [0,0,5,10]), ('pm_redline', [5200,5300,5400]), ('pm_gears', [3,3,4,4]), ('pm_body', list(range(9)))]
+    model_tabs = [('pm_ratio', [0,100,60,40,30]*4), ('pm_accel', [50,40,30,20,10]*3), ('pm_rpm', [2900,5200]*3), ('pm_combo', [0]*15), ('pm_eng', [0,5,10]), ('pm_trans', [0,0,5,10]), ('pm_redline', [5200,5300,5400]), ('pm_gears', [3,3,4,4]), ('pm_body', list(range(9))), ('pm_wtire', [2,5,8,11,14]*3)]
     carperf = [i % 9 for i in range(NCARS)]; carflags = [0x0141] * NCARS
     names = ['DEFAULT CAR %d' % i for i in range(NCARS)]; prices = [500 + 100 * i for i in range(NCARS)]
     parts = [('PART %d' % i, 20 + 5 * i, i % 5, 7, 0) for i in range(43)]

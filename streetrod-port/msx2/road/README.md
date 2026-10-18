@@ -161,3 +161,15 @@ Detalhes: a pista (`curve_ram`/`hill_ram`, lidos por `proj.s`) é escolhida na l
 copiados por `bank_copy` (rotina na página 1) — liberou ~1,7 KB de código. Testes: `loop_test.tcl` (LAPS=n), `bobs_test.tcl`, `pink_test.tcl`
 (`-DSTART_CAR=17 -DSTART_MONEY=500 -DSTART_WINS=20 -DTEST_ACCEPT [-DTEST_LOSE]`). A decisão de aceitar apostas é uma regra simples minha; as tabelas do bloco
 9/10/11 do HOT_DATA ainda não foram decifradas.
+
+## Consequências e fim de jogo (marco M5)
+- **Desgaste por corrida:** motor `+100 + 30·(ticks acima da rotação de corte)`, pneus `+6` (`+10` na estrada), gasolina `-3` galões (tanque de 20; Bob's exige 3).
+- **Quebras** (a corrida vira derrota, a aposta se perde): motor `2% + 6%·ticks acima da rotação + desgaste/500`, câmbio `1% + 12%·trocas com o motor passado`, pneus pela
+  tabela do jogo (`pm_wtire`, 5 níveis de desgaste por tipo de pneu). Carro quebrado não corre ("YOUR CAR'S NOT RUNNING, SPEEDY!").
+- **Destruição:** perdendo a mais de 90 mph há 6% de chance de perder o carro (sucata = 10% do preço): "LUCKY YOU WEREN'T KILLED!".
+- **Garagem:** no menu do carro, **FIX OR JUNK IT** ("DAMN. IT'LL COST $x": preço das peças quebradas; consertar zera o desgaste do motor/pneus; sucatear paga a sucata) e
+  **GAS UP** (3 galões por dólar). CAR INFO mostra combustível, desgaste dos pneus e o que está quebrado.
+- **Fim de jogo:** acabou o verão (dia 61 = 1º de outubro) → "YOU'RE DONE FER THE SUMMER!"; venceu The King numa corrida real → "YOU DESERVE TO BE KING OF THE COUNTY!";
+  sem carro, sem peças e com menos de $300 → "YOU'RE OUTTA DOUGH.". Mostra o resumo (dinheiro, carros, vitórias) e volta ao título.
+- Testes: `cons_test.tcl` (`-DTEST_BRK=1`: quebra de motor forçada, Bob's recusa, FIX IT), fim do verão com `-DSTART_DAY=59 -DTEST_BRK=0`.
+Os números (percentuais, custos) são regras minhas inspiradas nas mensagens do original; a tabela de pneus é a do jogo.
