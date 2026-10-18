@@ -1355,14 +1355,22 @@ static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV
     vc_w(4, xa); vc_w(6, y); vc_w(8, xb - xa); vc_w(10, h); vc[12] = HC_K; vc[13] = 0; vc[14] = 0x80;
     vdp_cmd15();
 }
+static u8 fr_n; static i16 fr_x[2] = {0, 24}, fr_w[2] = {12, 30};      /* objetos do cenario NA FRENTE do carro (bombas do posto): retangulos restaurados da copia limpa (pagina 2) por cima dele */
+#define FR_Y 92
+#define FR_H 82
 static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pagina); rodas por baixo, corpo por cima */
     i16 yt = base + car_yt(id), wy = yt + CWY(id) - (WH_H >> 1), fl = base + car_floor, x1 = xl + car_w[id];
+    u8 i;
     cshadow(xl + 6, fl - 5, x1 - 6, 2); cshadow(xl + 2, fl - 3, x1 - 2, 3); cshadow(xl + 14, fl, x1 - 14, 2);     /* sombra elíptica sob o carro */
     clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
     if (chead != 255) clmmm(0, STK_Y0, head_x(id, xl), head_y(id) - car_yt(id) + yt, head_w[chead], head_h[chead]);      /* o retrato do piloto aparece pela janela (o corpo vem por cima) */
     clmmm(0, CAR_Y0, xl, yt, car_w[id], CH(id));
     if (cstk) clmmm(0, STK_Y0, xl + ((car_wx0[id] + car_wx1[id] - stk_w[cstk - 1]) >> 1) + 4, yt + (CH(id) * 3) / 5 - (stk_h[cstk - 1] >> 1), stk_w[cstk - 1], stk_h[cstk - 1]);
+    for (i = 0; i < fr_n; i++) {                                         /* o carro passa ENTRE a bomba e a construcao: a bomba volta por cima */
+        vc_w(0, fr_x[i]); vc_w(2, 512 + FR_Y); vc_w(4, fr_x[i]); vc_w(6, base + FR_Y); vc_w(8, fr_w[i]); vc_w(10, FR_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+        vdp_cmd15();
+    }
 }
 static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (8 px por quadro), desenhando na pagina oculta e trocando a pagina */
     i16 x = x0, d = x1 > x0 ? 8 : -8; u8 pg = 1; u16 j;
@@ -1492,7 +1500,7 @@ static void gas_station(void) {                /* o posto Gus' Gas (LIB2 item 90
     if (!nown) { ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); return; }
     id = gc[cur].id; cvar = gc[cur].roof | (gc[cur].bump << 1); cstk = gc[cur].stick; chead = 255;
     g_group = 243; load_assets();
-    bar_news = 2; cur_ymax = 210; car_floor = 162;
+    bar_news = 2; cur_ymax = 210; car_floor = 162; fr_n = 2;
     cmd_n = 0; cp = cmd_buf; hub_status(); band_save();
     car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
     xl = 256 - car_w[id] - 2; if (xl > 50) xl = 50;
@@ -1510,7 +1518,7 @@ static void gas_station(void) {                /* o posto Gus' Gas (LIB2 item 90
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status(); car_blit(0, id, xl); vdp_wait();
     }
     car_slide(id, xl, 256);                                                   /* sai para a frente */
-    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; car_floor = CAR_FLOOR;
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; car_floor = CAR_FLOOR; fr_n = 0;
     load_garage(); band_save();
 }
 static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c);

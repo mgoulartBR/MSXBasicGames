@@ -308,3 +308,6 @@ Clicar no **galão verde** (WANNA TANK?) leva ao **posto Gus' Gas** (LIB2 item 9
 (ou em qualquer lugar da bomba/frente do posto à esquerda) para abrir **GUS' GAS**: **FILL IT UP $x** (completa o tanque de 20 galões), **5 GALLONS $y** ou **NO THANKS**; preço = 1 dólar por 3 galões, como antes.
 Depois de abastecer (ou EXIT/ESC) o carro **sai para a frente** e você volta à garagem. "GAS UP" no menu do carro continua existindo. Teste: `gas_test.tcl` (`-DCUR_X=240 -DCUR_Y=174 -DGAS_CUR_X=36 -DGAS_CUR_Y=130`).
 Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 KB — o próximo recurso precisa mover código para o BANK3 antes.
+
+### Posto: o carro passa entre a bomba e a construção
+`car_blit` ganhou "objetos na frente" (`fr_n`, `fr_x/fr_w`, `FR_Y/FR_H`): depois de desenhar o carro, os retângulos das **duas bombas** (x 0-12 e 24-54, y 92-174) são restaurados da cópia limpa (página 2) por cima dele, então o carro entra, para e sai passando **atrás das bombas e na frente da construção**. Só o posto liga `fr_n`.
