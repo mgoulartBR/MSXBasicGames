@@ -15,7 +15,7 @@
 #define KERB_MERGE 1    /* 1 = zebra desenhada como um retangulo largo sob a pista */
 #endif
 #ifndef VIEW_BOT
-#define VIEW_BOT 88     /* altura da janela da estrada */
+#define VIEW_BOT 104     /* altura da janela da estrada */
 #endif
 #ifndef N_ROWS
 #define N_ROWS 15       /* linhas projetadas (original: 14 distantes + proximas) */
@@ -317,13 +317,14 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
 
 /* instrumentos do cockpit: ponteiros (LINE) sobre o fundo restaurado da pagina 2 (HMMM); so redesenha quando o valor muda
    (cache por pagina, pois ha 2 paginas alternadas) */
+#define GEAR_SHEET_Y 1000        /* digitos 0-9 pre-desenhados na pagina 3 */
 #define HUD_GEAR_X 133
 #define HUD_GEAR_Y 115
 static void gauge(i16 cx, i16 cy, i16 tx, i16 ty) {
     i16 dx = tx, dy = ty, ax = tx < 0 ? -tx : tx, ay = ty < 0 ? -ty : ty;
     u8 maj = ay > ax;
-    vc_w(0, cx - 20); vc_w(2, 512 + cy - 20); vc_w(4, cx - 20); vc_w(6, ybase + cy - 20);   /* fundo limpo (pagina 2) */
-    vc_w(8, 40); vc_w(10, 40); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vc_w(0, (cx - 16) & ~1); vc_w(2, 512 + cy - 16); vc_w(4, (cx - 16) & ~1); vc_w(6, ybase + cy - 16);   /* fundo limpo (pagina 2) */
+    vc_w(8, 34); vc_w(10, 32); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
     vdp_cmd15();
     vc_w(4, cx); vc_w(6, ybase + cy);                                                        /* ponteiro (2 pixels de espessura) */
     vc_w(8, maj ? ay : ax); vc_w(10, maj ? ax : ay); vc[12] = 6;
@@ -339,7 +340,10 @@ static void draw_hud_page(void) {
     if (rp > NEEDLE_RPM_N - 1) rp = NEEDLE_RPM_N - 1;
     if (hud_c[pg][0] != sp) { hud_c[pg][0] = sp; gauge(GAUGE_SPD_X, GAUGE_SPD_Y, needle_spd[sp * 2], needle_spd[sp * 2 + 1]); }
     if (hud_c[pg][1] != rp) { hud_c[pg][1] = rp; gauge(GAUGE_RPM_X, GAUGE_RPM_Y, needle_rpm[rp * 2], needle_rpm[rp * 2 + 1]); }
-    if (hud_c[pg][2] != g) { hud_c[pg][2] = g; draw_digit(HUD_GEAR_X, HUD_GEAR_Y, (u8)g, 13); }
+    (void)pg;
+    vc_w(0, g * 8); vc_w(2, GEAR_SHEET_Y); vc_w(4, HUD_GEAR_X); vc_w(6, ybase + HUD_GEAR_Y);   /* o overlay apaga o mostrador pequeno: recopia a marcha todo quadro */
+    vc_w(8, 8); vc_w(10, 12); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
 }
 
 #ifdef DEBUG_HUD
@@ -385,6 +389,9 @@ static void init_static(void) {
         vdp_wait();
     }
     load_cockpit();
+    ybase = GEAR_SHEET_Y; cmd_n = 0; cp = cmd_buf;
+    for (pg = 0; pg < 10; pg++) draw_digit(pg * 8, 0, pg, 13);
+    vdp_wait();
     hud_reset();
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
@@ -459,7 +466,7 @@ static void new_race(void) {
 void main(void) {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0;
-    u16 base;
+    u16 base; u8 k;
     dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 #ifdef DRY
@@ -532,17 +539,30 @@ void main(void) {
         draw_opp();
         if (state == 0) draw_lights();
 #if HAVE_COCKPIT
-        /* cockpit por cima da estrada (LMMM com TIMP): so as duas regioes onde ha moldura (coluna esquerda e painel) */
-        vc_w(0, 0); vc_w(2, OV_SY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP);
-        vc_w(8, OV_AW); vc_w(10, VIEW_BOT - SKY_TOP); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
+#ifndef NO_OV
+        /* cockpit por cima da estrada. (1) coluna esquerda: HMMM de retangulos justos da copia limpa (pagina 2);
+           (2) faixa do volante/capo: LMMM com TIMP da folha de overlay; (3) o resto do painel, todo opaco: um HMMM */
+        for (k = 0; k < OV_N; k++) {
+            i16 ox = ov_x[k] << 1, oy = ov_y[k];
+            vc_w(0, ox); vc_w(2, 512 + WIN_Y + SKY_TOP + oy); vc_w(4, ox); vc_w(6, ybase + SKY_TOP + oy);
+            vc_w(8, ov_w[k] << 1); vc_w(10, ov_h[k]); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+            vdp_cmd15();
+        }
+        vc_w(0, 0); vc_w(2, OV_SY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP + OV_BY);
+        vc_w(8, 256); vc_w(10, OV_CY - OV_BY); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
         vdp_cmd15();
-        vc_w(0, OV_AW); vc_w(2, OV_SY + OV_BY); vc_w(4, OV_AW); vc_w(6, ybase + SKY_TOP + OV_BY);
-        vc_w(8, 256 - OV_AW); vc_w(10, VIEW_BOT - SKY_TOP - OV_BY);
-        vdp_cmd15();
+        if (VIEW_BOT - SKY_TOP > OV_CY) {
+            vc_w(0, 0); vc_w(2, 512 + WIN_Y + SKY_TOP + OV_CY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP + OV_CY);
+            vc_w(8, 256); vc_w(10, VIEW_BOT - SKY_TOP - OV_CY); vc[14] = 0xD0;
+            vdp_cmd15();
+        }
+#endif
 #endif
         ybase = base;
         clip_l = 0; clip_r = 256;
+#ifndef NO_HUD
         draw_hud_page();
+#endif
         clip_l = VIEW_X0; clip_r = VIEW_X1;
         dbg_cmds = cmd_n; dbg_speed = speed; dbg_pos = pos;
         vdp_wait();

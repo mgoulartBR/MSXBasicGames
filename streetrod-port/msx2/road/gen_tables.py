@@ -3,10 +3,10 @@
 Modelo de projeção baseado em SRSE.EXE (img 0x27BBF/0x27C01): x = cx + ((off - P)*k)/z, y = HZ + (camH - h)*k/z."""
 import math, os
 
-HZ = 30                  # linha do horizonte na janela da estrada
-WIDE = 1.5               # fator visual de largura da pista (so desenho; a fisica continua com HALF_ROAD)
+HZ = 22                  # linha do horizonte na janela da estrada
+WIDE = 2.1               # fator visual de largura da pista (so desenho; a fisica continua com HALF_ROAD)
 HALF_ROAD = 900          # metade da largura da pista (unidades do jogo original: 0x5DC..0xCE4 / 2)
-CAM_K = 1320             # constante vertical: y = HZ + CAM_K/z
+CAM_K = 1866             # constante vertical: y = HZ + CAM_K/z
 ZMAX = 128
 
 def recip(z): return min(65535, round(8192 / z)) if z else 0
