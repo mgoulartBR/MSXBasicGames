@@ -1466,6 +1466,9 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
 }
 static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; return pick_hot(0); }
 #endif
+#ifdef OLD_MENU
+static void calendar_screen(void) {}
+#else
 static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c);
 static const Hot cal_hot[2] = {{0, 0, 255, 189, 0}, {214, 201, 250, 211, 3}};
 static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 item 221) com a data de hoje marcada e o dia final (15/set) circulado na arte; qualquer clique/ESC/EXIT volta */
@@ -1483,6 +1486,7 @@ static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 ite
     lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     load_garage(); band_save();
 }
+#endif
 static void jingle(void) {
     static const u16 nt[8] = {478, 380, 319, 239, 319, 380, 319, 478};
     u8 i;
