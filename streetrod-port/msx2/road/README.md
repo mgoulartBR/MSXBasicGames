@@ -98,7 +98,7 @@ Primeira versão em C puro: **3,4 fps** (janela 256x112).
   para a paleta MSX2 (`palette_def.py`) e comprime em faixas de 4 KB (LZ4-like, decodificador Z80 de ~60 bytes em `vdpasm.s`). Também gera o carro
   visto por trás (item 248, fundo transparente por flood-fill) em 9 tamanhos, os ponteiros dos mostradores e `assets.h`.
 - Na carga a tela é apagada e as faixas vão para a VRAM: cockpit nas páginas 0 e 1 (as duas telas) e uma cópia limpa na página 2; sprites na página 3.
-- A estrada é desenhada só no para-brisa (x 64..256, 80 linhas a partir de y=22). Tacômetro e velocímetro: a cada mudança, `HMMM` restaura o fundo
+- A estrada é desenhada só no vidro (x 0..256, y 46..94: termina na linha do capô, com as linhas ciano e o painel sempre intactos). A moldura da esquerda (porta/coluna A) é recopiada por cima em ~14 retângulos HMMM. Tacômetro e velocímetro: a cada mudança, `HMMM` restaura o fundo
   limpo (página 2) e `LINE` desenha o ponteiro; o oponente é um `LMMM` com TIMP (cor 0 transparente) da folha de sprites.
 - A ROM de 32 KB usa ENASLT no início para mapear o cartucho também na página 2 da CPU.
 - `./shot.sh "<flags>" "t1 t2" prefixo` salva capturas de tela (VRAM→PNG) no openMSX.

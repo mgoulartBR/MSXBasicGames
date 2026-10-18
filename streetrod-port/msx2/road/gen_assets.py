@@ -81,7 +81,8 @@ def cockpit_pixels(lib2):
     return np.array(MAP, np.uint8)[idx]
 
 STRIP = 4096
-WIN_Y, SKY_TOP, VIEW_BOT = 24, 22, 104     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
+WIN_Y, SKY_TOP, VIEW_BOT = 24, 22, 70
+GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
 SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
@@ -99,17 +100,9 @@ def overlay(a):
         if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
             glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
     glass[108 - y0:, :54] = False             # abaixo da janela lateral o preto e a porta (opaco)
-    for x in range(54, w):                      # capo/painel: o vidro termina na linha clara do topo do painel (nao some por baixo dela)
-        col = sub[98 - y0:, x]
-        hit = np.nonzero(np.isin(col, (4, 5, 7, 15)))[0]
-        if len(hit): glass[98 - y0 + hit[0]:, x] = False
+    glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
-    # regioes com moldura: coluna esquerda (x < aw) e, a partir da linha by, o painel em toda a largura
-    opaque = out != 0
-    by = next(r for r in range(h) if opaque[r, 60:].sum() > 8)
-    aw = int(np.nonzero(opaque[:by].any(axis=0) & (np.arange(w) < 120))[0].max()) + 2
-    cy = next(r for r in range(h - 1, -1, -1) if not opaque[r].all()) + 1       # a partir daqui tudo e opaco
-    return out, by, (aw + 1) & ~1, cy
+    return out
 
 def overlay_rects(ov, band=2, gap=4):
     """Retangulos (x, y, w, h) que cobrem os pixels opacos do overlay, em faixas de `band` linhas (x e w pares, para HMMM)."""
@@ -194,15 +187,13 @@ def main():
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             ents.append((len(blob), vaddr + s, len(chunk) // 256, copies)); blob.extend(enc)
-    sprh = ''; OV_AW = OV_BY = OV_CY = 0; orects = []
+    sprh = ''; orects = []
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
-        ov, OV_BY, OV_AW, OV_CY = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
+        ov = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
-        orects = overlay_rects(ov[:OV_BY], band=8, gap=4)          # coluna esquerda: retangulos HMMM tight
-        wsheet = ov[OV_BY:OV_CY]
-        add((wsheet[:, 0::2] << 4 | wsheet[:, 1::2]).astype(np.uint8).tobytes(), OV_SY * 128, 1)   # faixa do volante: TIMP
+        orects = overlay_rects(ov, band=8, gap=4)          # moldura da esquerda (porta/coluna A): retangulos HMMM justos
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -242,7 +233,7 @@ def main():
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
         f.write('static const uint8_t ov_w[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[2] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_h[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[3]) for r in orects) or '0'))
-        f.write('#define WIN_Y %d\n#define SKY_TOP %d\n#define OV_SY %d\n#define OV_AW %d\n#define OV_BY %d\n#define OV_CY %d\n' % (WIN_Y, SKY_TOP, OV_SY, OV_AW, OV_BY, OV_CY))
+        f.write('#define WIN_Y %d\n#define SKY_TOP %d\n' % (WIN_Y, SKY_TOP))
         f.write('/* ponteiros dos mostradores do cockpit: (dx,dy) da ponta em relacao ao eixo; tacometro: indice = rpm/50, velocimetro: indice = mph */\n')
         f.write('#define GAUGE_RPM_X 117\n#define GAUGE_RPM_Y 142\n#define GAUGE_SPD_X 157\n#define GAUGE_SPD_Y 142\n')
         f.write('#define NEEDLE_RPM_N 108\n#define NEEDLE_SPD_N 144\n')

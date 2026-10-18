@@ -16,7 +16,7 @@
 #define KERB_MERGE 1    /* 1 = zebra desenhada como um retangulo largo sob a pista */
 #endif
 #ifndef VIEW_BOT
-#define VIEW_BOT 104     /* altura da janela da estrada */
+#define VIEW_BOT 70     /* altura da janela da estrada */
 #endif
 #ifndef N_ROWS
 #define N_ROWS 15       /* linhas projetadas (original: 14 distantes + proximas) */
@@ -658,20 +658,12 @@ void main(void) {
         draw_lights(state == 0 || (state == 1 && (u16)(JIFFY - start_j) < 2 * jhz));
 #if HAVE_COCKPIT
 #ifndef NO_OV
-        /* cockpit por cima da estrada. (1) coluna esquerda: HMMM de retangulos justos da copia limpa (pagina 2);
-           (2) faixa do volante/capo: LMMM com TIMP da folha de overlay; (3) o resto do painel, todo opaco: um HMMM */
+        /* moldura da esquerda (porta/coluna A) por cima da estrada: HMMM de retangulos justos da copia limpa (pagina 2).
+           A estrada nao desce alem do para-brisa (VIEW_BOT), entao o painel/capo nunca e sobrescrito. */
         for (k = 0; k < OV_N; k++) {
             i16 ox = ov_x[k] << 1, oy = ov_y[k];
             vc_w(0, ox); vc_w(2, 512 + WIN_Y + SKY_TOP + oy); vc_w(4, ox); vc_w(6, ybase + SKY_TOP + oy);
             vc_w(8, ov_w[k] << 1); vc_w(10, ov_h[k]); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
-            vdp_cmd15();
-        }
-        vc_w(0, 0); vc_w(2, OV_SY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP + OV_BY);
-        vc_w(8, 256); vc_w(10, OV_CY - OV_BY); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
-        vdp_cmd15();
-        if (VIEW_BOT - SKY_TOP > OV_CY) {
-            vc_w(0, 0); vc_w(2, 512 + WIN_Y + SKY_TOP + OV_CY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP + OV_CY);
-            vc_w(8, 256); vc_w(10, VIEW_BOT - SKY_TOP - OV_CY); vc[14] = 0xD0;
             vdp_cmd15();
         }
 #endif
