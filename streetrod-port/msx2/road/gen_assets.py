@@ -157,6 +157,7 @@ def overlay_rects(ov, band=2, gap=4):
     return rects
 
 LIGHT_Y = 940
+NEWS_BODY_TOP = [(16, 30), (30, 30), (16, 16), (30, 30), (30, 30)]   # linha (na faixa de 54) onde comeca o corpo do texto de cada coluna, por manchete
 CAR_Y0 = 852; WHEEL_Y0 = 920; STK_Y0 = 948; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
 EGA_PAL = [(0,0,0),(0,0,0),(85,85,85),(170,170,170),(255,255,255),(170,170,170),(0,0,0),(85,255,255),
            (0,170,170),(0,170,0),(170,0,0),(255,85,85),(170,0,170),(85,255,85),(170,85,0),(255,255,85)]
@@ -273,9 +274,14 @@ def main():
             len(carart), ','.join(str(c['wx'][0]) for c in carart),
             len(carart), ','.join(str(c['wx'][1]) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][1]),
             ','.join(str(st.shape[1]) for st in stkart), ','.join(str(st.shape[0]) for st in stkart))
-        news = garage_pixels(lib2, 21)                           # jornal "Los Angeles News" (item 21: AUTO PARTS / USED CARS / titulo), sobre fundo preto ate a linha 190
-        news = np.vstack([news, np.zeros((190 - news.shape[0], news.shape[1]), np.uint8)])
+        news = garage_pixels(lib2, 21)                           # jornal "Los Angeles News" (item 21: AUTO PARTS / USED CARS / titulo) + manchete do dia (itens 22-26)
         add((news[:, 0::2] << 4 | news[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=190)
+        for k_ in range(5):
+            hl = garage_pixels(lib2, 22 + k_).copy()
+            for c_, top in enumerate(NEWS_BODY_TOP[k_]):          # apaga o "texto" ilegivel (rabiscos) de cada coluna; o codigo reescreve com a fonte da garagem
+                hl[top:54, 0 if c_ == 0 else 128:128 if c_ == 0 else 256] = 4
+                hl[top:54, 127] = 1                                # filete entre as colunas
+            add((hl[:, 0::2] << 4 | hl[:, 1::2]).astype(np.uint8).tobytes(), news.shape[0] * 128, 3, group=191 + k_)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

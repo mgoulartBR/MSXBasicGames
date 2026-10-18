@@ -1348,7 +1348,8 @@ static u8 hot_at(u8 x, u8 y) {
 static void hot_label(u8 h) {
     u8 n = 0;
     cmd_n = 0; cp = cmd_buf;
-    if (lab_mode) hub_restore(0, 176, 256, 14); else hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
+    if (lab_mode) { vdp_wait(); cmd_n = 0; cp = cmd_buf; return; }                           /* jornal: as faixas ja dizem o que sao */
+    hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
     if (h != 255) {
         while (hnames[h][n]) n++;
         if (lab_mode) { push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 12, HC_W); push_fill(128 - 3 * n - 4, 177, 6 * n + 8, 1, HC_K); gtext(128 - 3 * n, 180, hnames[h], 0); }
@@ -1413,9 +1414,22 @@ static void jingle(void) {
 #ifndef OLD_MENU
 static const Hot news_hot[3] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}};
 static const char *const news_name[3] = {"AUTO PARTS", "USED CARS", "SELL SPARE PARTS"};
+static const u8 news_top[5][2] = {{16, 30}, {30, 30}, {16, 16}, {30, 30}, {30, 30}};
+static const char *const news_body[5][2][4] = {
+    {{"Koufax fans eleven,", "LA beats Cincinnati", "before 50,000 fans.", "Final score: 5 to 2."}, {"Waves flatten beach", "houses. No injuries."}},
+    {{"Teen dies in crash.", "Police warn racers."}, {"Radar patrols on", "all main roads."}},
+    {{"Detroit says small", "imports will never", "sell in America.", "Quote of the day."}, {"Dealers shrug off", "the new Toyota:", "'just a toy.'", "Sales stay flat."}},
+    {{"Lawrence of Arabia", "leads with ten."}, {"Test rocket lost at", "Cape Canaveral."}},
+    {{"Advisers only, says", "the White House."}, {"Congress wants more", "answers on the war."}}};
 static void newspaper(void) {                  /* a primeira pagina do "Los Angeles News" (LIB2 item 21): clique em AUTO PARTS / USED CARS; o titulo vende pecas avulsas */
     u8 r;
-    g_group = 190; load_assets();
+    u8 k, c, l;
+    g_group = 190; load_assets(); g_group = 191 + day % 5; load_assets();
+    ybase = 512; k = day % 5;                                    /* texto legivel (fonte da garagem) no lugar dos rabiscos, desenhado na copia (pagina 2) e copiado para a tela */
+    for (c = 0; c < 2; c++)
+        for (l = 0; l < 4 && news_body[k][c][l]; l++)
+            if (news_top[k][c] + 2 + 9 * l + 8 <= 53) gtext(c ? 134 : 6, 136 + news_top[k][c] + 2 + 9 * l, news_body[k][c][l], 0);
+    ybase = 0; hub_restore(0, 0, 256, 190);
     cmd_n = 0; cp = cmd_buf; hub_status();
     for (;;) {
         hs = news_hot; hn = 3; hnames = news_name; lab_mode = 1;

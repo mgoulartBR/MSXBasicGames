@@ -253,3 +253,9 @@ A faixa inferior (manchete do dia, itens 22-26) foi retirada: o texto dela é pr
 ### Animação do carro sem piscar a barra de status
 A animação alterna as páginas 0 e 1; a barra de status só existia na página 0 e "piscava" a cada quadro. `hub_status` agora desenha a barra nas **duas** páginas, e o hub a chama **antes** de `draw_car`.
 `cshadow` também recorta a sombra fora da tela (carro entrando/saindo).
+
+### Jornal: texto legível (revisão)
+Voltou o layout do original (página 21 + manchete do dia 22-26 embaixo, sem o fundo preto) e **sem etiqueta repetida** no pé (as faixas já dizem o que são). Os "rabiscos" ilegíveis do corpo de cada coluna
+(microtexto pré-renderizado na arte) são apagados na geração (`NEWS_BODY_TOP` em `gen_assets.py`; filete entre as colunas) e o jogo escreve um texto curto **legível com a fonte da garagem**
+(`news_body[]`, 2-4 linhas de até 20 letras, desenhado na cópia da página 2 e copiado para a tela). As manchetes (fonte grande da arte) ficam como no original.
+Obs.: o clique no título "Los Angeles News" (vender peças avulsas) não tem etiqueta.
