@@ -29,6 +29,7 @@
 	.globl _g_t1
 	.globl _g_t3
 	.globl _g_row6
+	.globl _g_row7
 	.globl _palette
 	.globl _g_a
 	.globl _g_b
@@ -166,6 +167,9 @@ _read_input::
 	ld a,#6
 	call 0x0141
 	ld (_g_row6),a
+	ld a,#7
+	call 0x0141
+	ld (_g_row7),a          ; linha 7: bit5 = ESC, bit4 = STOP, bit6 = BS (0 = apertado)
 	pop iy
 	pop ix
 	ret

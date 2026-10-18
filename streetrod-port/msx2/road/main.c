@@ -60,7 +60,7 @@ volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
-u8 g_trig, g_row6, g_st0, g_st1, g_t0, g_t1, g_t3;
+u8 g_trig, g_row6, g_row7, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
 u16 g_lzsrc, g_vlo, g_palp; u8 g_vhi, g_vpg, g_group;
 extern void lz_unpack(void);
@@ -168,6 +168,10 @@ static void combine_input(void) {
     g_trig = (g_t0 ? 1 : 0) | (g_t1 ? 2 : 0) | (g_t3 ? 4 : 0);
     e = ev_space; if (e) { ev_space = 0; g_trig |= 1; }       /* toque curto travado pela interrupcao */
     e = ev_shift; if (e) { ev_shift = 0; g_trig |= 4; }
+}
+
+static u8 want_back(void) {                 /* voltar: ESC, STOP, BS, SHIFT ou botao B do joystick */
+    return (g_trig & 4) != 0 || !(g_row6 & 1) || (g_row7 & 0x70) != 0x70;
 }
 
 static void handle_input(void) {
@@ -545,8 +549,8 @@ static void menu_change(i16 d) {
     menu_row(m_sel); if (m_sel == 0) menu_info();
     vdp_wait();
 }
-static void menu(void) {
-    u8 prev = 0, f, go, held = 1;
+static u8 menu(void) {                      /* 1 = iniciar corrida, 0 = voltar (ESC) */
+    u8 prev = 0, f, go, held = 1, bheld = 1;
     u16 t_hold = 0, t_rep = 0;
     clip_l = 0; clip_r = 256; ybase = 0; vdp_reg(2, 0x1F); dbg_state = 8;
     cmd_n = 0; cp = cmd_buf;
@@ -558,14 +562,16 @@ static void menu(void) {
     draw_text(16, 172, "UP DOWN  SELECT FIELD", 6);
     draw_text(16, 186, "LEFT RIGHT  CHANGE", 6);
     draw_text(16, 200, "SPACE  START RACE", 13);
+    draw_text(168, 200, "ESC BACK", 6);
     sel_car = own[cur];
     vdp_wait();
     for (;;) {
         u8 st, act = 0; i16 d = 0;
         read_input(); combine_input();
         st = g_stick; go = (g_trig & 3) != 0;
-        if (go && !held) break;
-        held = go;
+        if (go && !held) return 1;
+        if (want_back() && !bheld) return 0;
+        held = go; bheld = want_back();
         if (st != prev) { act = 1; prev = st; t_hold = JIFFY; t_rep = JIFFY; }
         else if (st && (u16)(JIFFY - t_hold) > jhz / 3 && (u16)(JIFFY - t_rep) >= jhz / 8) { act = 1; t_rep = JIFFY; }
         if (!act) continue;
@@ -622,6 +628,7 @@ static void hub_status(void) {
 #define UI_W 240
 /* lista rolavel (ate UI_VIS linhas visiveis); o texto de cada item vem de ui_get(i). Devolve o indice (ESPACO) ou 255 (SHIFT = voltar) */
 #define UI_VIS 8
+static u8 ui_nohint;                         /* 1 = menu raiz (sem voltar): nao mostra a dica ESC */
 static const char *(*ui_get)(u8 i);
 static const char *const *ui_arr;
 static const char *ui_arr_get(u8 i) { return ui_arr[i]; }
@@ -644,12 +651,13 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
     push_fill(UI_X, y0, UI_W, 2, HC_W); push_fill(UI_X, y0 + h - 2, UI_W, 2, HC_W);
     push_fill(UI_X, y0, 2, h, HC_W); push_fill(UI_X + UI_W - 2, y0, 2, h, HC_W);
     draw_text(UI_X + 10, y0 + 6, title, HC_Y);
+    { u8 l = 0; while (title[l]) l++; if (l <= 18 && !ui_nohint) draw_text(UI_X + UI_W - 80, y0 + 6, "ESC BACK", HC_R); }
     for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
     vdp_wait();
     for (;;) {
         u8 st, go, back, ns = sel;
         read_input(); combine_input();
-        st = g_stick; go = (g_trig & 3) != 0; back = (g_trig & 4) != 0 || !(g_row6 & 1);
+        st = g_stick; go = (g_trig & 3) != 0; back = want_back();
         if (go && !held) return sel;
         if (back && !bheld) return 255;
         held = go; bheld = back;
@@ -704,7 +712,7 @@ static void cars_screen(void) {
     const char *it[MAXCARS]; u8 i, r;
     if (!nown) { ui_note("YOUR CARS", "BUY A CAR FIRST!"); return; }
     for (i = 0; i < nown; i++) it[i] = car_name[own[i]];
-    r = ui_pick("YOUR CARS - SPACE TO DRIVE", it, nown, cur);
+    r = ui_pick("YOUR CARS", it, nown, cur);
     if (r != 255) { cur = r; sel_car = own[cur]; }
 }
 
@@ -816,7 +824,7 @@ static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sa
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
     for (;;) {
-        r = ui_pick("MAIN MENU", items, 4, sel);
+        ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0;
         if (r == 255) continue;
         sel = r;
         if (r == 0) cars_screen();
@@ -973,7 +981,7 @@ void main(void) {
         new_game();
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();
-            menu();                                     /* escolha do oponente */
+            if (!menu()) continue;                      /* escolha do oponente (ESC volta a garagem) */
             run_race();
             settle_race();
         }
