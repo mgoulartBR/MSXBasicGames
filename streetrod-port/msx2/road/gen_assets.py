@@ -285,6 +285,40 @@ def main():
         for t, wh in enumerate(wheelart): add(packrows(wh, wh.shape[1]), WHEEL_Y0 * 128, 1, group=28 + t)
         stkart = cars_art.stickers(lib2)
         for s_, st in enumerate(stkart): add(packrows(st, st.shape[1]), STK_Y0 * 128, 1, group=180 + s_)
+        def best_rects(arr, nmax=10):                               # animacao do carro: o corpo vira faixas de linhas: retangulos opacos (HMMM no miolo) e faixas "planas" com as colunas ocupadas (LMMM)
+            H, Wd = arr.shape
+            runs = []; bounds = []
+            for row in arr:
+                best = (0, 0); cur = 0
+                for bx in range((len(row) + 1) // 2):
+                    op = bx * 2 + 1 < len(row) and row[bx * 2] != 0 and row[bx * 2 + 1] != 0
+                    cur = cur + 1 if op else 0
+                    if cur > best[1]: best = (bx - cur + 1, cur)
+                runs.append(best)
+                nz = np.nonzero(row)[0]
+                bounds.append((int(nz[0]), int(nz[-1]) + 1) if len(nz) else None)
+            for tol in (6, 10, 16, 24, 40, 80):
+                segs = []; r = 0
+                while r < H:
+                    if runs[r][1] >= 16:
+                        s, e = runs[r][0], runs[r][0] + runs[r][1]; r2 = r + 1
+                        while r2 < H and runs[r2][1] >= 16:
+                            ns, ne = max(s, runs[r2][0]), min(e, runs[r2][0] + runs[r2][1])
+                            if ne - ns < 16 or any(runs[k][1] - (ne - ns) > tol for k in range(r, r2 + 1)): break
+                            s, e = ns, ne; r2 += 1
+                        if r2 - r >= 3: segs.append((r, r2 - r, 1, s * 2, e * 2)); r = r2; continue
+                    r2 = r + 1                                       # faixa plana: linhas ate o proximo retangulo
+                    while r2 < H and not (runs[r2][1] >= 16 and r2 + 3 <= H and all(runs[k][1] >= 16 for k in range(r2, r2 + 3))): r2 += 1
+                    bb = [bounds[k] for k in range(r, r2) if bounds[k]]
+                    c1, c2 = (min(x[0] for x in bb) & ~1, (max(x[1] for x in bb) + 1) & ~1) if bb else (0, 0)
+                    segs.append((r, r2 - r, 0, c1, c2)); r = r2
+                if len(segs) <= nmax: break
+            out = []
+            for (r, h, flag, c1, c2) in segs:
+                if flag or c2 > c1: out.append((r, h | (0x80 if flag else 0), c1, c2))
+            out = out[:nmax]
+            return out + [(0, 0, 0, 0)] * (nmax - len(out))
+        rect_blob = bytes(v for vv in range(4) for i in range(len(carart)) for q in best_rects(varart[i][vv][0]) for v in q)    # 40 bytes por (variante, carro): indice cvar * ncarros + id
         flat = lambda f: ','.join(str(f(i, v)) for v in range(4) for i in range(len(carart)))
         carh = ('#define CAR_Y0 %d\n#define WHEEL_Y0 %d\n#define STK_Y0 %d\n#define BAND_COPY_Y %d\n#define WH_W %d\n#define WH_H %d\n'
                 'static const uint8_t car_w[%d] = {%s};\nstatic const uint8_t car_h[%d] = {%s};\nstatic const uint8_t car_wx0[%d] = {%s};\n'
@@ -339,6 +373,10 @@ def main():
         td = open(tdat, 'rb').read()
         if len(banks[-1]) + len(td) > 0x4000: banks.append(bytearray())
         text_base = len(banks[-1]); banks[-1].extend(td); text_bank = len(banks) - 1 + ABASE      # nomes (carros, pecas, pilotos) no fim do ultimo banco de assets
+    rect_bank = rect_base = 0
+    if ents and 'rect_blob' in dir():
+        if len(banks[-1]) + len(rect_blob) > 0x4000: banks.append(bytearray())
+        rect_base = len(banks[-1]); banks[-1].extend(rect_blob); rect_bank = len(banks) - 1 + ABASE
     import music_gen                                              # radio: cada estacao em seu proprio banco (3 bytes por linha de sequenciador)
     mus = []
     if ents:
@@ -356,7 +394,7 @@ def main():
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
-        f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n' % (1 if ents else 0, text_bank, text_base))
+        f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n#define RECT_BANK %d\n#define RECT_BASE %d\n' % (1 if ents else 0, text_bank, text_base, rect_bank, rect_base))
         f.write('static const uint8_t mus_bank[5] = {%s};\nstatic const uint16_t mus_rows[5] = {%s};\nstatic const uint16_t mus_ms[5] = {%s};\n' % tuple(','.join(str(m[i]) for m in mus) for i in range(3)))
         def fmnum(n):                                              # OPLL: f = F * 49716 / 2^(19 - bloco); F de 9 bits, bloco 0..7 -> bits (bloco << 9) | F
             fr = 440 * 2 ** ((n - 69) / 12)

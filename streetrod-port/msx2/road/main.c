@@ -1486,20 +1486,82 @@ static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pag
     }
 }
 static u8 slide_pg;                                    /* pagina que ficou visivel no fim da animacao */
+/* animacao otimizada: o carro pronto (sombra, rodas, corpo, retrato, adesivo) e montado uma vez em x=0 na faixa da pagina 2 (rascunho durante a animacao) e as
+   corridas opacas de cada linha sao medidas; a faixa e dividida em ate 3 retangulos opacos (copiados por HMMM, ~4x mais rapido que LMMM) e o resto (bordas,
+   janelas, rodas) vai por LMMM. A cada quadro: restaura o fundo (HMMM da copia limpa da pagina 3) e desenha esses poucos blocos. Posicoes pares (HMMM so
+   enderecia bytes); quadros com x impar usam o desenho completo. */
+static i16 rs_y0; static u8 rs_n;
+static u8 sg_n, sg_r[12], sg_h[12], sg_c1[12], sg_c2[12], sg_f[12];      /* faixas de linhas: f=1 retangulo opaco (miolo c1..c2 por HMMM, bordas por LMMM); f=0 plana (so LMMM de c1..c2) */
+static void hm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
+    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx); vc_w(6, dy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+}
+static void seg_add(u8 r, u8 h, u8 f, u8 c1, u8 c2) { if (!h || sg_n >= 12) return; sg_r[sg_n] = r; sg_h[sg_n] = h; sg_f[sg_n] = f; sg_c1[sg_n] = c1; sg_c2[sg_n] = c2; sg_n++; }
+static void slide_prep(u8 id) {
+    u8 q[10][4], k, r, h, body, wz, w = car_w[id];
+    g_bk_bank = RECT_BANK; g_bk_src = 0x8000 + RECT_BASE + 40 * ((u16)cvar * (u8)sizeof(car_w) + id); g_bk_dst = (u16)q; g_bk_len = 40; bank_copy();       /* faixas do corpo (gen_assets.py: best_rects) */
+    rs_y0 = car_yt(id) - 4; if (rs_y0 < BAND_Y) rs_y0 = BAND_Y;
+    k = car_floor + 2 - rs_y0; rs_n = k > 84 ? 84 : k;
+    body = car_yt(id) - rs_y0;
+    wz = body + CWY(id) - (WH_H >> 1);                          /* a partir daqui ha rodas e sombra: faixas planas valem a largura toda */
+    vc_w(4, 0); vc_w(6, 512 + BAND_Y); vc_w(8, 256); vc_w(10, BAND_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xC0;      /* HMMV: zera a faixa (cor 0 = transparente) */
+    vdp_cmd15();
+    car_blit(512, id, 0);
+    sg_n = 0;
+    for (k = 0; k < 10 && q[k][1]; k++) {
+        r = body + q[k][0]; h = q[k][1] & 0x7F;
+        if (r + h > rs_n) break;
+        if (q[k][1] & 0x80) seg_add(r, h, 1, q[k][2], q[k][3]);
+        else if (r + h > wz) seg_add(r, h, 0, 0, w);
+        else seg_add(r, h, 0, q[k][2], q[k][3]);
+    }
+    r = sg_n ? sg_r[sg_n - 1] + sg_h[sg_n - 1] : body;
+    seg_add(r, rs_n - r, 0, 0, w);                              /* de baixo do corpo ao chao: rodas e sombra */
+    vdp_wait();
+}
+static void slide_frame(u8 id, u8 pg, i16 x, i16 px) {
+    i16 base = (i16)pg * 256, xa = x < px ? x : px, xb = (x > px ? x : px) + car_w[id], y, ix0, ix1, c1, c2, l, r, sy;
+    u8 k;
+    if (xa < 0) xa = 0;
+    xb = (xb + 1) & ~1; if (xb > 256) xb = 256;
+    xa &= ~1;
+    for (k = 0; k < sg_n; k++) {
+        y = rs_y0 + sg_r[k]; c1 = sg_c1[k]; c2 = sg_c2[k]; sy = BAND_COPY_Y + (y - BAND_Y);
+        if (sg_f[k]) {                                          /* retangulo opaco: o miolo cobre o fundo, so as margens precisam ser restauradas */
+            l = x + c1; if (l < xa) l = xa; if (l > xb) l = xb;
+            r = x + c2; if (r < xa) r = xa; if (r > xb) r = xb;
+            if (l > xa) hm(xa, sy, xa, base + y, l - xa, sg_h[k]);
+            if (xb > r) hm(r, sy, r, base + y, xb - r, sg_h[k]);
+            clmmm(0, 512 + y, x, base + y, c1, sg_h[k]);
+            ix0 = x + c1; ix1 = x + c2;
+            if (ix0 < 0) ix0 = 0;
+            if (ix1 > 256) ix1 = 256;
+            if (ix1 > ix0) hm(ix0 - x, 512 + y, ix0, base + y, ix1 - ix0, sg_h[k]);
+            clmmm(c2, 512 + y, x + c2, base + y, car_w[id] - c2, sg_h[k]);
+        } else {
+            if (xb > xa) hm(xa, sy, xa, base + y, xb - xa, sg_h[k]);
+            clmmm(c1, 512 + y, x + c1, base + y, c2 - c1, sg_h[k]);
+        }
+    }
+}
 static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (12 px por quadro), desenhando na pagina oculta e trocando a pagina */
-    i16 x = x0, d = x1 > x0 ? 1 : -1; u8 pg = 1; u16 j;
+    i16 x = x0, d = x1 > x0 ? 1 : -1, px[2]; u8 pg = 1, fast = fr_n == 0; u16 j;
+    if (fast) { slide_prep(id); px[0] = px[1] = x0; }
     for (;;) {
-        band_cmd(BAND_COPY_Y, pg * 256 + BAND_Y);
-        car_blit(pg * 256, id, x);
+        if (fast && !(x & 1)) slide_frame(id, pg, x, px[pg]);
+        else { band_cmd(BAND_COPY_Y, pg * 256 + BAND_Y); car_blit(pg * 256, id, x); }
+        px[pg] = x;
         vdp_wait();
         j = JIFFY; while (JIFFY == j) ;
         vdp_reg(2, (u8)((pg << 5) | 0x1F));
         pg ^= 1;
         if (x == x1) break;
-        x += d * 12;                                    /* passo fixo: o desenho leva 4-8 jiffies por quadro (limite do VDP), entao passo constante da o movimento mais regular */
+        x += d * 12;
         if ((d > 0 && x > x1) || (d < 0 && x < x1)) x = x1;
+        else x &= ~1;                                  /* posicoes pares: o miolo vai por HMMM */
     }
     slide_pg = pg ^ 1;
+    if (fast) band_cmd(BAND_COPY_Y, 512 + BAND_Y);     /* devolve a faixa da pagina 2 (era rascunho) */
 }
 static void car_page(u8 p, u8 id, i16 xl) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
 static void draw_car(void) {                    /* mostra o carro atual (com a animacao de entrada/saida) e deixa o resultado final nas 3 paginas (0 visivel, 1, 2 = copia para restaurar menus) */
