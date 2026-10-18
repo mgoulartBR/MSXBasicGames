@@ -158,7 +158,7 @@ def overlay_rects(ov, band=2, gap=4):
 
 LIGHT_Y = 940
 NEWS_BODY_TOP = [(16, 30), (30, 30), (16, 16), (30, 30), (30, 30)]   # linha (na faixa de 54) onde comeca o corpo do texto de cada coluna, por manchete
-BOB_REAR = (11, 249, 57); BOB_HEAD = ((25, 11), (22, 8), (24, 13)); BOB_Y0 = 768
+HEAD_ITEMS = [194, 195, 196, 197, 198, 199] + list(range(202, 218))
 def bob_raw(lib2, k):
     import srlib
     it = srlib.load(lib2)[k]
@@ -240,7 +240,7 @@ def main():
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
             ents.append((len(banks) - 1 + ABASE, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
-    sprh = ''; orects = []; carh = ''; bobh = ''
+    sprh = ''; orects = []; carh = ''; headh = ''
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
@@ -290,11 +290,11 @@ def main():
                 hl[top:54, 0 if c_ == 0 else 128:128 if c_ == 0 else 256] = 4
                 hl[top:54, 127] = 1                                # filete entre as colunas
             add((hl[:, 0::2] << 4 | hl[:, 1::2]).astype(np.uint8).tobytes(), news.shape[0] * 128, 3, group=191 + k_)
-        bobs = garage_pixels(lib2, 93).copy()                    # Bob's Drive-In (item 93) sem os carros pintados (os oponentes sao os mesmos carros da garagem, vistos de lado)
-        for x0, x1, xs, per in ((8, 73, 0, 6), (174, 252, 128, 10)):          # apaga os carros: parede/meio-fio/asfalto copiados de uma faixa limpa na mesma linha
-            for y in range(80, 121):
-                for x in range(x0, x1): bobs[y, x] = bobs[y, xs + (x - x0) % per]
+        bobs = garage_pixels(lib2, 93)                           # Bob's Drive-In (item 93); os carros pintados fazem parte do cenario
         add((bobs[:, 0::2] << 4 | bobs[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=197)
+        headart = [bob_raw(lib2, k_) for k_ in HEAD_ITEMS]        # retratos dos pilotos (LIB2 itens 194-199, 202-217): aparecem na janela do carro (grupos 220+piloto, rascunho STK_Y0)
+        for p_, h_ in enumerate(headart): add(packrows(h_, h_.shape[1]), STK_Y0 * 128, 1, group=220 + p_)
+        headh = 'static const uint8_t head_w[%d] = {%s};\nstatic const uint8_t head_h[%d] = {%s};\n' % (len(headart), ','.join(str(h_.shape[1]) for h_ in headart), len(headart), ','.join(str(h_.shape[0]) for h_ in headart))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -333,7 +333,7 @@ def main():
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
-        f.write(sprh); f.write(carh)
+        f.write(sprh); f.write(carh); f.write(headh)
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))

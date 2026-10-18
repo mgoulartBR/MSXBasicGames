@@ -291,3 +291,8 @@ na janela (`bob_head`) e, se ninguém o desafia, **sai para a frente (direita)**
 **Clique na cabeça** (ou passe o cursor: o nome aparece na barra de status): janela com o nome, o carro e **CHALLENGE / NOT NOW** → tipo de corrida e aposta (`bobs_race`, BANK3). A cena do Bob's (item 93)
 teve os dois carros pintados apagados na geração (copiando faixas limpas da parede/meio-fio/asfalto); a página 2 fica limpa (sem o carro) para restaurar as janelas. Animação com troca de página, como na garagem.
 `pick_hot` ganhou `pick_tick` (função chamada a cada quadro). O fluxo de texto antigo (`bobs()`) continua para os testes. Teste: `bobsfront_test.tcl` (`-DBOB_CUR_X/-DBOB_CUR_Y` posicionam o cursor na cabeça).
+
+### Bob's: cenário intacto e retratos dos pilotos (correção)
+Os carros pintados (verde e vermelho) e o cara encostado **são cenário** (voltaram; só o oponente entra/sai). As **cabeças dos pilotos** são os retratos da LIB2 (itens 194-199 e 202-217 = 22 retratos, um por piloto, grupos 220+piloto):
+`car_blit` desenha o retrato por baixo do corpo, então ele aparece só pela janela (como no original). Posição: atrás do meio do carro (`head_x/head_y`), clicável ±14×12 px. O carro estaciona com as rodas em y=157 (`car_floor`);
+a etiqueta da barra de status mostra "NOME - CLICK TO CHALLENGE". Obs.: o rascunho do retrato reutiliza `STK_Y0` (adesivos não são usados no Bob's).

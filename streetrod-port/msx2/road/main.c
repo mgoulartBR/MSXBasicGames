@@ -1342,7 +1342,11 @@ static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM r
     if (dx + w > 256) w = 256 - dx;
     if (w > 0) lmmm(sx, sy, dx, dy, w, h);
 }
-static i16 car_yt(u8 id) { return CAR_FLOOR - (CWY(id) + (WH_H >> 1)); }
+static i16 car_floor = CAR_FLOOR;                        /* y da base das rodas (garagem 152; Bob's mais baixo) */
+static u8 chead = 255;                                   /* piloto cuja cabeca aparece na janela (255 = nenhuma) */
+static i16 car_yt(u8 id) { return car_floor - (CWY(id) + (WH_H >> 1)); }
+static i16 head_x(u8 id, i16 xl) { return xl + ((car_wx0[id] + car_wx1[id]) >> 1) - 16 - (head_w[chead] >> 1); }   /* canto da cabeca: atras do meio do carro (lugar do motorista) */
+static i16 head_y(u8 id) { return car_yt(id) + (CH(id) * 28) / 100 - (head_h[chead] >> 1) - 4; }
 static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV) */
     if (xa < 0) xa = 0;
     if (xb > 256) xb = 256;
@@ -1351,10 +1355,11 @@ static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV
     vdp_cmd15();
 }
 static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pagina); rodas por baixo, corpo por cima */
-    i16 yt = base + car_yt(id), wy = yt + CWY(id) - (WH_H >> 1), fl = base + CAR_FLOOR, x1 = xl + car_w[id];
+    i16 yt = base + car_yt(id), wy = yt + CWY(id) - (WH_H >> 1), fl = base + car_floor, x1 = xl + car_w[id];
     cshadow(xl + 6, fl - 5, x1 - 6, 2); cshadow(xl + 2, fl - 3, x1 - 2, 3); cshadow(xl + 14, fl, x1 - 14, 2);     /* sombra elíptica sob o carro */
     clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
     clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
+    if (chead != 255) clmmm(0, STK_Y0, head_x(id, xl), head_y(id) - car_yt(id) + yt, head_w[chead], head_h[chead]);      /* o retrato do piloto aparece pela janela (o corpo vem por cima) */
     clmmm(0, CAR_Y0, xl, yt, car_w[id], CH(id));
     if (cstk) clmmm(0, STK_Y0, xl + ((car_wx0[id] + car_wx1[id] - stk_w[cstk - 1]) >> 1) + 4, yt + (CH(id) * 3) / 5 - (stk_h[cstk - 1] >> 1), stk_w[cstk - 1], stk_h[cstk - 1]);
 }
@@ -1410,7 +1415,7 @@ static void hot_label(u8 h) {
     if (lab_mode == 1) { vdp_wait(); cmd_n = 0; cp = cmd_buf; return; }                       /* jornal: as faixas ja dizem o que sao */
     if (lab_mode == 2) {                                                                         /* Bob's: o nome do piloto sob o cursor, na linha de baixo da barra de status */
         push_fill(0, 201, 206, 10, HC_W);
-        if (h == 0) gtext(6, 202, hnames[0], 0);
+        if (h == 0) { gtext(6, 202, hnames[0], 0); gtext(6 + 6 * 12, 202, "- CLICK TO CHALLENGE", 0); }
         vdp_wait(); cmd_n = 0; cp = cmd_buf; return;
     }
     hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
@@ -1512,22 +1517,16 @@ static const char *bobs_name[1];
 static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c) {   /* retangulo de uma cor (LMMV) */
     vc_w(4, xa); vc_w(6, y); vc_w(8, w); vc_w(10, h); vc[12] = c; vc[13] = 0; vc[14] = 0x80; vdp_cmd15();
 }
-static void bob_head(i16 base) {                        /* a cabeca do piloto na janela do carro (clicavel) */
-    i16 hx = bxl + ((car_wx0[bcar] + car_wx1[bcar]) >> 1) - 2, hy = base + car_yt(bcar) + (car_h[bcar] * 26) / 100;
-    cfill(hx + 2, hy, 3, 1, 14); cfill(hx + 1, hy + 1, 5, 1, 14);                  /* cabelo */
-    cfill(hx + 1, hy + 2, 5, 4, 15); cfill(hx, hy + 3, 1, 2, 15); cfill(hx + 6, hy + 3, 1, 2, 15);      /* rosto e orelhas */
-    cfill(hx + 2, hy + 6, 3, 2, 15);
-}
 static void bob_show(void) {                            /* carro parado + cabeca nas paginas 0 e 1 (a 2 fica limpa: e' a copia para restaurar) */
     u8 p;
-    for (p = 0; p < 2; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, bcar, bxl); bob_head(p * 256); }
+    for (p = 0; p < 2; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, bcar, bxl); }
     vdp_wait(); vdp_reg(2, 0x1F);
 }
 static void bobs_hotup(void) {
     bobs_hot[0].x0 = 255; bobs_hot[0].x1 = 0;
-    if (bst == 2) {
-        i16 hx = bxl + ((car_wx0[bcar] + car_wx1[bcar]) >> 1) + 1, hy = car_yt(bcar) + (car_h[bcar] * 26) / 100 + 4;
-        bobs_hot[0].x0 = hx - 12; bobs_hot[0].x1 = hx + 12; bobs_hot[0].y0 = hy - 12; bobs_hot[0].y1 = hy + 12; bobs_hot[0].id = 0;
+    if (bst == 2) {                                                        /* a cabeca do piloto (e a janela em volta) e clicavel */
+        i16 hx = head_x(bcar, bxl) + (head_w[chead] >> 1), hy = head_y(bcar) + (head_h[chead] >> 1);
+        bobs_hot[0].x0 = hx - 14; bobs_hot[0].x1 = hx + 14; bobs_hot[0].y0 = hy - 12; bobs_hot[0].y1 = hy + 12; bobs_hot[0].id = 0;
     }
 }
 static void bobs_tick(void) {
@@ -1538,8 +1537,8 @@ static void bobs_tick(void) {
         if (p == bpil) p = (p + 1) % NPILOTS;
         pick_opp_car(p); bpil = p; bcar = sel_opp;
         q = PILN(p); while (q[n] && n < 12) { bpn[n] = q[n]; n++; } bpn[n] = 0;
-        c = (u8)(rnd16() % 12); cvar = 0; cstk = 0;
-        car_art(bcar, (car_flags[bcar] >> 4) & 3); set_paint(c);
+        c = (u8)(rnd16() % 12); cvar = 0; cstk = 0; chead = p;
+        car_art(bcar, (car_flags[bcar] >> 4) & 3); g_group = 220 + p; load_assets(); set_paint(c);
         bxl = (256 - car_w[bcar]) >> 1;
         car_slide(bcar, -(i16)car_w[bcar], bxl);                              /* entra pela esquerda, como na garagem */
         bst = 2; bob_show(); bt = JIFFY + (u16)jhz * (8 + rnd16() % 5);
@@ -1552,10 +1551,10 @@ static void bobs_tick(void) {
     }
     bobs_hotup();
 }
-static void bobs_repaint(void) { if (bst == 2) { car_blit(0, bcar, bxl); bob_head(0); vdp_wait(); } }
+static void bobs_repaint(void) { if (bst == 2) { car_blit(0, bcar, bxl); vdp_wait(); } }
 static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): os oponentes chegam sozinhos; clique na cabeca do piloto para ver quem e e desafiar. 1 = a corrida vai comecar */
     u8 r, k; char cn[30]; const char *it[3];
-    bobs_name[0] = bpn; bpn[0] = 0;
+    bobs_name[0] = bpn; bpn[0] = 0; car_floor = 157;
     g_group = 197; load_assets();
     cmd_n = 0; cp = cmd_buf; bar_news = 2; cur_ymax = 210; hub_status();
     band_save();                                                              /* faixa limpa do cenario (pagina 3), usada pelas animacoes */
@@ -1572,11 +1571,11 @@ static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): o
         for (k = 0; k < 28 && CARN(sel_opp)[k]; k++) cn[k] = CARN(sel_opp)[k];
         cn[k] = 0; it[0] = cn; it[1] = "CHALLENGE"; it[2] = "NOT NOW";
         do { k = ui_pick(bpn, it, 3, 1); } while (k == 0);
-        if (k == 1 && bobs_race(sel_pil)) { lab_mode = 0; bar_news = 0; cur_ymax = 187; return 1; }
+        if (k == 1 && bobs_race(sel_pil)) { lab_mode = 0; bar_news = 0; cur_ymax = 187; car_floor = CAR_FLOOR; chead = 255; return 1; }
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status(); bobs_repaint();
         if (bst == 2) bt = JIFFY + (u16)jhz * (8 + rnd16() % 5);              /* o tempo de espera recomeca */
     }
-    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; car_floor = CAR_FLOOR; chead = 255;
     load_garage(); band_save();
     return 0;
 }
