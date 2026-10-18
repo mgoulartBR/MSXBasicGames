@@ -99,6 +99,10 @@ def overlay(a):
         if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
             glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
     glass[108 - y0:, :54] = False             # abaixo da janela lateral o preto e a porta (opaco)
+    for x in range(54, w):                      # capo/painel: o vidro termina na linha clara do topo do painel (nao some por baixo dela)
+        col = sub[98 - y0:, x]
+        hit = np.nonzero(np.isin(col, (4, 5, 7, 15)))[0]
+        if len(hit): glass[98 - y0 + hit[0]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     # regioes com moldura: coluna esquerda (x < aw) e, a partir da linha by, o painel em toda a largura
     opaque = out != 0
