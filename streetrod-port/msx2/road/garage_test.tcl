@@ -28,7 +28,7 @@ foreach s $::seq {
         space { after time $at { tap 8 0x01 } }
         up    { after time $at { tap 8 0x20 } }
         down  { after time $at { tap 8 0x40 } }
-        shift { after time $at { tap 7 0x20 } }
+        shift { after time $at { tap 7 0x04 } }
         say*  { after time $at [list say [lrange $k 1 end]] }
         snap* { after time $at [list snap [lindex $k 1]] }
     }

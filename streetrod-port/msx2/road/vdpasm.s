@@ -169,7 +169,7 @@ _read_input::
 	ld (_g_row6),a
 	ld a,#7
 	call 0x0141
-	ld (_g_row7),a          ; linha 7: bit5 = ESC, bit4 = STOP, bit6 = BS (0 = apertado)
+	ld (_g_row7),a          ; linha 7 (F4 F5 ESC TAB STOP BS SELECT RET): bit2 = ESC, bit4 = STOP, bit5 = BS (0 = apertado)
 	pop iy
 	pop ix
 	ret

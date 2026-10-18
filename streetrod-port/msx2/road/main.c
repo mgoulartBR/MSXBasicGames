@@ -179,7 +179,7 @@ static void combine_input(void) {
 }
 
 static u8 want_back(void) {                 /* voltar: ESC, STOP, BS, SHIFT ou botao B do joystick */
-    return (g_trig & 4) != 0 || !(g_row6 & 1) || (g_row7 & 0x70) != 0x70;
+    return (g_trig & 4) != 0 || !(g_row6 & 1) || (g_row7 & 0x34) != 0x34;
 }
 
 static void handle_input(void) {

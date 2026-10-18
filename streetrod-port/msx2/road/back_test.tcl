@@ -8,7 +8,7 @@ after time 15 { tap 8 0x20 }            ;# up -> NEWSPAPER
 after time 16.5 { tap 8 0x01 }          ;# abre jornal
 after time 18 { tap 8 0x40 }
 after time 19.5 { tap 8 0x01 }          ;# auto parts
-after time 21 { snap parts; tap 7 0x20 } ;# ESC -> categorias? (volta ao menu do jornal)
+after time 21 { snap parts; tap 7 0x04 } ;# ESC -> categorias? (volta ao menu do jornal)
 after time 22.5 { snap news }
-after time 23 { tap 7 0x20 }            ;# ESC -> hub
+after time 23 { tap 7 0x04 }            ;# ESC -> hub
 after time 24.5 { snap hub; exit }
