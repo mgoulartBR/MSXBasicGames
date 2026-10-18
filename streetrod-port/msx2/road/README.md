@@ -213,3 +213,11 @@ das arcadas (3 carros têm posição manual). As imagens usam a paleta da cena: 
 no rascunho da página 3 (`CAR_Y0`/`WHEEL_Y0`); `draw_car` copia a faixa limpa do chão (guardada em `BAND_COPY_Y` por `band_save`) para as páginas 0-2 e compõe o carro por cima (a página 2
 continua servindo de cópia para `hub_restore`). É redesenhado ao voltar de qualquer ação do hub (troca/compra/venda/conserto). O carro é clicável (= YOUR CARS). Nota: o banco 2 de código
 está com ~14,5 KB de 16 KB — o próximo grande bloco de código deve ir para um BANK3 (`#pragma codeseg BANK3`).
+
+## Fonte e janelas da garagem; entrada/saída do carro (M7, parte 3)
+- **Fonte:** na garagem o texto agora usa a fonte 6x8 da BIOS (tabela `CGTBL`, ponteiro em 0x0004; `font_init` copia as 96 letras para a página 3 da VRAM, em preto e em branco, ao carregar a cena)
+  e `gtext` desenha letra a letra com LMMM (TIMP). Minúsculas/símbolos existem na fonte; o jogo ainda manda os textos em maiúsculas. A fonte 3x5 em 2x2 continua só nas telas de corrida/título.
+- **Visor:** a barra branca no alto da cena mostra o nome do objeto sob o cursor (texto preto centralizado). **Barra de status** branca com texto preto (dinheiro, data, carro; "ESC BACK" à direita nos submenus).
+  **Janelas:** moldura preta, fundo branco, título sublinhado, linhas de 12 px, item selecionado = barra preta com texto branco; os textos cabem nas janelas (até ~36 letras).
+- **Carro:** base das rodas no chão (y=190). Ao trocar de carro: garagem vazia → o carro novo entra pela esquerda; garagem cheia → o antigo sai de ré (para a esquerda) e o novo aparece no lugar.
+  A animação desenha na página oculta e troca a página (sem cintilação), 8 px por quadro (`car_slide`). `new_game` zera `shown_id`; ao voltar de uma corrida o mesmo carro não é reanimado.

@@ -120,6 +120,7 @@ static u16 race_len = RACE_LEN;
 #define STREET_LEN 420
 #endif
 #define STREET_LIMIT 45                              /* mph: acima disso o guarda multa */
+static u8 shown_id = 255, shown_tir, shown_paint;       /* carro desenhado agora na garagem (255 = vazia) */
 static u8 street_mode, street_res, street_cop;       /* street_res: 0 chegou ao Bobs, 1 desistiu (ESC) */
 static u16 street_fine; static u8 street_tix;
 static const u16 cop_at[3] = {110, 230, 350};
@@ -592,7 +593,7 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_R 11
 #pragma codeseg BANK2
 static void new_game(void) BK {
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255;
 #ifdef START_CAR
     car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
@@ -604,24 +605,64 @@ static void draw_nz(i16 x, i16 y, u16 v, u8 digits, u8 c) {      /* numero sem z
     for (i = 1; i < digits; i++) p *= 10;
     for (i = 0; i < digits; i++, p /= 10) { if (v >= p || i == digits - 1) { draw_digit(x + i * 8, y, (v / p) % 10, c); } }
 }
+static void font_init(void);
 static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
     u8 rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40);
     g_palp = (u16)pal_garage; pal_load2();
     g_group = 1; load_assets();
+    font_init();
     vdp_reg(1, rg1 | 0x40);
 }
 static void hub_restore(i16 x, i16 y, i16 w, i16 h) {   /* devolve um pedaco da cena limpa (copia na pagina 2) */
     vc_w(0, x); vc_w(2, 512 + y); vc_w(4, x); vc_w(6, y); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
     vdp_cmd15();
 }
-static void hub_status(void) {
+static void lmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
+    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx); vc_w(6, dy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;   /* TIMP: cor 0 transparente */
+    vdp_cmd15();
+}
+/* ---- fonte da garagem: a fonte 6x8 da BIOS (CGTBL) copiada para a pagina 3 da VRAM (preta e branca) e desenhada por LMMM ---- */
+#define FONT_Y 960
+#define HC_K 1          /* preto */
+static void font_init(void) {
+    const u8 *cg = (const u8 *)(*(volatile u16 *)0x0004);
+    u8 g, r, b, x, bits; u16 o, off;
+    for (o = 0; o < 6144; o++) cmd_buf[o] = 0;
+    for (g = 0; g < 96; g++) {
+        u8 gx = (g & 31) * 6, gy = (g >> 5) * 8;
+        for (r = 0; r < 8; r++) {
+            bits = cg[(u16)(g + 32) * 8 + r];
+            for (b = 0; b < 6; b++) if (bits & (0x80 >> b)) {
+                x = gx + b; off = (u16)(gy + r) * 128 + (x >> 1);
+                cmd_buf[off] |= (x & 1) ? 0x01 : 0x10;                      /* preto (indice 1) nas linhas 0-23 */
+                off += 3072; cmd_buf[off] |= (x & 1) ? 0x04 : 0x40;         /* branco (indice 4) nas linhas 24-47 */
+            }
+        }
+    }
+    g_vlo = 0xE000; g_vhi = 1; g_vpg = 24; vram_blit();
+}
+static void gtext(i16 x, i16 y, const char *s, u8 c) {      /* c: 0 = preto, 1 = branco; avanca 6 px por letra */
+    i16 sy0 = FONT_Y + c * 24; u8 ch;
+    for (; *s; s++, x += 6) {
+        ch = *s - 32; if (ch > 95) ch = 0;
+        lmmm((ch & 31) * 6, sy0 + (ch >> 5) * 8, x, y + ybase, 6, 8);
+    }
+}
+static u8 num_str(char *d, u16 v) {         /* decimal sem zeros a esquerda; devolve o tamanho */
+    char t[6]; u8 n = 0, k = 0;
+    do { t[k++] = '0' + v % 10; v /= 10; } while (v);
+    while (k) d[n++] = t[--k];
+    return n;
+}
+static void hub_status(void) {              /* barra branca: dinheiro, data e carro (texto preto, como o visor da cena) */
     static const char mon[2][4] = {"AUG", "SEP"};
-    u8 mo = day >= 31;
-    push_fill(0, 190, 256, 22, 0);
-    draw_text(8, 190, "$", HC_Y); draw_nz(16, 190, money, 5, HC_Y);
-    draw_text(88, 190, mon[mo], HC_W); draw_numc(120, 190, mo ? day - 30 : day + 1, 2, HC_W); draw_text(144, 190, "1963", HC_W);
-    draw_text(8, 202, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", HC_G);
+    char b[24]; u8 mo = day >= 31, n = 0;
+    push_fill(0, 190, 256, 22, HC_W);
+    b[n++] = '$'; n += num_str(b + n, money); b[n] = 0; gtext(6, 192, b, 0);
+    n = 0; b[n++] = mon[mo][0]; b[n++] = mon[mo][1]; b[n++] = mon[mo][2]; b[n++] = ' '; n += num_str(b + n, mo ? day - 30 : day + 1);
+    b[n++] = ','; b[n++] = ' '; b[n++] = '1'; b[n++] = '9'; b[n++] = '6'; b[n++] = '3'; b[n] = 0; gtext(96, 192, b, 0);
+    gtext(6, 203, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", 0);
     vdp_wait();
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
@@ -629,31 +670,31 @@ static void hub_status(void) {
 #define UI_W 240
 /* lista rolavel (ate UI_VIS linhas visiveis); o texto de cada item vem de ui_get(i). Devolve o indice (ESPACO) ou 255 (SHIFT = voltar) */
 #define UI_VIS 8
+#define UI_RH 12
 static u8 ui_nohint;                         /* 1 = menu raiz (sem voltar): nao mostra a dica ESC */
 static const char *(*ui_get)(u8 i);
 static const char *const *ui_arr;
 static const char *ui_arr_get(u8 i) { return ui_arr[i]; }
 static char tb[32];
 static void ui_row(u8 i, i16 y0, u8 top, u8 sel) {
-    i16 y = y0 + 24 + 14 * (i - top);
-    push_fill(UI_X + 4, y - 2, UI_W - 8, 14, 0);
-    draw_text(UI_X + 26, y, ui_get(i), i == sel ? HC_G : HC_W);
-    if (i == sel) push_fill(UI_X + 10, y, 8, 8, HC_G);
+    i16 y = y0 + 20 + UI_RH * (i - top);
+    push_fill(UI_X + 4, y - 2, UI_W - 8, UI_RH, i == sel ? HC_K : HC_W);          /* selecionado: barra preta, texto branco */
+    gtext(UI_X + 10, y, ui_get(i), i == sel);
 }
 static u8 ui_list(const char *title, u8 n, u8 sel) {
     u8 vis = n < UI_VIS ? n : UI_VIS, top = 0, prev = 0xFF, i, held = 1, bheld = 1;
-    i16 h = 24 + 14 * vis, y0 = 186 - h;        /* o menu fica no chao da garagem (a parte baixa da cena) */
+    i16 h = 24 + UI_RH * vis, y0 = 186 - h;        /* o menu fica no chao da garagem (a parte baixa da cena) */
     if (!n) return 255;
     if (sel >= vis) top = sel - vis + 1;
     clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
     cmd_n = 0; cp = cmd_buf;
     hub_restore(0, 22, 256, 168);                /* apaga o menu anterior */
-    push_fill(UI_X, y0, UI_W, h, 0);
-    push_fill(UI_X, y0, UI_W, 2, HC_W); push_fill(UI_X, y0 + h - 2, UI_W, 2, HC_W);
-    push_fill(UI_X, y0, 2, h, HC_W); push_fill(UI_X + UI_W - 2, y0, 2, h, HC_W);
-    draw_text(UI_X + 10, y0 + 6, title, HC_Y);
-    push_fill(184, 190, 72, 12, 0);                  /* dica de voltar na barra de status (menu raiz nao tem) */
-    if (!ui_nohint) draw_text(184, 190, "ESC BACK", HC_R);
+    push_fill(UI_X, y0, UI_W, h, HC_K);                         /* janela: moldura preta, fundo branco, titulo sublinhado */
+    push_fill(UI_X + 2, y0 + 2, UI_W - 4, h - 4, HC_W);
+    gtext(UI_X + 8, y0 + 6, title, 0);
+    push_fill(UI_X + 6, y0 + 17, UI_W - 12, 1, HC_K);
+    push_fill(190, 190, 66, 11, HC_W);                           /* dica de voltar na barra de status (menu raiz nao tem) */
+    if (!ui_nohint) gtext(202, 192, "ESC BACK", 0);
     for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
     vdp_wait();
     for (;;) {
@@ -1151,6 +1192,7 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
 /* ---- o carro do jogador desenhado na garagem (corpo + rodas, LIB2; ver cars_art.py) ---- */
 #define BAND_Y 112                              /* faixa do chao que o carro ocupa (nas paginas 0-2); a copia limpa fica na pagina 3 */
 #define BAND_H 78
+#define CAR_FLOOR 190                          /* y da base das rodas */
 static u8 car_on, car_x0, car_x1, car_y0, car_y1;
 static void band_cmd(i16 sy, i16 dy) {
     vc_w(0, 0); vc_w(2, sy); vc_w(4, 0); vc_w(6, dy); vc_w(8, 256); vc_w(10, BAND_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
@@ -1163,29 +1205,53 @@ static void set_paint(u8 p) {                   /* indice 6 da paleta = pintura,
     r = r > 5 ? 7 : r + 2; b = b > 5 ? 7 : b + 2; g = g > 5 ? 7 : g + 2;
     g_reg = 7; g_val = (u8)(r << 4 | b); g_sh = g; pal_one();
 }
-static void lmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
-    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx); vc_w(6, dy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;   /* TIMP: cor 0 transparente */
-    vdp_cmd15();
+static void car_art(u8 id, u8 tir) {                    /* descomprime o corpo e a roda no rascunho da pagina 3 */
+    if (tir > 2) tir = 2;
+    g_group = 2 + id; load_assets();
+    g_group = 28 + tir; load_assets();
 }
-static void draw_car(void) {                    /* restaura a faixa limpa e desenha o carro atual nas 3 paginas (0 visivel, 1, 2 = copia para restaurar menus) */
-    u8 p, id, t;
-    i16 xl, yt, base;
+static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM recortado nas bordas da tela */
+    if (dx < 0) { sx -= dx; w += dx; dx = 0; }
+    if (dx + w > 256) w = 256 - dx;
+    if (w > 0) lmmm(sx, sy, dx, dy, w, h);
+}
+static i16 car_yt(u8 id) { return CAR_FLOOR - (car_wy[id] + (WH_H >> 1)); }
+static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pagina); rodas por baixo, corpo por cima */
+    i16 yt = base + car_yt(id), wy = yt + car_wy[id] - (WH_H >> 1);
+    clmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), wy, WH_W, WH_H);
+    clmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), wy, WH_W, WH_H);
+    clmmm(0, CAR_Y0, xl, yt, car_w[id], car_h[id]);
+}
+static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (8 px por quadro), desenhando na pagina oculta e trocando a pagina */
+    i16 x = x0, d = x1 > x0 ? 8 : -8; u8 pg = 1; u16 j;
+    for (;;) {
+        band_cmd(BAND_COPY_Y, pg * 256 + BAND_Y);
+        car_blit(pg * 256, id, x);
+        vdp_wait();
+        j = JIFFY; while (JIFFY == j) ;
+        vdp_reg(2, (u8)((pg << 5) | 0x1F));
+        pg ^= 1;
+        if (x == x1) break;
+        x += d; if ((d > 0 && x > x1) || (d < 0 && x < x1)) x = x1;
+    }
+}
+static void draw_car(void) {                    /* mostra o carro atual (com a animacao de entrada/saida) e deixa o resultado final nas 3 paginas (0 visivel, 1, 2 = copia para restaurar menus) */
+    u8 p, id = nown ? gc[cur].id : 255;
+    i16 xl;
+    if (shown_id != 255 && shown_id != id) {                       /* o carro antigo sai de re (para a esquerda) */
+        car_art(shown_id, shown_tir); set_paint(shown_paint);
+        car_slide(shown_id, (256 - car_w[shown_id]) >> 1, -(i16)car_w[shown_id]);
+    }
     for (p = 0; p < 3; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y);
     car_on = 0;
-    if (!nown) { vdp_wait(); return; }
-    id = gc[cur].id; t = gc[cur].tir; if (t > 2) t = 2;
-    g_group = 2 + id; load_assets();
-    g_group = 28 + t; load_assets();
-    set_paint(gc[cur].paint);
-    xl = (256 - car_w[id]) >> 1; yt = 186 - (car_wy[id] + (WH_H >> 1));
-    for (p = 0; p < 3; p++) {
-        base = p * 256 + yt;
-        lmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), base + car_wy[id] - (WH_H >> 1), WH_W, WH_H);
-        lmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), base + car_wy[id] - (WH_H >> 1), WH_W, WH_H);
-        lmmm(0, CAR_Y0, xl, base, car_w[id], car_h[id]);
-    }
-    vdp_wait();
-    car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = yt; car_y1 = yt + car_h[id];
+    if (id == 255) { vdp_wait(); shown_id = 255; vdp_reg(2, 0x1F); return; }
+    car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
+    xl = (256 - car_w[id]) >> 1;
+    if (shown_id == 255) car_slide(id, -(i16)car_w[id], xl);       /* garagem vazia: o carro entra */
+    for (p = 0; p < 3; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
+    vdp_wait(); vdp_reg(2, 0x1F);
+    shown_id = id; shown_tir = gc[cur].tir; shown_paint = gc[cur].paint;
+    car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = car_yt(id); car_y1 = car_y0 + car_h[id];
 }
 typedef struct { u8 x0, y0, x1, y1, id; } Hot;
 static const char *const hot_name[7] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "CATCH SOME TUNES", "WANNA TANK?", "HIT THE STREET", "TIME TO QUIT"};
@@ -1228,8 +1294,8 @@ static u8 hot_at(u8 x, u8 y) {
 }
 static void hot_label(u8 h) {
     cmd_n = 0; cp = cmd_buf;
-    hub_restore(0, 22, 256, 16);
-    if (h != 255) { u8 n = 0; while (hot_name[h][n]) n++; push_fill(4, 24, 8 + 9 * n, 12, 0); draw_text(8, 26, hot_name[h], HC_Y); }
+    hub_restore(56, 33, 162, 15);                 /* o visor branco no alto da cena mostra o nome do objeto sob o cursor */
+    if (h != 255) { u8 n = 0; while (hot_name[h][n]) n++; gtext(137 - 3 * n, 37, hot_name[h], 0); }
     vdp_wait(); cmd_n = 0; cp = cmd_buf;
 }
 #ifdef OLD_MENU                                /* testes automaticos: o menu de texto antigo (ver README) */
@@ -1289,8 +1355,8 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cursor_init();
-    band_save(); draw_car();
     cmd_n = 0; cp = cmd_buf; hub_status();
+    band_save(); draw_car();
     if (pm1) { ui_note(pm1, pm2); pm1 = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
     for (;;) {
         if (game_end) return 1;
