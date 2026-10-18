@@ -313,7 +313,7 @@ def main():
         add((calscr[:, 0::2] << 4 | calscr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=242)
         gus = garage_pixels(lib2, 90)                            # posto "Gus' Gas" (item 90, grupo 243)
         add((gus[:, 0::2] << 4 | gus[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=243)
-        lib1 = os.path.join(os.path.dirname(lib2), 'LIB1')        # telas da LIB1 (paleta EGA padrao): 250 intro, 251 titulo, 252 ranking, 253 vitoria, 254 creditos; 256x200 (320 -> 256) centradas
+        lib1 = os.path.join(os.path.dirname(lib2), 'LIB1')        # telas da LIB1 (mesma paleta do jogo, EGA_PAL): 250 intro, 251 titulo, 252 ranking, 253 vitoria, 254 creditos; 256x200 (320 -> 256) centradas
         for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3)):
             scr = lib1_screen(lib1, it_)
             add((scr[:, 0::2] << 4 | scr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=grp_)
@@ -356,7 +356,7 @@ def main():
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
         pe = []
-        for r, g_, b_ in EGA16: pe += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
+        for r, g_, b_ in EGA_PAL: pe += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_ega[32] = {%s};\n' % ','.join(map(str, pe)))
         f.write(sprh); f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))

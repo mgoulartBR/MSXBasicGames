@@ -443,12 +443,6 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
         else if (*s == '\'') draw_glyph(x, y, sym[8], c);
     }
 }
-static char rk_buf[20]; static u8 rk_x, rk_y, rk_c;
-static void rank_line(void) BK {                 /* escreve rk_buf em (rk_x, rk_y) com a fonte 3x5 (usada na tabela "King Street Rodders") */
-    cmd_n = 0; cp = cmd_buf; clip_l = 0; clip_r = 256; ybase = 0;
-    draw_text(rk_x, rk_y, rk_buf, rk_c);
-    vdp_wait();
-}
 #pragma codeseg CODE
 
 /* instrumentos do cockpit: ponteiros (LINE) sobre o fundo restaurado da pagina 2 (HMMM); so redesenha quando o valor muda
@@ -1253,13 +1247,12 @@ static void full_screen(u8 grp, u8 wait) {      /* tela cheia da LIB1 (paleta EG
     vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_ega; pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
     if (wait) wait_click();
 }
-static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela: posicao, nome e dinheiro */
-    u8 n = 0;
-    while (name[n] && n < 10) { rk_buf[n] = name[n]; n++; }
-    while (n < 11) rk_buf[n++] = ' ';
-    rk_buf[n++] = '$'; { u16 v = score; char t[6]; u8 k = 0; do { t[k++] = '0' + v % 10; v /= 10; } while (v); while (k) rk_buf[n++] = t[--k]; }
-    rk_buf[n] = 0; rk_x = 36; rk_y = 63 + 11 * pos; rk_c = you ? 14 : 15;
-    rank_line();
+static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela, na fonte do jogo: nome a esquerda, dinheiro a direita */
+    char b[8]; u8 n = 1, y = 62 + 11 * pos;
+    b[0] = '$'; n += num_str(b + 1, score); b[n] = 0;
+    cmd_n = 0; cp = cmd_buf;
+    if (you) { push_fill(32, y - 1, 134, 10, 15); vdp_wait(); }
+    gtext(36, y, name, you ? 0 : 1); gtext(162 - 6 * n, y, b, you ? 0 : 1);
 }
 static void victory_and_ranking(void) {
     static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "SPEEDY", "BOBBY", "MOUSE", "LEFTY"};

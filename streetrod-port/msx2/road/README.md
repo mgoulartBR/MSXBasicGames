@@ -316,6 +316,6 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 - `title_screen()`: intro "California Dreams presents" (LIB1 item 2, grupo 250) por ~2 s e titulo (item 0, grupo 251), ambos com a paleta EGA (`pal_ega`); Espaco/botao/clique segue.
 - `race_result()`: o resultado da corrida e uma janela sobre a cena do Bob's (YOU WIN!/YOU LOSE!, tempo e media em MPH; "YA JUMPED THE LIGHT" na queima de largada).
-- `victory_and_ranking()`: se venceu o Rei, a tela de vitoria (item 8, grupo 253); depois a tabela "King Street Rodders" (item 4, grupo 252) com 10 linhas: pilotos ficticios fixos + o jogador (amarelo) inserido pelo dinheiro final. Os nomes/valores dos rivais sao inventados (o ranking original nao foi extraido). Teste: `-DSTART_END=2 -DSTART_MONEY=1700` + `rank_test.tcl`.
+- `victory_and_ranking()`: se venceu o Rei, a tela de vitoria (item 8, grupo 253); depois a tabela "King Street Rodders" (item 4, grupo 252) com 10 linhas na fonte do jogo (`gtext`; a linha do jogador vai sobre uma barra amarela): pilotos ficticios fixos + o jogador (amarelo) inserido pelo dinheiro final. Os nomes/valores dos rivais sao inventados (o ranking original nao foi extraido). Teste: `-DSTART_END=2 -DSTART_MONEY=1700` + `rank_test.tcl`.
 - `-DSTART_END=n` forca `game_end` ao iniciar (teste).
 - Banco 4 agora guarda o menu de carros da garagem; texto da corrida foi para o banco 1.
