@@ -81,7 +81,9 @@ def cockpit_pixels(lib2):
     return np.array(MAP, np.uint8)[idx]
 
 STRIP = 4096
-WIN_Y, SKY_TOP, VIEW_BOT = 24, 22, 70
+WIN_Y, SKY_TOP = 24, 22
+VIEW_BOT = int(os.environ.get('VIEW_BOT', '70'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
+GLASS_MODE = os.environ.get('GLASS_MODE', 'flat')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
@@ -100,7 +102,16 @@ def overlay(a):
         if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
             glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
     glass[108 - y0:, :54] = False             # abaixo da janela lateral o preto e a porta (opaco)
-    glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
+    if GLASS_MODE == 'flat':
+        glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
+    else:
+        cut = np.full(w, h)
+        for x in range(54, w):
+            hit = np.nonzero(np.isin(sub[98 - y0:, x], (4, 5, 7, 15)))[0]
+            if len(hit): cut[x] = 98 - y0 + hit[0]
+        for x in range(54, w):                      # contorno suave (mediana de 21 colunas): ignora as linhas finas do painel
+            win = np.sort(cut[max(54, x - 10):x + 11]); cut[x] = win[len(win) // 2] - 1
+        for x in range(54, w): glass[cut[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     return out
 
