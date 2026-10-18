@@ -2,6 +2,7 @@
  * Mede o custo de ~23 linhas de projeção por frame desenhadas com HMMV. */
 #include <stdint.h>
 #include "tables.h"
+#include "assets.h"
 
 #ifndef STEP_SH
 #define STEP_SH 2       /* log2 de scanlines por grupo de retangulos da pista */
@@ -23,10 +24,16 @@
 #define DRAW_MODE 2     /* bit0: zebras separadas, bit1: gramado por scanline (cada pixel pintado 1x) */
 #endif
 #ifndef VIEW_X0
-#define VIEW_X0 32
+#define VIEW_X0 64
 #endif
 #ifndef VIEW_X1
-#define VIEW_X1 224
+#define VIEW_X1 256
+#endif
+#ifndef WIN_Y
+#define WIN_Y 22          /* linha da tela onde comeca a janela da estrada (para-brisa do cockpit) */
+#endif
+#ifndef SKY_TOP
+#define SKY_TOP 27        /* acima disso o espelho retrovisor do cockpit fica intacto */
 #endif
 #define HZ 36
 #define CMD_MAX 700
@@ -57,6 +64,9 @@ u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
 u8 g_trig, g_row6, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
+u16 g_lzsrc, g_vlo; u8 g_vhi, g_vpg;
+extern void lz_unpack(void);
+extern void vram_blit(void);
 i16 g_a, g_r, g_fx, g_fy, g_fw, g_fh; u16 g_b;
 extern void mul12(void);
 extern void mul16x8(void);
@@ -242,9 +252,13 @@ static void push_fill_v(i16 x, i16 y, i16 w, i16 h, u8 c) {
     push_fill(x, y, w, h, c);
 }
 
+u8 vc[15];
+extern void vdp_cmd15(void);
+static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }
+
 static void draw_opp(void) {
-    i16 d = (i16)(opos - pos), y, xc, hw, w, h, x;
-    u8 r;
+    i16 d = (i16)(opos - pos), y, xc, hw, w, h, x, sx, sw, dx0, dx1, ty;
+    u8 r, si;
     if (d < 2 || d >= N_ROWS - 1) return;
     r = (u8)d;
     y = Y[r - 1];
@@ -252,26 +266,31 @@ static void draw_opp(void) {
     xc = XC[r - 1];
     hw = hwy_tab[y];
     x = xc + ((hw * OLANE) >> 4);
-    w = hw >> 2; if (w < 4) w = 4;
+    w = hw >> 1;
+#if HAVE_COCKPIT
+    if (w > 127) w = 127;
+    si = spr_sel[w];
+    if (si == 255) return;
+    sw = spr_w[si]; h = spr_h[si]; sx = spr_x[si];
+    dx0 = x - (sw >> 1); dx1 = dx0 + sw;                         /* recorte horizontal na janela */
+    if (dx0 < clip_l) { sx += clip_l - dx0; dx0 = clip_l; }
+    if (dx1 > clip_r) dx1 = clip_r;
+    if (dx1 <= dx0) return;
+    ty = y - h; if (y > VIEW_BOT) h -= y - VIEW_BOT; if (h <= 0) return;
+    vc_w(0, sx); vc_w(2, SPR_Y0); vc_w(4, dx0); vc_w(6, ybase + ty);
+    vc_w(8, dx1 - dx0); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;   /* LMMM com TIMP: cor 0 transparente */
+    vdp_cmd15();
+#else
     h = (w >> 1) + (w >> 2) + 1;
-    push_fill_v(x - (w >> 1), y - h, w, h, 14);                      /* corpo */
-    push_fill_v(x - (w >> 2), y - h - (h >> 1), w >> 1, (h >> 1) + 1, 15);   /* cabine */
-    push_fill_v(x - (w >> 1) - 2, y - (h >> 1), 2, h >> 1, 0);       /* rodas */
-    push_fill_v(x + (w >> 1), y - (h >> 1), 2, h >> 1, 0);
-}
-
-static void draw_car(void) {
-    push_fill(100, 96, 56, 14, 9);
-    push_fill(110, 88, 36, 8, 10);
-    push_fill(96, 104, 12, 8, 0);
-    push_fill(148, 104, 12, 8, 0);
+    push_fill_v(x - (w >> 1), y - h, w, h, 14);
+#endif
 }
 
 static void draw_lights(void) {         /* semaforo: vermelho, vermelho, verde */
     u8 lit = cd_t < GO_J / 3 ? 0 : cd_t < 2 * GO_J / 3 ? 1 : cd_t < GO_J ? 2 : 3;
-    push_fill(104, 4, 10, 10, lit >= 1 ? 6 : 11);
-    push_fill(123, 4, 10, 10, lit >= 2 ? 6 : 11);
-    push_fill(142, 4, 10, 10, lit >= 3 ? 13 : 11);
+    push_fill(138, SKY_TOP, 8, 8, lit >= 1 ? 6 : 4);
+    push_fill(156, SKY_TOP, 8, 8, lit >= 2 ? 6 : 4);
+    push_fill(174, SKY_TOP, 8, 8, lit >= 3 ? 13 : 4);
 }
 
 /* ---- HUD: digitos e letras 3x5 em escala 2x2 ---- */
@@ -303,15 +322,31 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
     }
 }
 
-static void draw_gear(void) {
-    u8 pg;
-    clip_l = 0; clip_r = 256;
-    for (pg = 0; pg < 2; pg++) {
-        ybase = pg ? 256 : 0;
-        draw_digit(224, 120, gear, 13);
-        vdp_wait();
-    }
-    clip_l = VIEW_X0; clip_r = VIEW_X1;
+/* instrumentos do cockpit: ponteiros (LINE) sobre o fundo restaurado da pagina 2 (HMMM); so redesenha quando o valor muda
+   (cache por pagina, pois ha 2 paginas alternadas) */
+#define HUD_GEAR_X 133
+#define HUD_GEAR_Y 115
+static void gauge(i16 cx, i16 cy, i16 tx, i16 ty) {
+    i16 dx = tx, dy = ty, ax = tx < 0 ? -tx : tx, ay = ty < 0 ? -ty : ty;
+    u8 maj = ay > ax;
+    vc_w(0, cx - 20); vc_w(2, 512 + cy - 20); vc_w(4, cx - 20); vc_w(6, ybase + cy - 20);   /* fundo limpo (pagina 2) */
+    vc_w(8, 40); vc_w(10, 40); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+    vc_w(4, cx); vc_w(6, ybase + cy);                                                        /* ponteiro (2 pixels de espessura) */
+    vc_w(8, maj ? ay : ax); vc_w(10, maj ? ax : ay); vc[12] = 6;
+    vc[13] = (maj ? 1 : 0) | (dx < 0 ? 4 : 0) | (dy < 0 ? 8 : 0); vc[14] = 0x70;
+    vdp_cmd15();
+    vc_w(4, cx + 1); vdp_cmd15();
+}
+static u16 hud_c[2][3];
+static void hud_reset(void) { u8 i; for (i = 0; i < 3; i++) hud_c[0][i] = hud_c[1][i] = 0xFFFF; }
+static void draw_hud_page(void) {
+    u8 pg = ybase != 0;
+    u16 sp = speed > NEEDLE_SPD_N - 1 ? NEEDLE_SPD_N - 1 : speed, rp = rpm / 50, g = gear;
+    if (rp > NEEDLE_RPM_N - 1) rp = NEEDLE_RPM_N - 1;
+    if (hud_c[pg][0] != sp) { hud_c[pg][0] = sp; gauge(GAUGE_SPD_X, GAUGE_SPD_Y, needle_spd[sp * 2], needle_spd[sp * 2 + 1]); }
+    if (hud_c[pg][1] != rp) { hud_c[pg][1] = rp; gauge(GAUGE_RPM_X, GAUGE_RPM_Y, needle_rpm[rp * 2], needle_rpm[rp * 2 + 1]); }
+    if (hud_c[pg][2] != g) { hud_c[pg][2] = g; draw_digit(HUD_GEAR_X, HUD_GEAR_Y, (u8)g, 13); }
 }
 
 #ifdef DEBUG_HUD
@@ -331,6 +366,22 @@ static void draw_hud(void) {                /* escrito nas duas paginas, 1x por 
 
 #endif
 
+static void load_cockpit(void) {            /* descomprime os assets (cockpit nas paginas 0/1/2, sprites na 3) para a VRAM */
+#if HAVE_COCKPIT
+    u8 k, rg1 = *(volatile u8 *)0xF3E0;
+    vdp_reg(1, rg1 & ~0x40);                /* tela apagada: acesso a VRAM sem espera */
+    for (k = 0; k < ASSET_N; k++) {
+        g_lzsrc = asset_src[k]; lz_unpack();
+        g_vpg = asset_pg[k]; g_vhi = asset_vhi[k]; g_vlo = asset_vlo[k];
+        if (asset_cp[k] == 1) { vram_blit(); continue; }
+        vram_blit();
+        g_vlo += 0x8000; vram_blit();
+        g_vhi = 1; g_vlo = asset_vlo[k]; vram_blit();
+    }
+    vdp_reg(1, rg1 | 0x40);
+#endif
+}
+
 static void init_static(void) {
     u8 pg;
     clip_l = 0; clip_r = 256;
@@ -338,10 +389,10 @@ static void init_static(void) {
         ybase = pg ? 256 : 0;
         cmd_n = 0; cp = cmd_buf;
         push_fill(0, 0, 256, 212, 0);
-        push_fill(0, VIEW_BOT, 256, 212 - VIEW_BOT, 11);
-        push_fill(6, 150, 204, 14, 0);
         vdp_wait();
     }
+    load_cockpit();
+    hud_reset();
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
@@ -415,6 +466,7 @@ static void new_race(void) {
 void main(void) {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0;
+    u16 base;
     dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 #ifdef DRY
@@ -480,16 +532,14 @@ void main(void) {
         dbg_rpm = rpm; dbg_gear = gear; dbg_state = state; dbg_opos = opos; dbg_ospeed = vspd[1];
         cmd_n = 0; cp = cmd_buf;
         project();
-        push_fill(0, 0, 256, Y[N_ROWS - 1] < 0 ? 0 : Y[N_ROWS - 1], 1);
+        base = ybase; ybase = base + WIN_Y;                 /* janela da estrada: y relativo ao para-brisa */
+        push_fill(0, SKY_TOP, 256, Y[N_ROWS - 1] - SKY_TOP, 0);
         draw_road_asm();
         draw_opp();
         if (state == 0) draw_lights();
-        draw_car();
+        ybase = base;
         clip_l = 0; clip_r = 256;
-        push_fill(8, 152, 200, 10, 0);
-        push_fill(8, 152, speed + (speed >> 1), 10, 13);
-        push_fill(8, 168, 200, 8, 0);
-        push_fill(8, 168, rpm / 30, 8, rpm > 4700 ? 6 : 8);
+        draw_hud_page();
         clip_l = VIEW_X0; clip_r = VIEW_X1;
         dbg_cmds = cmd_n; dbg_speed = speed; dbg_pos = pos;
         vdp_wait();
@@ -500,7 +550,6 @@ void main(void) {
         vdp_reg(2, (shown << 5) | 0x1F);
         ybase = shown ? 0 : 256;
         dbg_frames++;
-        if (gear_changed) { gear_changed = 0; { u16 sv = ybase; draw_gear(); ybase = sv; } }
         if ((u16)(JIFFY - j0) >= jhz) {
             dbg_fps10 = (u16)(((u16)(dbg_frames - fr0) * (10u * jhz)) / (u16)(JIFFY - j0));
             fr0 = dbg_frames; j0 = JIFFY;

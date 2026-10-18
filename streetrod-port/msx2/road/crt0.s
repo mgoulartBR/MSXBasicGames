@@ -32,6 +32,7 @@
 	.area _CODE
 init:
 	ld sp,(0xFC4A)
+	call map_page2           ; ROM de 32 KB: os assets ficam em 0x8000
 	call gsinit
 	call _main
 1$:	jr 1$
@@ -52,4 +53,31 @@ gsinit:
 	ldir
 gsinit_next:
 	.area _GSFINAL
+	ret
+
+	.area _CODE
+; mapeia o slot do cartucho (o mesmo da pagina 1) tambem na pagina 2
+map_page2:
+	call 0x0138              ; RSLREG
+	rrca
+	rrca
+	and a,#3
+	ld c,a
+	ld hl,#0xFCC1            ; EXPTBL
+	add a,l
+	ld l,a
+	ld a,(hl)
+	and a,#0x80
+	or a,c
+	ld c,a
+	inc l
+	inc l
+	inc l
+	inc l                    ; SLTTBL
+	ld a,(hl)
+	and a,#0x0C
+	or a,c
+	ld h,#0x80
+	call 0x0024              ; ENASLT
+	ei
 	ret

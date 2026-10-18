@@ -2,7 +2,8 @@
 
 Pista pseudo-3D (projeção por segmentos, modelo extraído de `SRSE.EXE`, ver `../../NOTES.md`) em
 **Screen 5 (256x212, 16 cores), V9938**, com 2 páginas de VRAM e troca no vblank. Código 100% próprio
-(C/SDCC + Z80 assembly); nada do jogo original está aqui. Roda em cartucho ROM de 16 KB.
+(C/SDCC + Z80 assembly). Os gráficos do original (cockpit, carro) **não** estão no repositório: `gen_assets.py` os extrai do `LIB2` da *sua* cópia
+do jogo (`LIB2=.../LIB2 ./build.sh`) e embute na ROM. Sem `LIB2` o jogo roda com gráficos simples. ROM de 32 KB (código em 0x4000, assets LZ em 0x8000).
 
 ![Screen 5](docs/road_screen5.png)
 
@@ -91,3 +92,13 @@ Primeira versão em C puro: **3,4 fps** (janela 256x112).
 3. Emitir menos registros por comando; juntar DI/EI do polling.
 4. Janela do tamanho do para-brisa original (≈ 205x45): ~16 fps medidos com 160x56.
 5. MSX turbo R (R800): CPU ~5-10x; o VDP continua igual, então o limite passa a ser o `HMMV`.
+
+## Gráficos do original (cockpit)
+- `gen_assets.py`: lê o item 14 da `LIB2` (cockpit 320x190), reduz para 256 colunas (descarta 1 coluna em 5, preservando o dither), mapeia as cores EGA
+  para a paleta MSX2 (`palette_def.py`) e comprime em faixas de 4 KB (LZ4-like, decodificador Z80 de ~60 bytes em `vdpasm.s`). Também gera o carro
+  visto por trás (item 248, fundo transparente por flood-fill) em 9 tamanhos, os ponteiros dos mostradores e `assets.h`.
+- Na carga a tela é apagada e as faixas vão para a VRAM: cockpit nas páginas 0 e 1 (as duas telas) e uma cópia limpa na página 2; sprites na página 3.
+- A estrada é desenhada só no para-brisa (x 64..256, 80 linhas a partir de y=22). Tacômetro e velocímetro: a cada mudança, `HMMM` restaura o fundo
+  limpo (página 2) e `LINE` desenha o ponteiro; o oponente é um `LMMM` com TIMP (cor 0 transparente) da folha de sprites.
+- A ROM de 32 KB usa ENASLT no início para mapear o cartucho também na página 2 da CPU.
+- `./shot.sh "<flags>" "t1 t2" prefixo` salva capturas de tela (VRAM→PNG) no openMSX.

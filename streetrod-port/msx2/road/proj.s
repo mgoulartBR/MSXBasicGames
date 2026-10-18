@@ -116,7 +116,7 @@ pr_row:
 	cp a,#4
 	jr nz,1$
 	ld (_xoff_ahead),hl
-1$:	; xc = 128 + ((xoff - P) * rc) >> 12
+1$:	; xc = CX + ((xoff - P) * rc) >> 12
 	ld de,(_P)
 	or a,a
 	sbc hl,de
@@ -125,7 +125,7 @@ pr_row:
 	ld (_g_b8),a
 	call _mul16x8
 	ld hl,(_g_r)
-	ld de,#128
+	ld de,#CX
 	add hl,de
 	call clampx
 	ld (p_xc),hl

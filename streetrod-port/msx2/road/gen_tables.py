@@ -44,8 +44,9 @@ thr = [13, 27, 41, 55, 69, 83, 97, 101, 105, 109, 113, 117, 121, 125, 129]
 out.append('const uint8_t step_thr[15] = {%s};' % ','.join(map(str, thr)))
 
 def rgb(r, g, b): return ((r << 4) | b, g)   # MSX2: byte0 = R<<4|B, byte1 = G
-pal = [(0,0,0), (2,5,7), (0,3,0), (1,5,0), (2,2,2), (3,3,3), (6,0,0), (7,7,7),
-       (7,7,0), (6,1,1), (2,0,0), (1,1,1), (7,7,7), (0,6,0), (1,2,7), (4,4,4)]
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from palette_def import PAL as pal
 flat = []
 for c in pal: flat += list(rgb(*c))
 out.append('const uint8_t palette[32] = {%s};' % ','.join(map(str, flat)))

@@ -11,3 +11,8 @@ config.inc
 main_bench.c
 main_v.c
 tables.h
+assets.bin
+assets.h
+cockpit_px.npy
+sheet_px.npy
+config.inc

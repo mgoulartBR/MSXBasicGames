@@ -1,5 +1,13 @@
 	.module vdpasm
 	.include "config.inc"
+	.globl _g_lzsrc
+	.globl _g_vlo
+	.globl _g_vhi
+	.globl _g_vpg
+	.globl _lz_unpack
+	.globl _vc
+	.globl _vdp_cmd15
+	.globl _vram_blit
 	.globl _ev_space
 	.globl _ev_shift
 	.globl _install_hook
@@ -741,3 +749,119 @@ _key_isr:
 	.area _DATA
 _k_edge:	.ds 1
 	.area _CODE
+
+; ---------------------------------------------------------------------
+; _lz_unpack: descomprime (formato LZ4-like, ver gen_assets.py) de (g_lzsrc) para _cmd_buf (reaproveitado como buffer na carga)
+	.area _DATA
+lz_tok:	.ds 1
+	.area _CODE
+_lz_unpack::
+	ld hl,(_g_lzsrc)
+	ld de,#_cmd_buf
+lz_next:
+	ld a,(hl)
+	inc hl
+	ld (lz_tok),a
+	rrca
+	rrca
+	rrca
+	rrca
+	and a,#15
+	ld c,a
+	ld b,#0
+	cp a,#15
+	call z,lz_ext
+	ld a,b
+	or a,c
+	jr z,lz_nolit
+	ldir
+lz_nolit:
+	ld c,(hl)
+	inc hl
+	ld b,(hl)
+	inc hl
+	ld a,b
+	or a,c
+	ret z                    ; offset 0 = fim
+	push hl
+	ld h,d
+	ld l,e
+	or a,a
+	sbc hl,bc
+	ex (sp),hl               ; hl = ponteiro de origem, (sp) = inicio da copia
+	ld a,(lz_tok)
+	and a,#15
+	ld c,a
+	ld b,#0
+	cp a,#15
+	call z,lz_ext
+	inc bc
+	inc bc
+	inc bc
+	inc bc
+	ex (sp),hl
+	ldir
+	pop hl
+	jr lz_next
+lz_ext:
+1$:	ld a,(hl)
+	inc hl
+	push af
+	add a,c
+	ld c,a
+	jr nc,2$
+	inc b
+2$:	pop af
+	inc a
+	jr z,1$
+	ret
+
+; _vram_blit: copia g_vpg paginas de 256 bytes de _cmd_buf para a VRAM em (g_vhi:g_vlo)
+_vram_blit::
+	di
+	ld a,(_g_vhi)
+	add a,a
+	add a,a
+	ld b,a
+	ld a,(_g_vlo+1)
+	rlca
+	rlca
+	and a,#3
+	or a,b
+	out (#0x99),a
+	ld a,#0x8E
+	out (#0x99),a
+	ld a,(_g_vlo)
+	out (#0x99),a
+	ld a,(_g_vlo+1)
+	and a,#0x3F
+	or a,#0x40
+	out (#0x99),a
+	ld a,(_g_vpg)
+	ld d,a
+	ld hl,#_cmd_buf
+	ld c,#0x98
+1$:	ld b,#0
+	otir
+	dec d
+	jr nz,1$
+	xor a,a
+	out (#0x99),a
+	ld a,#0x8E
+	out (#0x99),a
+	ei
+	ret
+
+; _vdp_cmd15: espera CE=0 e envia 15 bytes de _vc para R#32..R#46 (HMMM/LINE)
+_vdp_cmd15::
+	call ex_wait
+	di
+	ld a,#32
+	out (#0x99),a
+	ld a,#0x91
+	out (#0x99),a
+	ld hl,#_vc
+	ld bc,#0x0F9B
+	otir
+	ei
+	ret
