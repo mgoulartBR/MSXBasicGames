@@ -329,6 +329,10 @@ def main():
             len(carart), ','.join(str(c['wx'][0]) for c in carart),
             len(carart), ','.join(str(c['wx'][1]) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][1]),
             ','.join(str(st.shape[1]) for st in stkart), ','.join(str(st.shape[0]) for st in stkart))
+        lic = garage_pixels(lib2, 16)                            # carteira DMV (item 16): grupo 244, no alto da tela (o teclado do nome fica embaixo)
+        canvas = np.zeros((212, 256), np.uint8); lx0 = ((256 - lic.shape[1]) // 2) & ~1
+        canvas[:lic.shape[0], lx0:lx0 + lic.shape[1]] = lic
+        add((canvas[:, 0::2] << 4 | canvas[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=244)
         news = garage_pixels(lib2, 21)                           # jornal "Los Angeles News" (item 21: AUTO PARTS / USED CARS / titulo) + manchete do dia (itens 22-26)
         add((news[:, 0::2] << 4 | news[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=190)
         for k_ in range(5):

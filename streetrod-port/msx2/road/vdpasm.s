@@ -22,6 +22,7 @@
 	.globl _pal_load2
 	.globl _psg_w
 	.globl _fm_w
+	.globl _key_get
 	.globl _sr_exec
 	.globl _bd_exec
 	.globl _get_cart_slot
@@ -884,6 +885,22 @@ _vram_blit::
 	ld a,#0x8E
 	out (#0x99),a
 	ei
+	ret
+
+; _key_get: g_val = proximo caractere do buffer de teclado da BIOS (0 se vazio); a BIOS pode estragar IX/IY, que o C usa
+_key_get::
+	push ix
+	push iy
+	call 0x009C              ; CHSNS: Z = buffer vazio
+	jr z,kg_none
+	call 0x009F              ; CHGET
+	jr kg_end
+kg_none:
+	xor a,a
+kg_end:
+	pop iy
+	pop ix
+	ld (_g_val),a
 	ret
 
 ; ---- salvar/carregar ----

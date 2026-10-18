@@ -80,6 +80,7 @@ static const char *txt(char *buf, u16 ofs, u8 len) { g_bk_bank = TEXT_BANK; g_bk
 #define PILN(i) txt(nbd, TXT_PIL_OFS + (i) * 11, 11)
 extern void lz_unpack(void);
 extern void psg_w(void);
+extern void key_get(void);
 extern void sr_exec(void);
 extern void bd_exec(void);
 extern void get_cart_slot(void);
@@ -152,6 +153,8 @@ static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JI
 #define MAXSPARE 12
 static u8 spare[MAXSPARE], nspare;
 static u8 offer_day = 255;
+static char pname[13];                       /* nome do jogador (carteira DMV); vazio = SPEEDY */
+static u8 ask_name;                          /* 1 = pedir o nome (jogo novo) */
 static u8 ask_load;                          /* 1 = no comeco do jogo, oferecer o carregamento de um jogo salvo */
 static u8 game_end;                          /* 0 jogando, 1 acabou o verao, 2 rei do condado, 3 faliu */
 static u8 wins_drag, wins_road;
@@ -685,7 +688,10 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_R 11
 #pragma codeseg BANK2
 static void new_game(void) BK {
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255; ask_load = 1;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255; ask_load = 1; ask_name = 1;
+#ifdef NO_NAME
+    ask_name = 0;                                                                   /* testes automatizados nao digitam o nome */
+#endif
 #ifdef START_CAR
     car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
@@ -1372,13 +1378,13 @@ static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma lin
     gtext(36, y, name, !you); gtext(162 - 6 * n, y, b, !you);
 }
 static void victory_and_ranking(void) {
-    static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "SPEEDY", "BOBBY", "MOUSE", "LEFTY"};
+    static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "VINNIE", "BOBBY", "MOUSE", "LEFTY"};
     static const u16 base[9] = {2900, 2300, 1800, 1500, 1200, 1000, 800, 650, 500};
     u8 i, k = 0, you = 0;
     if (game_end == 2) full_screen(253, 1);                        /* "Well, you've done it, you've beaten the king..." */
     full_screen(252, 0);
     for (i = 0; i < 10; i++) {
-        if (!you && (k >= 9 || money >= base[k])) { put_rank(i, "YOU", money, 1); you = 1; }
+        if (!you && (k >= 9 || money >= base[k])) { put_rank(i, pname[0] ? pname : "SPEEDY", money, 1); you = 1; }
         else { put_rank(i, nm[k], base[k], 0); k++; }
     }
     wait_click();
@@ -1630,6 +1636,7 @@ static u8 scene_pick(void) {
     for (;;) { ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0; if (r != 255) { sel = r; return map[r]; } }
 }
 #else
+static u8 pick_abort;                              /* uma funcao de pick_tick pode pedir a saida de pick_hot (devolve 253) */
 static void (*pick_tick)(void);                  /* chamada a cada quadro por pick_hot (animacoes) */
 static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado (254 = voltar, se allow_back) */
     u8 held = 1, bheld = 1, prev = 0xFE, hit, hold = 0, st, step, go;
@@ -1639,6 +1646,7 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
     for (;;) {
         j = JIFFY; while (JIFFY == j) ;
         if (pick_tick) pick_tick();
+        if (pick_abort) { pick_abort = 0; spr_off(); return 253; }
         read_input(); combine_input();
         st = g_stick; go = (g_trig & 3) != 0;
         if (st) {
@@ -1864,7 +1872,9 @@ static void race_result(void) BK {              /* resultado da corrida: janela 
 /* ---- salvar / carregar: SRAM do PAC / FM-PAC (qualquer slot com a SRAM liberada por 0x4D/0x69 em 0x5FFE/0x5FFF) ou arquivo STREETRO.SAV no disco (BDOS do Disk BASIC) ---- */
 #define SV_OFS 0x1D00                          /* dentro dos 8 KB da SRAM do PAC, perto do fim (os primeiros bytes pertencem ao sistema de arquivos do PAC) */
 #define SV_HDR 13
-#define SV_N (SV_HDR + MAXSPARE + sizeof(gc) + 2)
+#define SV_SP (SV_HDR + 13)                    /* depois do nome (12 letras + 0) */
+#define SV_GC (SV_SP + MAXSPARE)
+#define SV_N (SV_GC + sizeof(gc) + 2)
 static u8 sv_media, sv_slot, sv_buf[128], sv_chk[128], sv_fcb[37];     /* sv_media: 0 nenhum, 1 PAC, 2 disco */
 static void sv_probe(u8 sl) {
     if (sl == cart_slot) return;
@@ -1888,18 +1898,19 @@ static u8 sv_sum(const u8 *b) { u16 s = 0; u8 i; for (i = 0; i < SV_N - 2; i++) 
 static void sv_pack(void) {
     u8 i; const u8 *g = (const u8 *)gc;
     for (i = 0; i < 128; i++) sv_buf[i] = 0;
-    sv_buf[0] = 'S'; sv_buf[1] = 'R'; sv_buf[2] = 1; sv_buf[3] = SV_N; sv_buf[4] = nown; sv_buf[5] = cur; sv_buf[6] = day; sv_buf[7] = nspare;
+    sv_buf[0] = 'S'; sv_buf[1] = 'R'; sv_buf[2] = 2; sv_buf[3] = SV_N; sv_buf[4] = nown; sv_buf[5] = cur; sv_buf[6] = day; sv_buf[7] = nspare;
     sv_buf[8] = wins_drag; sv_buf[9] = wins_road; sv_buf[10] = sel_car; sv_buf[11] = (u8)money; sv_buf[12] = (u8)(money >> 8);
-    for (i = 0; i < MAXSPARE; i++) sv_buf[SV_HDR + i] = spare[i];
-    for (i = 0; i < sizeof(gc); i++) sv_buf[SV_HDR + MAXSPARE + i] = g[i];
+    for (i = 0; i < 13; i++) sv_buf[SV_HDR + i] = pname[i];
+    for (i = 0; i < MAXSPARE; i++) sv_buf[SV_SP + i] = spare[i];
+    for (i = 0; i < sizeof(gc); i++) sv_buf[SV_GC + i] = g[i];
     sv_buf[SV_N - 2] = sv_sum(sv_buf); sv_buf[SV_N - 1] = (u8)~sv_buf[SV_N - 2];
 }
 static u8 sv_ok(const u8 *b) {                  /* 1 se o bloco e uma gravacao valida e coerente */
     u8 i;
-    if (b[0] != 'S' || b[1] != 'R' || b[2] != 1 || b[3] != SV_N) return 0;
+    if (b[0] != 'S' || b[1] != 'R' || b[2] != 2 || b[3] != SV_N) return 0;
     if (b[SV_N - 2] != sv_sum(b) || b[SV_N - 1] != (u8)~b[SV_N - 2]) return 0;
     if (b[4] > MAXCARS || b[7] > MAXSPARE || (b[4] && b[5] >= b[4]) || b[6] > 62) return 0;
-    for (i = 0; i < b[4]; i++) if (b[SV_HDR + MAXSPARE + i * sizeof(Car)] >= sizeof(car_w)) return 0;
+    for (i = 0; i < b[4]; i++) if (b[SV_GC + i * sizeof(Car)] >= sizeof(car_w)) return 0;
     return 1;
 }
 static u8 sv_bdos(u8 fn, u8 *de) { g_reg = fn; g_bk_src = (u16)de; bd_exec(); return g_val; }
@@ -1939,35 +1950,102 @@ static u8 sv_load(void) BK {
     if (!sv_exists()) return 0;
     nown = sv_buf[4]; cur = sv_buf[5]; day = sv_buf[6]; nspare = sv_buf[7]; wins_drag = sv_buf[8]; wins_road = sv_buf[9]; sel_car = sv_buf[10];
     money = sv_buf[11] | ((u16)sv_buf[12] << 8);
-    for (i = 0; i < MAXSPARE; i++) spare[i] = sv_buf[SV_HDR + i];
-    for (i = 0; i < sizeof(gc); i++) g[i] = sv_buf[SV_HDR + MAXSPARE + i];
+    for (i = 0; i < 13; i++) pname[i] = sv_buf[SV_HDR + i];
+    pname[12] = 0;
+    for (i = 0; i < MAXSPARE; i++) spare[i] = sv_buf[SV_SP + i];
+    for (i = 0; i < sizeof(gc); i++) g[i] = sv_buf[SV_GC + i];
     offer_day = 255; game_end = 0;
     return 1;
 }
 #pragma codeseg BANK2
-static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
-    static const char *const yn[2] = {"YES", "NO"};
-    u8 r;
+#ifdef OLD_MENU
+static void name_screen(void) BK {}
+#else
+/* ---- nome do jogador: carteira DMV (LIB2 item 16, grupo 244) com teclado na tela (mouse) e o teclado do MSX (buffer da BIOS) ---- */
+static Hot khot[29];                           /* 26 letras (ids 0-25), espaco 26, apaga 27, pronto 28 */
+static u8 nm_n;
+static void nm_show(void) {
+    cmd_n = 0; cp = cmd_buf;
+    hub_restore(112, 58, 82, 11);                                       /* a linha NAME: da carteira, limpa da copia na pagina 2 */
+    gtext(114, 60, pname, 0);
+    vdp_wait(); cmd_n = 0; cp = cmd_buf;
+}
+static void nm_key(u8 c) {                     /* 0..25 letra, 26 espaco, 27 apaga */
+    if (c == 27) { if (nm_n) pname[--nm_n] = 0; }
+    else if (nm_n < 12) pname[nm_n++] = c == 26 ? ' ' : 'A' + c;
+    nm_show();
+}
+static void nm_tick(void) {
+    key_get(); { u8 c = g_val;
+        if (c >= 'a' && c <= 'z') c -= 32;
+        if (c >= 'A' && c <= 'Z') nm_key(c - 'A');
+        else if (c == ' ') nm_key(26);
+        else if (c == 8 || c == 127) nm_key(27);
+        else if (c == 13) pick_abort = 1;
+    }
+}
+static void name_screen(void) BK {
+    static const char kl[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    u8 i, r, x, y, k; char b[2];
+    u8 rg1 = *(volatile u8 *)0xF3E0;
+    clip_l = 0; clip_r = 256; ybase = 0;
+    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_garage; pal_load2(); g_group = 244; load_assets(); font_init(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    cmd_n = 0; cp = cmd_buf;
+    for (i = 0; i < 26; i++) {                                                   /* teclas: duas fileiras de 13 */
+        x = 4 + 19 * (i % 13); y = 157 + 13 * (i / 13);
+        khot[i].x0 = x; khot[i].y0 = y; khot[i].x1 = x + 17; khot[i].y1 = y + 11; khot[i].id = i;
+        push_fill(x, y, 18, 12, HC_K); push_fill(x + 1, y + 1, 16, 10, HC_W);
+        b[0] = kl[i]; b[1] = 0; gtext(x + 6, y + 2, b, 0);
+    }
+    for (r = 0; r < 3; r++) {                                                    /* espaco, apaga, pronto */
+        static const u8 bx[3] = {4, 93, 162}, bw[3] = {86, 66, 90};
+        static const char *const bl[3] = {"SPACE", "DEL", "DONE"};
+        x = bx[r]; y = 183; k = 26 + r;
+        khot[k].x0 = x; khot[k].y0 = y; khot[k].x1 = x + bw[r] - 1; khot[k].y1 = y + 11; khot[k].id = k;
+        push_fill(x, y, bw[r], 12, HC_K); push_fill(x + 1, y + 1, bw[r] - 2, 10, HC_W);
+        gtext(x + (bw[r] - 6 * (r == 0 ? 5 : r == 1 ? 3 : 4)) / 2, y + 2, bl[r], 0);
+    }
+    gtext(4, 199, "TYPE YOUR NAME - RETURN WHEN DONE", 1);
+    vdp_wait(); cmd_n = 0; cp = cmd_buf;
+    nm_n = 0; while (pname[nm_n]) nm_n++;
+    nm_show();
+    hs = khot; hn = 29; lab_mode = 1; pick_tick = nm_tick; cur_ymax = 210;
+    for (;;) {
+        k = pick_hot(1);
+        if (k >= 253 || k == 28) break;                                          /* RETURN, ESC ou DONE */
+        nm_key(k);
+    }
+    pick_tick = 0; lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+    if (!pname[0]) { static const char d[7] = "SPEEDY"; for (i = 0; i < 7; i++) pname[i] = d[i]; }
+}
+#endif
+static void hub_draw(void) {                    /* monta a garagem: cena, cursor, barra de status e o carro */
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cursor_init();
     cmd_n = 0; cp = cmd_buf; hub_status();
     band_save(); draw_car();
+}
+static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
+    static const char *const yn[2] = {"YES", "NO"};
+    u8 r;
+    hub_draw();
     if (pm_on) { ui_note(pmb[0], pmb[1]); pm_on = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
 #ifdef TEST_SAVE
-    money = 777; day = 9; wins_drag = 5; dbg_t1 = sv_save(); ask_load = 0;
+    money = 777; day = 9; wins_drag = 5; pname[0] = 'Z'; pname[1] = 'E'; pname[2] = 'D'; pname[3] = 0; dbg_t1 = sv_save(); ask_load = 0;
 #endif
 #ifdef TEST_LOAD
-    dbg_t1 = sv_load(); ask_load = 0; cmd_n = 0; cp = cmd_buf; hub_status(); draw_car();
+    dbg_t1 = sv_load(); dbg_t2 = pname[0] | ((u16)pname[2] << 8); ask_load = 0; cmd_n = 0; cp = cmd_buf; hub_status(); draw_car();
 #endif
     if (ask_load) {                                     /* comeco do jogo: ha um jogo salvo? */
         ask_load = 0;
         if (sv_media && sv_exists()) {
             ui_nohint = 1;
-            if (ui_pick("LOAD SAVED GAME?", yn, 2, 0) == 0 && sv_load()) { cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car(); }
+            if (ui_pick("LOAD SAVED GAME?", yn, 2, 0) == 0 && sv_load()) { ask_name = 0; cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car(); }
             ui_nohint = 0;
         }
     }
+    if (ask_name) { ask_name = 0; name_screen(); hub_draw(); }                       /* jogo novo: a carteira DMV pede o nome */
     for (;;) {
         if (game_end) return 1;
         if (!nown && money < 300 && !nspare) { game_end = 3; return 1; }

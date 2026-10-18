@@ -336,3 +336,8 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - Formato (`sv_pack/sv_ok`): 'S','R', versao, tamanho, estado (carros, pecas, dinheiro, dia, vitorias...), `gc[]` inteiro e checksum; 91 bytes em PAC+0x1D00 (fim dos 8 KB) ou 1 registro de 128 bytes no arquivo. Depois de gravar, le de volta e compara.
 - Interface: a porta ("TIME TO QUIT") abre SAVE GAME / LOAD GAME / QUIT TO TITLE; no comeco de um jogo novo, se ha gravacao valida, pergunta "LOAD SAVED GAME?". Sem PAC nem disco: avisa. Testes: `-DTEST_SAVE`, `-DTEST_LOAD`, `-DNO_PAC`, `sv_test.tcl`, `sv_ui_test.tcl`.
 - Cuidado com o mapper: emuladores adivinham ASCII16 contando `LD (nn),A` para 0x6000/0x7000; por isso o codigo novo evita esse padrao para outros enderecos (usa `ld (hl),a`).
+
+## M7: nome do jogador (carteira DMV)
+
+- LIB2 item 16 ("DRIVER LICENSE", linha `NAME:`) vira o grupo 244 (no alto da tela, copias nas paginas 0-2). `name_screen()` (banco 2) roda no primeiro `hub()` de um jogo novo, depois da pergunta de carregar (se carregou um save, o nome vem dele): digita-se com o teclado do MSX (buffer da BIOS via `key_get`, RETURN termina, BS apaga, ESC aceita) ou clicando no teclado da tela (26 letras, SPACE, DEL, DONE: hotspots para `pick_hot`, acessiveis com o mouse e o cursor). 12 letras no maximo; vazio vira SPEEDY. `pick_abort` deixa um `pick_tick` encerrar o `pick_hot` (RETURN).
+- O nome entra no ranking (linha amarela) e no arquivo de save (versao 2, 104 bytes). Teste: `-DNO_NAME` pula a tela (testes automatizados), `name_test.tcl`.
