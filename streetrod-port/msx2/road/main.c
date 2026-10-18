@@ -413,18 +413,12 @@ static void draw_hud(void) {                /* escrito nas duas paginas, 1x por 
 
 #endif
 
+extern void load_assets(void);
 static void load_cockpit(void) {            /* descomprime os assets (cockpit nas paginas 0/1/2, sprites na 3) para a VRAM */
 #if HAVE_COCKPIT
-    u8 k, rg1 = *(volatile u8 *)0xF3E0;
+    u8 rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40);                /* tela apagada: acesso a VRAM sem espera */
-    for (k = 0; k < ASSET_N; k++) {
-        g_lzsrc = asset_src[k]; lz_unpack();
-        g_vpg = asset_pg[k]; g_vhi = asset_vhi[k]; g_vlo = asset_vlo[k];
-        if (asset_cp[k] == 1) { vram_blit(); continue; }
-        vram_blit();
-        g_vlo += 0x8000; vram_blit();
-        g_vhi = 1; g_vlo = asset_vlo[k]; vram_blit();
-    }
+    load_assets();                          /* troca de banco ASCII16 dentro do carregador (pagina 1) */
     vdp_reg(1, rg1 | 0x40);
 #endif
 }

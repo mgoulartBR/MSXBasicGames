@@ -115,3 +115,11 @@ inicia. Ao fim da corrida, ESPAÇO volta ao menu. Os 26 carros e 22 pilotos vêm
 curvas de torque e linha vermelha de cada carro (modelo `tools/powertrain.py`) e a habilidade do piloto; o oponente troca de marcha em
 `rotação de corte - 100*habilidade`. Vista traseira do oponente: 3 modelos (sedã genérico, perua/woodie, Corvette) e cor de pintura sorteada
 (cor 12 da paleta). Os assets ficam no fim da ROM de 32 KB (hoje ~0,3 KB de folga: próximo passo é uma ROM maior com mapper).
+
+## ROM com mapper ASCII16 (64 KB)
+- Layout: banco 0 (0x4000, fixo) + banco 1 (0x8000, padrão) = código e tabelas (até 32 KB); bancos 2+ = assets comprimidos (16 KB cada), que só são
+  mapeados em 0x8000 pelo carregador (`load_assets` em `vdpasm.s`, junto com `lz_unpack`/`vram_blit`, tudo na página 1 fixa: o linker coloca `vdpasm`
+  primeiro). A faixa de assets nunca cruza dois bancos (`gen_assets.py`).
+- `crt0.s` escreve 0 em 0x6000 e 1 em 0x7000. As escritas a 0x6000/0x7000 fazem emuladores (openMSX, WebMSX) detectarem ASCII16; se o seu não detectar,
+  escolha o mapper "ASCII16" ao carregar a ROM.
+- Para adicionar assets basta chamar `add()` em `gen_assets.py`: novos bancos são criados automaticamente (a ROM cresce em potências de 2).

@@ -5,6 +5,7 @@
 	.globl _g_vhi
 	.globl _g_vpg
 	.globl _lz_unpack
+	.globl _load_assets
 	.globl _psg_w
 	.globl _pal_one
 	.globl _vc
@@ -890,4 +891,67 @@ _pal_one::
 	ld a,(_g_sh)
 	out (#0x9A),a
 	ei
+	ret
+
+; _load_assets: para cada faixa da tabela (assets.inc): seleciona o banco ASCII16 em 0x8000, descomprime e copia para a VRAM
+; (copias = 1: so no destino; 3: paginas 0, 1 e 2). Tem de ficar na pagina 1 (nao trocada), como lz_unpack e vram_blit.
+	.include "assets.inc"
+_load_assets::
+	ld a,#ASSET_N
+	or a,a
+	ret z
+	ld hl,#asset_tab
+	ld b,#ASSET_N
+la_next:
+	push bc
+	ld a,(hl)
+	inc hl
+	ld (0x7000),a
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	inc hl
+	ld (_g_lzsrc),de
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	inc hl
+	ld (_g_vlo),de
+	ld a,(hl)
+	inc hl
+	ld (_g_vhi),a
+	ld a,(hl)
+	inc hl
+	ld (_g_vpg),a
+	ld a,(hl)
+	inc hl
+	push af
+	push hl
+	call _lz_unpack
+	call _vram_blit
+	pop hl
+	pop af
+	cp a,#1
+	jr z,la_done
+	push hl
+	ld hl,(_g_vlo)
+	ld a,h
+	xor a,#0x80
+	ld h,a
+	ld (_g_vlo),hl            ; segunda copia: pagina 1 (vlo + 0x8000)
+	call _vram_blit
+	ld hl,(_g_vlo)
+	ld a,h
+	xor a,#0x80
+	ld h,a
+	ld (_g_vlo),hl
+	ld a,#1
+	ld (_g_vhi),a             ; terceira copia: pagina 2 (A16 = 1)
+	call _vram_blit
+	pop hl
+la_done:
+	pop bc
+	djnz la_next
+	ld a,#1
+	ld (0x7000),a             ; volta o banco 1 (codigo) em 0x8000
 	ret

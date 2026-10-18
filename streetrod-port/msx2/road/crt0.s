@@ -32,7 +32,11 @@
 	.area _CODE
 init:
 	ld sp,(0xFC4A)
-	call map_page2           ; ROM de 32 KB: os assets ficam em 0x8000
+	call map_page2           ; mapeia o slot do cartucho tambem na pagina 2
+	xor a,a
+	ld (0x6000),a            ; ASCII16: banco 0 em 0x4000-0x7FFF (codigo fixo)
+	inc a
+	ld (0x7000),a            ; banco 1 em 0x8000-0xBFFF (resto do codigo); bancos 2+ = assets, trocados so no carregador
 	call gsinit
 	call _main
 1$:	jr 1$

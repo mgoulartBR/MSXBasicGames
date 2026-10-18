@@ -19,3 +19,4 @@ config.inc
 overlay_px.npy
 layout.inc
 cars.h
+assets.inc

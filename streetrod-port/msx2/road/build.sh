@@ -14,5 +14,5 @@ sdasz80 -plosgff crt0.rel crt0.s
 sdasz80 -plosgff vdpasm.rel vdpasm.s
 sdasz80 -plosgff proj.rel proj.s
 sdcc -mz80 --std-sdcc11 --opt-code-speed -c "$@" ${SRC:-main.c} -o $(basename ${SRC:-main.c} .c).rel
-sdcc -mz80 --no-std-crt0 --code-loc 0x4020 --data-loc 0xC000 crt0.rel $(basename ${SRC:-main.c} .c).rel vdpasm.rel proj.rel -o road.ihx
+sdcc -mz80 --no-std-crt0 --code-loc 0x4020 --data-loc 0xC000 crt0.rel vdpasm.rel proj.rel $(basename ${SRC:-main.c} .c).rel -o road.ihx
 python3 ihx2rom.py road.ihx road.rom assets.bin

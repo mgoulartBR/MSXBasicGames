@@ -211,13 +211,14 @@ def scale_sprite(col, w):
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    blob = bytearray(); ents = []       # ents: (offset_rom, vram_addr, paginas_256, copias)
+    banks = [bytearray()]; ents = []       # banco de 16 KB por vez (a partir do banco 2 da ROM); ents: (banco, endereco 0x8000+, vaddr, paginas_256, copias)
     lib2 = os.environ.get('LIB2')
     def add(raw, vaddr, copies):
         for s in range(0, len(raw), STRIP):
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
-            ents.append((len(blob), vaddr + s, len(chunk) // 256, copies)); blob.extend(enc)
+            if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
+            ents.append((len(banks) + 1, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
     sprh = ''; orects = []
     if lib2:
         a = cockpit_pixels(lib2)
@@ -253,23 +254,19 @@ def main():
                 'static const uint8_t spr_h[3][SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
             len(SPR_W), SPR_Y0, SPR_STRIDE, ','.join(map(str, xs)), ','.join(map(str, SPR_W)),
             ','.join('{%s}' % ','.join(map(str, h)) for h in hs), ','.join(map(str, sel)))
-    print('assets: %d faixas, %d bytes comprimidos' % (len(ents), len(blob)), file=sys.stderr)
-    base = 0xC000 - len(blob)             # os assets ficam no fim da ROM (codigo e tabelas crescem a partir de 0x4000)
-    ents = [(base + e[0],) + e[1:] for e in ents]
-    assert base >= 0x6000, 'assets grandes demais'
-    open(os.path.join(here, 'assets.bin'), 'wb').write(blob)
+    nb = len(banks) if ents else 0
+    print('assets: %d faixas em %d banco(s) de 16 KB' % (len(ents), nb), file=sys.stderr)
+    open(os.path.join(here, 'assets.bin'), 'wb').write(b''.join(bytes(b).ljust(0x4000, b'\xff') for b in banks) if ents else b'')
+    with open(os.path.join(here, 'assets.inc'), 'w') as f:       # tabela lida pelo carregador em assembly (fica na pagina 1, fixa)
+        f.write('\t.equ ASSET_N, %d\nasset_tab:\n' % len(ents))
+        for b, src, v, pg, cp in ents:
+            f.write('\t.db %d\n\t.dw %d\n\t.dw %d\n\t.db %d, %d, %d\n' % (b, src, v & 0xFFFF, v >> 16, pg, cp))
     with open(os.path.join(here, 'assets.h'), 'w') as f:
         import math
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
-        f.write('#define HAVE_COCKPIT %d\n#define ASSET_N %d\n#define ASSET_BASE %d\n' % (1 if ents else 0, len(ents), base))
-        n = max(1, len(ents))
-        f.write('static const uint16_t asset_src[%d] = {%s};\n' % (n, ','.join(str(e[0]) for e in ents) or '0'))
-        f.write('static const uint16_t asset_vlo[%d] = {%s};\n' % (n, ','.join(str(e[1] & 0xFFFF) for e in ents) or '0'))
-        f.write('static const uint8_t asset_vhi[%d] = {%s};\n' % (n, ','.join(str(e[1] >> 16) for e in ents) or '0'))
-        f.write('static const uint8_t asset_pg[%d] = {%s};\n' % (n, ','.join(str(e[2]) for e in ents) or '0'))
-        f.write('static const uint8_t asset_cp[%d] = {%s};\n' % (n, ','.join(str(e[3]) for e in ents) or '0'))
+        f.write('#define HAVE_COCKPIT %d\n' % (1 if ents else 0))
         f.write(sprh)
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
