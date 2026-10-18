@@ -22,6 +22,12 @@
 	.globl _pal_load2
 	.globl _psg_w
 	.globl _fm_w
+	.globl _sr_exec
+	.globl _bd_exec
+	.globl _get_cart_slot
+	.globl _cart_slot
+	.globl _g_s0
+	.globl _g_s1
 	.globl _rd_slot
 	.globl _wr_slot
 	.globl _pal_one
@@ -879,6 +885,167 @@ _vram_blit::
 	out (#0x99),a
 	ei
 	ret
+
+; ---- salvar/carregar ----
+; _get_cart_slot: g_val = identificador (F000SSPP) do slot do cartucho (o da pagina 1, onde este codigo roda), igual ao calculo de map_page2 no crt0
+_get_cart_slot::
+	call 0x0138              ; RSLREG
+	rrca
+	rrca
+	and a,#3
+	ld c,a
+	ld hl,#0xFCC1            ; EXPTBL
+	add a,l
+	ld l,a
+	ld a,(hl)
+	and a,#0x80
+	or a,c
+	ld c,a
+	inc l
+	inc l
+	inc l
+	inc l                    ; SLTTBL
+	ld a,(hl)
+	and a,#0x0C
+	or a,c
+	ld (_g_val),a
+	ret
+
+; _sr_exec: copia o modelo sr_tpl para a RAM (ele troca a pagina 1 de slot, entao nao pode rodar de la) e o executa
+;   entrada: g_val = operacao (0 sonda, 1 le, 2 grava); g_bk_bank = slot do PAC; g_bk_src = deslocamento na SRAM (0..0x1FFD); g_bk_dst = buffer na RAM; g_bk_len = bytes
+;   saida (sonda): g_val = 1 se o slot tem uma SRAM de PAC/FM-PAC (liberada por 0x4D/0x69 em 0x5FFE/0x5FFF)
+_sr_exec::
+	ld hl,#sr_tpl
+	ld de,#sr_ram
+	ld bc,#sr_end-sr_tpl
+	ldir
+	jp sr_ram
+sr_tpl:                          ; (sem LD (nn),A para enderecos 0x4000-0xBFFF: os emuladores adivinham o mapper contando esses padroes, e so 0x6000/0x7000 podem aparecer)
+	di
+	ld a,(_g_bk_bank)
+	ld h,#0x40
+	call 0x0024              ; ENASLT: pagina 1 -> slot do PAC
+	di
+	ld a,(_g_val)
+	or a,a
+	jr z,sr_probe
+	ld hl,#0x5FFE
+	ld (hl),#0x4D
+	inc hl
+	ld (hl),#0x69            ; destranca a SRAM
+	ld a,(_g_val)
+	cp a,#1
+	jr z,sr_rd
+	ld hl,(_g_bk_src)        ; grava: SRAM <- buffer
+	ld de,#0x4000
+	add hl,de
+	ex de,hl
+	ld hl,(_g_bk_dst)
+	jr sr_cp
+sr_rd:
+	ld hl,(_g_bk_src)        ; le: buffer <- SRAM
+	ld de,#0x4000
+	add hl,de
+	ld de,(_g_bk_dst)
+sr_cp:
+	ld a,(_g_bk_len)
+	ld c,a
+	ld b,#0
+	ldir
+	ld hl,#0x5FFE
+	xor a,a
+	ld (hl),a                ; tranca a SRAM
+	inc hl
+	ld (hl),a
+	jr sr_exit
+sr_probe:
+	ld hl,#0x5FFE
+	ld a,(hl)
+	ld (_g_s0),a
+	inc hl
+	ld a,(hl)
+	ld (_g_s1),a
+	ld (hl),#0x69
+	dec hl
+	ld (hl),#0x4D
+	ld hl,#0x4000
+	ld a,(hl)
+	ld b,a
+	xor a,#0x5A
+	cp a,#0xFF
+	jr nz,sr_p1
+	ld a,b
+	xor a,#0x3C
+sr_p1:
+	ld c,a                   ; padrao de teste (nunca igual ao original nem a 0xFF)
+	ld (hl),a
+	ld a,(hl)
+	cp a,c
+	jr nz,sr_notp            ; nao grava nem destrancado: ROM ou vazio
+	ld (hl),b                ; devolve o conteudo
+	ld hl,#0x5FFE
+	xor a,a
+	ld (hl),a
+	inc hl
+	ld (hl),a                ; tranca
+	ld hl,#0x4000
+	ld (hl),c
+	ld a,(hl)
+	cp a,c
+	jr z,sr_ram_found        ; ainda grava trancado: e RAM comum, nao PAC
+	ld a,#1
+	ld (_g_val),a            ; PAC: so grava destrancado
+	jr sr_exit
+sr_ram_found:
+	ld (hl),b                ; devolve o byte da RAM
+sr_notp:
+	ld hl,#0x5FFE
+	ld a,(_g_s0)
+	ld (hl),a
+	inc hl
+	ld a,(_g_s1)
+	ld (hl),a
+	xor a,a
+	ld (_g_val),a
+sr_exit:
+	ld a,(_cart_slot)
+	ld h,#0x40
+	call 0x0024              ; volta o cartucho para a pagina 1
+	ei
+	ret
+sr_end:
+
+; _bd_exec: chamada BDOS do Disk BASIC (MSX-DOS 1) feita de uma rotina na RAM; depois remapeia o cartucho nas paginas 1 e 2 e o banco de codigo
+;   entrada: g_reg = funcao, g_bk_src = DE; saida: g_val = A
+_bd_exec::
+	ld hl,#bd_tpl
+	ld de,#sr_ram
+	ld bc,#bd_end-bd_tpl
+	ldir
+	jp sr_ram
+bd_tpl:
+	ld a,(_g_reg)
+	ld c,a
+	ld de,(_g_bk_src)
+	call 0xF37D
+	ld (_g_val),a
+	di
+	ld a,(_cart_slot)
+	ld h,#0x40
+	call 0x0024
+	di
+	ld a,(_cart_slot)
+	ld h,#0x80
+	call 0x0024
+	ld a,(_cur_bank)
+	ld (0x7000),a
+	ei
+	ret
+bd_end:
+	.area _DATA
+sr_ram::
+	.ds 192
+	.area _CODE
 
 ; _vdp_cmd15: espera CE=0 e envia 15 bytes de _vc para R#32..R#46 (HMMM/LINE)
 _vdp_cmd15::
