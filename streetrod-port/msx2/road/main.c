@@ -16,7 +16,7 @@
 #define KERB_MERGE 1    /* 1 = zebra desenhada como um retangulo largo sob a pista */
 #endif
 #ifndef VIEW_BOT
-#define VIEW_BOT 70     /* altura da janela da estrada */
+#define VIEW_BOT 86     /* altura da janela da estrada */
 #endif
 #ifndef N_ROWS
 #define N_ROWS 15       /* linhas projetadas (original: 14 distantes + proximas) */

@@ -82,8 +82,9 @@ def cockpit_pixels(lib2):
 
 STRIP = 4096
 WIN_Y, SKY_TOP = 24, 22
-VIEW_BOT = int(os.environ.get('VIEW_BOT', '70'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
-GLASS_MODE = os.environ.get('GLASS_MODE', 'flat')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
+VIEW_BOT = int(os.environ.get('VIEW_BOT', '86'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
+STRIP_W = 8
+GLASS_MODE = os.environ.get('GLASS_MODE', 'dash')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
@@ -101,6 +102,7 @@ def overlay(a):
         y, x = st.pop()
         if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
             glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    cuts = None
     glass[108 - y0:, :54] = False             # abaixo da janela lateral o preto e a porta (opaco)
     if GLASS_MODE == 'flat':
         glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
@@ -109,11 +111,15 @@ def overlay(a):
         for x in range(54, w):
             hit = np.nonzero(np.isin(sub[98 - y0:, x], (4, 5, 7, 15)))[0]
             if len(hit): cut[x] = 98 - y0 + hit[0]
+        sm = cut.copy()
         for x in range(54, w):                      # contorno suave (mediana de 21 colunas): ignora as linhas finas do painel
-            win = np.sort(cut[max(54, x - 10):x + 11]); cut[x] = win[len(win) // 2] - 1
-        for x in range(54, w): glass[cut[x]:, x] = False
+            win = np.sort(cut[max(54, x - 10):x + 11]); sm[x] = win[len(win) // 2] - 1
+        cuts = sm.copy()
+        for x0 in range(54, w, STRIP_W):            # em faixas de STRIP_W colunas: o painel comeca na linha mais alta da faixa (nunca sobra estrada sobre o painel)
+            cuts[x0:x0 + STRIP_W] = sm[x0:x0 + STRIP_W].min()
+        for x in range(54, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
-    return out
+    return out, cuts
 
 def overlay_rects(ov, band=2, gap=4):
     """Retangulos (x, y, w, h) que cobrem os pixels opacos do overlay, em faixas de `band` linhas (x e w pares, para HMMM)."""
@@ -202,9 +208,13 @@ def main():
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
-        ov = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
+        ov, cuts = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
-        orects = overlay_rects(ov, band=8, gap=4)          # moldura da esquerda (porta/coluna A): retangulos HMMM justos
+        orects = overlay_rects(ov[:, :54] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
+        if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
+            for x0 in range(54, 256, STRIP_W):
+                x1 = min(256, x0 + STRIP_W); c = int(cuts[x0])
+                if c < ov.shape[0]: orects.append([x0, c, x1 - x0, ov.shape[0] - c])
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
