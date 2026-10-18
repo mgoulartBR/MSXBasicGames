@@ -3,7 +3,7 @@
 	.include "layout.inc"
 	.globl _pos, _sub, _P, _xoff_ahead
 	.globl _XC, _Y, _PAR
-	.globl _rc8_tab, _ytab, _curve_tab, _hill_tab
+	.globl _rc8_tab, _ytab, _curve_ram, _hill_ram
 	.globl _g_a, _g_b8, _g_r, _mul16x8
 
 	.area _DATA
@@ -66,7 +66,7 @@ _project_asm::
 	ld a,(_pos)
 	ld c,a
 	ld b,#0
-	ld hl,#_hill_tab
+	ld hl,#_hill_ram
 	add hl,bc
 	ld a,(hl)
 	ld l,a
@@ -99,7 +99,7 @@ pr_row:
 	; dx += curve[s]; xoff += dx
 	ld c,a
 	ld b,#0
-	ld hl,#_curve_tab
+	ld hl,#_curve_ram
 	add hl,bc
 	ld a,(hl)
 	ld c,a
@@ -133,7 +133,7 @@ pr_row:
 	ld a,(p_s)
 	ld c,a
 	ld b,#0
-	ld hl,#_hill_tab
+	ld hl,#_hill_ram
 	add hl,bc
 	ld a,(hl)
 	ld c,a

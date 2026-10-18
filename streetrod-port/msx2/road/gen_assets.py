@@ -266,6 +266,12 @@ def main():
                 'static const uint8_t spr_h[3][SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
             len(SPR_W), SPR_Y0, SPR_STRIDE, ','.join(map(str, xs)), ','.join(map(str, SPR_W)),
             ','.join('{%s}' % ','.join(map(str, h)) for h in hs), ','.join(map(str, sel)))
+    tdat = os.path.join(here, 'textdata.bin')
+    text_bank = 0; text_base = 0
+    if ents and os.path.exists(tdat):
+        td = open(tdat, 'rb').read()
+        if len(banks[-1]) + len(td) > 0x4000: banks.append(bytearray())
+        text_base = len(banks[-1]); banks[-1].extend(td); text_bank = len(banks) + 1      # nomes (carros, pecas, pilotos) no fim do ultimo banco de assets
     nb = len(banks) if ents else 0
     print('assets: %d faixas em %d banco(s) de 16 KB' % (len(ents), nb), file=sys.stderr)
     open(os.path.join(here, 'assets.bin'), 'wb').write(b''.join(bytes(b).ljust(0x4000, b'\xff') for b in banks) if ents else b'')
@@ -278,7 +284,7 @@ def main():
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
-        f.write('#define HAVE_COCKPIT %d\n' % (1 if ents else 0))
+        f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n' % (1 if ents else 0, text_bank, text_base))
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))

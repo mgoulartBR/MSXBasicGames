@@ -6,6 +6,11 @@
 	.globl _g_vpg
 	.globl _lz_unpack
 	.globl _load_assets
+	.globl _bank_copy
+	.globl _g_bk_bank
+	.globl _g_bk_src
+	.globl _g_bk_dst
+	.globl _g_bk_len
 	.globl _g_group
 	.globl _g_palp
 	.globl _pal_load2
@@ -986,4 +991,18 @@ _pal_load2::
 	ld bc,#0x209A
 	otir
 	ei
+	ret
+
+; _bank_copy: copia g_bk_len bytes de (g_bk_src em 0x8000+, banco g_bk_bank) para g_bk_dst; volta o banco 1 (tem de ficar na pagina 1)
+_bank_copy::
+	ld a,(_g_bk_bank)
+	ld (0x7000),a
+	ld hl,(_g_bk_src)
+	ld de,(_g_bk_dst)
+	ld a,(_g_bk_len)
+	ld c,a
+	ld b,#0
+	ldir
+	ld a,#1
+	ld (0x7000),a
 	ret

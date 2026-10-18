@@ -150,3 +150,14 @@ largada com as peças instaladas, o desgaste e o ponto (dano ainda não usado). 
 casos no próprio Z80 via `pt_dbg.c` (compilar à mão: `sdcc ... pt_dbg.c`, ler 0xF000.. no openMSX). Obs.: o SDCC gerou código errado para a expressão
 composta do desgaste/ternário em `i32`; o código foi reescrito em passos simples (ver comentário em `ptmodel.h`).
 Testes: `garage_test.tcl` (compra peça, troca, CAR INFO) e `sell_test.tcl` (venda).
+
+## Bob's Drive-In (marco M4)
+BOBS DRIVE-IN → **CHALLENGE WHO?** (22 pilotos, de Mike a The King) → o jogo mostra o piloto e o carro dele (carro sorteado na classe de desempenho que cresce com o
+nível do piloto) → **tipo de corrida**: DRAG RACE (reta e plana, 380 segmentos), ROAD RACE (pista com curvas e ladeiras, 520), JUST FOR KICKS (sem aposta) e
+PINK SLIPS (o carro de um contra o do outro; exige vitórias: `1 + índice/2`; o oponente aceita com chance de 70%) → **aposta** $10/$25/$50/$100 (o oponente aceita
+com chance 100-15*nível; falta de dinheiro avisa) → corrida. Depois: vitória soma a aposta, derrota desconta; pink slip transfere o carro (se não houver vaga,
+vende por metade do valor); mensagens do original ("BIG DEAL.", "YOU JUST WON A HELLUVA CAR!", "YA JUMPED THE LIGHT, SPEEDY!"). Cada corrida passa 1 dia.
+Detalhes: a pista (`curve_ram`/`hill_ram`, lidos por `proj.s`) é escolhida na largada; os nomes (carros, peças, pilotos) vivem num banco da ROM e são
+copiados por `bank_copy` (rotina na página 1) — liberou ~1,7 KB de código. Testes: `loop_test.tcl` (LAPS=n), `bobs_test.tcl`, `pink_test.tcl`
+(`-DSTART_CAR=17 -DSTART_MONEY=500 -DSTART_WINS=20 -DTEST_ACCEPT [-DTEST_LOSE]`). A decisão de aceitar apostas é uma regra simples minha; as tabelas do bloco
+9/10/11 do HOT_DATA ainda não foram decifradas.

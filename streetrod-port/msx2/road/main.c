@@ -66,7 +66,13 @@ u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
 u8 g_trig, g_row6, g_row7, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
-u16 g_lzsrc, g_vlo, g_palp; u8 g_vhi, g_vpg, g_group;
+u16 g_lzsrc, g_vlo, g_palp, g_bk_src, g_bk_dst; u8 g_vhi, g_vpg, g_group, g_bk_bank, g_bk_len;
+extern void bank_copy(void);
+static char nbc[28], nbp[21], nbd[11];
+static const char *txt(char *buf, u16 ofs, u8 len) { g_bk_bank = TEXT_BANK; g_bk_src = 0x8000 + TEXT_BASE + ofs; g_bk_dst = (u16)buf; g_bk_len = len; bank_copy(); return buf; }
+#define CARN(i) txt(nbc, TXT_CAR_OFS + (i) * 28, 28)
+#define PARTN(i) txt(nbp, TXT_PART_OFS + (i) * 21, 21)
+#define PILN(i) txt(nbd, TXT_PIL_OFS + (i) * 11, 11)
 extern void lz_unpack(void);
 extern void psg_w(void);
 extern void pal_one(void);
@@ -103,6 +109,13 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 #ifndef RACE_LEN
 #define RACE_LEN 380            /* arrancada: 380 segmentos (como no original) */
 #endif
+#define ROAD_LEN 520            /* corrida de estrada (pista com curvas e ladeiras) */
+static u16 race_len = RACE_LEN;
+i8 curve_ram[256], hill_ram[256];                 /* pista da corrida atual (proj.s le estes arrays) */
+static void set_track(u8 road) {                  /* arrancada: reta e plana; estrada: a pista sintetica */
+    u16 i;
+    for (i = 0; i < 256; i++) { curve_ram[i] = road ? curve_tab[i] : 0; hill_ram[i] = road ? hill_tab[i] : 0; }
+}
 #ifndef OPP_START
 #define OPP_START 0            /* teste: posicao inicial do oponente (segmentos) */
 #endif
@@ -115,8 +128,13 @@ static u16 money; static u8 day, nown, cur; static Car gc[MAXCARS];     /* estad
 static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 #define MAXSPARE 12
 static u8 spare[MAXSPARE], nspare;
-static u8 m_sel;
 static u8 offer_day = 255;
+static u8 wins_drag, wins_road;
+#ifdef START_WINS
+#define WINS0 START_WINS
+#else
+#define WINS0 0
+#endif
 static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
 #include "ptmodel.h"
 static void car_stock(Car *c, u8 id) {      /* configuracao de fabrica a partir do campo flags do HOT_DATA */
@@ -237,7 +255,7 @@ static void veh_tick(u8 c, u8 thr, u8 brk) {
 /* IA do oponente (simplificada de SRSE.EXE img 0xD29D): acelera, alivia nas curvas e quando esta longe na frente */
 static void opp_ai(void) {
     u8 thr = 1, brk = 0;
-    i16 gap = (i16)(opos - pos), cv = curve_tab[(opos + 3) & 255];
+    i16 gap = (i16)(opos - pos), cv = curve_ram[(opos + 3) & 255];
     u16 lim;
     if (cv < 0) cv = -cv;
     lim = 160 - 3 * cv;
@@ -259,7 +277,7 @@ static void steer_frame(u16 dj) {
     if (in_right) d += 1;
     P += d * (i16)(4 + (speed >> 4)) * (i16)dj;
 #endif
-    P -= (i16)(((i32)curve_tab[pos & 255] * speed * dj) >> 9);   /* forca centrifuga */
+    P -= (i16)(((i32)curve_ram[pos & 255] * speed * dj) >> 9);   /* forca centrifuga */
     if (P > 1400) P = 1400; if (P < -1400) P = -1400;
 }
 
@@ -536,61 +554,6 @@ static void wait_start(void) {            /* espera ESPACO / botao A (ignora tec
 static const u8 paint_rb[8] = {0x50 | 5, 0x60, 0x10 | 6, 0x00 | 1, 0x70, 0x60 | 6, 0x70, 0x00 | 5};   /* R<<4|B da cor da pintura do oponente */
 static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 
-static void menu_row(u8 f) {
-    i16 y = 26 + f * 34;
-    u8 sel = f == m_sel;
-    push_fill(0, y, 256, 28, 0);
-    draw_text(16, y, f == 0 ? "YOUR CAR" : f == 1 ? "OPPONENT CAR" : "OPPONENT DRIVER", sel ? 13 : 8);
-    draw_text(16, y + 14, f == 0 ? car_name[sel_car] : f == 1 ? car_name[sel_opp] : pil_name[sel_pil], 7);
-    if (sel) { push_fill(2, y, 2, 2, 13); push_fill(4, y + 2, 2, 2, 13); push_fill(6, y + 4, 2, 2, 13); push_fill(4, y + 6, 2, 2, 13); push_fill(2, y + 8, 2, 2, 13); }
-}
-static void menu_info(void) {
-    push_fill(0, 134, 256, 28, 0);
-    draw_text(16, 134, "GEARS", 8); draw_num(64, 134, pm_gears[gc[cur].trn], 1);
-    draw_text(88, 134, "REDLINE", 8); draw_num(152, 134, pm_redline[gc[cur].eng], 4);
-    draw_text(16, 148, gc[cur].trn == 0 ? "AUTOMATIC" : "MANUAL SHIFT", 7);
-}
-static void menu_change(i16 d) {
-    if (m_sel == 0) sel_car = (u8)((sel_car + NCARS + d) % NCARS);
-    else if (m_sel == 1) sel_opp = (u8)((sel_opp + NCARS + d) % NCARS);
-    else sel_pil = (u8)((sel_pil + NPILOTS + d) % NPILOTS);
-    menu_row(m_sel); if (m_sel == 0) menu_info();
-    vdp_wait();
-}
-static u8 menu(void) {                      /* 1 = iniciar corrida, 0 = voltar (ESC) */
-    u8 prev = 0, f, go, held = 1, bheld = 1;
-    u16 t_hold = 0, t_rep = 0;
-    clip_l = 0; clip_r = 256; ybase = 0; vdp_reg(2, 0x1F); dbg_state = 8;
-    cmd_n = 0; cp = cmd_buf;
-    push_fill(0, 0, 256, 212, 0);
-    draw_text(72, 6, "BOBS DRIVE-IN", 13);
-    m_sel = 1;                              /* o carro do jogador vem da garagem: campo 0 so informativo */
-    for (f = 0; f < 3; f++) menu_row(f);
-    menu_info();
-    draw_text(16, 172, "UP DOWN  SELECT FIELD", 6);
-    draw_text(16, 186, "LEFT RIGHT  CHANGE", 6);
-    draw_text(16, 200, "SPACE  START RACE", 13);
-    draw_text(168, 200, "ESC BACK", 6);
-    sel_car = gc[cur].id;
-    vdp_wait();
-    for (;;) {
-        u8 st, act = 0; i16 d = 0;
-        read_input(); combine_input();
-        st = g_stick; go = (g_trig & 3) != 0;
-        if (go && !held) return 1;
-        if (want_back() && !bheld) return 0;
-        held = go; bheld = want_back();
-        if (st != prev) { act = 1; prev = st; t_hold = JIFFY; t_rep = JIFFY; }
-        else if (st && (u16)(JIFFY - t_hold) > jhz / 3 && (u16)(JIFFY - t_rep) >= jhz / 8) { act = 1; t_rep = JIFFY; }
-        if (!act) continue;
-        if (st == 1 && m_sel > 1) { f = m_sel; m_sel--; menu_row(f); menu_row(m_sel); vdp_wait(); }
-        else if (st == 5 && m_sel < 2) { f = m_sel; m_sel++; menu_row(f); menu_row(m_sel); vdp_wait(); }
-        else if (st == 3) d = 1;
-        else if (st == 7) d = -1;
-        if (d) menu_change(d);
-    }
-}
-
 /* ---- estado do jogo e hub (garagem) ---- */
 #ifndef START_MONEY
 #define START_MONEY 1000
@@ -600,7 +563,7 @@ static u8 menu(void) {                      /* 1 = iniciar corrida, 0 = voltar (
 #define HC_G 13
 #define HC_R 11
 static void new_game(void) {
-    money = START_MONEY; day = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
+    money = START_MONEY; day = 0; wins_drag = WINS0; wins_road = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
 #ifdef START_CAR
     car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
@@ -628,7 +591,7 @@ static void hub_status(void) {
     push_fill(0, 190, 256, 22, 0);
     draw_text(8, 190, "$", HC_Y); draw_nz(16, 190, money, 5, HC_Y);
     draw_text(88, 190, mon[mo], HC_W); draw_numc(120, 190, mo ? day - 30 : day + 1, 2, HC_W); draw_text(144, 190, "1963", HC_W);
-    draw_text(8, 202, nown ? car_name[gc[cur].id] : "NO CAR - BUY ONE", HC_G);
+    draw_text(8, 202, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", HC_G);
     vdp_wait();
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
@@ -659,7 +622,8 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
     push_fill(UI_X, y0, UI_W, 2, HC_W); push_fill(UI_X, y0 + h - 2, UI_W, 2, HC_W);
     push_fill(UI_X, y0, 2, h, HC_W); push_fill(UI_X + UI_W - 2, y0, 2, h, HC_W);
     draw_text(UI_X + 10, y0 + 6, title, HC_Y);
-    { u8 l = 0; while (title[l]) l++; if (l <= 18 && !ui_nohint) draw_text(UI_X + UI_W - 80, y0 + 6, "ESC BACK", HC_R); }
+    push_fill(184, 190, 72, 12, 0);                  /* dica de voltar na barra de status (menu raiz nao tem) */
+    if (!ui_nohint) draw_text(184, 190, "ESC BACK", HC_R);
     for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
     vdp_wait();
     for (;;) {
@@ -735,11 +699,11 @@ static const char *inst_get(u8 cat) {                   /* "ENGINE        GM V-8
     u8 n = 0, id = part_find(cat, *car_var(gcar, cat), car_maker(gcar)); 
     put_str(tb, &n, cat_label[cat]);
     while (n < 10) tb[n++] = ' ';
-    if (id != 255) put_str(tb, &n, part_name[id]); else put_str(tb, &n, "?");
+    if (id != 255) put_str(tb, &n, PARTN(id)); else put_str(tb, &n, "?");
     tb[n] = 0;
     return tb;
 }
-static const char *spare_cat_get(u8 i) { return part_name[spare[gsp[i]]]; }
+static const char *spare_cat_get(u8 i) { return PARTN(spare[gsp[i]]); }
 static void change_part(u8 cat) {
     u8 i, r, old, fit = car_maker(gcar);
     gsn = 0;
@@ -776,7 +740,7 @@ static void car_info(void) {
     n = 0; put_str(info_buf[2], &n, gcar->trn == 0 ? "AUTOMATIC" : "MANUAL"); put_str(info_buf[2], &n, "  WEAR "); put_num(info_buf[2], &n, gcar->wear / 100); put_str(info_buf[2], &n, "%"); info_buf[2][n] = 0;
     n = 0; put_str(info_buf[3], &n, "TIMING "); if (gcar->trim < 0) info_buf[3][n++] = '-'; put_num(info_buf[3], &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); info_buf[3][n] = 0;
     ui_get = info_get;
-    ui_list(car_name[gcar->id], 4, 0);
+    ui_list(CARN(gcar->id), 4, 0);
 }
 static void car_tune(void) {
     static const char *const it[3] = {"RETARD", "ADVANCE", "DONE"};
@@ -818,7 +782,7 @@ static void car_menu(u8 ci) {
     u8 r = 0;
     gcar = &gc[ci];
     for (;;) {
-        r = ui_pick(car_name[gc[ci].id], it, 6, r);
+        r = ui_pick(CARN(gc[ci].id), it, 6, r);
         if (r == 255 || r == 5) return;
         if (r == 0) { cur = ci; sel_car = gc[ci].id; ui_note("O.K.!", "NOW DRIVING THIS CAR"); }
         else if (r == 1) car_parts();
@@ -830,7 +794,7 @@ static void car_menu(u8 ci) {
 static const char *carlist_get(u8 i) {
     u8 n = 0;
     tb[n++] = i == cur ? '*' : ' ';
-    put_str(tb, &n, car_name[gc[i].id]);
+    put_str(tb, &n, CARN(gc[i].id));
     tb[n] = 0;
     return tb;
 }
@@ -863,7 +827,7 @@ static void make_offers(void) {            /* ofertas do dia: sorteio determinis
     }
 }
 static u16 offer_price(u8 i) { return (u16)((u32)car_price[offer[i]] * offer_pct[i] / 100); }
-static const char *offer_get(u8 i) { return (offer_mask >> i) & 1 ? "(GONE)" : fmt_price(car_name[offer[i]], offer_price(i)); }
+static const char *offer_get(u8 i) { return (offer_mask >> i) & 1 ? "(GONE)" : fmt_price(CARN(offer[i]), offer_price(i)); }
 static u8 try_pay(u16 price) {            /* confere o dinheiro; mensagem se faltar */
     if (money < price) { ui_note("NO GO, HOT SHOT", fmt_short(price - money)); return 0; }
     money -= price; return 1;
@@ -872,7 +836,7 @@ static void buy_car(u8 i) {
     static const char *const it[3] = {"BUY AT ASKING PRICE", "MAKE AN OFFER", "FORGET IT"};
     static const char *const dis[3] = {"10% LESS", "20% LESS", "30% LESS"};
     u16 price = offer_price(i); u8 r;
-    r = ui_pick(car_name[offer[i]], it, 3, 0);
+    r = ui_pick(CARN(offer[i]), it, 3, 0);
     if (r == 255 || r == 2) return;
     if (nown >= MAXCARS) { ui_note("YOU'VE GOT NO ROOM!", "SELL A CAR FIRST"); return; }
     if (r == 1) {
@@ -904,7 +868,7 @@ static void used_cars(void) {
 
 /* ---- jornal: pecas ---- */
 static u8 pcat, plist[16], pn;
-static const char *part_get(u8 i) { return fmt_price(part_name[plist[i]], PART_PRICE(plist[i])); }
+static const char *part_get(u8 i) { return fmt_price(PARTN(plist[i]), PART_PRICE(plist[i])); }
 static void parts_shop(void) {
     static const char *const cats[6] = {"ENGINES", "TRANSMISSIONS", "CARBURETORS", "MANIFOLDS", "TIRES", "BACK"};
     u8 c = 0, r, i;
@@ -921,11 +885,11 @@ static void parts_shop(void) {
             if (nspare >= MAXSPARE) { ui_note("TOO MUCH JUNK", "SELL SOME PARTS"); continue; }
             if (!try_pay(PART_PRICE(plist[r]))) continue;
             spare[nspare++] = plist[r];
-            ui_note("IT'S YOURS!", part_name[plist[r]]);
+            ui_note("IT'S YOURS!", PARTN(plist[r]));
         }
     }
 }
-static const char *spare_get(u8 i) { return fmt_price(part_name[spare[i]], PART_PRICE(spare[i]) / 2); }
+static const char *spare_get(u8 i) { return fmt_price(PARTN(spare[i]), PART_PRICE(spare[i]) / 2); }
 static void sell_parts(void) {
     u8 r, sel = 0;
     for (;;) {
@@ -948,19 +912,101 @@ static void newspaper(void) {
         if (r == 0) used_cars(); else if (r == 1) parts_shop(); else sell_parts();
     }
 }
+/* ---- Bob's Drive-In: desafiar um piloto (arrancada / estrada / so por diversao / pink slip), apostas ---- */
+static u8 race_type, opp_ok;                 /* 0 arrancada, 1 estrada, 2 so por diversao, 3 pink slip */
+static u16 bet;
+
+static const char *pm1, *pm2;                /* mensagem do resultado da ultima corrida (mostrada ao voltar a garagem) */
+static const u16 bets[4] = {10, 25, 50, 100};
+static const char *pil_get(u8 i) { return PILN(i); }
+static void pick_opp_car(u8 pil) {           /* pilotos melhores (indice maior) correm com carros de classe mais alta */
+    u8 target = (u8)((u16)pil * 8 / 21), c, tries;
+    for (tries = 0; tries < 60; tries++) {
+        i16 d;
+        c = (u8)(rnd16() % 25); d = (i16)car_perf[c] - target;
+        if (d >= -1 && d <= 1) break;
+    }
+    sel_opp = c;
+}
+static const char *const yes_msg[6] = {"YOU'RE ON!", "ALRIGHT!", "LET'S GO!", "COOL!", "O.K.!", "LET'S HIT IT!"};
+static const char *const no_msg[10] = {"CHICKEN!", "GET LOST!", "GIVE ME A BREAK", "GET OUTTA MY FACE", "BUZZ OFF", "WHADDA LOSER", "BLOW IT OUT YOUR EAR", "FORGET IT, GEEK", "BEAT IT, TWERP", "NO WAY, YA NERD"};
+static u8 refuses(u8 pct) {                  /* 1 = o oponente recusa (pct = chance de ACEITAR); -DTEST_ACCEPT aceita sempre */
+#ifdef TEST_ACCEPT
+    (void)pct; return 0;
+#else
+    return (u8)(rnd16() >> 8) % 100 >= pct;
+#endif
+}
+static u8 bobs(void) {                       /* 1 = a corrida vai comecar */
+    static const char *const types[5] = {"DRAG RACE", "ROAD RACE", "JUST FOR KICKS", "PINK SLIPS", "BACK"};
+    static const char *const betm[5] = {"BET $10", "BET $25", "BET $50", "BET $100", "BACK"};
+    u8 p = 0, t = 0, b;
+    for (;;) {
+        ui_get = pil_get;
+        p = ui_list("CHALLENGE WHO?", NPILOTS, p);
+        if (p == 255) return 0;
+        pick_opp_car(p); sel_pil = p;
+        ui_note(PILN(p), CARN(sel_opp));            /* quem e e com que carro */
+        t = ui_pick("WHAT KIND OF RACE?", types, 5, t);
+        if (t == 255 || t == 4) continue;
+        race_type = t; bet = 0;
+        if (t == 3) {                               /* pink slip: o carro de um contra o do outro */
+            if ((u8)(wins_drag + wins_road) < 1 + p / 2) { ui_note("YOU'RE GONNA HAFTA", "WIN MORE RACES!"); continue; }
+            if (refuses(70)) { ui_note(no_msg[rnd16() % 10], "NOT FOR PINK SLIPS"); continue; }
+            ui_note("COOL, DUDE! GET YOUR", "PINK SLIP OUT, LET'S GO!");
+        } else if (t != 2) {
+            b = ui_pick("HOW MUCH?", betm, 5, 1);
+            if (b == 255 || b == 4) continue;
+            if (money < bets[b]) { ui_note("YOU DON'T HAVE", "ENOUGH DOUGH FOR THAT"); continue; }
+            if (refuses(100 - 15 * b)) { ui_note(no_msg[rnd16() % 10], "TOO RICH FOR HIM"); continue; }
+            bet = bets[b];
+            ui_note(yes_msg[rnd16() % 6], "LET'S HIT THE STRIP");
+        } else ui_note(yes_msg[rnd16() % 6], "JUST FOR KICKS");
+        race_len = t == 1 ? ROAD_LEN : RACE_LEN;
+        return 1;
+    }
+}
+static void settle_race(void) {              /* dinheiro, carros, vitorias e a mensagem do resultado */
+    static char pb[2][30];
+    u8 win = result == 1, n;
+    pm1 = win ? "YOU WON!" : result == 3 ? "YA JUMPED THE LIGHT," : "YOU LOSE, SUCKER.";
+    pm2 = win ? "TOO BAD YOU DIDN'T BET" : result == 3 ? "SPEEDY!" : "TAKE A WALK.";
+    if (win && race_type < 2) { if (race_type == 0) wins_drag++; else wins_road++; }
+    if (race_type == 3) {
+        if (win) {
+            pm1 = "YOU JUST WON A"; pm2 = "HELLUVA CAR!";
+            if (nown < MAXCARS) { car_stock(&gc[nown], sel_opp); nown++; }
+            else { money += car_price[sel_opp] / 2; pm2 = "HELLUVA CAR! (SOLD IT)"; }
+        } else {
+            u8 i; for (i = cur; i + 1 < nown; i++) gc[i] = gc[i + 1];
+            nown--; cur = 0; if (nown) sel_car = gc[0].id;
+            pm1 = "YOU LOST YOUR CAR!"; pm2 = "PINK SLIP GONE";
+        }
+    } else if (bet) {
+        if (win) {
+            money += bet;
+            pm1 = bet == 10 ? "BIG DEAL." : bet == 25 ? "TWENTY-FIVE BUCKS." : bet == 50 ? "FIFTY SMACKERS." : "A HUNDRED SMACKERS,";
+            pm2 = bet == 10 ? "TEN LOUSY BUCKS." : bet == 25 ? "NOT BAD." : bet == 50 ? "NOT BAD." : "HOT SHOT.";
+        } else { money = money > bet ? money - bet : 0; }
+    }
+    (void)pb; (void)n;
+    if (day < 60) day++;
+    dbg_money = money; dbg_day = day;
+}
 static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
     u8 sel = 2, r;
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
+    if (pm1) { ui_note(pm1, pm2); pm1 = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
     for (;;) {
         ui_nohint = 1; r = ui_pick("MAIN MENU", items, 4, sel); ui_nohint = 0;
         if (r == 255) continue;
         sel = r;
         if (r == 0) cars_screen();
         else if (r == 1) newspaper();
-        else if (r == 2) { if (nown) return 0; ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!"); }
+        else if (r == 2) { if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!"); else if (bobs()) return 0; }
         else return 1;
         cmd_n = 0; cp = cmd_buf; hub_status();
     }
@@ -968,6 +1014,7 @@ static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sa
 
 static void new_race(void) {
     u8 k = (u8)(JIFFY & 7);
+    set_track(race_type == 1);
     load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
     g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
@@ -1031,9 +1078,12 @@ static void run_race(void) {
             if (!dbg_t60 && speed >= 60) dbg_t60 = (u16)(JIFFY - start_j);
             if (!dbg_t100 && speed >= 100) dbg_t100 = (u16)(JIFFY - start_j);
             if (speed > dbg_top) dbg_top = speed;
-            if (pos >= RACE_LEN || opos >= RACE_LEN) {
+            if (pos >= race_len || opos >= race_len) {
                 u16 pp = pos * 8 + sub, op = opos * 8 + osub;
-                result = (pos >= RACE_LEN && pp >= op) ? 1 : 2;
+                result = (pos >= race_len && pp >= op) ? 1 : 2;
+#ifdef TEST_LOSE
+                result = 2;
+#endif
                 state = 2; show_result();
                 dbg_state = state;
                 continue;
@@ -1085,12 +1135,6 @@ static void run_race(void) {
     }
 }
 
-static void settle_race(void) {              /* efeito economico provisorio da corrida (o jornal, apostas e danos entram nos marcos seguintes) */
-    if (result == 1) money += 50; else money = money > 25 ? money - 25 : 0;
-    if (day < 60) day++;
-    dbg_money = money; dbg_day = day;
-}
-
 void main(void) {
     set_screen5();
     jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */
@@ -1112,7 +1156,6 @@ void main(void) {
         new_game();
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();
-            if (!menu()) continue;                      /* escolha do oponente (ESC volta a garagem) */
             run_race();
             settle_race();
         }
