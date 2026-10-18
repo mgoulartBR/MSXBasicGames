@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "tables.h"
 #include "assets.h"
+#include "cars.h"
 
 #ifndef STEP_SH
 #define STEP_SH 2       /* log2 de scanlines por grupo de retangulos da pista */
@@ -60,6 +61,7 @@ u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
 u16 g_lzsrc, g_vlo; u8 g_vhi, g_vpg;
 extern void lz_unpack(void);
 extern void psg_w(void);
+extern void pal_one(void);
 extern void vram_blit(void);
 i16 g_a, g_r, g_fx, g_fy, g_fw, g_fh; u16 g_b;
 extern void mul12(void);
@@ -95,6 +97,19 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 #ifndef OPP_START
 #define OPP_START 0            /* teste: posicao inicial do oponente (segmentos) */
 #endif
+/* powertrain dos 2 veiculos (0 = jogador, 1 = oponente), copiado das tabelas de carros (cars.h) ao iniciar a corrida */
+static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
+static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
+static u8 m_sel;
+static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
+static void load_car(u8 slot, u8 id) {
+    u8 i;
+    for (i = 0; i < 5; i++) { pt_ratio[slot * 5 + i] = car_ratio[id * 5 + i]; pt_hi0[slot * 5 + i] = car_hi0[id * 5 + i]; pt_hi1[slot * 5 + i] = car_hi1[id * 5 + i]; }
+    for (i = 0; i < 15; i++) pt_acc[slot * 15 + i] = car_acc[id * 15 + i];
+    pt_ngears[slot] = car_ngears[id]; pt_redline[slot] = car_redline[id]; pt_auto[slot] = car_auto[id];
+}
+#define OPP_A opp_a
+#define OPP_B opp_b
 static u8 jhz = 60;                    /* 50 ou 60 Hz (detectado em execucao) */
 static u16 tick_inc, adv_k, go_j;
 #define GO_J go_j               /* semaforo: 3 s ate o verde */
@@ -265,13 +280,13 @@ static void draw_opp(void) {
     if (w > 127) w = 127;
     si = spr_sel[w];
     if (si == 255) return;
-    sw = spr_w[si]; h = spr_h[si]; sx = spr_x[si];
+    sw = spr_w[si]; h = spr_h[opp_set][si]; sx = spr_x[si];
     dx0 = x - (sw >> 1); dx1 = dx0 + sw;                         /* recorte horizontal na janela */
     if (dx0 < clip_l) { sx += clip_l - dx0; dx0 = clip_l; }
     if (dx1 > clip_r) dx1 = clip_r;
     if (dx1 <= dx0) return;
     ty = y - h; if (y > VIEW_BOT) h -= y - VIEW_BOT; if (h <= 0) return;
-    vc_w(0, sx); vc_w(2, SPR_Y0); vc_w(4, dx0); vc_w(6, ybase + ty);
+    vc_w(0, sx); vc_w(2, SPR_Y0 + opp_set * SPR_STRIDE); vc_w(4, dx0); vc_w(6, ybase + ty);
     vc_w(8, dx1 - dx0); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;   /* LMMM com TIMP: cor 0 transparente */
     vdp_cmd15();
 #else
@@ -488,7 +503,66 @@ static void wait_start(void) {            /* espera ESPACO / botao A (ignora tec
     }
 }
 
+/* ---- menu de selecao: carro do jogador, carro e piloto do oponente ---- */
+static const u8 paint_rb[8] = {0x50 | 5, 0x60, 0x10 | 6, 0x00 | 1, 0x70, 0x60 | 6, 0x70, 0x00 | 5};   /* R<<4|B da cor da pintura do oponente */
+static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
+
+static void menu_row(u8 f) {
+    i16 y = 26 + f * 34;
+    u8 sel = f == m_sel;
+    push_fill(0, y, 256, 28, 0);
+    draw_text(16, y, f == 0 ? "YOUR CAR" : f == 1 ? "OPPONENT CAR" : "OPPONENT DRIVER", sel ? 13 : 8);
+    draw_text(16, y + 14, f == 0 ? car_name[sel_car] : f == 1 ? car_name[sel_opp] : pil_name[sel_pil], 7);
+    if (sel) { push_fill(2, y, 2, 2, 13); push_fill(4, y + 2, 2, 2, 13); push_fill(6, y + 4, 2, 2, 13); push_fill(4, y + 6, 2, 2, 13); push_fill(2, y + 8, 2, 2, 13); }
+}
+static void menu_info(void) {
+    push_fill(0, 134, 256, 28, 0);
+    draw_text(16, 134, "GEARS", 8); draw_num(64, 134, car_ngears[sel_car], 1);
+    draw_text(88, 134, "REDLINE", 8); draw_num(152, 134, car_redline[sel_car], 4);
+    draw_text(16, 148, car_auto[sel_car] ? "AUTOMATIC" : "MANUAL SHIFT", 7);
+}
+static void menu_change(i16 d) {
+    if (m_sel == 0) sel_car = (u8)((sel_car + NCARS + d) % NCARS);
+    else if (m_sel == 1) sel_opp = (u8)((sel_opp + NCARS + d) % NCARS);
+    else sel_pil = (u8)((sel_pil + NPILOTS + d) % NPILOTS);
+    menu_row(m_sel); if (m_sel == 0) menu_info();
+    vdp_wait();
+}
+static void menu(void) {
+    u8 prev = 0, f, go, held = 1;
+    u16 t_hold = 0, t_rep = 0;
+    clip_l = 0; clip_r = 256; ybase = 0; vdp_reg(2, 0x1F); dbg_state = 8;
+    cmd_n = 0; cp = cmd_buf;
+    push_fill(0, 0, 256, 212, 0);
+    draw_text(88, 6, "SELECT RACE", 13);
+    m_sel = 0;
+    for (f = 0; f < 3; f++) menu_row(f);
+    menu_info();
+    draw_text(16, 172, "UP DOWN  SELECT FIELD", 6);
+    draw_text(16, 186, "LEFT RIGHT  CHANGE", 6);
+    draw_text(16, 200, "SPACE  START RACE", 13);
+    vdp_wait();
+    for (;;) {
+        u8 st, act = 0; i16 d = 0;
+        read_input(); combine_input();
+        st = g_stick; go = (g_trig & 3) != 0;
+        if (go && !held) break;
+        held = go;
+        if (st != prev) { act = 1; prev = st; t_hold = JIFFY; t_rep = JIFFY; }
+        else if (st && (u16)(JIFFY - t_hold) > jhz / 3 && (u16)(JIFFY - t_rep) >= jhz / 8) { act = 1; t_rep = JIFFY; }
+        if (!act) continue;
+        if (st == 1 && m_sel > 0) { f = m_sel; m_sel--; menu_row(f); menu_row(m_sel); vdp_wait(); }
+        else if (st == 5 && m_sel < 2) { f = m_sel; m_sel++; menu_row(f); menu_row(m_sel); vdp_wait(); }
+        else if (st == 3) d = 1;
+        else if (st == 7) d = -1;
+        if (d) menu_change(d);
+    }
+}
+
 static void new_race(void) {
+    u8 k = (u8)(JIFFY & 7);
+    load_car(0, sel_car); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
+    g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
     launched[0] = launched[1] = 0; adv_acc[0] = adv_acc[1] = 0;
@@ -519,6 +593,7 @@ void main(void) {
     vdp_reg(2, 0x1F);
     dbg_state = 9;                                      /* 9 = tela inicial pronta (aguardando ESPACO) */
     wait_start();
+    menu();
     new_race();
     init_static();
     ybase = 256;
@@ -529,7 +604,7 @@ void main(void) {
         read_input(); combine_input();
         if (state == 2) {                                   /* resultado: espera ESPACO / botao A */
             u8 go = (g_trig & 3) != 0;
-            if (go && !go_held) { new_race(); init_static(); tickacc = 0; last_j = JIFFY; start_j = last_j; ybase = 256; vdp_reg(2, 0x1F); continue; }
+            if (go && !go_held) { menu(); new_race(); init_static(); tickacc = 0; last_j = JIFFY; start_j = last_j; ybase = 256; vdp_reg(2, 0x1F); continue; }
             go_held = go;
             continue;
         }

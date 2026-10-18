@@ -108,3 +108,10 @@ Primeira versão em C puro: **3,4 fps** (janela 256x112).
   sprites; some ao fim de ~2 s da largada (a região é restaurada da cópia limpa do cockpit).
 - Som no PSG (escrita direta nas portas 0xA0/0xA1): motor = 2 tons (canais A/B) com frequência `rpm/15` Hz e volume maior com acelerador; bipes do
   semáforo no canal C (2 graves e 1 agudo e longo na largada). O mixer escreve `0xB8` (bit 7 = porta B como saída, necessária à BIOS para ler joystick).
+
+## Menu de seleção (carro, oponente, piloto)
+Depois da tela de título aparece o menu: ↑/↓ escolhe o campo (seu carro / carro do oponente / piloto) e ←/→ troca o valor (segurar repete); ESPAÇO
+inicia. Ao fim da corrida, ESPAÇO volta ao menu. Os 26 carros e 22 pilotos vêm de `HOT_DATA`/`SRSE.EXE`: `gen_tables.py` gera `cars.h` com as marchas,
+curvas de torque e linha vermelha de cada carro (modelo `tools/powertrain.py`) e a habilidade do piloto; o oponente troca de marcha em
+`rotação de corte - 100*habilidade`. Vista traseira do oponente: 3 modelos (sedã genérico, perua/woodie, Corvette) e cor de pintura sorteada
+(cor 12 da paleta). Os assets ficam no fim da ROM de 32 KB (hoje ~0,3 KB de folga: próximo passo é uma ROM maior com mapper).

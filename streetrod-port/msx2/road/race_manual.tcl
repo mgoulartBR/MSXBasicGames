@@ -9,9 +9,11 @@ set ::step 0; set ::shifting 0; set ::wait 0
 proc poll {} {
     set st [w 0xF014]; set g [w 0xF012]; set rpm [w 0xF010]
     switch $::step {
-        0 { if {$st == 9} { say "titulo visivel: ESPACO"; tap 8 0x01; keymatrixdown 8 0x20; set ::step 1 } }
+        0 { if {$st == 9} { say "titulo visivel: ESPACO"; tap 8 0x01; set ::step 10 } }
+        10 { if {$st == 8} { say "menu visivel: ESPACO"; after time 2.0 { tap 8 0x01; keymatrixdown 8 0x20 }; set ::step 1 } }
         1 { if {$st == 0} { say "contagem: engata antes do verde"; after time 1.0 { say "vai bater ESPACO"; tap 8 0x01; after time 0.05 { say "espaco apertado" } }; set ::step 2 } }
-        2 { if {$st == 2} { say "esperado res=3 (largada falsa)"; after time 0.8 { tap 8 0x01 }; set ::step 3 } }
+        2 { if {$st == 2} { say "esperado res=3 (largada falsa)"; after time 0.8 { tap 8 0x01 }; set ::step 11 } }
+        11 { if {$st == 8} { say "menu de novo: ESPACO"; after time 2.0 { tap 8 0x01 }; set ::step 3 } }
         3 { if {$st == 0 && [incr ::wait] > 5} { say "reiniciou: nova contagem"; set ::step 4 } }
         4 { if {$st == 1 && !$::shifting && $g >= 1 && $g < 4 && $rpm > 4700} { set ::shifting 1; tap 8 0x01; after time 0.5 { set ::shifting 0 } }
             if {$st == 2} { say "FIM DA CORRIDA"; close $::log; exit } }

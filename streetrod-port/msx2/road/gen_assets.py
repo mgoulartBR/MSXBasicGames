@@ -84,7 +84,7 @@ STRIP = 4096
 WIN_Y, SKY_TOP, VIEW_BOT = 24, 22, 104     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [6, 8, 11, 15, 20, 27, 36, 48, 64]      # larguras das versoes reduzidas do carro (visto por tras)
-SPR_Y0 = 808                                      # a folha de sprites fica na pagina 3 da VRAM
+SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
 
 def overlay(a):
     """Parte do cockpit que fica POR CIMA da estrada: vidro (preto ligado ao para-brisa e a janela lateral) vira transparente (0);
@@ -128,7 +128,7 @@ def overlay_rects(ov, band=2, gap=4):
             else: rects.append([s, y0, e - s, min(band, h - y0)])
     return rects
 
-LIGHT_Y = 850
+LIGHT_Y = 940
 def light_sheet(lib2):
     """Semaforo (item 13: duas cabecas de 24x32, lampada vermelha na da direita, verde na da esquerda) em 3 estados: apagado, vermelho, verde."""
     import srlib
@@ -184,7 +184,7 @@ def main():
         for s in range(0, len(raw), STRIP):
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
-            ents.append((0x8000 + len(blob), vaddr + s, len(chunk) // 256, copies)); blob.extend(enc)
+            ents.append((len(blob), vaddr + s, len(chunk) // 256, copies)); blob.extend(enc)
     sprh = ''; OV_AW = OV_BY = OV_CY = 0; orects = []
     if lib2:
         a = cockpit_pixels(lib2)
@@ -196,26 +196,31 @@ def main():
         add((wsheet[:, 0::2] << 4 | wsheet[:, 1::2]).astype(np.uint8).tobytes(), OV_SY * 128, 1)   # faixa do volante: TIMP
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
-        col = rear_sprite(lib2, int(os.environ.get('OPP_SPRITE', '248')))
-        sheet = np.zeros((SPR_W[-1] * col.shape[0] // col.shape[1] + 2, 256), np.uint8)
-        xs = []; x = 0
-        for w in SPR_W:
-            sp = scale_sprite(col, w); sheet[:sp.shape[0], x:x + w] = sp; xs.append((x, w, sp.shape[0])); x += w
-        np.save(os.path.join(here, 'sheet_px.npy'), sheet)
-        add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), SPR_Y0 * 128, 1)
+        hs = []; xs = []
+        for k, item in enumerate(REAR_ITEMS):
+            col = rear_sprite(lib2, item)
+            sheet = np.zeros((SPR_STRIDE, 256), np.uint8); xs = []; x = 0; hh = []
+            for w in SPR_W:
+                sp = scale_sprite(col, w); sheet[:sp.shape[0], x:x + w] = sp; xs.append(x); hh.append(sp.shape[0]); x += w
+            assert max(hh) <= SPR_STRIDE
+            add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), (SPR_Y0 + k * SPR_STRIDE) * 128, 1)
+            hs.append(hh)
         sel = [255 if w < SPR_W[0] else max(i for i, s in enumerate(SPR_W) if s <= w) for w in range(128)]
-        sprh = ('#define SPR_N %d\n#define SPR_Y0 %d\nstatic const uint8_t spr_x[SPR_N] = {%s};\nstatic const uint8_t spr_w[SPR_N] = {%s};\n'
-                'static const uint8_t spr_h[SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
-            len(SPR_W), SPR_Y0, ','.join(str(t[0]) for t in xs), ','.join(str(t[1]) for t in xs), ','.join(str(t[2]) for t in xs), ','.join(map(str, sel)))
+        sprh = ('#define SPR_N %d\n#define SPR_Y0 %d\n#define SPR_STRIDE %d\nstatic const uint8_t spr_x[SPR_N] = {%s};\nstatic const uint8_t spr_w[SPR_N] = {%s};\n'
+                'static const uint8_t spr_h[3][SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
+            len(SPR_W), SPR_Y0, SPR_STRIDE, ','.join(map(str, xs)), ','.join(map(str, SPR_W)),
+            ','.join('{%s}' % ','.join(map(str, h)) for h in hs), ','.join(map(str, sel)))
     print('assets: %d faixas, %d bytes comprimidos' % (len(ents), len(blob)), file=sys.stderr)
-    assert len(blob) <= 0x4000, 'assets > 16 KB'
+    base = 0xC000 - len(blob)             # os assets ficam no fim da ROM (codigo e tabelas crescem a partir de 0x4000)
+    ents = [(base + e[0],) + e[1:] for e in ents]
+    assert base >= 0x6000, 'assets grandes demais'
     open(os.path.join(here, 'assets.bin'), 'wb').write(blob)
     with open(os.path.join(here, 'assets.h'), 'w') as f:
         import math
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
-        f.write('#define HAVE_COCKPIT %d\n#define ASSET_N %d\n' % (1 if ents else 0, len(ents)))
+        f.write('#define HAVE_COCKPIT %d\n#define ASSET_N %d\n#define ASSET_BASE %d\n' % (1 if ents else 0, len(ents), base))
         n = max(1, len(ents))
         f.write('static const uint16_t asset_src[%d] = {%s};\n' % (n, ','.join(str(e[0]) for e in ents) or '0'))
         f.write('static const uint16_t asset_vlo[%d] = {%s};\n' % (n, ','.join(str(e[1] & 0xFFFF) for e in ents) or '0'))

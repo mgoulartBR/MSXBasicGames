@@ -6,6 +6,7 @@
 	.globl _g_vpg
 	.globl _lz_unpack
 	.globl _psg_w
+	.globl _pal_one
 	.globl _vc
 	.globl _vdp_cmd15
 	.globl _vram_blit
@@ -874,5 +875,19 @@ _psg_w::
 	out (#0xA0),a
 	ld a,(_g_val)
 	out (#0xA1),a
+	ei
+	ret
+
+; _pal_one: define a cor g_reg (0..15) da paleta como (g_val = R<<4|B, g_sh = G)
+_pal_one::
+	ld a,(_g_reg)
+	di
+	out (#0x99),a
+	ld a,#0x90
+	out (#0x99),a
+	ld a,(_g_val)
+	out (#0x9A),a
+	ld a,(_g_sh)
+	out (#0x9A),a
 	ei
 	ret

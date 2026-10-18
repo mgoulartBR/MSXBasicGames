@@ -54,44 +54,59 @@ from palette_def import PAL as pal
 flat = []
 for c in pal: flat += list(rgb(*c))
 out.append('const uint8_t palette[32] = {%s};' % ','.join(map(str, flat)))
-# --- powertrain dos dois carros (jogador CAR e oponente OPP_CAR) a partir do modelo extraido de SRSE.EXE
-import os, struct, sys
+# --- powertrain de todos os carros (modelo extraido de SRSE.EXE), nomes e pilotos: cars.h. O carro/piloto escolhidos vem de um menu.
+import os, struct, sys, re
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tools'))
 CAR = int(os.environ.get('CAR', '17'))
 OPP_CAR = int(os.environ.get('OPP_CAR', '12'))
 OPP = int(os.environ.get('OPP', '0'))          # indice do piloto oponente (0 = Mike ... 21 = The King)
+NCARS = 26
 def default_pt(n_gears, redline):
     mk = lambda r, a: dict(ratio=r, segs=[dict(lo=0, hi=2900, accel=a[0]), dict(lo=2900, hi=redline, accel=a[1]), dict(lo=redline, hi=5700, accel=a[2])])
     return dict(n_gears=n_gears, redline=redline, trans=3, gears=[mk(28500, (573, 573, 57)), mk(153, (573, 435, 43)), mk(91, (72, 72, 7)), mk(57, (26, 26, 2)), mk(45, (17, 17, 1))])
-pts, opp_ab = [], (20, 10)
+def clean(s, n):
+    s = s.upper().replace(' & ', ' ').replace('CONVERTIBLE', 'CONV').replace('CONV.', 'CONV').replace('SEDAN', 'SDN')
+    s = re.sub(r'[^A-Z0-9 .\-]', '', s).strip(' .')
+    return s[:n]
+pts, names, pilots = [], [], []
 try:
     from powertrain import Model, stock_variants
-    from hotdata import SIZES
+    from hotdata import SIZES, cstr
     exe, hot = os.environ['SRSE_EXE'], os.environ['HOT_DATA']
     hd = open(hot, 'rb').read()
-    b1 = hd[SIZES[0]:SIZES[0] + SIZES[1]]
+    b0 = hd[:SIZES[0]]; b1 = hd[SIZES[0]:SIZES[0] + SIZES[1]]; pool = hd[sum(SIZES[:6]):sum(SIZES[:7])]
     M = Model(exe)
-    for cid in (CAR, OPP_CAR):
+    for cid in range(NCARS):
         price, perf, idx, flags, noff = struct.unpack('<HBBHH', b1[10 * cid:10 * cid + 8])
         v = stock_variants(flags)
         p = M.build(perf, v['engine'], v['trans'], v['manifold'], v['carb'], v['tires']); p['trans'] = v['trans']
-        pts.append(p)
-    rec = hd[:SIZES[0]][18 * OPP:18 * OPP + 18]
-    opp_ab = (rec[1], rec[2])
-    src = 'carros %d/%d, piloto %d' % (CAR, OPP_CAR, OPP)
+        pts.append(p); names.append(clean(cstr(pool, noff), 27))
+    for i in range(22):
+        r = b0[18 * i:18 * i + 18]
+        pilots.append((clean(cstr(pool, struct.unpack('<H', r[6:8])[0]), 10), r[1], r[2]))
+    src = 'jogo original'
 except Exception as e:                       # sem os arquivos do jogo: curvas genericas
     sys.stderr.write('powertrain padrao (%s)\n' % e)
-    pts = [default_pt(4, 5200), default_pt(4, 4500)]
+    pts = [default_pt(4, 5200 - 100 * (i % 5)) for i in range(NCARS)]
+    names = ['DEFAULT CAR %d' % i for i in range(NCARS)]
+    pilots = [('DRIVER %d' % i, 20 - i // 3, 10 - i // 4) for i in range(22)]
     src = 'padrao'
-out.append('/* powertrain: %s */' % src)
-out.append('const uint16_t pt_ratio[10] = {%s};' % ','.join(str(x['ratio']) for p in pts for x in p['gears']))
-out.append('const uint16_t pt_hi0[10] = {%s};' % ','.join(str(x['segs'][0]['hi']) for p in pts for x in p['gears']))
-out.append('const uint16_t pt_hi1[10] = {%s};' % ','.join(str(x['segs'][1]['hi']) for p in pts for x in p['gears']))
-out.append('const uint16_t pt_acc[30] = {%s};' % ','.join(str(s['accel']) for p in pts for x in p['gears'] for s in x['segs']))
-out.append('const uint8_t pt_ngears[2] = {%s};' % ','.join(str(p['n_gears']) for p in pts))
-out.append('const uint16_t pt_redline[2] = {%s};' % ','.join(str(p['redline']) for p in pts))
-out.append('const uint8_t pt_auto[2] = {%s};' % ','.join('1' if p['trans'] == 0 else '0' for p in pts))
-out.append('#define OPP_A %d' % opp_ab[0])
-out.append('#define OPP_B %d' % opp_ab[1])
+def spr_set(n):                              # vista traseira do carro: 0 sedan generico, 1 perua/woodie, 2 Corvette
+    return 2 if 'CORVETTE' in n else 1 if ('WOODIE' in n or 'WAGON' in n or 'NOMAD' in n) else 0
+cars = ['/* gerado por gen_tables.py (%s) */' % src, '#define NCARS %d' % NCARS, '#define NPILOTS %d' % len(pilots),
+        '#define DEF_CAR %d' % CAR, '#define DEF_OPP_CAR %d' % OPP_CAR, '#define DEF_OPP %d' % OPP]
+def arr(t, name, vals): cars.append('static const %s %s[%d] = {%s};' % (t, name, len(vals), ','.join(map(str, vals))))
+arr('uint16_t', 'car_ratio', [x['ratio'] for p in pts for x in p['gears']])
+arr('uint16_t', 'car_hi0', [x['segs'][0]['hi'] for p in pts for x in p['gears']])
+arr('uint16_t', 'car_hi1', [x['segs'][1]['hi'] for p in pts for x in p['gears']])
+arr('uint16_t', 'car_acc', [s['accel'] for p in pts for x in p['gears'] for s in x['segs']])
+arr('uint8_t', 'car_ngears', [p['n_gears'] for p in pts])
+arr('uint16_t', 'car_redline', [p['redline'] for p in pts])
+arr('uint8_t', 'car_auto', [1 if p['trans'] == 0 else 0 for p in pts])
+arr('uint8_t', 'car_spr', [spr_set(n) for n in names])
+cars.append('static const char car_name[%d][28] = {%s};' % (NCARS, ','.join('"%s"' % n for n in names)))
+cars.append('static const char pil_name[%d][11] = {%s};' % (len(pilots), ','.join('"%s"' % p[0] for p in pilots)))
+arr('uint8_t', 'pil_a', [p[1] for p in pilots]); arr('uint8_t', 'pil_b', [p[2] for p in pilots])
+open('cars.h', 'w').write('#include <stdint.h>\n' + '\n'.join(cars) + '\n')
 open('tables.h', 'w').write('\n'.join(out) + '\n')
 print('tables.h ok; curve range', min(curve), max(curve), 'hill range', min(hill), max(hill))
