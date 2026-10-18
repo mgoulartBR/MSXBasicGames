@@ -82,9 +82,10 @@ def cockpit_pixels(lib2):
 
 STRIP = 4096
 WIN_Y, SKY_TOP = 24, 22
-VIEW_BOT = int(os.environ.get('VIEW_BOT', '86'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
+VIEW_BOT = int(os.environ.get('VIEW_BOT', '95'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
 STRIP_TOL = 1
-ARC_X0 = 66                                   # a partir daqui o recorte segue o capo (antes ficam a coluna A e a porta)
+ARC_X0 = 66; ARC_XL = 54; DIAG_SLOPE = 0.67      # ARC_XL: a diagonal do capo e prolongada ate a base da coluna A
+# a partir daqui o recorte segue o capo (antes ficam a coluna A e a porta)
 GLASS_MODE = os.environ.get('GLASS_MODE', 'dash')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
@@ -120,8 +121,9 @@ def overlay(a):
         sm = cut.copy()
         for x in range(XA, w):
             win = np.sort(cut[max(XA, x - 3):x + 4]); sm[x] = win[len(win) // 2]
+        for x in range(ARC_XL, XA): sm[x] = min(h - 1, sm[XA] + DIAG_SLOPE * (XA - x))       # prolonga a diagonal ate a coluna A
         sm = np.rint(sm).astype(int)
-        cuts = sm.copy(); x0 = XA
+        cuts = sm.copy(); x0 = ARC_XL
         while x0 < w:                               # faixas adaptativas: a faixa segue a curva com tolerancia de STRIP_TOL px
             x1 = x0 + 2; lo = hi = sm[x0]
             while x1 < w and max(hi, sm[x1], sm[x1 + 1]) - min(lo, sm[x1], sm[x1 + 1]) <= STRIP_TOL:   # passos de 2 colunas: HMMM exige x e largura pares
@@ -129,7 +131,7 @@ def overlay(a):
             lo = min(lo, sm[x0 + 1])
             cuts[x0:x1] = lo; x0 = x1
         if os.environ.get('DBG_CUTS'): print(list(zip(range(XA, w), cuts[XA:], sm[XA:]))[50:90], file=sys.stderr)
-        for x in range(XA, w): glass[cuts[x]:, x] = False
+        for x in range(ARC_XL, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     return out, cuts, (sm if GLASS_MODE != 'flat' else None)
 
@@ -223,11 +225,13 @@ def main():
         ov, cuts, sm = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
         if sm is not None:                          # completa o contorno ciano do capo (no original e tracejado): linha continua de 1 px
             a = a.copy()
-            for x in range(ARC_X0, 256): a[WIN_Y + SKY_TOP + int(sm[x]), x] = 1
+            for x in range(ARC_XL, 256):
+                y = WIN_Y + SKY_TOP + int(sm[x])
+                if a[y, x] in (0, 1): a[y, x] = 1          # nao pinta sobre a coluna A
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
-        orects = overlay_rects(ov[:, :ARC_X0] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
+        orects = overlay_rects(ov[:, :ARC_XL] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
-            x0 = ARC_X0
+            x0 = ARC_XL
             while x0 < 256:
                 x1 = x0 + 2
                 while x1 < 256 and cuts[x1] == cuts[x0]: x1 += 2
