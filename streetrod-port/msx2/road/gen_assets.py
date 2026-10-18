@@ -157,6 +157,7 @@ def overlay_rects(ov, band=2, gap=4):
     return rects
 
 LIGHT_Y = 940
+CAR_Y0 = 848; WHEEL_Y0 = 924; BAND_COPY_Y = 768      # pagina 3 na garagem: copia limpa da faixa do chao, corpo e roda de rascunho
 EGA_PAL = [(0,0,0),(0,0,0),(85,85,85),(170,170,170),(255,255,255),(170,170,170),(0,0,0),(85,255,255),
            (0,170,170),(0,170,0),(170,0,0),(255,85,85),(170,0,170),(85,255,85),(170,85,0),(255,255,85)]
 def garage_pixels(lib2):
@@ -230,7 +231,7 @@ def main():
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
             ents.append((len(banks) - 1 + ABASE, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
-    sprh = ''; orects = []
+    sprh = ''; orects = []; carh = ''
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
@@ -251,6 +252,20 @@ def main():
                 x0 = x1
         g = garage_pixels(lib2)                                   # cena da garagem (item 32): grupo 1, so na pagina 0, paleta EGA propria
         add((g[:, 0::2] << 4 | g[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=1)
+        import cars_art                                            # carros da garagem: corpo (grupo 2+id) e rodas (grupo 28+tipo), na area de rascunho da pagina 3
+        carart, wheelart = cars_art.load(lib2)
+        def packrows(a, wpx):
+            raw = np.zeros((a.shape[0], 256), np.uint8); raw[:, :a.shape[1]] = a
+            return (raw[:, 0::2] << 4 | raw[:, 1::2]).astype(np.uint8).tobytes()
+        for i, c in enumerate(carart): add(packrows(c['body'], c['w']), CAR_Y0 * 128, 1, group=2 + i)
+        for t, wh in enumerate(wheelart): add(packrows(wh, wh.shape[1]), WHEEL_Y0 * 128, 1, group=28 + t)
+        carh = ('#define CAR_Y0 %d\n#define WHEEL_Y0 %d\n#define BAND_COPY_Y %d\n#define WH_W %d\n#define WH_H %d\n'
+                'static const uint8_t car_w[%d] = {%s};\nstatic const uint8_t car_h[%d] = {%s};\nstatic const uint8_t car_wx0[%d] = {%s};\n'
+                'static const uint8_t car_wx1[%d] = {%s};\nstatic const uint8_t car_wy[%d] = {%s};\n') % (
+            CAR_Y0, WHEEL_Y0, BAND_COPY_Y, wheelart[0].shape[1], wheelart[0].shape[0],
+            len(carart), ','.join(str(c['w']) for c in carart), len(carart), ','.join(str(c['h']) for c in carart),
+            len(carart), ','.join(str(c['wx'][0]) for c in carart), len(carart), ','.join(str(c['wx'][1]) for c in carart),
+            len(carart), ','.join(str(c['wy']) for c in carart))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -289,7 +304,7 @@ def main():
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
-        f.write(sprh)
+        f.write(sprh); f.write(carh)
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))

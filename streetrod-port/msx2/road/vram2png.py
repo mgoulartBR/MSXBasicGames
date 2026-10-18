@@ -13,6 +13,10 @@ for i in range(16):
     b0, g = pal_bytes[2*i], pal_bytes[2*i+1]
     r, b = (b0 >> 4) & 7, b0 & 7
     pal.append(tuple(int(v * 255 / 7) for v in (r, g, b)))
+import os
+if os.path.exists(sys.argv[1] + '.pal'):                  # paleta ao vivo (debug read "VDP palette") se o teste a salvou
+    pb = list(map(int, open(sys.argv[1] + '.pal').read().split()))
+    pal = [tuple(int(v * 255 / 7) for v in ((pb[2*i] >> 4) & 7, pb[2*i+1], pb[2*i] & 7)) for i in range(16)]
 base = page * 0x8000
 img = Image.new('RGB', (256, 212))
 px = img.load()

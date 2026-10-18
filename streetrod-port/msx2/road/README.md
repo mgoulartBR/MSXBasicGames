@@ -204,3 +204,12 @@ restantes, rádio = **CATCH SOME TUNES** (jingle de 8 notas no PSG), galão verd
 Testes automáticos: `-DOLD_MENU -DSKIP_STREET` recompõe o menu de texto antigo e pula a rua (todos os `*_test.tcl` antigos); `click_test.tcl`/`click2_test.tcl`
 (`-DCUR_X/-DCUR_Y` posicionam o cursor) e `vram2png.py ... garage spr` (renderiza os sprites; o `screenshot` do openMSX sai preto em modo sem throttle).
 Pendente no M7: telas de título/jornal/Bob's/resultado com a arte da LIB1/LIB2, o carro desenhado na garagem, pintura/adereços, música, ranking.
+
+## O carro na garagem (M7, parte 2)
+O carro atual aparece desenhado na garagem: corpo lateral (LIB2: itens 39…201, escolhidos pelo `pic_index` do HOT_DATA; figura 255 = Plymouth conversível = item 179, 26º = Corvette 201)
++ duas rodas (tipo de pneu: 28 = faixa branca, 65 = cromada, 106 = slick), tudo com a largura reduzida a 4/5 como a cena (`cars_art.py`). A posição das rodas vem da detecção dos vãos
+das arcadas (3 carros têm posição manual). As imagens usam a paleta da cena: **índice 0 = transparente (LMMM TIMP), 6 = pintura, 7 = reflexo** (6/7 não são usados pela cena, então
+`set_paint` troca só essas duas cores — cada carro tem `paint` 0..7 = a paleta de pinturas do oponente). Cada carro é um grupo de assets (2+id), cada pneu outro (28+tipo), descomprimidos
+no rascunho da página 3 (`CAR_Y0`/`WHEEL_Y0`); `draw_car` copia a faixa limpa do chão (guardada em `BAND_COPY_Y` por `band_save`) para as páginas 0-2 e compõe o carro por cima (a página 2
+continua servindo de cópia para `hub_restore`). É redesenhado ao voltar de qualquer ação do hub (troca/compra/venda/conserto). O carro é clicável (= YOUR CARS). Nota: o banco 2 de código
+está com ~14,5 KB de 16 KB — o próximo grande bloco de código deve ir para um BANK3 (`#pragma codeseg BANK3`).

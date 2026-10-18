@@ -135,7 +135,7 @@ static void set_track(u8 road) {                  /* arrancada: reta e plana; es
 static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
 static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
 #define MAXCARS 4
-typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; u8 fuel, brk, tp; } Car;   /* carro do jogador: variantes instaladas, ajuste do ponto, desgaste (0..10000) */
+typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; u8 fuel, brk, tp, paint; } Car;   /* carro do jogador: variantes instaladas, ajuste do ponto, desgaste (0..10000) */
 static u16 money; static u8 day, nown, cur; static Car gc[MAXCARS];     /* estado do jogo */
 static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 #define MAXSPARE 12
@@ -153,7 +153,7 @@ static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
 static void car_stock(Car *c, u8 id) {      /* configuracao de fabrica a partir do campo flags do HOT_DATA */
     u16 f = car_flags[id];
     c->id = id; c->tir = (f >> 4) & 3; c->trn = (f >> 6) & 3; c->eng = (f >> 8) & 7; c->man = (f >> 11) & 7; c->carb = (f >> 14) & 3;
-    c->trim = 0; c->wear = 0; c->fuel = 10; c->brk = 0; c->tp = 0;      /* fuel em galoes (max 20); brk: 1 motor, 2 cambio, 4 pneus; tp: desgaste dos pneus 0..100 */
+    c->trim = 0; c->wear = 0; c->fuel = 10; c->brk = 0; c->tp = 0; c->paint = (u8)((id * 3 + 1) & 7);      /* fuel em galoes (max 20); brk: 1 motor, 2 cambio, 4 pneus; tp: desgaste dos pneus 0..100 */
 }
 static void load_pt(u8 slot, const Car *c) { pt_build(slot, car_perf[c->id], c->eng, c->trn, c->man, c->carb, c->tir, c->wear, c->trim, 0); }
 static void load_car(u8 slot, u8 id) { Car t; car_stock(&t, id); load_pt(slot, &t); }
@@ -1148,6 +1148,45 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
     return 1;
 }
 /* ---- garagem clicavel: cursor (sprite 16x16) movido por setas/joystick; ESPACO/botao A clica no objeto sob a ponta ---- */
+/* ---- o carro do jogador desenhado na garagem (corpo + rodas, LIB2; ver cars_art.py) ---- */
+#define BAND_Y 112                              /* faixa do chao que o carro ocupa (nas paginas 0-2); a copia limpa fica na pagina 3 */
+#define BAND_H 78
+static u8 car_on, car_x0, car_x1, car_y0, car_y1;
+static void band_cmd(i16 sy, i16 dy) {
+    vc_w(0, 0); vc_w(2, sy); vc_w(4, 0); vc_w(6, dy); vc_w(8, 256); vc_w(10, BAND_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+}
+static void band_save(void) { band_cmd(512 + BAND_Y, BAND_COPY_Y); }
+static void set_paint(u8 p) {                   /* indice 6 da paleta = pintura, 7 = reflexo (mais claro) */
+    u8 rb = paint_rb[p], g = paint_g[p], r = (rb >> 4) & 7, b = rb & 7;
+    g_reg = 6; g_val = rb; g_sh = g; pal_one();
+    r = r > 5 ? 7 : r + 2; b = b > 5 ? 7 : b + 2; g = g > 5 ? 7 : g + 2;
+    g_reg = 7; g_val = (u8)(r << 4 | b); g_sh = g; pal_one();
+}
+static void lmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
+    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx); vc_w(6, dy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;   /* TIMP: cor 0 transparente */
+    vdp_cmd15();
+}
+static void draw_car(void) {                    /* restaura a faixa limpa e desenha o carro atual nas 3 paginas (0 visivel, 1, 2 = copia para restaurar menus) */
+    u8 p, id, t;
+    i16 xl, yt, base;
+    for (p = 0; p < 3; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y);
+    car_on = 0;
+    if (!nown) { vdp_wait(); return; }
+    id = gc[cur].id; t = gc[cur].tir; if (t > 2) t = 2;
+    g_group = 2 + id; load_assets();
+    g_group = 28 + t; load_assets();
+    set_paint(gc[cur].paint);
+    xl = (256 - car_w[id]) >> 1; yt = 186 - (car_wy[id] + (WH_H >> 1));
+    for (p = 0; p < 3; p++) {
+        base = p * 256 + yt;
+        lmmm(0, WHEEL_Y0, xl + car_wx0[id] - (WH_W >> 1), base + car_wy[id] - (WH_H >> 1), WH_W, WH_H);
+        lmmm(0, WHEEL_Y0, xl + car_wx1[id] - (WH_W >> 1), base + car_wy[id] - (WH_H >> 1), WH_W, WH_H);
+        lmmm(0, CAR_Y0, xl, base, car_w[id], car_h[id]);
+    }
+    vdp_wait();
+    car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = yt; car_y1 = yt + car_h[id];
+}
 typedef struct { u8 x0, y0, x1, y1, id; } Hot;
 static const char *const hot_name[7] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "CATCH SOME TUNES", "WANNA TANK?", "HIT THE STREET", "TIME TO QUIT"};
 #define NHOT 8
@@ -1183,6 +1222,7 @@ static void spr_on(void) {
 static void spr_off(void) { g_sy = 0xD8; spr_put(); vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20); }
 static u8 hot_at(u8 x, u8 y) {
     u8 i;
+    if (car_on && x >= car_x0 && x < car_x1 && y >= car_y0 && y < car_y1) return 0;          /* o carro desenhado: YOUR CARS */
     for (i = 0; i < NHOT; i++) if (x >= hot[i].x0 && x <= hot[i].x1 && y >= hot[i].y0 && y <= hot[i].y1) return hot[i].id;
     return 255;
 }
@@ -1249,6 +1289,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cursor_init();
+    band_save(); draw_car();
     cmd_n = 0; cp = cmd_buf; hub_status();
     if (pm1) { ui_note(pm1, pm2); pm1 = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
     for (;;) {
@@ -1267,7 +1308,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             else if (street_trip() && bobs()) return 0;
         }
         else { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
-        cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status();
+        cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); draw_car(); hub_status();
     }
 }
 
