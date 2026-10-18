@@ -19,5 +19,13 @@ if len(sys.argv) > 3 and os.path.exists(sys.argv[3]):
     size = 0x10000
     while size < len(img): size *= 2
     img += b'\xff' * (size - len(img))
+# deteccao automatica de mapper dos emuladores: conta `LD (nn),A` (32 lo hi) para enderecos de registradores de banco. Para ser reconhecido como
+# ASCII16 so podem existir 0x6000/0x7000; padroes casuais nos dados (ex.: tabela de precos 50,80 = 32 00 50 00) confundem com Konami/ASCII8.
+bad = []
+for a_ in (0x5000, 0x9000, 0xB000, 0x6800, 0x7800, 0x5800, 0x9800, 0xB800):
+    pat = bytes([0x32, a_ & 255, a_ >> 8]); i_ = img.find(pat, 0, 0x8000)
+    while i_ >= 0:
+        bad.append('%04X: LD (%04X),A' % (i_ + 0x4000, a_)); i_ = img.find(pat, i_ + 1, 0x8000)
+if bad: raise SystemExit('padrao que confunde a deteccao de mapper: ' + ', '.join(bad))
 open(sys.argv[2], 'wb').write(img)
 print('ROM: %d bytes de codigo+tabelas (max 32768); arquivo de %d KB (mapper ASCII16)' % (top, len(img) // 1024))

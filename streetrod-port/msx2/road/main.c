@@ -54,6 +54,8 @@ volatile __at(0xF01E) u16 dbg_ospeed;
 volatile __at(0xF020) u16 dbg_in;       /* bit0 espaco, bit1 up_held, bit2 largada falsa, bits4+ marcha */
 volatile __at(0xF030) u16 dbg_money;
 volatile __at(0xF032) u16 dbg_day;
+volatile __at(0xF034) u16 dbg_nown;
+volatile __at(0xF036) u16 dbg_nspare;
 volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
@@ -105,7 +107,10 @@ static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
 static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
 #define MAXCARS 4
 static u16 money; static u8 day, nown, cur, own[MAXCARS];     /* estado do jogo */
+#define MAXSPARE 12
+static u8 spare[MAXSPARE], nspare;
 static u8 m_sel;
+static u8 offer_day = 255;
 static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
 static void load_car(u8 slot, u8 id) {
     u8 i;
@@ -349,6 +354,7 @@ static const u8 letters[26][5] = {
     {2,5,7,5,5},{6,5,6,5,6},{3,4,4,4,3},{6,5,5,5,6},{7,4,6,4,7},{7,4,6,4,4},{3,4,5,5,3},{5,5,7,5,5},{7,2,2,2,7},
     {1,1,1,5,2},{5,5,6,5,5},{4,4,4,4,7},{5,7,7,5,5},{6,5,5,5,5},{2,5,5,5,2},{6,5,6,4,4},{2,5,5,6,3},{6,5,6,5,5},
     {3,4,2,1,6},{7,2,2,2,2},{5,5,5,5,7},{5,5,5,5,2},{5,5,7,7,5},{5,5,2,5,5},{5,5,2,2,2},{7,1,2,4,7}};
+static const u8 sym[9][5] = {{3,6,2,3,6},{2,2,2,0,2},{6,1,2,0,2},{0,2,0,2,0},{0,0,0,2,4},{0,2,7,2,0},{1,1,2,4,4},{5,1,2,4,5},{2,2,0,0,0}};   /* $ ! ? : , + / % ' */
 static void draw_glyph(i16 x, i16 y, const u8 *g, u8 c) {
     u8 row, col;
     push_fill(x, y, 8, 12, 0);
@@ -368,6 +374,15 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
         else if (*s >= '0' && *s <= '9') draw_glyph(x, y, font[*s - '0'], c);
         else if (*s == '.') push_fill(x + 2, y + 8, 2, 2, c);
         else if (*s == '-') push_fill(x, y + 4, 6, 2, c);
+        else if (*s == '$') draw_glyph(x, y, sym[0], c);
+        else if (*s == '!') draw_glyph(x, y, sym[1], c);
+        else if (*s == '?') draw_glyph(x, y, sym[2], c);
+        else if (*s == ':') draw_glyph(x, y, sym[3], c);
+        else if (*s == ',') draw_glyph(x, y, sym[4], c);
+        else if (*s == '+') draw_glyph(x, y, sym[5], c);
+        else if (*s == '/') draw_glyph(x, y, sym[6], c);
+        else if (*s == '%') draw_glyph(x, y, sym[7], c);
+        else if (*s == '\'') draw_glyph(x, y, sym[8], c);
     }
 }
 
@@ -563,12 +578,25 @@ static void menu(void) {
 }
 
 /* ---- estado do jogo e hub (garagem) ---- */
+#ifndef START_MONEY
+#define START_MONEY 1000
+#endif
 #define HC_W 4          /* cores da paleta da garagem (indices EGA) */
 #define HC_Y 15
 #define HC_G 13
 #define HC_R 11
-static void new_game(void) { money = 1000; day = 0; nown = 1; own[0] = 16; cur = 0; sel_car = own[0]; }
+static void new_game(void) {
+    money = START_MONEY; day = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
+#ifdef START_CAR
+    own[0] = START_CAR; nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
+#endif
+}
 
+static void draw_nz(i16 x, i16 y, u16 v, u8 digits, u8 c) {      /* numero sem zeros a esquerda */
+    u16 p = 1; u8 i;
+    for (i = 1; i < digits; i++) p *= 10;
+    for (i = 0; i < digits; i++, p /= 10) { if (v >= p || i == digits - 1) { draw_digit(x + i * 8, y, (v / p) % 10, c); } }
+}
 static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
     u8 rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40);
@@ -584,26 +612,39 @@ static void hub_status(void) {
     static const char mon[2][4] = {"AUG", "SEP"};
     u8 mo = day >= 31;
     push_fill(0, 190, 256, 22, 0);
-    draw_text(8, 190, "$", HC_Y); draw_numc(16, 190, money, 5, HC_Y);
+    draw_text(8, 190, "$", HC_Y); draw_nz(16, 190, money, 5, HC_Y);
     draw_text(88, 190, mon[mo], HC_W); draw_numc(120, 190, mo ? day - 30 : day + 1, 2, HC_W); draw_text(144, 190, "1963", HC_W);
-    draw_text(8, 202, car_name[own[cur]], HC_G);
+    draw_text(8, 202, nown ? car_name[own[cur]] : "NO CAR - BUY ONE", HC_G);
     vdp_wait();
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
 #define UI_X 8
 #define UI_W 240
-static u8 ui_pick(const char *title, const char *const *it, u8 n, u8 sel) {
-    u8 prev = 0xFF, i, held = 1, bheld = 1;
-    i16 h = 24 + 14 * n, y0 = 186 - h;          /* o menu fica no chao da garagem (a parte baixa da cena) */
-    clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7;
+/* lista rolavel (ate UI_VIS linhas visiveis); o texto de cada item vem de ui_get(i). Devolve o indice (ESPACO) ou 255 (SHIFT = voltar) */
+#define UI_VIS 8
+static const char *(*ui_get)(u8 i);
+static const char *const *ui_arr;
+static const char *ui_arr_get(u8 i) { return ui_arr[i]; }
+static char tb[32];
+static void ui_row(u8 i, i16 y0, u8 top, u8 sel) {
+    i16 y = y0 + 24 + 14 * (i - top);
+    push_fill(UI_X + 4, y - 2, UI_W - 8, 14, 0);
+    draw_text(UI_X + 26, y, ui_get(i), i == sel ? HC_G : HC_W);
+    if (i == sel) push_fill(UI_X + 10, y, 8, 8, HC_G);
+}
+static u8 ui_list(const char *title, u8 n, u8 sel) {
+    u8 vis = n < UI_VIS ? n : UI_VIS, top = 0, prev = 0xFF, i, held = 1, bheld = 1;
+    i16 h = 24 + 14 * vis, y0 = 186 - h;        /* o menu fica no chao da garagem (a parte baixa da cena) */
+    if (!n) return 255;
+    if (sel >= vis) top = sel - vis + 1;
+    clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
     cmd_n = 0; cp = cmd_buf;
     hub_restore(0, 22, 256, 168);                /* apaga o menu anterior */
     push_fill(UI_X, y0, UI_W, h, 0);
     push_fill(UI_X, y0, UI_W, 2, HC_W); push_fill(UI_X, y0 + h - 2, UI_W, 2, HC_W);
     push_fill(UI_X, y0, 2, h, HC_W); push_fill(UI_X + UI_W - 2, y0, 2, h, HC_W);
     draw_text(UI_X + 10, y0 + 6, title, HC_Y);
-    for (i = 0; i < n; i++) draw_text(UI_X + 26, y0 + 24 + 14 * i, it[i], i == sel ? HC_G : HC_W);
-    push_fill(UI_X + 10, y0 + 24 + 14 * sel, 8, 8, HC_G);
+    for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
     vdp_wait();
     for (;;) {
         u8 st, go, back, ns = sel;
@@ -617,25 +658,156 @@ static u8 ui_pick(const char *title, const char *const *it, u8 n, u8 sel) {
         if (st == 1 && sel > 0) ns = sel - 1; else if (st == 5 && sel + 1 < n) ns = sel + 1;
         if (ns != sel) {
             cmd_n = 0; cp = cmd_buf;
-            for (i = sel; ; i = ns) {
-                push_fill(UI_X + 4, y0 + 22 + 14 * i, UI_W - 8, 14, 0);
-                draw_text(UI_X + 26, y0 + 24 + 14 * i, it[i], i == ns ? HC_G : HC_W);
-                if (i == ns) push_fill(UI_X + 10, y0 + 24 + 14 * i, 8, 8, HC_G);
-                if (i == ns) break;
+            if (ns < top || ns >= top + vis) {          /* rolagem: redesenha tudo */
+                top = ns < top ? ns : ns - vis + 1; sel = ns;
+                for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
+            } else {
+                i = sel; sel = ns; ui_row(i, y0, top, sel); ui_row(sel, y0, top, sel);
             }
-            sel = ns; vdp_wait();
+            vdp_wait();
         }
     }
 }
+static u8 ui_pick(const char *title, const char *const *it, u8 n, u8 sel) { ui_arr = it; ui_get = ui_arr_get; return ui_list(title, n, sel); }
 static void ui_note(const char *a, const char *b) {   /* aviso de 2 linhas, ate ESPACO/SHIFT */
     const char *it[2]; it[0] = a; it[1] = b;
     ui_pick(a, it + 1, 1, 0);
 }
+/* "NOME....... $1234" em tb[] (nome cortado/preenchido em 21 colunas, preco em 4 digitos) */
+static const char *fmt_price(const char *name, u16 price) {
+    u8 i = 0;
+    while (i < 20 && name[i]) { tb[i] = name[i]; i++; }
+    while (i < 21) tb[i++] = ' ';
+    tb[i++] = '$';
+    tb[i + 3] = '0' + price % 10; tb[i + 2] = price >= 10 ? '0' + (price / 10) % 10 : ' ';
+    tb[i + 1] = price >= 100 ? '0' + (price / 100) % 10 : ' '; tb[i] = price >= 1000 ? '0' + (price / 1000) % 10 : ' ';
+    tb[i + 4] = 0;
+    return tb;
+}
+static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
+    u8 i = 0;
+    static const char pre[] = "YOU ARE $";
+    while (pre[i]) { tb[i] = pre[i]; i++; }
+    if (v >= 1000) tb[i++] = '0' + (v / 1000) % 10;
+    if (v >= 100) tb[i++] = '0' + (v / 100) % 10;
+    if (v >= 10) tb[i++] = '0' + (v / 10) % 10;
+    tb[i++] = '0' + v % 10;
+    { static const char suf[] = " SHORT"; u8 k = 0; while (suf[k]) tb[i++] = suf[k++]; }
+    tb[i] = 0;
+    return tb;
+}
+
+/* ---- inventario ---- */
+static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
+
 static void cars_screen(void) {
     const char *it[MAXCARS]; u8 i, r;
+    if (!nown) { ui_note("YOUR CARS", "BUY A CAR FIRST!"); return; }
     for (i = 0; i < nown; i++) it[i] = car_name[own[i]];
     r = ui_pick("YOUR CARS - SPACE TO DRIVE", it, nown, cur);
     if (r != 255) { cur = r; sel_car = own[cur]; }
+}
+
+/* ---- jornal: carros usados ---- */
+#define NOFFERS 6
+static u8 offer[NOFFERS], offer_pct[NOFFERS], offer_mask;
+static void make_offers(void) {            /* ofertas do dia: sorteio deterministico por dia; vendidos/recusados ficam marcados */
+    u16 r = day * 2713u + 4219u; u8 i, j, id;
+    if (offer_day == day) return;
+    offer_day = day; offer_mask = 0;
+    static const u8 cheap[5] = {0, 6, 16, 19, 23};        /* sempre ha uma pechincha: garante que da para comprar o primeiro carro */
+    for (i = 0; i < NOFFERS; i++) {
+        do {
+            r = r * 25173u + 13849u; id = i ? (u8)((r >> 4) % 25) : cheap[(r >> 5) % 5];
+            for (j = 0; j < i; j++) if (offer[j] == id) break;
+        } while (j < i);
+        offer[i] = id; offer_pct[i] = 80 + (u8)((r >> 9) % 41);
+    }
+}
+static u16 offer_price(u8 i) { return (u16)((u32)car_price[offer[i]] * offer_pct[i] / 100); }
+static const char *offer_get(u8 i) { return (offer_mask >> i) & 1 ? "(GONE)" : fmt_price(car_name[offer[i]], offer_price(i)); }
+static u8 try_pay(u16 price) {            /* confere o dinheiro; mensagem se faltar */
+    if (money < price) { ui_note("NO GO, HOT SHOT", fmt_short(price - money)); return 0; }
+    money -= price; return 1;
+}
+static void buy_car(u8 i) {
+    static const char *const it[3] = {"BUY AT ASKING PRICE", "MAKE AN OFFER", "FORGET IT"};
+    static const char *const dis[3] = {"10% LESS", "20% LESS", "30% LESS"};
+    u16 price = offer_price(i); u8 r;
+    r = ui_pick(car_name[offer[i]], it, 3, 0);
+    if (r == 255 || r == 2) return;
+    if (nown >= MAXCARS) { ui_note("YOU'VE GOT NO ROOM!", "SELL A CAR FIRST"); return; }
+    if (r == 1) {
+        u8 d = ui_pick("HOW ABOUT...", dis, 3, 0), chance;
+        if (d == 255) return;
+        chance = d == 0 ? 80 : d == 1 ? 50 : 15;
+        if ((u8)(rnd16() >> 8) % 100 >= chance) { ui_note("GET LOST!", "NO DEAL"); offer_mask |= 1 << i; return; }
+        price = (u16)((u32)price * (90 - 10 * d) / 100);
+        ui_note("I'LL TAKE IT!", "DEAL");
+    }
+    if (!try_pay(price)) return;
+    own[nown++] = offer[i]; offer_mask |= 1 << i;
+    if (nown == 1) { cur = 0; sel_car = own[0]; }
+    ui_note("IT'S YOURS!", "ENJOY THE RIDE");
+}
+static void used_cars(void) {
+    u8 r, sel = 0;
+    make_offers();
+    for (;;) {
+        ui_get = offer_get;
+        r = ui_list("USED CARS", NOFFERS, sel);
+        if (r == 255) return;
+        sel = r;
+        if ((offer_mask >> r) & 1) { ui_note("SOLD ALREADY", "TRY ANOTHER"); continue; }
+        buy_car(r);
+    }
+}
+
+/* ---- jornal: pecas ---- */
+static u8 pcat, plist[16], pn;
+static const char *part_get(u8 i) { return fmt_price(part_name[plist[i]], PART_PRICE(plist[i])); }
+static void parts_shop(void) {
+    static const char *const cats[6] = {"ENGINES", "TRANSMISSIONS", "CARBURETORS", "MANIFOLDS", "TIRES", "BACK"};
+    u8 c = 0, r, i;
+    for (;;) {
+        c = ui_pick("AUTO PARTS", cats, 6, c);
+        if (c == 255 || c == 5) return;
+        pn = 0;
+        for (i = 0; i < NPARTS; i++) if (part_cat[i] == c) plist[pn++] = i;
+        r = 0;
+        for (;;) {
+            ui_get = part_get;
+            r = ui_list(cats[c], pn, r);
+            if (r == 255) break;
+            if (nspare >= MAXSPARE) { ui_note("TOO MUCH JUNK", "SELL SOME PARTS"); continue; }
+            if (!try_pay(PART_PRICE(plist[r]))) continue;
+            spare[nspare++] = plist[r];
+            ui_note("IT'S YOURS!", part_name[plist[r]]);
+        }
+    }
+}
+static const char *spare_get(u8 i) { return fmt_price(part_name[spare[i]], PART_PRICE(spare[i]) / 2); }
+static void sell_parts(void) {
+    u8 r, sel = 0;
+    for (;;) {
+        if (!nspare) { ui_note("SELL PARTS", "NO SPARE PARTS"); return; }
+        ui_get = spare_get;
+        r = ui_list("SELL SPARE PARTS", nspare, sel);
+        if (r == 255) return;
+        money += PART_PRICE(spare[r]) / 2;
+        spare[r] = spare[--nspare];
+        sel = r > 0 ? r - 1 : 0;
+    }
+}
+static void newspaper(void) {
+    static const char *const items[4] = {"USED CARS", "AUTO PARTS", "SELL SPARE PARTS", "BACK"};
+    u8 r, sel = 0;
+    for (;;) {
+        r = ui_pick("LOS ANGELES NEWS", items, 4, sel);
+        if (r == 255 || r == 3) return;
+        sel = r;
+        if (r == 0) used_cars(); else if (r == 1) parts_shop(); else sell_parts();
+    }
 }
 static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
@@ -648,8 +820,8 @@ static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sa
         if (r == 255) continue;
         sel = r;
         if (r == 0) cars_screen();
-        else if (r == 1) ui_note("NEWSPAPER", "COMING SOON");
-        else if (r == 2) return 0;
+        else if (r == 1) newspaper();
+        else if (r == 2) { if (nown) return 0; ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!"); }
         else return 1;
         cmd_n = 0; cp = cmd_buf; hub_status();
     }

@@ -130,3 +130,13 @@ com HMMM). Barra de status: dinheiro, data (agosto-setembro de 1963) e carro atu
 BOBS DRIVE-IN (escolhe oponente e piloto, corre, o resultado altera dinheiro/dia: +$50 vitória, -$25 derrota; provisório) e QUIT GAME (volta ao título).
 Estado: `money`, `day`, `own[4]`, `cur` (`new_game()` começa com $1000 e um Lincoln Capri 1957). Assets em grupos: 0 = corrida, 1 = garagem (`g_group`).
 Testes: `hub_test.tcl` (percorre as telas e salva capturas) e `loop_test.tcl` (hub↔corrida em loop, `-DRACE_LEN=40 -DAUTOPILOT=1`).
+
+## Jornal (marco M2)
+Menu NEWSPAPER: **USED CARS** (6 ofertas por dia, sorteio determinístico por dia com preço 80–120% do preço de tabela e sempre uma pechincha entre os
+carros mais baratos; compra ao preço pedido ou com oferta de 10/20/30% a menos, que o vendedor aceita com chance 80/50/15%, senão a oferta some no dia),
+**AUTO PARTS** (43 peças do `HOT_DATA` por categoria: motores, câmbios, carburadores, coletores, pneus; até 12 peças avulsas) e **SELL SPARE PARTS** (metade do
+preço). O jogo começa sem carro ($1000): Bob's Drive-In e a lista de carros avisam "buy a car first". Mensagens no estilo do original
+("NO GO, HOT SHOT / YOU ARE $x SHORT", "IT'S YOURS!"). Limite de 4 carros. Testes: `news_test.tcl`/`news_test2.tcl` (`-DSTART_MONEY=6000`),
+`-DSTART_CAR=16` dá um carro inicial para os testes de corrida (`loop_test.tcl`).
+Detalhe de ROM: `ihx2rom.py` falha se a ROM tiver o byte-padrão `LD (nn),A` para registradores de banco de outros mapper (ex.: `32 00 50`),
+porque o openMSX/WebMSX os usam para adivinhar o mapper; a tabela de preços das peças guarda `preço+1` por isso.
