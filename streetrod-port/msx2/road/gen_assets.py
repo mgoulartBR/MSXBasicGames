@@ -339,6 +339,11 @@ def main():
         td = open(tdat, 'rb').read()
         if len(banks[-1]) + len(td) > 0x4000: banks.append(bytearray())
         text_base = len(banks[-1]); banks[-1].extend(td); text_bank = len(banks) - 1 + ABASE      # nomes (carros, pecas, pilotos) no fim do ultimo banco de assets
+    import music_gen                                              # radio: cada estacao em seu proprio banco (3 bytes por linha de sequenciador)
+    mus = []
+    if ents:
+        for sg in music_gen.all_songs():
+            banks.append(bytearray(sg.data())); mus.append((len(banks) - 1 + ABASE, sg.n, sg.row_ms))
     nb = len(banks) if ents else 0
     print('assets: %d faixas em %d banco(s) de 16 KB' % (len(ents), nb), file=sys.stderr)
     open(os.path.join(here, 'assets.bin'), 'wb').write(b''.join(bytes(b).ljust(0x4000, b'\xff') for b in banks) if ents else b'')
@@ -352,6 +357,8 @@ def main():
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
         f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n' % (1 if ents else 0, text_bank, text_base))
+        f.write('static const uint8_t mus_bank[5] = {%s};\nstatic const uint16_t mus_rows[5] = {%s};\nstatic const uint16_t mus_ms[5] = {%s};\n' % tuple(','.join(str(m[i]) for m in mus) for i in range(3)))
+        f.write('static const uint16_t mus_per[128] = {%s};\n' % ','.join(str(min(4095, round(55930 / (440 * 2 ** ((n - 69) / 12))))) if n >= 12 else '0' for n in range(128)))
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))

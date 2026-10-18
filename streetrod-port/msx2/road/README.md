@@ -319,3 +319,11 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - `victory_and_ranking()`: se venceu o Rei, a tela de vitoria (item 8, grupo 253); depois a tabela "King Street Rodders" (item 4, grupo 252) com 10 linhas na fonte do jogo (`gtext`; a linha do jogador vai sobre uma barra amarela): pilotos ficticios fixos + o jogador (amarelo) inserido pelo dinheiro final. Os nomes/valores dos rivais sao inventados (o ranking original nao foi extraido). Teste: `-DSTART_END=2 -DSTART_MONEY=1700` + `rank_test.tcl`.
 - `-DSTART_END=n` forca `game_end` ao iniciar (teste).
 - Banco 4 agora guarda o menu de carros da garagem; texto da corrida foi para o banco 1.
+
+## M7: radio e musica
+
+- `music_gen.py` compoe 5 estacoes originais (estilos dos anos 50/60), 2,4-2,7 min cada, em linhas de sequenciador (3 bytes por linha: canal A melodia, B baixo, C harmonia/percussao): ROCK 'N' ROLL (padrao), SLOW BLUES, SWING JAZZ, DOO-WOP, SURF ROCK. Cada uma vai em um banco proprio da ROM (`mus_bank/mus_rows/mus_ms/mus_per` em assets.h).
+- Player (banco 3): `mus_tick()` roda a partir de `combine_input()` (todo laco de tela chama) usando o relogio JIFFY; le 3 bytes por linha com `bank_copy`; envelopes de volume por canal; chimbal/caixa = ruido curto/longo no canal C. Se uma carga de tela atrasa o relogio, ele recomeca sem tentar recuperar.
+- Durante a corrida (`race_go`) o PSG e do motor: a musica pausa (`mus_pause`) e retoma ao voltar. Clicar no radio da garagem abre `radio()`: 5 estacoes ou RADIO OFF (silencia).
+- Animacao do carro: passo fixo de 12 px por quadro; a pagina visivel nunca e apagada (sem piscar no fim). O desenho e limitado pelo VDP (4-8 jiffies por quadro).
+- Corrigido: mensagem pos-corrida lia texto de outro banco (agora copiada em `pmb`).

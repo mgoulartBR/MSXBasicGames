@@ -210,8 +210,11 @@ extern volatile u8 ev_space, ev_shift;
 extern void install_hook(void);
 
 #pragma codeseg CODE
+static u8 mus_st = 1, mus_hold;                 /* radio: estacao 1..5 (0 = desligado); mus_hold = corrida em andamento (o PSG e do motor) */
+static void mus_tick(void) BK;
 static void combine_input(void) {
     u8 e;
+    if (mus_st && !mus_hold) mus_tick();
     g_stick = g_st0 ? g_st0 : g_st1;
     g_trig = (g_t0 ? 1 : 0) | (g_t1 ? 2 : 0) | (g_t3 ? 4 : 0);
     e = ev_space; if (e) { ev_space = 0; g_trig |= 1; }       /* toque curto travado pela interrupcao */
@@ -521,6 +524,59 @@ static void init_static(void) {
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
+#pragma codeseg BANK3
+/* ---- radio: 5 estacoes (music_gen.py) tocadas no PSG; 1 linha = 3 bytes (A melodia, B baixo, C harmonia/percussao), lidas do banco da estacao ---- */
+static u16 mus_row, mus_due, mus_dur, mus_t0[3], mus_noise;       /* linha atual, jiffy da proxima, duracao da linha (8.8 jiffies), inicio de cada nota, fim do ruido */
+static u8 mus_fr, mus_on[3], mus_lv[3];
+static const u8 mus_env[3][3] = {{12, 7, 6}, {13, 10, 8}, {9, 3, 4}};   /* por canal: volume inicial, piso, jiffies por degrau */
+static void mus_row_play(void) {
+    u8 b[3], c, v; u16 per;
+    g_bk_bank = mus_bank[mus_st - 1]; g_bk_src = 0x8000 + mus_row * 3; g_bk_dst = (u16)b; g_bk_len = 3; bank_copy();
+    for (c = 0; c < 3; c++) {
+        v = b[c];
+        if (v >= 12) {
+            per = mus_per[v]; psg(2 * c, (u8)per); psg(2 * c + 1, (u8)(per >> 8));
+            mus_t0[c] = JIFFY; mus_on[c] = 1; mus_lv[c] = 255;
+            if (c == 2 && mus_noise) { psg(7, 0xB8); mus_noise = 0; }
+        } else if (v == 1) { mus_on[c] = 0; mus_lv[c] = 0; psg(8 + c, 0); }
+        else if (v >= 2 && c == 2) {                                      /* 2 = chimbal, 3 = caixa: ruido no canal C */
+            psg(6, v == 2 ? 4 : 14); psg(7, 0x9C); psg(10, v == 2 ? 8 : 12);
+            mus_noise = JIFFY + (v == 2 ? 2 : 5); mus_on[2] = 0;
+        }
+    }
+}
+static void mus_tick(void) BK {
+    u8 c, v, age; i16 d;
+    while ((d = (i16)(JIFFY - mus_due)) >= 0) {
+        u16 t;
+        if (d > 40) mus_due = JIFFY;                                      /* ficou muito atras (carga de tela): recomeca o relogio */
+        mus_row_play();
+        if (++mus_row >= mus_rows[mus_st - 1]) mus_row = 0;
+        t = (u16)mus_fr + (u8)mus_dur; mus_fr = (u8)t;
+        mus_due += (mus_dur >> 8) + (t >> 8);
+    }
+    if (mus_noise && (i16)(JIFFY - mus_noise) >= 0) { psg(10, 0); psg(7, 0xB8); mus_noise = 0; }
+    for (c = 0; c < 3; c++) if (mus_on[c]) {
+        age = JIFFY - mus_t0[c]; if (age > 120) age = 120;
+        v = mus_env[c][0]; age /= mus_env[c][2];
+        v = v > mus_env[c][1] + age ? v - age : mus_env[c][1];
+        if (v != mus_lv[c]) { mus_lv[c] = v; psg(8 + c, v); }
+    }
+}
+static void mus_pause(void) BK {                                              /* corrida: o PSG e do motor */
+    mus_hold = 1; mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
+    psg(8, 0); psg(9, 0); psg(10, 0); psg(7, 0xB8);
+}
+static void mus_set(u8 st) BK {                                           /* troca de estacao (0 = desliga) */
+    u16 x;
+    psg(8, 0); psg(9, 0); psg(10, 0); psg(7, 0xB8); mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
+    mus_st = st;
+    if (!st) return;
+    mus_row = 0; mus_due = JIFFY; mus_fr = 0;
+    x = mus_ms[st - 1] * (u16)jhz;
+    mus_dur = (x / 125u) * 32u + ((x % 125u) * 32u) / 125u;               /* ms -> jiffies em 8.8 */
+}
+#pragma codeseg CODE
 static void race_silence(void) { psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; }
 
 #pragma codeseg BANK2
@@ -1123,7 +1179,8 @@ static void body_shop(void) BK {                 /* pintura, adesivos, teto reba
 static u8 race_type, opp_ok;                 /* 0 arrancada, 1 estrada, 2 so por diversao, 3 pink slip */
 static u16 bet;
 
-static const char *pm1, *pm2;                /* mensagem do resultado da ultima corrida (mostrada ao voltar a garagem) */
+static char pmb[2][28]; static u8 pm_on;     /* mensagem do resultado da ultima corrida (mostrada ao voltar a garagem); copiada, pois quem a escreve (banco 3) nao e quem a mostra (banco 2) */
+static void pm_put(u8 i, const char *s) { u8 n = 0; while (*s && n < 27) pmb[i][n++] = *s++; pmb[i][n] = 0; if (!i) pm_on = 1; }
 static const u16 bets[4] = {10, 25, 50, 100};
 static const char *pil_get(u8 i) { return PILN(i); }
 static void pick_opp_car(u8 pil) BK {           /* pilotos melhores (indice maior) correm com carros de classe mais alta */
@@ -1187,7 +1244,7 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     c->fuel = c->fuel > 3 ? c->fuel - 3 : 0;
     c->wear = c->wear + 100 + over_t * 30 > 10000 ? 10000 : c->wear + 100 + over_t * 30;
     c->tp = c->tp + 6 + (race_type == 1 ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_type == 1 ? 4 : 0);
-    pm1 = pm2 = 0;
+    pm_on = 0;
     if (result != 3) {                       /* quebras: motor (rotacao e desgaste), cambio (trocas com o motor passado), pneus (tabela do jogo) */
         ep = 2 + over_t * 6 + (u8)(c->wear / 500); if (ep > 85) ep = 85;
         tpr = 1 + badshift * 12; if (tpr > 85) tpr = 85;
@@ -1201,36 +1258,36 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
 #endif
         if (brk0) {
             c->brk |= brk0; result = 2;
-            pm1 = brk0 == 1 ? "BLEW YOUR ENGINE AGAIN?" : brk0 == 2 ? "YOU JUST DROPPED YOUR" : "BLEW YOUR TIRES AGAIN?";
-            pm2 = brk0 == 2 ? "TRANSMISSION, KLUTZ!" : "YOU LOSE. TAKE A WALK.";
+            pm_put(0, brk0 == 1 ? "BLEW YOUR ENGINE AGAIN?" : brk0 == 2 ? "YOU JUST DROPPED YOUR" : "BLEW YOUR TIRES AGAIN?");
+            pm_put(1, brk0 == 2 ? "TRANSMISSION, KLUTZ!" : "YOU LOSE. TAKE A WALK.");
         } else if (result == 2 && dbg_top >= 90 && rnd16() % 100 < 6) {      /* perdeu a alta velocidade: pode destruir o carro */
             u16 scrap = scrap_value(c);
             n = 0; put_str(pbuf, &n, "CAR TOTALED. $"); put_num(pbuf, &n, scrap); put_str(pbuf, &n, " SCRAP"); pbuf[n] = 0;
             money += scrap; remove_car(cur); gone = 1;
-            pm1 = "LUCKY YOU WEREN'T KILLED!"; pm2 = pbuf;
+            pm_put(0, "LUCKY YOU WEREN'T KILLED!"); pm_put(1, pbuf);
         }
     }
     win = result == 1;
-    if (!pm1) {
-        pm1 = win ? "YOU WON!" : result == 3 ? "YA JUMPED THE LIGHT," : "YOU LOSE, SUCKER.";
-        pm2 = win ? "TOO BAD YOU DIDN'T BET" : result == 3 ? "SPEEDY!" : "TAKE A WALK.";
+    if (!pm_on) {
+        pm_put(0, win ? "YOU WON!" : result == 3 ? "YA JUMPED THE LIGHT," : "YOU LOSE, SUCKER.");
+        pm_put(1, win ? "TOO BAD YOU DIDN'T BET" : result == 3 ? "SPEEDY!" : "TAKE A WALK.");
     }
     if (win && race_type < 2) { if (race_type == 0) wins_drag++; else wins_road++; }
     if (win && sel_pil == NPILOTS - 1 && race_type != 2) game_end = 2;            /* venceu The King */
     if (race_type == 3) {
         if (win) {
-            pm1 = "YOU JUST WON A"; pm2 = "HELLUVA CAR!";
+            pm_put(0, "YOU JUST WON A"); pm_put(1, "HELLUVA CAR!");
             if (nown < MAXCARS) { car_stock(&gc[nown], sel_opp); nown++; }
-            else { money += car_price[sel_opp] / 2; pm2 = "HELLUVA CAR! (SOLD IT)"; }
+            else { money += car_price[sel_opp] / 2; pm_put(1, "HELLUVA CAR! (SOLD IT)"); }
         } else {
             if (!gone) remove_car(cur);
-            pm1 = "YOU LOST YOUR CAR!"; pm2 = "PINK SLIP GONE";
+            pm_put(0, "YOU LOST YOUR CAR!"); pm_put(1, "PINK SLIP GONE");
         }
     } else if (bet) {
         if (win) {
             money += bet;
-            pm1 = bet == 10 ? "BIG DEAL." : bet == 25 ? "TWENTY-FIVE BUCKS." : bet == 50 ? "FIFTY SMACKERS." : "A HUNDRED SMACKERS,";
-            pm2 = bet == 10 ? "TEN LOUSY BUCKS." : bet == 25 ? "NOT BAD." : bet == 50 ? "NOT BAD." : "HOT SHOT.";
+            pm_put(0, bet == 10 ? "BIG DEAL." : bet == 25 ? "TWENTY-FIVE BUCKS." : bet == 50 ? "FIFTY SMACKERS." : "A HUNDRED SMACKERS,");
+            pm_put(1, bet == 10 ? "TEN LOUSY BUCKS." : bet == 25 ? "NOT BAD." : bet == 50 ? "NOT BAD." : "HOT SHOT.");
         } else money = money > bet ? money - bet : 0;
     }
     if (day < 62) day++;
@@ -1284,6 +1341,7 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
 }
 #pragma codeseg BANK2
 static void run_race(void) BK;
+static void race_go(void) BK;
 static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu (ESC) */
     Car *c = &gc[cur]; u8 gas = 1;
     u16 avg;
@@ -1292,7 +1350,7 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
 #endif
     ui_note("CRUISING IN TOWN...", "MAX SPEED 45 MPH"); ui_nohint = 0;
     street_mode = 1; race_type = 1; street_res = 1;
-    run_race();
+    race_go();
     street_mode = 0;
     load_garage(); ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
@@ -1371,8 +1429,9 @@ static void car_blit(i16 base, u8 id, i16 xl) {         /* base = 0/256/512 (pag
         vdp_cmd15();
     }
 }
-static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (8 px por quadro), desenhando na pagina oculta e trocando a pagina */
-    i16 x = x0, d = x1 > x0 ? 8 : -8; u8 pg = 1; u16 j;
+static u8 slide_pg;                                    /* pagina que ficou visivel no fim da animacao */
+static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (12 px por quadro), desenhando na pagina oculta e trocando a pagina */
+    i16 x = x0, d = x1 > x0 ? 1 : -1; u8 pg = 1; u16 j;
     for (;;) {
         band_cmd(BAND_COPY_Y, pg * 256 + BAND_Y);
         car_blit(pg * 256, id, x);
@@ -1381,24 +1440,30 @@ static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a 
         vdp_reg(2, (u8)((pg << 5) | 0x1F));
         pg ^= 1;
         if (x == x1) break;
-        x += d; if ((d > 0 && x > x1) || (d < 0 && x < x1)) x = x1;
+        x += d * 12;                                    /* passo fixo: o desenho leva 4-8 jiffies por quadro (limite do VDP), entao passo constante da o movimento mais regular */
+        if ((d > 0 && x > x1) || (d < 0 && x < x1)) x = x1;
     }
+    slide_pg = pg ^ 1;
 }
+static void car_page(u8 p, u8 id, i16 xl) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
 static void draw_car(void) {                    /* mostra o carro atual (com a animacao de entrada/saida) e deixa o resultado final nas 3 paginas (0 visivel, 1, 2 = copia para restaurar menus) */
-    u8 p, id = nown ? gc[cur].id : 255;
+    u8 p, sp, id = nown ? gc[cur].id : 255;
     i16 xl;
     if (shown_id != 255 && shown_id != id) {                       /* o carro antigo sai de re (para a esquerda) */
         cvar = shown_var; cstk = shown_stk; car_art(shown_id, shown_tir); set_paint(shown_paint);
         car_slide(shown_id, (256 - car_w[shown_id]) >> 1, -(i16)car_w[shown_id]);
     }
-    for (p = 0; p < 3; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y);
     car_on = 0;
-    if (id == 255) { vdp_wait(); shown_id = 255; vdp_reg(2, 0x1F); return; }
+    if (id == 255) { for (p = 0; p < 3; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); vdp_wait(); shown_id = 255; vdp_reg(2, 0x1F); return; }
     cvar = gc[cur].roof | (gc[cur].bump << 1); cstk = gc[cur].stick;
     car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
     xl = (256 - car_w[id]) >> 1;
-    if (shown_id == 255) car_slide(id, -(i16)car_w[id], xl);       /* garagem vazia: o carro entra */
-    for (p = 0; p < 3; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, id, xl); }
+    sp = 0;                                                       /* pagina visivel agora */
+    if (shown_id == 255) { car_slide(id, -(i16)car_w[id], xl); sp = slide_pg; }      /* garagem vazia: o carro entra */
+    else if (shown_id != id) sp = slide_pg;                       /* o antigo acabou de sair: a pagina visivel esta vazia */
+    car_page(2, id, xl);                                           /* a pagina visivel nunca e apagada (sem piscar): desenha nas outras e troca */
+    if (sp == 0) { car_page(1, id, xl); vdp_wait(); vdp_reg(2, 0x3F); car_page(0, id, xl); }
+    else { car_page(0, id, xl); vdp_wait(); vdp_reg(2, 0x1F); car_page(1, id, xl); }
     vdp_wait(); vdp_reg(2, 0x1F);
     shown_id = id; shown_tir = gc[cur].tir; shown_paint = gc[cur].paint; shown_var = cvar; shown_stk = cstk;
     car_on = 1; car_x0 = xl; car_x1 = xl + car_w[id]; car_y0 = car_yt(id); car_y1 = car_y0 + CH(id);
@@ -1538,10 +1603,18 @@ static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 ite
     load_garage(); band_save();
 }
 #endif
-static void jingle(void) {
-    static const u16 nt[8] = {478, 380, 319, 239, 319, 380, 319, 478};
-    u8 i;
-    for (i = 0; i < 8; i++) { beep(nt[i], 7); while ((i16)(JIFFY - beep_end) < 0) ; psg(10, 0); beep_on = 0; }
+static const char *const rd_name[6] = {"ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK", "RADIO OFF"};
+static char rd_buf[24];
+static const char *radio_get(u8 i) {
+    u8 n = 0;
+    rd_buf[n++] = (i == 5 ? !mus_st : mus_st == i + 1) ? '>' : ' '; rd_buf[n++] = ' ';
+    put_str(rd_buf, &n, rd_name[i]); rd_buf[n] = 0;
+    return rd_buf;
+}
+static void radio(void) {                                              /* o radio da prateleira: 5 estacoes ou desligar */
+    u8 r;
+    ui_get = radio_get; r = ui_list("CATCH SOME TUNES", 6, mus_st ? mus_st - 1 : 5);
+    if (r != 255) mus_set(r == 5 ? 0 : r + 1);
 }
 #ifndef OLD_MENU
 static const Hot news_hot[5] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}, {132, 201, 208, 211, 2}, {214, 201, 250, 211, 3}};
@@ -1649,6 +1722,7 @@ static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): o
 #ifdef OLD_MENU
 static u8 bobs_front(void) { return bobs(); }
 #endif
+static void race_go(void) BK { mus_pause(); run_race(); mus_hold = 0; mus_due = JIFFY; }
 static void race_result(void) BK {              /* resultado da corrida: janela sobre a lanchonete (tempo e velocidade media) */
     static char tb1[22], tb2[22];
     const char *it[2]; u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0; u8 n;
@@ -1672,7 +1746,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
     cursor_init();
     cmd_n = 0; cp = cmd_buf; hub_status();
     band_save(); draw_car();
-    if (pm1) { ui_note(pm1, pm2); pm1 = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
+    if (pm_on) { ui_note(pmb[0], pmb[1]); pm_on = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
     for (;;) {
         if (game_end) return 1;
         if (!nown && money < 300 && !nspare) { game_end = 3; return 1; }
@@ -1680,7 +1754,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         if (r == 0) cars_screen();
         else if (r == 1) newspaper();
         else if (r == 2) calendar_screen();
-        else if (r == 3) jingle();
+        else if (r == 3) radio();
         else if (r == 7) body_shop();
         else if (r == 4) gas_station();
         else if (r == 5) {
@@ -1835,12 +1909,13 @@ void main(void) {
 #endif
     install_hook();
     snd_init();
+    mus_set(1);                                          /* estacao padrao: Rock 'n' Roll */
     for (;;) {
         title_screen();
         new_game();
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();
-            run_race();
+            race_go();
             race_result();
             settle_race();
         }
