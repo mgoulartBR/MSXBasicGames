@@ -268,7 +268,9 @@ static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }
 static void draw_opp(void) {
     i16 d = (i16)(opos - pos), y, xc, hw, w, h, x, sx, sw, dx0, dx1, ty;
     u8 r, si;
-    if (d < 2 || d >= N_ROWS - 1) return;
+    if (d < -1) return;
+    d += 3;                                 /* a camera fica no painel: o carro lado a lado aparece ~3 segmentos a frente */
+    if (d >= N_ROWS - 1) return;
     r = (u8)d;
     y = Y[r - 1];
     if (y < 0 || y > 250) return;

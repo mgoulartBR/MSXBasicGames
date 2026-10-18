@@ -2,6 +2,7 @@
 set throttle off
 proc tap {row mask} { keymatrixdown $row $mask; after time 0.1 [list keymatrixup $row $mask] }
 after time 8 { tap 8 0x01 }
+after time 11 { tap 8 0x01 }   ;# menu
 set i 0
 foreach t $::env(SHOTS) {
     after time $t [list apply {{i} {

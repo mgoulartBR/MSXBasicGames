@@ -83,7 +83,7 @@ def cockpit_pixels(lib2):
 STRIP = 4096
 WIN_Y, SKY_TOP, VIEW_BOT = 24, 22, 104     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
-SPR_W = [6, 8, 11, 15, 20, 27, 36, 48, 64]      # larguras das versoes reduzidas do carro (visto por tras)
+SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
 SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
 
 def overlay(a):
@@ -157,12 +157,17 @@ def rear_sprite(lib2, item):
     idx = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
     col = np.array(MAP, np.uint8)[idx]
     h, w = col.shape
+    solid = col != 0
+    pad = np.pad(solid, 2)
+    thick = np.zeros_like(solid)
+    for dy in range(5):
+        for dx in range(5): thick |= pad[dy:dy + h, dx:dx + w]       # fecha frestas de ate ~4 px no contorno antes de preencher o fundo
     bg = np.zeros((h, w), bool); st = [(y, x) for y in range(h) for x in (0, w - 1)] + [(y, x) for x in range(w) for y in (0, h - 1)]
     while st:
         y, x = st.pop()
-        if 0 <= y < h and 0 <= x < w and not bg[y, x] and col[y, x] == 0:
+        if 0 <= y < h and 0 <= x < w and not bg[y, x] and not thick[y, x]:
             bg[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
-    col = np.where(col == 0, 11, col).astype(np.uint8); col[bg] = 0
+    col = np.where(col == 0, 11, col).astype(np.uint8); col[bg & ~solid] = 0
     return col
 
 def scale_sprite(col, w):
