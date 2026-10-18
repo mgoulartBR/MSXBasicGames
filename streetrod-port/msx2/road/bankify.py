@@ -31,15 +31,35 @@ def hdr_region(name):
                 return r
     return None
 def decl_line(name):
-    pat = re.compile(r'^(static |const |extern )*[\w ]+[ *]\*?%s\s*[\[(=;]' % re.escape(name[1:]))
+    pat = re.compile(r'^(static |const |extern )*[\w \*]+[ *]\*?%s\s*[\[(=;]' % re.escape(name[1:]))
     for i, l in enumerate(clines, 1):
         if pat.match(l) and not l.startswith(('return', 'else')) and not (re.search(r'\)\s*(__banked|BK)?\s*;\s*$', l) and '(' in l): return i
     return None
 lines = open(asm_p).read().split('\n')
 banked = set(re.findall(r'^\s*b_(\w+)\s*=', '\n'.join(lines), re.M))
+# pre-passe: cada literal de string (___str_N) vai para o banco das funcoes que o usam (varios bancos -> nucleo)
+str_users = {}
+_fn = None; _incode = False; _srcline = 1
+for l in lines:
+    m = re.match(r';main\.c:(\d+):', l)
+    if m: _srcline = int(m.group(1))
+    a = re.match(r'\t\.area (\w+)', l)
+    if a: _incode = (a.group(1) == '_CODE'); continue
+    if _incode:
+        m = re.match(r'^(_\w+|_{2,3}str_\d+):{1,2}\s*$', l)
+        if m and not m.group(1).startswith(('___str', '__str')):
+            _fn = m.group(1).rstrip(':'); _fb = None
+            dl = decl_line(_fn); _fb = region(dl) if dl else None
+            _fnbank = _fb
+        elif _fn and not l.startswith(('\t.globl', ';')):
+            for t in re.findall(r'(?<![\w$])(_{2,3}str_\d+)\b', l):
+                str_users.setdefault(t, set()).add(_fnbank)
+def str_region(t):
+    u = {x for x in str_users.get(t, set()) if x}
+    return u.pop() if len(u) == 1 else 'CODE'
 out = []; area = None; cur = 'CODE'; srcline = 1; incode = False
 sym_bank = {}; label_of_line = {}; fn = None; refs = []
-lab = re.compile(r'^(_\w+|___str_\d+):{1,2}\s*$')
+lab = re.compile(r'^(_\w+|_{2,3}str_\d+):{1,2}\s*$')
 for l in lines:
     m = re.match(r';main\.c:(\d+):', l)
     if m: srcline = int(m.group(1))
@@ -52,11 +72,11 @@ for l in lines:
         m = lab.match(l)
         if m:
             name = m.group(1).rstrip(':')
-            dl = None if name.startswith('___str') else decl_line(name)
-            cur = region(dl) if dl else ((hdr_region(name) if not name.startswith('___str') else None) or region(srcline)); sym_bank[name] = cur; fn = name
+            dl = None if name.startswith(('___str', '__str')) else decl_line(name)
+            cur = str_region(name) if name.startswith(('___str', '__str')) else (region(dl) if dl else (hdr_region(name) or region(srcline))); sym_bank[name] = cur; fn = name
             out.append('\t.area %s' % ('_CODE' if cur == 'CODE' else cur))
         elif fn and not l.startswith(('\t.globl', ';')):
-            for t in re.findall(r'(?<![\w$])(_\w+|___str_\d+)\b', l):
+            for t in re.findall(r'(?<![\w$])(_\w+|_{2,3}str_\d+)\b', l):
                 if t != fn: refs.append((fn, t, srcline))
     out.append(l)
 open(out_p, 'w').write('\n'.join(out))

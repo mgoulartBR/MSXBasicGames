@@ -259,3 +259,11 @@ Voltou o layout do original (página 21 + manchete do dia 22-26 embaixo, sem o f
 (microtexto pré-renderizado na arte) são apagados na geração (`NEWS_BODY_TOP` em `gen_assets.py`; filete entre as colunas) e o jogo escreve um texto curto **legível com a fonte da garagem**
 (`news_body[]`, 2-4 linhas de até 20 letras, desenhado na cópia da página 2 e copiado para a tela). As manchetes (fonte grande da arte) ficam como no original.
 Obs.: o clique no título "Los Angeles News" (vender peças avulsas) não tem etiqueta.
+
+## Tudo pelo mouse (M7, parte 6)
+- **Listas/janelas** (`ui_list`): o cursor (sprite) aparece assim que o mouse se mexe; **passar o cursor seleciona a linha, o botão esquerdo escolhe**; botão **X** na barra de título (volta; o menu raiz não tem) e **▲▼ ("^" e "v")**
+  para rolar listas longas; botão direito/ESC/SHIFT também voltam. Teclado/joystick continuam iguais (setas + ESPAÇO).
+- **Jornal:** a barra de status vira **[SELL PARTS] [EXIT]** (botões clicáveis; o cursor pode descer até a barra); os títulos AUTO PARTS / USED CARS / "Los Angeles News" continuam clicáveis.
+- O cursor/mouse (`mouse_move`, `cursor_init`, `spr_on/off`) foi para o núcleo (usado pela garagem, jornal e listas). `-DTEST_MOUSE` simula o mouse nos testes (setas = deslocamento, ESPAÇO = botão); `mouse_test.tcl`, `mouse2_test.tcl`.
+- `bankify.py`: literais de string agora vão para o banco das funções que os usam (antes dependia da ordem do arquivo) e `decl_line` reconhece `static const char *const x[]`.
+- Núcleo: 15,4 KB de 16 KB — o próximo recurso grande deve mover algo para um banco.

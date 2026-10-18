@@ -658,6 +658,7 @@ static u8 num_str(char *d, u16 v) {         /* decimal sem zeros a esquerda; dev
     while (k) d[n++] = t[--k];
     return n;
 }
+static u8 bar_news;                          /* 1 = jornal: a barra de status leva os botoes SELL PARTS e EXIT (clicaveis com o mouse) */
 static void hub_status(void) {              /* barra branca: dinheiro, data e carro (texto preto, como o visor da cena) */
     static const char mon[2][4] = {"AUG", "SEP"};
     char b[24]; u8 mo = day >= 31, n = 0, pg;
@@ -668,10 +669,57 @@ static void hub_status(void) {              /* barra branca: dinheiro, data e ca
     b[n++] = '$'; n += num_str(b + n, money); b[n] = 0; gtext(6, 192, b, 0);
     n = 0; b[n++] = mon[mo][0]; b[n++] = mon[mo][1]; b[n++] = mon[mo][2]; b[n++] = ' '; n += num_str(b + n, mo ? day - 30 : day + 1);
     b[n++] = ','; b[n++] = ' '; b[n++] = '1'; b[n++] = '9'; b[n++] = '6'; b[n++] = '3'; b[n] = 0; gtext(96, 192, b, 0);
-    gtext(6, 203, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", 0);
+    if (bar_news) {
+        push_fill(132, 201, 76, 10, HC_K); push_fill(133, 202, 74, 8, HC_W); gtext(136, 202, "SELL PARTS", 0);
+        push_fill(214, 201, 36, 10, HC_K); push_fill(215, 202, 34, 8, HC_W); gtext(226, 202, "EXIT", 0);
+    } else gtext(6, 203, nown ? CARN(gc[cur].id) : "NO CAR - BUY ONE", 0);
     vdp_wait();
     }
     ybase = 0;
+}
+static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8, 0xD8, 0x18, 0x0C, 0x0C};
+#ifndef CUR_X
+#define CUR_X 128
+#define CUR_Y 110
+#endif
+static u8 cur_x = CUR_X, cur_y = CUR_Y, cur_ymax = 187, mouse_seen;
+static void cursor_init(void) {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
+    u8 f[18], i, o;
+    for (i = 0; i < 18; i++) f[i] = 0;
+    for (i = 0; i < 12; i++) f[i + 1] = cur_shape[i] >> 1;
+    for (i = 0; i < 255; i++) cmd_buf[i] = 0;
+    cmd_buf[255] = 0;
+    for (i = 0; i < 16; i++) {
+        o = f[i] | f[i + 1] | (i ? f[i - 1] : 0); o |= (u8)(o >> 1) | (u8)(o << 1);
+        cmd_buf[i] = f[i]; cmd_buf[32 + i] = o;
+    }
+    g_vlo = 0x7800; g_vhi = 0; g_vpg = 1; vram_blit();
+    for (i = 0; i < 32; i++) cmd_buf[i] = 0;
+    for (i = 0; i < 16; i++) { cmd_buf[i] = HC_W; cmd_buf[16 + i] = 1; }
+    g_vlo = 0x7400; vram_blit();
+}
+static void spr_on(void) {
+#ifdef NO_SPR
+    return;
+#endif
+    vdp_reg(1, *(volatile u8 *)0xF3E0 | 0x02); vdp_reg(8, *(volatile u8 *)0xFFE7 & ~0x22); }
+static void spr_off(void) { g_sy = 0xD8; spr_put(); vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20); }
+static u8 mouse_move(void) {                     /* mouse na porta 1: aplica o deslocamento ao cursor; 1 = mexeu */
+    i16 nx, ny;
+#ifdef TEST_MOUSE                                  /* testes: setas = deslocamento do mouse (4 px), ESPACO = botao esquerdo */
+    g_mdx = (g_stick >= 2 && g_stick <= 4) ? 4 : (g_stick >= 6 && g_stick <= 8) ? -4 : 0;
+    g_mdy = (g_stick == 8 || g_stick == 1 || g_stick == 2) ? -4 : (g_stick >= 4 && g_stick <= 6) ? 4 : 0;
+    if (g_trig & 1) g_trig |= 2;
+    { u16 j = JIFFY; while (JIFFY == j) ; }
+#else
+    read_mouse();
+#endif
+    if ((g_mdx || g_mdy) && g_mdx > -64 && g_mdx < 64 && g_mdy > -64 && g_mdy < 64) {
+        nx = cur_x + g_mdx; ny = cur_y + g_mdy;
+        cur_x = nx < 1 ? 1 : nx > 254 ? 254 : (u8)nx; cur_y = ny < 0 ? 0 : ny > cur_ymax ? cur_ymax : (u8)ny;
+        mouse_seen = 1; return 1;
+    }
+    return 0;
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
 #define UI_X 8
@@ -689,11 +737,30 @@ static void ui_row(u8 i, i16 y0, u8 top, u8 sel) {
     push_fill(UI_X + 4, y - 2, UI_W - 8, UI_RH, i == sel ? HC_K : HC_W);          /* selecionado: barra preta, texto branco */
     gtext(UI_X + 10, y, ui_get(i), i == sel);
 }
+static u8 ul_n, ul_vis, ul_top, ul_sel; static i16 ul_y0;
+static void ui_box(i16 x, i16 y, i16 w, i16 h, const char *t) {          /* botao: moldura preta, fundo branco */
+    push_fill(x, y, w, h, HC_K); push_fill(x + 1, y + 1, w - 2, h - 2, HC_W); gtext(x + 4, y + 1, t, 0);
+}
+static void ul_set(u8 ns) {                      /* muda o item selecionado (rolando a janela se preciso) */
+    u8 i;
+    if (ns == ul_sel || ns >= ul_n) return;
+    cmd_n = 0; cp = cmd_buf;
+    if (ns < ul_top || ns >= ul_top + ul_vis) {
+        ul_top = ns < ul_top ? ns : ns - ul_vis + 1; ul_sel = ns;
+        for (i = ul_top; i < ul_top + ul_vis; i++) ui_row(i, ul_y0, ul_top, ul_sel);
+    } else {
+        i = ul_sel; ul_sel = ns; ui_row(i, ul_y0, ul_top, ul_sel); ui_row(ul_sel, ul_y0, ul_top, ul_sel);
+    }
+    vdp_wait();
+}
+#define BTN_X (UI_X + UI_W - 18)                 /* botoes da barra de titulo: X (voltar), v e ^ (rolar) */
 static u8 ui_list(const char *title, u8 n, u8 sel) {
-    u8 vis = n < UI_VIS ? n : UI_VIS, top = 0, prev = 0xFF, i, held = 1, bheld = 1;
-    i16 h = 24 + UI_RH * vis, y0 = 186 - h;        /* o menu fica no chao da garagem (a parte baixa da cena) */
+    u8 prev = 0xFF, i, kheld = 1, mheld = 1, bheld = 1, shown = 0;
+    i16 h, y0;
+    ul_n = n; ul_vis = n < UI_VIS ? n : UI_VIS; ul_top = 0; ul_sel = sel;
+    h = 24 + UI_RH * ul_vis; y0 = 186 - h; ul_y0 = y0;        /* o menu fica no chao da garagem (a parte baixa da cena) */
     if (!n) return 255;
-    if (sel >= vis) top = sel - vis + 1;
+    if (sel >= ul_vis) ul_top = sel - ul_vis + 1;
     clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7; dbg_money = money; dbg_day = day; dbg_nown = nown; dbg_nspare = nspare;
     cmd_n = 0; cp = cmd_buf;
     hub_restore(0, 22, 256, 168);                /* apaga o menu anterior */
@@ -701,30 +768,42 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
     push_fill(UI_X + 2, y0 + 2, UI_W - 4, h - 4, HC_W);
     gtext(UI_X + 8, y0 + 6, title, 0);
     push_fill(UI_X + 6, y0 + 17, UI_W - 12, 1, HC_K);
+    if (!ui_nohint) ui_box(BTN_X, y0 + 4, 12, 11, "X");           /* voltar com o mouse */
+    if (n > ul_vis) { ui_box(BTN_X - 16, y0 + 4, 12, 11, "v"); ui_box(BTN_X - 32, y0 + 4, 12, 11, "^"); }
     push_fill(190, 190, 66, 11, HC_W);                           /* dica de voltar na barra de status (menu raiz nao tem) */
     if (!ui_nohint) gtext(202, 192, "ESC BACK", 0);
-    for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
+    for (i = ul_top; i < ul_top + ul_vis; i++) ui_row(i, y0, ul_top, ul_sel);
     vdp_wait();
     for (;;) {
-        u8 st, go, back, ns = sel;
+        u8 st, back, ns = ul_sel, over = 255, moved;
         read_input(); combine_input();
-        st = g_stick; go = (g_trig & 3) != 0; back = want_back();
-        if (go && !held) return sel;
-        if (back && !bheld) return 255;
-        held = go; bheld = back;
+        moved = mouse_move();
+        st = g_stick; back = want_back();
+#ifdef TEST_MOUSE
+        st = 0;
+#endif
+        if (mouse_seen) {
+            if (!shown) { shown = 1; spr_on(); }
+            g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
+            if (cur_x >= UI_X + 4 && cur_x < UI_X + UI_W - 4 && cur_y >= y0 + 18 && cur_y < y0 + 18 + UI_RH * ul_vis) over = ul_top + (cur_y - y0 - 18) / UI_RH;
+            if (moved && over != 255 && over != ul_sel) ul_set(over);          /* passar o cursor seleciona o item */
+        }
+        if ((g_trig & 2) && !mheld) {                           /* clique do mouse (botao esquerdo / A) */
+            if (cur_y >= y0 + 4 && cur_y < y0 + 15 && mouse_seen) {
+                if (!ui_nohint && cur_x >= BTN_X && cur_x < BTN_X + 12) { if (shown) spr_off(); return 255; }
+                if (ul_n > ul_vis && cur_x >= BTN_X - 16 && cur_x < BTN_X - 4) ul_set(ul_sel + 1 < ul_n ? ul_sel + 1 : ul_sel);
+                else if (ul_n > ul_vis && cur_x >= BTN_X - 32 && cur_x < BTN_X - 20) ul_set(ul_sel ? ul_sel - 1 : 0);
+            } else if (over != 255 || !mouse_seen) { if (shown) spr_off(); return over != 255 ? over : ul_sel; }
+        }
+#ifndef TEST_MOUSE
+        if ((g_trig & 1) && !kheld) { if (shown) spr_off(); return ul_sel; }
+#endif
+        if (back && !bheld) { if (shown) spr_off(); return 255; }
+        kheld = (g_trig & 1) != 0; mheld = (g_trig & 2) != 0; bheld = back;
         if (st == prev) continue;
         prev = st;
-        if (st == 1 && sel > 0) ns = sel - 1; else if (st == 5 && sel + 1 < n) ns = sel + 1;
-        if (ns != sel) {
-            cmd_n = 0; cp = cmd_buf;
-            if (ns < top || ns >= top + vis) {          /* rolagem: redesenha tudo */
-                top = ns < top ? ns : ns - vis + 1; sel = ns;
-                for (i = top; i < top + vis; i++) ui_row(i, y0, top, sel);
-            } else {
-                i = sel; sel = ns; ui_row(i, y0, top, sel); ui_row(sel, y0, top, sel);
-            }
-            vdp_wait();
-        }
+        if (st == 1 && ul_sel > 0) ns = ul_sel - 1; else if (st == 5 && ul_sel + 1 < ul_n) ns = ul_sel + 1;
+        ul_set(ns);
     }
 }
 static u8 ui_pick(const char *title, const char *const *it, u8 n, u8 sel) { ui_arr = it; ui_get = ui_arr_get; return ui_list(title, n, sel); }
@@ -1310,34 +1389,7 @@ static const char *const hot_name[8] = {"YOUR CARS", "NEWSPAPER", "CALENDAR", "C
 static const Hot hot[NHOT] = {
     {78, 68, 95, 88, 0}, {108, 156, 136, 187, 0}, {10, 156, 40, 180, 1}, {236, 40, 254, 90, 2}, {204, 48, 232, 64, 3},
     {226, 160, 252, 188, 4}, {0, 66, 30, 134, 5}, {124, 50, 150, 74, 6}, {178, 158, 208, 188, 7}};
-static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8, 0xD8, 0x18, 0x0C, 0x0C};
-#ifndef CUR_X
-#define CUR_X 128
-#define CUR_Y 110
-#endif
-static u8 cur_x = CUR_X, cur_y = CUR_Y;
-static void cursor_init(void) {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
-    u8 f[18], i, o;
-    for (i = 0; i < 18; i++) f[i] = 0;
-    for (i = 0; i < 12; i++) f[i + 1] = cur_shape[i] >> 1;
-    for (i = 0; i < 255; i++) cmd_buf[i] = 0;
-    cmd_buf[255] = 0;
-    for (i = 0; i < 16; i++) {
-        o = f[i] | f[i + 1] | (i ? f[i - 1] : 0); o |= (u8)(o >> 1) | (u8)(o << 1);
-        cmd_buf[i] = f[i]; cmd_buf[32 + i] = o;
-    }
-    g_vlo = 0x7800; g_vhi = 0; g_vpg = 1; vram_blit();
-    for (i = 0; i < 32; i++) cmd_buf[i] = 0;
-    for (i = 0; i < 16; i++) { cmd_buf[i] = HC_W; cmd_buf[16 + i] = 1; }
-    g_vlo = 0x7400; vram_blit();
-}
-static void spr_on(void) {
-#ifdef NO_SPR
-    return;
-#endif
-    vdp_reg(1, *(volatile u8 *)0xF3E0 | 0x02); vdp_reg(8, *(volatile u8 *)0xFFE7 & ~0x22); }
-static void spr_off(void) { g_sy = 0xD8; spr_put(); vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20); }
-static const Hot *hs; static u8 hn, lab_mode;            /* objetos clicaveis da tela atual; lab_mode 0 = garagem (visor), 1 = jornal (faixa no pe da pagina) */
+static const Hot *hs; static u8 hn, lab_mode;            /* objetos clicaveis da tela atual; lab_mode 0 = garagem (visor), 1 = jornal */
 static const char *const *hnames;
 static u8 hot_at(u8 x, u8 y) {
     u8 i;
@@ -1381,13 +1433,9 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
             if (st >= 2 && st <= 4 && cur_x + step < 255) cur_x += step;
             if (st >= 6 && st <= 8 && cur_x > step) cur_x -= step;
             if ((st == 8 || st == 1 || st == 2) && cur_y > step) cur_y -= step;
-            if (st >= 4 && st <= 6 && cur_y + step < 188) cur_y += step;
+            if (st >= 4 && st <= 6 && cur_y + step < cur_ymax + 1) cur_y += step;
         } else hold = 0;
-        read_mouse();
-        if (!st && (g_mdx || g_mdy) && g_mdx > -64 && g_mdx < 64 && g_mdy > -64 && g_mdy < 64) {      /* mouse na porta 1: deslocamento relativo */
-            i16 nx = cur_x + g_mdx, ny = cur_y + g_mdy;
-            cur_x = nx < 1 ? 1 : nx > 254 ? 254 : (u8)nx; cur_y = ny < 0 ? 0 : ny > 187 ? 187 : (u8)ny;
-        }
+        if (!st) mouse_move();
         hit = hot_at(cur_x, cur_y);
         if (hit != prev) { prev = hit; spr_off(); hot_label(hit); spr_on(); }
         g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
@@ -1397,7 +1445,7 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
         held = go;
     }
 }
-static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 0; return pick_hot(0); }
+static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187; return pick_hot(0); }
 #endif
 static void calendar_note(void) {
     static char cbuf[28];
@@ -1412,7 +1460,7 @@ static void jingle(void) {
     for (i = 0; i < 8; i++) { beep(nt[i], 7); while ((i16)(JIFFY - beep_end) < 0) ; psg(10, 0); beep_on = 0; }
 }
 #ifndef OLD_MENU
-static const Hot news_hot[3] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}};
+static const Hot news_hot[5] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}, {132, 201, 208, 211, 2}, {214, 201, 250, 211, 3}};
 static const char *const news_name[3] = {"AUTO PARTS", "USED CARS", "SELL SPARE PARTS"};
 static const u8 news_top[5][2] = {{16, 30}, {30, 30}, {16, 16}, {30, 30}, {30, 30}};
 static const char *const news_body[5][2][4] = {
@@ -1430,15 +1478,16 @@ static void newspaper(void) {                  /* a primeira pagina do "Los Ange
         for (l = 0; l < 4 && news_body[k][c][l]; l++)
             if (news_top[k][c] + 2 + 9 * l + 8 <= 53) gtext(c ? 134 : 6, 136 + news_top[k][c] + 2 + 9 * l, news_body[k][c][l], 0);
     ybase = 0; hub_restore(0, 0, 256, 190);
+    bar_news = 1; cur_ymax = 210;
     cmd_n = 0; cp = cmd_buf; hub_status();
     for (;;) {
-        hs = news_hot; hn = 3; hnames = news_name; lab_mode = 1;
+        hs = news_hot; hn = 5; hnames = news_name; lab_mode = 1;
         r = pick_hot(1);
-        if (r == 254) break;
+        if (r == 254 || r == 3) break;
         if (r == 0) parts_shop(); else if (r == 1) used_cars(); else sell_parts();
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status();
     }
-    lab_mode = 0;
+    lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     load_garage(); band_save();                  /* de volta a garagem: o hub redesenha o carro */
 }
 #endif
