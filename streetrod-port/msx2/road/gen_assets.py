@@ -157,6 +157,16 @@ def overlay_rects(ov, band=2, gap=4):
     return rects
 
 LIGHT_Y = 940
+EGA_PAL = [(0,0,0),(0,0,0),(85,85,85),(170,170,170),(255,255,255),(170,170,170),(0,0,0),(85,255,255),
+           (0,170,170),(0,170,0),(170,0,0),(255,85,85),(170,0,170),(85,255,85),(170,85,0),(255,255,85)]
+def garage_pixels(lib2):
+    import srlib
+    it = srlib.load(lib2)[32]
+    p = np.frombuffer(it.decode(), np.uint8).reshape(4, it.h, (it.w + 7) // 8)
+    b = np.unpackbits(p, axis=2)[:, :, :it.w]
+    idx = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
+    return idx[:, [x for x in range(320) if x % 5 != 4]]
+
 def light_sheet(lib2):
     """Semaforo (item 13: duas cabecas de 24x32, lampada vermelha na da direita, verde na da esquerda) em 3 estados: apagado, vermelho, verde."""
     import srlib
@@ -213,12 +223,12 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     banks = [bytearray()]; ents = []       # banco de 16 KB por vez (a partir do banco 2 da ROM); ents: (banco, endereco 0x8000+, vaddr, paginas_256, copias)
     lib2 = os.environ.get('LIB2')
-    def add(raw, vaddr, copies):
+    def add(raw, vaddr, copies, group=0):
         for s in range(0, len(raw), STRIP):
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
-            ents.append((len(banks) + 1, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
+            ents.append((len(banks) + 1, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
     sprh = ''; orects = []
     if lib2:
         a = cockpit_pixels(lib2)
@@ -238,6 +248,8 @@ def main():
                 while x1 < 256 and cuts[x1] == cuts[x0]: x1 += 2
                 if cuts[x0] < ov.shape[0]: orects.append([x0, int(cuts[x0]), x1 - x0, ov.shape[0] - int(cuts[x0])])
                 x0 = x1
+        g = garage_pixels(lib2)                                   # cena da garagem (item 32): grupo 1, so na pagina 0, paleta EGA propria
+        add((g[:, 0::2] << 4 | g[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=1)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -259,14 +271,17 @@ def main():
     open(os.path.join(here, 'assets.bin'), 'wb').write(b''.join(bytes(b).ljust(0x4000, b'\xff') for b in banks) if ents else b'')
     with open(os.path.join(here, 'assets.inc'), 'w') as f:       # tabela lida pelo carregador em assembly (fica na pagina 1, fixa)
         f.write('\t.equ ASSET_N, %d\nasset_tab:\n' % len(ents))
-        for b, src, v, pg, cp in ents:
-            f.write('\t.db %d\n\t.dw %d\n\t.dw %d\n\t.db %d, %d, %d\n' % (b, src, v & 0xFFFF, v >> 16, pg, cp))
+        for b, grp, src, v, pg, cp in ents:
+            f.write('\t.db %d, %d\n\t.dw %d\n\t.dw %d\n\t.db %d, %d, %d\n' % (b, grp, src, v & 0xFFFF, v >> 16, pg, cp))
     with open(os.path.join(here, 'assets.h'), 'w') as f:
         import math
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
         f.write('#define HAVE_COCKPIT %d\n' % (1 if ents else 0))
+        gp = []
+        for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
+        f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
         f.write(sprh)
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))

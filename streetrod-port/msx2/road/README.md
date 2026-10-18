@@ -123,3 +123,10 @@ curvas de torque e linha vermelha de cada carro (modelo `tools/powertrain.py`) e
 - `crt0.s` escreve 0 em 0x6000 e 1 em 0x7000. As escritas a 0x6000/0x7000 fazem emuladores (openMSX, WebMSX) detectarem ASCII16; se o seu não detectar,
   escolha o mapper "ASCII16" ao carregar a ROM.
 - Para adicionar assets basta chamar `add()` em `gen_assets.py`: novos bancos são criados automaticamente (a ROM cresce em potências de 2).
+
+## Hub / garagem (marco M1)
+Título → ESPAÇO → **garagem** (cena do `LIB2` item 32, paleta EGA própria carregada em `load_garage`; a cópia limpa fica na página 2 para o menu poder ser apagado
+com HMMM). Barra de status: dinheiro, data (agosto-setembro de 1963) e carro atual. Menu: YOUR CARS (escolher o carro, até 4), NEWSPAPER (em breve),
+BOBS DRIVE-IN (escolhe oponente e piloto, corre, o resultado altera dinheiro/dia: +$50 vitória, -$25 derrota; provisório) e QUIT GAME (volta ao título).
+Estado: `money`, `day`, `own[4]`, `cur` (`new_game()` começa com $1000 e um Lincoln Capri 1957). Assets em grupos: 0 = corrida, 1 = garagem (`g_group`).
+Testes: `hub_test.tcl` (percorre as telas e salva capturas) e `loop_test.tcl` (hub↔corrida em loop, `-DRACE_LEN=40 -DAUTOPILOT=1`).

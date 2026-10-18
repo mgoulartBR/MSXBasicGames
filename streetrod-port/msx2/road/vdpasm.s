@@ -6,6 +6,9 @@
 	.globl _g_vpg
 	.globl _lz_unpack
 	.globl _load_assets
+	.globl _g_group
+	.globl _g_palp
+	.globl _pal_load2
 	.globl _psg_w
 	.globl _pal_one
 	.globl _vc
@@ -904,8 +907,20 @@ _load_assets::
 	ld b,#ASSET_N
 la_next:
 	push bc
+	ld a,(_g_group)
+	ld c,a
 	ld a,(hl)
 	inc hl
+	ld b,a                    ; b = banco
+	ld a,(hl)
+	inc hl
+	cp a,c
+	jr z,la_go
+	ld de,#7
+	add hl,de                 ; faixa de outro grupo: pula src(2) vlo(2) vhi pg cp
+	jr la_done
+la_go:
+	ld a,b
 	ld (0x7000),a
 	ld e,(hl)
 	inc hl
@@ -954,4 +969,17 @@ la_done:
 	djnz la_next
 	ld a,#1
 	ld (0x7000),a             ; volta o banco 1 (codigo) em 0x8000
+	ret
+
+; _pal_load2: carrega a paleta de 32 bytes apontada por g_palp
+_pal_load2::
+	ld hl,(_g_palp)
+	di
+	xor a,a
+	out (#0x99),a
+	ld a,#0x90
+	out (#0x99),a
+	ld bc,#0x209A
+	otir
+	ei
 	ret

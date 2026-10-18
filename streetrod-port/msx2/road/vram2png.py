@@ -5,8 +5,9 @@ from PIL import Image
 vram = open(sys.argv[1], 'rb').read()
 r2 = int(sys.argv[2])
 page = (r2 >> 5) & 3
-src = open('tables.h').read()
-pal_bytes = list(map(int, re.search(r'palette\[32\] = \{([^}]*)\}', src).group(1).split(',')))
+garage = len(sys.argv) > 4 and sys.argv[4] == 'garage'
+src = open('assets.h' if garage else 'tables.h').read()
+pal_bytes = list(map(int, re.search(r'pal_garage\[32\] = \{([^}]*)\}' if garage else r'palette\[32\] = \{([^}]*)\}', src).group(1).split(',')))
 pal = []
 for i in range(16):
     b0, g = pal_bytes[2*i], pal_bytes[2*i+1]

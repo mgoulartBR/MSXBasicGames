@@ -52,16 +52,19 @@ volatile __at(0xF01A) u16 dbg_time10;   /* tempo da corrida em decimos de segund
 volatile __at(0xF01C) u16 dbg_avg;
 volatile __at(0xF01E) u16 dbg_ospeed;
 volatile __at(0xF020) u16 dbg_in;       /* bit0 espaco, bit1 up_held, bit2 largada falsa, bits4+ marcha */
+volatile __at(0xF030) u16 dbg_money;
+volatile __at(0xF032) u16 dbg_day;
 volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
 u8 g_trig, g_row6, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
-u16 g_lzsrc, g_vlo; u8 g_vhi, g_vpg;
+u16 g_lzsrc, g_vlo, g_palp; u8 g_vhi, g_vpg, g_group;
 extern void lz_unpack(void);
 extern void psg_w(void);
 extern void pal_one(void);
+extern void pal_load2(void);
 extern void vram_blit(void);
 i16 g_a, g_r, g_fx, g_fy, g_fw, g_fh; u16 g_b;
 extern void mul12(void);
@@ -100,6 +103,8 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 /* powertrain dos 2 veiculos (0 = jogador, 1 = oponente), copiado das tabelas de carros (cars.h) ao iniciar a corrida */
 static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
 static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
+#define MAXCARS 4
+static u16 money; static u8 day, nown, cur, own[MAXCARS];     /* estado do jogo */
 static u8 m_sel;
 static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
 static void load_car(u8 slot, u8 id) {
@@ -352,10 +357,11 @@ static void draw_glyph(i16 x, i16 y, const u8 *g, u8 c) {
             if (g[row] & (4 >> col)) push_fill(x + col * 2, y + row * 2, 2, 2, c);
 }
 static void draw_digit(i16 x, i16 y, u8 d, u8 c) { draw_glyph(x, y, font[d], c); }
-static void draw_num(i16 x, i16 y, u16 v, u8 digits) {
+static void draw_numc(i16 x, i16 y, u16 v, u8 digits, u8 c) {
     u8 i;
-    for (i = 0; i < digits; i++) { draw_digit(x + (digits - 1 - i) * 8, y, v % 10, 8); v /= 10; }
+    for (i = 0; i < digits; i++) { draw_digit(x + (digits - 1 - i) * 8, y, v % 10, c); v /= 10; }
 }
+#define draw_num(x, y, v, d) draw_numc(x, y, v, d, 8)
 static void draw_text(i16 x, i16 y, const char *s, u8 c) {
     for (; *s; s++, x += 8) {
         if (*s >= 'A' && *s <= 'Z') draw_glyph(x, y, letters[*s - 'A'], c);
@@ -418,7 +424,7 @@ static void load_cockpit(void) {            /* descomprime os assets (cockpit na
 #if HAVE_COCKPIT
     u8 rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40);                /* tela apagada: acesso a VRAM sem espera */
-    load_assets();                          /* troca de banco ASCII16 dentro do carregador (pagina 1) */
+    g_group = 0; load_assets();             /* troca de banco ASCII16 dentro do carregador (pagina 1) */
     vdp_reg(1, rg1 | 0x40);
 #endif
 }
@@ -530,13 +536,14 @@ static void menu(void) {
     clip_l = 0; clip_r = 256; ybase = 0; vdp_reg(2, 0x1F); dbg_state = 8;
     cmd_n = 0; cp = cmd_buf;
     push_fill(0, 0, 256, 212, 0);
-    draw_text(88, 6, "SELECT RACE", 13);
-    m_sel = 0;
+    draw_text(72, 6, "BOBS DRIVE-IN", 13);
+    m_sel = 1;                              /* o carro do jogador vem da garagem: campo 0 so informativo */
     for (f = 0; f < 3; f++) menu_row(f);
     menu_info();
     draw_text(16, 172, "UP DOWN  SELECT FIELD", 6);
     draw_text(16, 186, "LEFT RIGHT  CHANGE", 6);
     draw_text(16, 200, "SPACE  START RACE", 13);
+    sel_car = own[cur];
     vdp_wait();
     for (;;) {
         u8 st, act = 0; i16 d = 0;
@@ -547,11 +554,104 @@ static void menu(void) {
         if (st != prev) { act = 1; prev = st; t_hold = JIFFY; t_rep = JIFFY; }
         else if (st && (u16)(JIFFY - t_hold) > jhz / 3 && (u16)(JIFFY - t_rep) >= jhz / 8) { act = 1; t_rep = JIFFY; }
         if (!act) continue;
-        if (st == 1 && m_sel > 0) { f = m_sel; m_sel--; menu_row(f); menu_row(m_sel); vdp_wait(); }
+        if (st == 1 && m_sel > 1) { f = m_sel; m_sel--; menu_row(f); menu_row(m_sel); vdp_wait(); }
         else if (st == 5 && m_sel < 2) { f = m_sel; m_sel++; menu_row(f); menu_row(m_sel); vdp_wait(); }
         else if (st == 3) d = 1;
         else if (st == 7) d = -1;
         if (d) menu_change(d);
+    }
+}
+
+/* ---- estado do jogo e hub (garagem) ---- */
+#define HC_W 4          /* cores da paleta da garagem (indices EGA) */
+#define HC_Y 15
+#define HC_G 13
+#define HC_R 11
+static void new_game(void) { money = 1000; day = 0; nown = 1; own[0] = 16; cur = 0; sel_car = own[0]; }
+
+static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
+    u8 rg1 = *(volatile u8 *)0xF3E0;
+    vdp_reg(1, rg1 & ~0x40);
+    g_palp = (u16)pal_garage; pal_load2();
+    g_group = 1; load_assets();
+    vdp_reg(1, rg1 | 0x40);
+}
+static void hub_restore(i16 x, i16 y, i16 w, i16 h) {   /* devolve um pedaco da cena limpa (copia na pagina 2) */
+    vc_w(0, x); vc_w(2, 512 + y); vc_w(4, x); vc_w(6, y); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+}
+static void hub_status(void) {
+    static const char mon[2][4] = {"AUG", "SEP"};
+    u8 mo = day >= 31;
+    push_fill(0, 190, 256, 22, 0);
+    draw_text(8, 190, "$", HC_Y); draw_numc(16, 190, money, 5, HC_Y);
+    draw_text(88, 190, mon[mo], HC_W); draw_numc(120, 190, mo ? day - 30 : day + 1, 2, HC_W); draw_text(144, 190, "1963", HC_W);
+    draw_text(8, 202, car_name[own[cur]], HC_G);
+    vdp_wait();
+}
+/* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
+#define UI_X 8
+#define UI_W 240
+static u8 ui_pick(const char *title, const char *const *it, u8 n, u8 sel) {
+    u8 prev = 0xFF, i, held = 1, bheld = 1;
+    i16 h = 24 + 14 * n, y0 = 186 - h;          /* o menu fica no chao da garagem (a parte baixa da cena) */
+    clip_l = 0; clip_r = 256; ybase = 0; dbg_state = 7;
+    cmd_n = 0; cp = cmd_buf;
+    hub_restore(0, 22, 256, 168);                /* apaga o menu anterior */
+    push_fill(UI_X, y0, UI_W, h, 0);
+    push_fill(UI_X, y0, UI_W, 2, HC_W); push_fill(UI_X, y0 + h - 2, UI_W, 2, HC_W);
+    push_fill(UI_X, y0, 2, h, HC_W); push_fill(UI_X + UI_W - 2, y0, 2, h, HC_W);
+    draw_text(UI_X + 10, y0 + 6, title, HC_Y);
+    for (i = 0; i < n; i++) draw_text(UI_X + 26, y0 + 24 + 14 * i, it[i], i == sel ? HC_G : HC_W);
+    push_fill(UI_X + 10, y0 + 24 + 14 * sel, 8, 8, HC_G);
+    vdp_wait();
+    for (;;) {
+        u8 st, go, back, ns = sel;
+        read_input(); combine_input();
+        st = g_stick; go = (g_trig & 3) != 0; back = (g_trig & 4) != 0 || !(g_row6 & 1);
+        if (go && !held) return sel;
+        if (back && !bheld) return 255;
+        held = go; bheld = back;
+        if (st == prev) continue;
+        prev = st;
+        if (st == 1 && sel > 0) ns = sel - 1; else if (st == 5 && sel + 1 < n) ns = sel + 1;
+        if (ns != sel) {
+            cmd_n = 0; cp = cmd_buf;
+            for (i = sel; ; i = ns) {
+                push_fill(UI_X + 4, y0 + 22 + 14 * i, UI_W - 8, 14, 0);
+                draw_text(UI_X + 26, y0 + 24 + 14 * i, it[i], i == ns ? HC_G : HC_W);
+                if (i == ns) push_fill(UI_X + 10, y0 + 24 + 14 * i, 8, 8, HC_G);
+                if (i == ns) break;
+            }
+            sel = ns; vdp_wait();
+        }
+    }
+}
+static void ui_note(const char *a, const char *b) {   /* aviso de 2 linhas, ate ESPACO/SHIFT */
+    const char *it[2]; it[0] = a; it[1] = b;
+    ui_pick(a, it + 1, 1, 0);
+}
+static void cars_screen(void) {
+    const char *it[MAXCARS]; u8 i, r;
+    for (i = 0; i < nown; i++) it[i] = car_name[own[i]];
+    r = ui_pick("YOUR CARS - SPACE TO DRIVE", it, nown, cur);
+    if (r != 255) { cur = r; sel_car = own[cur]; }
+}
+static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
+    static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
+    u8 sel = 2, r;
+    load_garage();
+    ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
+    cmd_n = 0; cp = cmd_buf; hub_status();
+    for (;;) {
+        r = ui_pick("MAIN MENU", items, 4, sel);
+        if (r == 255) continue;
+        sel = r;
+        if (r == 0) cars_screen();
+        else if (r == 1) ui_note("NEWSPAPER", "COMING SOON");
+        else if (r == 2) return 0;
+        else return 1;
+        cmd_n = 0; cp = cmd_buf; hub_status();
     }
 }
 
@@ -568,31 +668,17 @@ static void new_race(void) {
     dbg_t60 = dbg_t100 = dbg_top = 0;
 }
 
-void main(void) {
+static void run_race(void) {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0;
     u16 base; u8 k;
     dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
-#ifdef DRY
-    g_dry = 1;
-#endif
-    set_screen5();
-    jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */
-    tick_inc = jhz == 50 ? 31 : 26; adv_k = jhz == 50 ? 41 : 35; go_j = 3 * jhz;
-    vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20);   /* sprites off (comandos mais rapidos); TP=0: cor 0 e preta, nao transparente (WebMSX/BIOS reais deixam TP=1) */
-    vdp_reg(7, 0);                                       /* cor de fundo/borda = 0 */
     pal_load();
-    install_hook();
-    snd_init();
-    show_title();
-    vdp_reg(2, 0x1F);
-    dbg_state = 9;                                      /* 9 = tela inicial pronta (aguardando ESPACO) */
-    wait_start();
-    menu();
     new_race();
     init_static();
     ybase = 256;
+    tickacc = 0;
     last_j = JIFFY; j0 = last_j; fr0 = 0; start_j = last_j;
     for (;;) {
         t = JIFFY; dj = t - last_j; last_j = t;
@@ -600,7 +686,7 @@ void main(void) {
         read_input(); combine_input();
         if (state == 2) {                                   /* resultado: espera ESPACO / botao A */
             u8 go = (g_trig & 3) != 0;
-            if (go && !go_held) { menu(); new_race(); init_static(); tickacc = 0; last_j = JIFFY; start_j = last_j; ybase = 256; vdp_reg(2, 0x1F); continue; }
+            if (go && !go_held) return;                     /* volta ao hub */
             go_held = go;
             continue;
         }
@@ -684,6 +770,40 @@ void main(void) {
             draw_hud();                                 /* contadores de depuracao: ~90 comandos VDP em 2 paginas = engasgo visivel */
             ybase = shown ? 0 : 256;
 #endif
+        }
+    }
+}
+
+static void settle_race(void) {              /* efeito economico provisorio da corrida (o jornal, apostas e danos entram nos marcos seguintes) */
+    if (result == 1) money += 50; else money = money > 25 ? money - 25 : 0;
+    if (day < 60) day++;
+    dbg_money = money; dbg_day = day;
+}
+
+void main(void) {
+    set_screen5();
+    jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */
+    tick_inc = jhz == 50 ? 31 : 26; adv_k = jhz == 50 ? 41 : 35; go_j = 3 * jhz;
+    vdp_reg(8, (*(volatile u8 *)0xFFE7 | 0x02) & ~0x20);   /* sprites off (comandos mais rapidos); TP=0: cor 0 e preta, nao transparente (WebMSX/BIOS reais deixam TP=1) */
+    vdp_reg(7, 0);                                       /* cor de fundo/borda = 0 */
+#ifdef DRY
+    g_dry = 1;
+#endif
+    install_hook();
+    snd_init();
+    for (;;) {
+        pal_load();
+        clip_l = VIEW_X0; clip_r = VIEW_X1;
+        show_title();
+        vdp_reg(2, 0x1F);
+        dbg_state = 9;                                  /* 9 = tela inicial pronta (aguardando ESPACO) */
+        wait_start();
+        new_game();
+        while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
+            pal_load();
+            menu();                                     /* escolha do oponente */
+            run_race();
+            settle_race();
         }
     }
 }
