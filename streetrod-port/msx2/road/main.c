@@ -112,6 +112,13 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 #endif
 #define ROAD_LEN 520            /* corrida de estrada (pista com curvas e ladeiras) */
 static u16 race_len = RACE_LEN;
+#ifndef STREET_LEN
+#define STREET_LEN 420
+#endif
+#define STREET_LIMIT 45                              /* mph: acima disso o guarda multa */
+static u8 street_mode, street_res, street_cop;       /* street_res: 0 chegou ao Bobs, 1 desistiu (ESC) */
+static u16 street_fine; static u8 street_tix;
+static const u16 cop_at[3] = {110, 230, 350};
 i8 curve_ram[256], hill_ram[256];                 /* pista da corrida atual (proj.s le estes arrays) */
 static void set_track(u8 road) {                  /* arrancada: reta e plana; estrada: a pista sintetica */
     u16 i;
@@ -1109,6 +1116,30 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
+static void run_race(void) BK;
+static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu (ESC) */
+    Car *c = &gc[cur]; u8 gas = 1;
+    u16 avg;
+    ui_note("CRUISING IN TOWN...", "MAX SPEED 45 MPH"); ui_nohint = 0;
+    street_mode = 1; race_type = 1; street_res = 1;
+    run_race();
+    street_mode = 0;
+    load_garage(); ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
+    cmd_n = 0; cp = cmd_buf; hub_status();
+    if (street_res) return 0;
+    avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0;
+    if (avg > 50) gas++;                                    /* quem acelera gasta mais */
+    c->fuel = c->fuel > gas ? c->fuel - gas : 0;
+    if (street_tix) {
+        u16 f = street_fine > money ? money : street_fine; u8 n = 0;
+        money -= f;
+        put_str(pbuf, &n, "FINE $"); put_num(pbuf, &n, f); pbuf[n] = 0;
+        ui_note(street_tix > 1 ? "SPEEDING TICKETS!" : "SPEEDING TICKET!", pbuf);
+        cmd_n = 0; cp = cmd_buf; hub_status();
+    }
+    if (c->fuel < 3) { ui_note("YOU'RE LOW ON GAS!", "FILL UP AT THE GARAGE"); cmd_n = 0; cp = cmd_buf; hub_status(); return 0; }
+    return 1;
+}
 static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
     u8 sel = 2, r;
@@ -1128,7 +1159,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
             else if (gc[cur].brk) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
             else if (gc[cur].fuel < 3) ui_note("YOU DON'T GOT ENOUGH GAS", "TO CRUISE DOWN TO BOBS");
-            else if (bobs()) return 0;
+            else if (street_trip() && bobs()) return 0;
         }
         else return 1;
         cmd_n = 0; cp = cmd_buf; hub_status();
@@ -1149,6 +1180,10 @@ static void new_race(void) {
     beep_stage = 0; light_rest = 0;
     opp_wait = OPP_B * 3 + 6; gear_changed = 1; go_held = 1; up_held = dn_held = 1;   /* tecla ainda apertada nao conta como troca */
     dbg_t60 = dbg_t100 = dbg_top = 0;
+    if (street_mode) {                                                       /* rua: sem oponente nem semaforo; o jogo comeca ja andando */
+        race_len = STREET_LEN; state = 1; launched[0] = 1; opp_wait = 0xFFFF; opos = 0;
+        street_cop = 0; street_fine = 0; street_tix = 0;
+    }
 }
 
 static void run_race(void) BK {
@@ -1193,17 +1228,25 @@ static void run_race(void) BK {
         if (state == 1) { advance(dj); steer_frame(dj); }
         while (nt--) {
             veh_tick(0, in_throttle, in_brake);
-            opp_ai();
+            if (!street_mode) opp_ai();
             if (state == 1) { race_ticks++; sum_spd += speed; }
         }
         if (state == 1) {
-            if (opos == pos && (P - (OLANE * 56)) < 300 && (P - (OLANE * 56)) > -300) {   /* colisao */
+            if (street_mode) {
+                if (street_cop < 3 && pos >= cop_at[street_cop]) {          /* radar do guarda */
+                    street_cop++;
+                    if (speed > STREET_LIMIT) { street_fine += 5 + (speed - STREET_LIMIT) / 4; street_tix++; beep(60, 20); }
+                }
+                if (want_back()) { street_res = 1; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; }
+                if (pos >= race_len) { street_res = 0; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; }
+            }
+            else if (opos == pos && (P - (OLANE * 56)) < 300 && (P - (OLANE * 56)) > -300) {   /* colisao */
                 vrpm[0] -= vrpm[0] >> 4; vrpm[1] -= vrpm[1] >> 4;
             }
             if (!dbg_t60 && speed >= 60) dbg_t60 = (u16)(JIFFY - start_j);
             if (!dbg_t100 && speed >= 100) dbg_t100 = (u16)(JIFFY - start_j);
             if (speed > dbg_top) dbg_top = speed;
-            if (pos >= race_len || opos >= race_len) {
+            if (!street_mode && (pos >= race_len || opos >= race_len)) {
                 u16 pp = pos * 8 + sub, op = opos * 8 + osub;
                 result = (pos >= race_len && pp >= op) ? 1 : 2;
 #ifdef TEST_LOSE
@@ -1220,8 +1263,7 @@ static void run_race(void) BK {
         base = ybase; ybase = base + WIN_Y;                 /* janela da estrada: y relativo ao para-brisa */
         push_fill(0, SKY_TOP, 256, Y[N_ROWS - 1] - SKY_TOP, 0);
         draw_road_asm();
-        draw_opp();
-        draw_lights(state == 0 || (state == 1 && (u16)(JIFFY - start_j) < 2 * jhz));
+        if (!street_mode) { draw_opp(); draw_lights(state == 0 || (state == 1 && (u16)(JIFFY - start_j) < 2 * jhz)); }
 #if HAVE_COCKPIT
 #ifndef NO_OV
         /* moldura da esquerda (porta/coluna A) por cima da estrada: HMMM de retangulos justos da copia limpa (pagina 2).

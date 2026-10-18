@@ -17,7 +17,7 @@ clines = open(c_p, errors='replace').read().split('\n')
 def decl_line(name):
     pat = re.compile(r'^(static |const |extern )*[\w ]+[ *]\*?%s\s*[\[(=;]' % re.escape(name[1:]))
     for i, l in enumerate(clines, 1):
-        if pat.match(l) and not l.startswith(('return', 'else')): return i
+        if pat.match(l) and not l.startswith(('return', 'else')) and not (re.search(r'\)\s*(__banked|BK)?\s*;\s*$', l) and '(' in l): return i
     return None
 lines = open(asm_p).read().split('\n')
 banked = set(re.findall(r'^\s*b_(\w+)\s*=', '\n'.join(lines), re.M))

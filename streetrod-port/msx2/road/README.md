@@ -186,3 +186,10 @@ A região fixa de código (32 KB) estava cheia; agora o código é dividido em *
 - Regras para novas funções: funções usadas por mais de um banco vão para o núcleo (`#pragma codeseg CODE`) ou são `BK`; **funções `BK` só recebem argumentos escalares**
   (um ponteiro para string/tabela de outro banco ficaria invisível). Para criar o banco 3 basta colocar `#pragma codeseg BANK3`.
 - Verificado: `loop_test`, `cons_test`, `garage_test`, `sell_test` e `pink_test` dão os mesmos resultados de antes (diferenças só em sorteios, que dependem do tempo de boot).
+
+## Rua (marco M6)
+Em **BOBS DRIVE-IN** o jogo agora faz primeiro o trajeto: "CRUISING IN TOWN... MAX SPEED 45 MPH" e você dirige (mesma engine da corrida, pista com curvas, sem
+oponente/semáforo, 420 segmentos) até o Bob's. Três **radares** (nos segmentos 110/230/350): acima de 45 mph a multa é `$5 + (mph-45)/4` por radar ("SPEEDING
+TICKET(S)!", "FINE $x", descontada do dinheiro). **Gasolina:** 1 galão por trajeto (2 se a média passar de 50 mph); com menos de 3 galões depois do trajeto avisa
+"YOU'RE LOW ON GAS!" e não abre o Bob's (a corrida gasta 3). **ESC/SHIFT** desiste e volta à garagem sem gastar. Implementado com `street_mode` em `run_race`
+(BANK1) e `street_trip` (BANK2). Teste: `street_test.tcl` (`-DAUTOPILOT=1 -DSTART_CAR=16`). As multas e o consumo são regras minhas.
