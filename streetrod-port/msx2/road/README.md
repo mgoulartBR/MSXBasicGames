@@ -173,3 +173,16 @@ copiados por `bank_copy` (rotina na página 1) — liberou ~1,7 KB de código. T
   sem carro, sem peças e com menos de $300 → "YOU'RE OUTTA DOUGH.". Mostra o resumo (dinheiro, carros, vitórias) e volta ao título.
 - Testes: `cons_test.tcl` (`-DTEST_BRK=1`: quebra de motor forçada, Bob's recusa, FIX IT), fim do verão com `-DSTART_DAY=59 -DTEST_BRK=0`.
 Os números (percentuais, custos) são regras minhas inspiradas nas mensagens do original; a tabela de pneus é a do jogo.
+
+## Infraestrutura de bancos de código (overlays)
+A região fixa de código (32 KB) estava cheia; agora o código é dividido em **bancos ASCII16** (sem limite prático de tamanho da ROM):
+- **Banco 0 = núcleo**, em 0x4000-0x7FFF (página 1, sempre visível): `crt0`, `vdpasm.s`, `proj.s`, tabelas, texto/UI, som, modelo do motor (`ptmodel.h`), bibliotecas do SDCC. Hoje ~13,3 KB de 16 KB.
+- **Bancos 1..3 = código**, na janela 0x8000-0xBFFF (página 2). Hoje: banco 1 = corrida (física, projeção, sprites, HUD, `run_race`), banco 2 = jogo (título, garagem, jornal, Bob's, consequências, `hub`). Cada um tem 16 KB.
+- **Bancos 4.. = assets** (`ASSET_BANK0=4`, variável de ambiente de `gen_assets.py`/`ihx2rom.py`) e o banco de texto.
+- Como funciona: `main.c` continua uma só unidade de compilação; os `#pragma codeseg CODE|BANK1|BANK2` marcam as regiões do fonte. `build.sh` compila para
+  assembly (`-S`), `bankify.py` redistribui funções/tabelas nas áreas `BANKn` (e **falha o build** se uma referência cruzar bancos sem passar por uma função
+  `__banked`), e o `sdld` põe cada área em `0x{n}8000` (endereço virtual); `ihx2rom.py` reposiciona no arquivo da ROM. Chamadas entre bancos usam o `__banked`
+  do SDCC (`BK` no fonte) com `___sdcc_bcall_ehl` + `get_bank/set_bank` (`vdpasm.s`; `_cur_bank` é restaurado pelos carregadores de assets/texto).
+- Regras para novas funções: funções usadas por mais de um banco vão para o núcleo (`#pragma codeseg CODE`) ou são `BK`; **funções `BK` só recebem argumentos escalares**
+  (um ponteiro para string/tabela de outro banco ficaria invisível). Para criar o banco 3 basta colocar `#pragma codeseg BANK3`.
+- Verificado: `loop_test`, `cons_test`, `garage_test`, `sell_test` e `pink_test` dão os mesmos resultados de antes (diferenças só em sorteios, que dependem do tempo de boot).

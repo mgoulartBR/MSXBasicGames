@@ -1,6 +1,7 @@
 /* Prototipo da estrada pseudo-3D de Street Rod para MSX2 (Screen 5, V9938).
  * Mede o custo de ~23 linhas de projeção por frame desenhadas com HMMV. */
 #include <stdint.h>
+#define BK __banked       /* funcao chamada de outro banco de codigo (ver bankify.py) */
 #include "tables.h"
 #include "assets.h"
 #include "cars.h"
@@ -147,6 +148,7 @@ static void load_pt(u8 slot, const Car *c) { pt_build(slot, car_perf[c->id], c->
 static void load_car(u8 slot, u8 id) { Car t; car_stock(&t, id); load_pt(slot, &t); }
 #define OPP_A opp_a
 #define OPP_B opp_b
+#pragma codeseg BANK1
 static u8 jhz = 60;                    /* 50 ou 60 Hz (detectado em execucao) */
 static u16 tick_inc, adv_k, go_j;
 #define GO_J go_j               /* semaforo: 3 s ate o verde */
@@ -191,6 +193,7 @@ static void set_gear(u8 c, u8 ng) {    /* troca de marcha: a velocidade e mantid
 extern volatile u8 ev_space, ev_shift;
 extern void install_hook(void);
 
+#pragma codeseg CODE
 static void combine_input(void) {
     u8 e;
     g_stick = g_st0 ? g_st0 : g_st1;
@@ -203,6 +206,7 @@ static u8 want_back(void) {                 /* voltar: ESC, STOP, BS, SHIFT ou b
     return (g_trig & 4) != 0 || !(g_row6 & 1) || (g_row7 & 0x34) != 0x34;
 }
 
+#pragma codeseg BANK1
 static void handle_input(void) {
     u8 st = g_stick, up, dn;
     in_throttle = (st == 1 || st == 2 || st == 8);
@@ -307,8 +311,10 @@ static void push_fill_v(i16 x, i16 y, i16 w, i16 h, u8 c) {
 
 u8 vc[15];
 extern void vdp_cmd15(void);
+#pragma codeseg CODE
 static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }
 
+#pragma codeseg BANK1
 static void draw_opp(void) {
     i16 d = (i16)(opos - pos), y, xc, hw, w, h, x, sx, sw, dx0, dx1, ty;
     u8 r, si;
@@ -360,6 +366,7 @@ static void draw_lights(u8 on) {         /* semaforo (LIB2 item 13): apagado, ve
 }
 
 /* ---- som (PSG): motor nos canais A/B (tom segue a rotacao), bipes do semaforo no canal C ---- */
+#pragma codeseg CODE
 static u16 beep_end; static u8 beep_on, beep_stage;
 static void psg(u8 r, u8 v) { g_reg = r; g_val = v; psg_w(); }
 static void snd_init(void) {
@@ -425,6 +432,7 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
 #define GEAR_SHEET_Y 1000        /* digitos 0-9 pre-desenhados na pagina 3 */
 #define HUD_GEAR_X 133
 #define HUD_GEAR_Y 115
+#pragma codeseg BANK1
 static void gauge(i16 cx, i16 cy, i16 tx, i16 ty) {
     i16 dx = tx, dy = ty, ax = tx < 0 ? -tx : tx, ay = ty < 0 ? -ty : ty;
     u8 maj = ay > ax;
@@ -523,7 +531,8 @@ static void show_result(void) {               /* tela de resultado, nas duas pag
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
-static void show_title(void) {
+#pragma codeseg BANK2
+static void show_title(void) BK {
     u8 pg;
     clip_l = 0; clip_r = 256;
     for (pg = 0; pg < 2; pg++) {
@@ -544,7 +553,7 @@ static void show_title(void) {
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
-static void wait_start(void) {            /* espera ESPACO / botao A (ignora tecla ja apertada no boot) */
+static void wait_start(void) BK {            /* espera ESPACO / botao A (ignora tecla ja apertada no boot) */
     u8 held = 1, go;
     for (;;) {
         read_input(); combine_input();
@@ -555,6 +564,7 @@ static void wait_start(void) {            /* espera ESPACO / botao A (ignora tec
 }
 
 /* ---- menu de selecao: carro do jogador, carro e piloto do oponente ---- */
+#pragma codeseg CODE
 static const u8 paint_rb[8] = {0x50 | 5, 0x60, 0x10 | 6, 0x00 | 1, 0x70, 0x60 | 6, 0x70, 0x00 | 5};   /* R<<4|B da cor da pintura do oponente */
 static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 
@@ -569,13 +579,15 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_Y 15
 #define HC_G 13
 #define HC_R 11
-static void new_game(void) {
+#pragma codeseg BANK2
+static void new_game(void) BK {
     money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
 #ifdef START_CAR
     car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
 }
 
+#pragma codeseg CODE
 static void draw_nz(i16 x, i16 y, u16 v, u8 digits, u8 c) {      /* numero sem zeros a esquerda */
     u16 p = 1; u8 i;
     for (i = 1; i < digits; i++) p *= 10;
@@ -687,6 +699,7 @@ static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
 /* ---- inventario ---- */
 
 /* ---- garagem: carros, pecas, ajuste do ponto, informacoes, venda ---- */
+#pragma codeseg BANK2
 static const char *const cat_label[5] = {"ENGINE", "TRANS", "CARB", "MANIFOLD", "TIRES"};
 static u8 *car_var(Car *c, u8 cat) { return cat == 0 ? &c->eng : cat == 1 ? &c->trn : cat == 2 ? &c->carb : cat == 3 ? &c->man : &c->tir; }
 static u8 car_maker(const Car *c) { return car_flags[c->id] & 7; }        /* 1 = GM, 2 = Ford, 4 = Chrysler (mesma mascara das pecas) */
@@ -1025,7 +1038,7 @@ static u8 bobs(void) {                       /* 1 = a corrida vai comecar */
     }
 }
 static char pbuf[30];
-static void settle_race(void) {              /* desgaste, quebras, dinheiro, carros, vitorias e a mensagem do resultado */
+static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, carros, vitorias e a mensagem do resultado */
     Car *c = &gc[cur];
     u8 win, ep, tpr, brk0 = 0, gone = 0, n;
     c->fuel = c->fuel > 3 ? c->fuel - 3 : 0;
@@ -1081,7 +1094,7 @@ static void settle_race(void) {              /* desgaste, quebras, dinheiro, car
     if (day >= 61 && !game_end) game_end = 1;
     dbg_money = money; dbg_day = day;
 }
-static void end_screen(void) {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
+static void end_screen(void) BK {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
     static const char *const l1[4] = {"", "YOU'RE DONE FER", "YOU DESERVE TO BE", "YOU'RE OUTTA DOUGH."};
     static const char *const l2[4] = {"", "THE SUMMER!", "KING OF THE COUNTY!", "LOOKS LIKE YOU'RE DONE"};
     u8 n;
@@ -1096,7 +1109,7 @@ static void end_screen(void) {                 /* fim de jogo: mensagem e estati
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
-static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
+static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 = sair para o titulo */
     static const char *const items[4] = {"YOUR CARS", "NEWSPAPER", "BOBS DRIVE-IN", "QUIT GAME"};
     u8 sel = 2, r;
     load_garage();
@@ -1122,6 +1135,7 @@ static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sa
     }
 }
 
+#pragma codeseg BANK1
 static void new_race(void) {
     u8 k = (u8)(JIFFY & 7);
     set_track(race_type == 1);
@@ -1137,7 +1151,7 @@ static void new_race(void) {
     dbg_t60 = dbg_t100 = dbg_top = 0;
 }
 
-static void run_race(void) {
+static void run_race(void) BK {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0;
     u16 base; u8 k;
@@ -1246,6 +1260,7 @@ static void run_race(void) {
     }
 }
 
+#pragma codeseg CODE
 void main(void) {
     set_screen5();
     jhz = (*(volatile u8 *)0xFFE8 & 2) ? 50 : 60;        /* bit 1 do R#9 (espelho da BIOS): 1 = 50 Hz */

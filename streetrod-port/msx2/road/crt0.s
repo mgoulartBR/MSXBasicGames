@@ -1,5 +1,6 @@
 	.module crt0
 	.globl _main
+	.globl _cur_bank
 	.globl s__INITIALIZER
 	.globl s__INITIALIZED
 	.globl l__INITIALIZER
@@ -38,6 +39,8 @@ init:
 	inc a
 	ld (0x7000),a            ; banco 1 em 0x8000-0xBFFF (resto do codigo); bancos 2+ = assets, trocados so no carregador
 	call gsinit
+	ld a,#1
+	ld (_cur_bank),a         ; banco de codigo corrente em 0x8000 (gsinit zerou a RAM)
 	call _main
 1$:	jr 1$
 

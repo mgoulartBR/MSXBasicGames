@@ -976,8 +976,8 @@ la_go:
 la_done:
 	pop bc
 	djnz la_next
-	ld a,#1
-	ld (0x7000),a             ; volta o banco 1 (codigo) em 0x8000
+	ld a,(_cur_bank)
+	ld (0x7000),a             ; volta o banco de codigo corrente em 0x8000
 	ret
 
 ; _pal_load2: carrega a paleta de 32 bytes apontada por g_palp
@@ -1003,6 +1003,19 @@ _bank_copy::
 	ld c,a
 	ld b,#0
 	ldir
-	ld a,#1
+	ld a,(_cur_bank)
+	ld (0x7000),a
+	ret
+
+; ---- troca de bancos de codigo (SDCC __banked: ___sdcc_bcall_ehl usa get_bank/set_bank, que preservam os demais registradores)
+	.area _DATA
+_cur_bank::
+	.ds 1
+	.area _CODE
+get_bank::
+	ld a,(_cur_bank)
+	ret
+set_bank::
+	ld (_cur_bank),a
 	ld (0x7000),a
 	ret

@@ -221,6 +221,7 @@ def scale_sprite(col, w):
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
+    ABASE = int(os.environ.get('ASSET_BANK0', '4'))     # primeiro banco de assets (antes dele: nucleo + bancos de codigo)
     banks = [bytearray()]; ents = []       # banco de 16 KB por vez (a partir do banco 2 da ROM); ents: (banco, endereco 0x8000+, vaddr, paginas_256, copias)
     lib2 = os.environ.get('LIB2')
     def add(raw, vaddr, copies, group=0):
@@ -228,7 +229,7 @@ def main():
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
-            ents.append((len(banks) + 1, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
+            ents.append((len(banks) - 1 + ABASE, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
     sprh = ''; orects = []
     if lib2:
         a = cockpit_pixels(lib2)
@@ -271,7 +272,7 @@ def main():
     if ents and os.path.exists(tdat):
         td = open(tdat, 'rb').read()
         if len(banks[-1]) + len(td) > 0x4000: banks.append(bytearray())
-        text_base = len(banks[-1]); banks[-1].extend(td); text_bank = len(banks) + 1      # nomes (carros, pecas, pilotos) no fim do ultimo banco de assets
+        text_base = len(banks[-1]); banks[-1].extend(td); text_bank = len(banks) - 1 + ABASE      # nomes (carros, pecas, pilotos) no fim do ultimo banco de assets
     nb = len(banks) if ents else 0
     print('assets: %d faixas em %d banco(s) de 16 KB' % (len(ents), nb), file=sys.stderr)
     open(os.path.join(here, 'assets.bin'), 'wb').write(b''.join(bytes(b).ljust(0x4000, b'\xff') for b in banks) if ents else b'')
