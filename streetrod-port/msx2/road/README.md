@@ -278,3 +278,4 @@ medidas implausíveis (largura fora de 22..52 px ou deslocamento > 10 px) são i
 
 ### Roda dianteira: ajuste visual
 A dianteira (lado direito) fica `FRONT_BACK = 4` px atrás do centro medido da arcada (`cars_art.py`), pedido por revisão visual; para ajustar mais/menos, mude esse valor e rode `build.sh`.
+A traseira (lado esquerdo) fica `REAR_FWD = 4` px à frente do centro medido, em todos os carros (inclusive os de posição manual).

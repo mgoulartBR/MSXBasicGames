@@ -11,6 +11,7 @@ WHEEL = [28, 65, 106]                       # pneu de fabrica (faixa branca), cr
 MANUAL = {61: (70, 192, 40), 135: (50, 186, 47), 126: (34, 158, 51)}    # item: (centro x da roda dianteira, traseira, centro y) onde a deteccao automatica falha
 WH_H = 28
 FRONT_BACK = 4
+REAR_FWD = 4
 
 def _img(it):
     p = np.frombuffer(it.decode(), np.uint8)
@@ -90,7 +91,7 @@ def load(lib2):
             cx1, cx2, cy = (runs[0][0] + runs[0][1]) // 2, (runs[1][0] + runs[1][1]) // 2, r
         if k not in MANUAL:
             cx1, cx2 = _arch(a, cx1, cy), _arch(a, cx2, cy) - FRONT_BACK       # a dianteira (lado direito) um pouco para tras do centro medido (ajuste visual)
-        cars.append(dict(item=k, body=a, w=w, h=h, wx=(cx1, cx2), wy=cy))
+        cars.append(dict(item=k, body=a, w=w, h=h, wx=(cx1 + REAR_FWD, cx2), wy=cy))          # traseira: REAR_FWD px para a frente (todos os carros, inclusive os manuais)
     wheels = [_scale(_img(items[k])) for k in WHEEL]
     return cars, wheels
 
