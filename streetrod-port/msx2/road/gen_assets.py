@@ -81,8 +81,25 @@ def cockpit_pixels(lib2):
     return np.array(MAP, np.uint8)[idx]
 
 STRIP = 4096
+WIN_Y, SKY_TOP, VIEW_BOT = 30, 27, 80     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
+OV_SY = 704                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [6, 8, 11, 15, 20, 27, 36, 48, 64]      # larguras das versoes reduzidas do carro (visto por tras)
 SPR_Y0 = 768                                      # a folha de sprites fica na pagina 3 da VRAM
+
+def overlay(a):
+    """Parte do cockpit que fica POR CIMA da estrada: vidro (preto ligado ao para-brisa e a janela lateral) vira transparente (0);
+    pretos de outras partes viram cor 11."""
+    y0, y1 = WIN_Y + SKY_TOP, WIN_Y + VIEW_BOT
+    sub = a[y0:y1]
+    h, w = sub.shape
+    glass = np.zeros((h, w), bool)
+    st = [(70 - y0, 160), (80 - y0, 25), (y1 - 1 - y0, 160)]
+    while st:
+        y, x = st.pop()
+        if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
+            glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
+    return out
 
 def rear_sprite(lib2, item):
     """Carro visto por tras (LIB2): fundo (preto ligado a borda) vira transparente (0); pretos internos viram cor 11 (quase preto)."""
@@ -126,7 +143,9 @@ def main():
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
+        ov = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
+        add((ov[:, 0::2] << 4 | ov[:, 1::2]).astype(np.uint8).tobytes(), OV_SY * 128, 1)
         col = rear_sprite(lib2, int(os.environ.get('OPP_SPRITE', '248')))
         sheet = np.zeros((SPR_W[-1] * col.shape[0] // col.shape[1] + 2, 256), np.uint8)
         xs = []; x = 0
@@ -154,6 +173,7 @@ def main():
         f.write('static const uint8_t asset_pg[%d] = {%s};\n' % (n, ','.join(str(e[2]) for e in ents) or '0'))
         f.write('static const uint8_t asset_cp[%d] = {%s};\n' % (n, ','.join(str(e[3]) for e in ents) or '0'))
         f.write(sprh)
+        f.write('#define WIN_Y %d\n#define SKY_TOP %d\n#define OV_SY %d\n' % (WIN_Y, SKY_TOP, OV_SY))
         f.write('/* ponteiros dos mostradores do cockpit: (dx,dy) da ponta em relacao ao eixo; tacometro: indice = rpm/50, velocimetro: indice = mph */\n')
         f.write('#define GAUGE_RPM_X 117\n#define GAUGE_RPM_Y 142\n#define GAUGE_SPD_X 157\n#define GAUGE_SPD_Y 142\n')
         f.write('#define NEEDLE_RPM_N 108\n#define NEEDLE_SPD_N 144\n')

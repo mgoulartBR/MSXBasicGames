@@ -24,16 +24,10 @@
 #define DRAW_MODE 2     /* bit0: zebras separadas, bit1: gramado por scanline (cada pixel pintado 1x) */
 #endif
 #ifndef VIEW_X0
-#define VIEW_X0 64
+#define VIEW_X0 0
 #endif
 #ifndef VIEW_X1
 #define VIEW_X1 256
-#endif
-#ifndef WIN_Y
-#define WIN_Y 22          /* linha da tela onde comeca a janela da estrada (para-brisa do cockpit) */
-#endif
-#ifndef SKY_TOP
-#define SKY_TOP 27        /* acima disso o espelho retrovisor do cockpit fica intacto */
 #endif
 #define HZ 36
 #define CMD_MAX 700
@@ -252,6 +246,8 @@ static void push_fill_v(i16 x, i16 y, i16 w, i16 h, u8 c) {
     push_fill(x, y, w, h, c);
 }
 
+#define OV_AW 56               /* largura da coluna esquerda (porta/coluna A) */
+#define OV_BY 36               /* a partir desta linha do overlay ha painel em toda a largura */
 u8 vc[15];
 extern void vdp_cmd15(void);
 static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }
@@ -538,6 +534,15 @@ void main(void) {
         draw_road_asm();
         draw_opp();
         if (state == 0) draw_lights();
+#if HAVE_COCKPIT
+        /* cockpit por cima da estrada (LMMM com TIMP): so as duas regioes onde ha moldura (coluna esquerda e painel) */
+        vc_w(0, 0); vc_w(2, OV_SY); vc_w(4, 0); vc_w(6, ybase + SKY_TOP);
+        vc_w(8, OV_AW); vc_w(10, VIEW_BOT - SKY_TOP); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
+        vdp_cmd15();
+        vc_w(0, OV_AW); vc_w(2, OV_SY + OV_BY); vc_w(4, OV_AW); vc_w(6, ybase + SKY_TOP + OV_BY);
+        vc_w(8, 256 - OV_AW); vc_w(10, VIEW_BOT - SKY_TOP - OV_BY);
+        vdp_cmd15();
+#endif
         ybase = base;
         clip_l = 0; clip_r = 256;
         draw_hud_page();
