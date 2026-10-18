@@ -76,11 +76,13 @@ try:
     hd = open(hot, 'rb').read()
     b0 = hd[:SIZES[0]]; b1 = hd[SIZES[0]:SIZES[0] + SIZES[1]]; pool = hd[sum(SIZES[:6]):sum(SIZES[:7])]
     M = Model(exe)
+    model_tabs = [('pm_ratio', M.t_ratio), ('pm_accel', M.t_accel), ('pm_rpm', M.t_rpm), ('pm_combo', M.t_combo), ('pm_eng', M.t_eng), ('pm_trans', M.t_trans), ('pm_redline', M.t_redline), ('pm_gears', M.t_gears), ('pm_body', M.t_body)]
+    carperf, carflags = [], []
     for cid in range(NCARS):
         price, perf, idx, flags, noff = struct.unpack('<HBBHH', b1[10 * cid:10 * cid + 8])
         v = stock_variants(flags)
         p = M.build(perf, v['engine'], v['trans'], v['manifold'], v['carb'], v['tires']); p['trans'] = v['trans']
-        pts.append(p); names.append(clean(cstr(pool, noff), 27)); prices.append(price)
+        pts.append(p); names.append(clean(cstr(pool, noff), 27)); prices.append(price); carperf.append(perf); carflags.append(flags)
     for i in range(22):
         r = b0[18 * i:18 * i + 18]
         pilots.append((clean(cstr(pool, struct.unpack('<H', r[6:8])[0]), 10), r[1], r[2]))
@@ -103,6 +105,8 @@ try:
 except Exception as e:                       # sem os arquivos do jogo: curvas genericas
     sys.stderr.write('powertrain padrao (%s)\n' % e)
     pts = [default_pt(4, 5200 - 100 * (i % 5)) for i in range(NCARS)]
+    model_tabs = [('pm_ratio', [0,100,60,40,30]*4), ('pm_accel', [50,40,30,20,10]*3), ('pm_rpm', [2900,5200]*3), ('pm_combo', [0]*15), ('pm_eng', [0,5,10]), ('pm_trans', [0,0,5,10]), ('pm_redline', [5200,5300,5400]), ('pm_gears', [3,3,4,4]), ('pm_body', list(range(9)))]
+    carperf = [i % 9 for i in range(NCARS)]; carflags = [0x0141] * NCARS
     names = ['DEFAULT CAR %d' % i for i in range(NCARS)]; prices = [500 + 100 * i for i in range(NCARS)]
     parts = [('PART %d' % i, 20 + 5 * i, i % 5, 7, 0) for i in range(43)]
     pilots = [('DRIVER %d' % i, 20 - i // 3, 10 - i // 4) for i in range(22)]
@@ -112,13 +116,9 @@ def spr_set(n):                              # vista traseira do carro: 0 sedan 
 cars = ['/* gerado por gen_tables.py (%s) */' % src, '#define NCARS %d' % NCARS, '#define NPILOTS %d' % len(pilots),
         '#define DEF_CAR %d' % CAR, '#define DEF_OPP_CAR %d' % OPP_CAR, '#define DEF_OPP %d' % OPP]
 def arr(t, name, vals): cars.append('static const %s %s[%d] = {%s};' % (t, name, len(vals), ','.join(map(str, vals))))
-arr('uint16_t', 'car_ratio', [x['ratio'] for p in pts for x in p['gears']])
-arr('uint16_t', 'car_hi0', [x['segs'][0]['hi'] for p in pts for x in p['gears']])
-arr('uint16_t', 'car_hi1', [x['segs'][1]['hi'] for p in pts for x in p['gears']])
-arr('uint16_t', 'car_acc', [s['accel'] for p in pts for x in p['gears'] for s in x['segs']])
-arr('uint8_t', 'car_ngears', [p['n_gears'] for p in pts])
-arr('uint16_t', 'car_redline', [p['redline'] for p in pts])
-arr('uint8_t', 'car_auto', [1 if p['trans'] == 0 else 0 for p in pts])
+for n_, t_ in model_tabs: arr('uint8_t' if max(t_) < 256 and min(t_) >= 0 else 'int16_t', n_, t_)      # tabelas pequenas em bytes (evita padroes 32 00 50 que confundem o detector de mapper)
+arr('uint8_t', 'car_perf', carperf); arr('uint16_t', 'car_flags', carflags)
+arr('uint8_t', 'car_ngears', [p['n_gears'] for p in pts]); arr('uint16_t', 'car_redline', [p['redline'] for p in pts]); arr('uint8_t', 'car_auto', [1 if p['trans'] == 0 else 0 for p in pts])
 arr('uint8_t', 'car_spr', [spr_set(n) for n in names])
 arr('uint16_t', 'car_price', prices)
 cars.append('#define NPARTS %d' % len(parts))

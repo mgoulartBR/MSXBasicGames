@@ -140,3 +140,13 @@ preço). O jogo começa sem carro ($1000): Bob's Drive-In e a lista de carros av
 `-DSTART_CAR=16` dá um carro inicial para os testes de corrida (`loop_test.tcl`).
 Detalhe de ROM: `ihx2rom.py` falha se a ROM tiver o byte-padrão `LD (nn),A` para registradores de banco de outros mapper (ex.: `32 00 50`),
 porque o openMSX/WebMSX os usam para adivinhar o mapper; a tabela de preços das peças guarda `preço+1` por isso.
+
+## Garagem (marco M3)
+YOUR CARS → escolher um carro → **DRIVE THIS CAR** (carro com que corre), **CAR PARTS** (troca peça por categoria usando as peças avulsas compatíveis com a
+montadora do carro; a peça antiga vai para o estoque), **TUNE TIMING** (retard/advance, mostra a potência), **CAR INFO** (potência, marchas, rotação máxima,
+câmbio, desgaste, ponto) e **SELL IT** (o revendedor oferece 55% do valor; pedir 20% ou 40% a mais é aceito com chance 55%/20%). O carro atual é marcado com `*`.
+O desempenho vem do modelo do jogo (`tools/powertrain.py`) portado para inteiros em `ptmodel.h` (`pt_quality`/`pt_power`/`pt_build`), recalculado na
+largada com as peças instaladas, o desgaste e o ponto (dano ainda não usado). Verificado contra o Python: 14.580 combinações no PC (erro ≤ 1 unidade) e
+casos no próprio Z80 via `pt_dbg.c` (compilar à mão: `sdcc ... pt_dbg.c`, ler 0xF000.. no openMSX). Obs.: o SDCC gerou código errado para a expressão
+composta do desgaste/ternário em `i32`; o código foi reescrito em passos simples (ver comentário em `ptmodel.h`).
+Testes: `garage_test.tcl` (compra peça, troca, CAR INFO) e `sell_test.tcl` (venda).

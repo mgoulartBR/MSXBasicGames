@@ -32,7 +32,7 @@
 #endif
 #define CMD_MAX 700
 
-typedef uint32_t u32; typedef int16_t i16; typedef uint16_t u16; typedef uint8_t u8; typedef int32_t i32;
+typedef uint32_t u32; typedef int8_t i8; typedef int16_t i16; typedef uint16_t u16; typedef uint8_t u8; typedef int32_t i32;
 
 /* variaveis lidas pelo script de teste (enderecos fixos) */
 volatile __at(0xF000) u16 dbg_frames;
@@ -56,6 +56,10 @@ volatile __at(0xF030) u16 dbg_money;
 volatile __at(0xF032) u16 dbg_day;
 volatile __at(0xF034) u16 dbg_nown;
 volatile __at(0xF036) u16 dbg_nspare;
+volatile __at(0xF038) u16 dbg_power;
+volatile __at(0xF03A) u16 dbg_t1;
+volatile __at(0xF03C) u16 dbg_t2;
+volatile __at(0xF03E) u16 dbg_t3;
 volatile __at(0xFC9E) u16 JIFFY;
 
 u8 cmd_buf[CMD_MAX * 11];
@@ -106,18 +110,22 @@ static void push_fill(i16 x, i16 y, i16 w, i16 h, u8 c) {
 static u16 pt_ratio[10], pt_hi0[10], pt_hi1[10], pt_acc[30], pt_redline[2];
 static u8 pt_ngears[2], pt_auto[2], opp_a, opp_b, opp_set;
 #define MAXCARS 4
-static u16 money; static u8 day, nown, cur, own[MAXCARS];     /* estado do jogo */
+typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; } Car;   /* carro do jogador: variantes instaladas, ajuste do ponto, desgaste (0..10000) */
+static u16 money; static u8 day, nown, cur; static Car gc[MAXCARS];     /* estado do jogo */
+static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 #define MAXSPARE 12
 static u8 spare[MAXSPARE], nspare;
 static u8 m_sel;
 static u8 offer_day = 255;
 static u8 sel_car = DEF_CAR, sel_opp = DEF_OPP_CAR, sel_pil = DEF_OPP;
-static void load_car(u8 slot, u8 id) {
-    u8 i;
-    for (i = 0; i < 5; i++) { pt_ratio[slot * 5 + i] = car_ratio[id * 5 + i]; pt_hi0[slot * 5 + i] = car_hi0[id * 5 + i]; pt_hi1[slot * 5 + i] = car_hi1[id * 5 + i]; }
-    for (i = 0; i < 15; i++) pt_acc[slot * 15 + i] = car_acc[id * 15 + i];
-    pt_ngears[slot] = car_ngears[id]; pt_redline[slot] = car_redline[id]; pt_auto[slot] = car_auto[id];
+#include "ptmodel.h"
+static void car_stock(Car *c, u8 id) {      /* configuracao de fabrica a partir do campo flags do HOT_DATA */
+    u16 f = car_flags[id];
+    c->id = id; c->tir = (f >> 4) & 3; c->trn = (f >> 6) & 3; c->eng = (f >> 8) & 7; c->man = (f >> 11) & 7; c->carb = (f >> 14) & 3;
+    c->trim = 0; c->wear = 0;
 }
+static void load_pt(u8 slot, const Car *c) { pt_build(slot, car_perf[c->id], c->eng, c->trn, c->man, c->carb, c->tir, c->wear, c->trim, 0); }
+static void load_car(u8 slot, u8 id) { Car t; car_stock(&t, id); load_pt(slot, &t); }
 #define OPP_A opp_a
 #define OPP_B opp_b
 static u8 jhz = 60;                    /* 50 ou 60 Hz (detectado em execucao) */
@@ -538,9 +546,9 @@ static void menu_row(u8 f) {
 }
 static void menu_info(void) {
     push_fill(0, 134, 256, 28, 0);
-    draw_text(16, 134, "GEARS", 8); draw_num(64, 134, car_ngears[sel_car], 1);
-    draw_text(88, 134, "REDLINE", 8); draw_num(152, 134, car_redline[sel_car], 4);
-    draw_text(16, 148, car_auto[sel_car] ? "AUTOMATIC" : "MANUAL SHIFT", 7);
+    draw_text(16, 134, "GEARS", 8); draw_num(64, 134, pm_gears[gc[cur].trn], 1);
+    draw_text(88, 134, "REDLINE", 8); draw_num(152, 134, pm_redline[gc[cur].eng], 4);
+    draw_text(16, 148, gc[cur].trn == 0 ? "AUTOMATIC" : "MANUAL SHIFT", 7);
 }
 static void menu_change(i16 d) {
     if (m_sel == 0) sel_car = (u8)((sel_car + NCARS + d) % NCARS);
@@ -563,7 +571,7 @@ static u8 menu(void) {                      /* 1 = iniciar corrida, 0 = voltar (
     draw_text(16, 186, "LEFT RIGHT  CHANGE", 6);
     draw_text(16, 200, "SPACE  START RACE", 13);
     draw_text(168, 200, "ESC BACK", 6);
-    sel_car = own[cur];
+    sel_car = gc[cur].id;
     vdp_wait();
     for (;;) {
         u8 st, act = 0; i16 d = 0;
@@ -594,7 +602,7 @@ static u8 menu(void) {                      /* 1 = iniciar corrida, 0 = voltar (
 static void new_game(void) {
     money = START_MONEY; day = 0; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0;
 #ifdef START_CAR
-    own[0] = START_CAR; nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
+    car_stock(&gc[0], START_CAR); nown = 1; sel_car = START_CAR;                  /* so para testes automatizados */
 #endif
 }
 
@@ -620,7 +628,7 @@ static void hub_status(void) {
     push_fill(0, 190, 256, 22, 0);
     draw_text(8, 190, "$", HC_Y); draw_nz(16, 190, money, 5, HC_Y);
     draw_text(88, 190, mon[mo], HC_W); draw_numc(120, 190, mo ? day - 30 : day + 1, 2, HC_W); draw_text(144, 190, "1963", HC_W);
-    draw_text(8, 202, nown ? car_name[own[cur]] : "NO CAR - BUY ONE", HC_G);
+    draw_text(8, 202, nown ? car_name[gc[cur].id] : "NO CAR - BUY ONE", HC_G);
     vdp_wait();
 }
 /* menu vertical sobre a cena: devolve o item escolhido (ESPACO) ou 255 (SHIFT = voltar) */
@@ -706,14 +714,136 @@ static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
 }
 
 /* ---- inventario ---- */
-static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 
+/* ---- garagem: carros, pecas, ajuste do ponto, informacoes, venda ---- */
+static const char *const cat_label[5] = {"ENGINE", "TRANS", "CARB", "MANIFOLD", "TIRES"};
+static u8 *car_var(Car *c, u8 cat) { return cat == 0 ? &c->eng : cat == 1 ? &c->trn : cat == 2 ? &c->carb : cat == 3 ? &c->man : &c->tir; }
+static u8 car_maker(const Car *c) { return car_flags[c->id] & 7; }        /* 1 = GM, 2 = Ford, 4 = Chrysler (mesma mascara das pecas) */
+static u8 part_find(u8 cat, u8 var, u8 maker) {         /* id do catalogo da peca instalada (categoria, variante, montadora) */
+    u8 i;
+    for (i = 0; i < NPARTS; i++) if (part_cat[i] == cat && part_var[i] == var && (part_mk[i] & maker)) return i;
+    return 255;
+}
+static void put_str(char *d, u8 *n, const char *s) { while (*s) d[(*n)++] = *s++; }
+static void put_num(char *d, u8 *n, u16 v) {
+    u16 p = 10000; u8 on = 0;
+    for (; p; p /= 10) { u8 dg = (v / p) % 10; if (dg || on || p == 1) { d[(*n)++] = '0' + dg; on = 1; } }
+}
+static Car *gcar;                                       /* carro em edicao */
+static u8 gcat, gsp[MAXSPARE], gsn;
+static const char *inst_get(u8 cat) {                   /* "ENGINE        GM V-8 283 CI" */
+    u8 n = 0, id = part_find(cat, *car_var(gcar, cat), car_maker(gcar)); 
+    put_str(tb, &n, cat_label[cat]);
+    while (n < 10) tb[n++] = ' ';
+    if (id != 255) put_str(tb, &n, part_name[id]); else put_str(tb, &n, "?");
+    tb[n] = 0;
+    return tb;
+}
+static const char *spare_cat_get(u8 i) { return part_name[spare[gsp[i]]]; }
+static void change_part(u8 cat) {
+    u8 i, r, old, fit = car_maker(gcar);
+    gsn = 0;
+    for (i = 0; i < nspare; i++) if (part_cat[spare[i]] == cat && (part_mk[spare[i]] & fit)) gsp[gsn++] = i;
+    if (!gsn) { ui_note("NO SPARE PART", "THAT WILL FIT"); return; }
+    ui_get = spare_cat_get;
+    r = ui_list(cat_label[cat], gsn, 0);
+    if (r == 255) return;
+    r = gsp[r];
+    old = part_find(cat, *car_var(gcar, cat), fit);
+    *car_var(gcar, cat) = part_var[spare[r]];
+    if (old != 255) spare[r] = old; else spare[r] = spare[--nspare];
+    ui_note("DONE!", "PART INSTALLED");
+}
+static void car_parts(void) {
+    u8 c = 0;
+    static const char *const dummy[1] = {""};
+    (void)dummy;
+    for (;;) {
+        ui_get = inst_get;
+        c = ui_list("CAR PARTS - SPACE TO CHANGE", 5, c);
+        if (c == 255) return;
+        change_part(c);
+    }
+}
+static u16 car_power(const Car *c) { return pt_power(car_perf[c->id], c->eng, c->trn, c->man, c->carb, c->wear, c->trim, 0); }
+static char info_buf[4][30];
+static const char *info_get(u8 i) { return info_buf[i]; }
+static void car_info(void) {
+    u8 n; u16 p = car_power(gcar);
+    dbg_power = p; dbg_t1 = (u16)pt_quality(car_perf[gcar->id], gcar->eng, gcar->trn, gcar->man, gcar->carb, gcar->wear, gcar->trim, 0); dbg_t2 = gcar->wear; dbg_t3 = car_perf[gcar->id] * 256 + gcar->eng * 16 + gcar->trn;
+    n = 0; put_str(info_buf[0], &n, "POWER "); put_num(info_buf[0], &n, p / 100); info_buf[0][n] = 0;
+    n = 0; put_str(info_buf[1], &n, "GEARS "); put_num(info_buf[1], &n, pm_gears[gcar->trn]); put_str(info_buf[1], &n, "  REDLINE "); put_num(info_buf[1], &n, pm_redline[gcar->eng]); info_buf[1][n] = 0;
+    n = 0; put_str(info_buf[2], &n, gcar->trn == 0 ? "AUTOMATIC" : "MANUAL"); put_str(info_buf[2], &n, "  WEAR "); put_num(info_buf[2], &n, gcar->wear / 100); put_str(info_buf[2], &n, "%"); info_buf[2][n] = 0;
+    n = 0; put_str(info_buf[3], &n, "TIMING "); if (gcar->trim < 0) info_buf[3][n++] = '-'; put_num(info_buf[3], &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); info_buf[3][n] = 0;
+    ui_get = info_get;
+    ui_list(car_name[gcar->id], 4, 0);
+}
+static void car_tune(void) {
+    static const char *const it[3] = {"RETARD", "ADVANCE", "DONE"};
+    u8 r, n; char title[28]; u8 sel = 1;
+    for (;;) {
+        n = 0; put_str(title, &n, "TIMING "); if (gcar->trim < 0) title[n++] = '-'; put_num(title, &n, gcar->trim < 0 ? -gcar->trim : gcar->trim);
+        put_str(title, &n, "  POWER "); put_num(title, &n, car_power(gcar) / 100); title[n] = 0;
+        r = ui_pick(title, it, 3, sel);
+        if (r == 255 || r == 2) return;
+        sel = r;
+        if (r == 0 && gcar->trim > -8) gcar->trim--;
+        if (r == 1 && gcar->trim < 8) gcar->trim++;
+    }
+}
+static u16 sale_value(const Car *c) { return (u16)((u32)car_price[c->id] * (200 - c->wear / 100) / 200); }
+static u8 sell_car(u8 ci) {                             /* 1 = vendido */
+    static const char *const it[4] = {"TAKE IT", "ASK 20% MORE", "ASK 40% MORE", "FORGET IT"};
+    u16 offer_ = (u16)((u32)sale_value(gcar) * 55 / 100); u8 r, n; char title[28];
+    for (;;) {
+        n = 0; put_str(title, &n, "I'LL GIVE YOU $"); put_num(title, &n, offer_); title[n] = 0;
+        r = ui_pick(title, it, 4, 0);
+        if (r == 255 || r == 3) return 0;
+        if (r == 0) break;
+        if ((u8)(rnd16() >> 8) % 100 < (r == 1 ? 55 : 20)) { offer_ = (u16)((u32)offer_ * (r == 1 ? 120 : 140) / 100); ui_note("O.K.!", "YOU'VE GOT A DEAL"); break; }
+        ui_note("NO WAY!", "TAKE IT OR LEAVE IT");
+        { static const char *const it2[2] = {"TAKE IT", "FORGET IT"}; if (ui_pick(title, it2, 2, 0) != 0) return 0; }
+        break;
+    }
+    money += offer_;
+    for (n = ci; n + 1 < nown; n++) gc[n] = gc[n + 1];
+    nown--;
+    if (cur >= nown) cur = nown ? nown - 1 : 0;
+    else if (cur > ci) cur--;
+    if (nown) sel_car = gc[cur].id;
+    return 1;
+}
+static void car_menu(u8 ci) {
+    static const char *const it[6] = {"DRIVE THIS CAR", "CAR PARTS", "TUNE TIMING", "CAR INFO", "SELL IT", "BACK"};
+    u8 r = 0;
+    gcar = &gc[ci];
+    for (;;) {
+        r = ui_pick(car_name[gc[ci].id], it, 6, r);
+        if (r == 255 || r == 5) return;
+        if (r == 0) { cur = ci; sel_car = gc[ci].id; ui_note("O.K.!", "NOW DRIVING THIS CAR"); }
+        else if (r == 1) car_parts();
+        else if (r == 2) car_tune();
+        else if (r == 3) car_info();
+        else if (sell_car(ci)) return;
+    }
+}
+static const char *carlist_get(u8 i) {
+    u8 n = 0;
+    tb[n++] = i == cur ? '*' : ' ';
+    put_str(tb, &n, car_name[gc[i].id]);
+    tb[n] = 0;
+    return tb;
+}
 static void cars_screen(void) {
-    const char *it[MAXCARS]; u8 i, r;
-    if (!nown) { ui_note("YOUR CARS", "BUY A CAR FIRST!"); return; }
-    for (i = 0; i < nown; i++) it[i] = car_name[own[i]];
-    r = ui_pick("YOUR CARS", it, nown, cur);
-    if (r != 255) { cur = r; sel_car = own[cur]; }
+    u8 r, sel = 0;
+    for (;;) {
+        if (!nown) { ui_note("YOUR CARS", "BUY A CAR FIRST!"); return; }
+        ui_get = carlist_get;
+        r = ui_list("YOUR CARS", nown, sel < nown ? sel : nown - 1);
+        if (r == 255) return;
+        sel = r;
+        car_menu(r);
+    }
 }
 
 /* ---- jornal: carros usados ---- */
@@ -754,8 +884,9 @@ static void buy_car(u8 i) {
         ui_note("I'LL TAKE IT!", "DEAL");
     }
     if (!try_pay(price)) return;
-    own[nown++] = offer[i]; offer_mask |= 1 << i;
-    if (nown == 1) { cur = 0; sel_car = own[0]; }
+    car_stock(&gc[nown], offer[i]); gc[nown].wear = (u16)(rnd16() % 3000);         /* usado: 0 a 30% de desgaste */
+    nown++; offer_mask |= 1 << i;
+    if (nown == 1) { cur = 0; sel_car = gc[0].id; }
     ui_note("IT'S YOURS!", "ENJOY THE RIDE");
 }
 static void used_cars(void) {
@@ -837,7 +968,7 @@ static u8 hub(void) {                       /* 0 = ir ao Bob's (corrida), 1 = sa
 
 static void new_race(void) {
     u8 k = (u8)(JIFFY & 7);
-    load_car(0, sel_car); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
+    load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
     g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
