@@ -35,6 +35,28 @@ def _wells(a, minrun=16):
         if len(runs) == 2: return r, runs
     return None
 
+def _refine(a, cx, cy, wh_w=32, wh_h=28):
+    """centraliza a roda no vao da arcada: flood-fill dos pixels transparentes a partir do centro (limitado a +-24 px e ate a base da roda) -> topo (apice) e extensao
+    horizontal a meia altura da roda; centro x = meio do vao, centro y = apice + raio"""
+    h, w = a.shape; r = wh_h // 2
+    bottom = min(h - 1, cy + r)
+    seen = set(); st = [(cy, cx)]; reg = []
+    if a[cy, cx] != 0:                                     # semente dentro do corpo: procura o vazio mais proximo na mesma linha
+        for d in range(1, 12):
+            for xx in (cx - d, cx + d):
+                if 0 <= xx < w and a[cy, xx] == 0: st = [(cy, xx)]; break
+            else: continue
+            break
+    while st:
+        y, x = st.pop()
+        if (y, x) in seen or not (0 <= y <= bottom and 0 <= x < w) or abs(x - cx) > 24 or a[y, x] != 0: continue
+        seen.add((y, x)); reg.append((y, x)); st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    if not reg: return cx, cy
+    ytop = min(y for y, x in reg)
+    row = [x for y, x in reg if y == min(bottom, ytop + r - 2)]
+    if not row: return cx, cy
+    return (min(row) + max(row)) // 2, min(bottom, ytop + r + 1) if ytop + r + 1 <= bottom + 3 else cy
+
 def load(lib2):
     items = srlib.load(lib2)
     cars = []
@@ -45,6 +67,12 @@ def load(lib2):
             r, runs = _wells(a) or _wells(a, 12) or (None, None)
             assert r is not None, k
             cx1, cx2, cy = (runs[0][0] + runs[0][1]) // 2, (runs[1][0] + runs[1][1]) // 2, r
+        if k not in MANUAL:
+            ox1, ox2, oy = cx1, cx2, cy
+            (cx1, cy1), (cx2, cy2) = _refine(a, cx1, cy), _refine(a, cx2, cy)
+            clamp = lambda v, o, d: max(o - d, min(o + d, v))                 # a refinacao so ajusta: no maximo +-8 px em x e -1..+3 em y
+            cx1, cx2 = clamp(cx1, ox1, 8), clamp(cx2, ox2, 8)
+            cy = oy                                                       # vertical mantido (so o x e' recentralizado)
         cars.append(dict(item=k, body=a, w=w, h=h, wx=(cx1, cx2), wy=cy))
     wheels = [_scale(_img(items[k])) for k in WHEEL]
     return cars, wheels

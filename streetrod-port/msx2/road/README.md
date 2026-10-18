@@ -267,3 +267,7 @@ Obs.: o clique no título "Los Angeles News" (vender peças avulsas) não tem et
 - O cursor/mouse (`mouse_move`, `cursor_init`, `spr_on/off`) foi para o núcleo (usado pela garagem, jornal e listas). `-DTEST_MOUSE` simula o mouse nos testes (setas = deslocamento, ESPAÇO = botão); `mouse_test.tcl`, `mouse2_test.tcl`.
 - `bankify.py`: literais de string agora vão para o banco das funções que os usam (antes dependia da ordem do arquivo) e `decl_line` reconhece `static const char *const x[]`.
 - Núcleo: 15,4 KB de 16 KB — o próximo recurso grande deve mover algo para um banco.
+
+### Rodas centralizadas nas arcadas
+`cars_art._refine`: depois da detecção grosseira, o centro x de cada roda é recalculado pelo vão da arcada (flood-fill dos pixels transparentes a partir do centro, limitado a ±24 px; centro = meio do vão à
+altura do meio da roda), com ajuste máximo de ±8 px; o y não muda (carros com arcadas abertas, como o Lincoln, ficavam com a roda baixa demais).
