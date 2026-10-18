@@ -84,6 +84,7 @@ STRIP = 4096
 WIN_Y, SKY_TOP = 24, 22
 VIEW_BOT = int(os.environ.get('VIEW_BOT', '86'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
 STRIP_TOL = 1
+ARC_X0 = 66                                   # a partir daqui o recorte segue o capo (antes ficam a coluna A e a porta)
 GLASS_MODE = os.environ.get('GLASS_MODE', 'dash')    # flat: vidro termina em y=GLASS_BOT; dash: segue o topo do painel (1o pixel claro por coluna)
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
@@ -107,21 +108,28 @@ def overlay(a):
     if GLASS_MODE == 'flat':
         glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
     else:
-        cut = np.full(w, h)
-        for x in range(54, w):
-            lit = np.isin(sub[96 - y0:, x], (4, 5, 7, 15))
-            thick = lit[:-2] & lit[1:-1] & lit[2:]                  # borda do volante/painel = 3 linhas claras seguidas (ignora tracos finos do capo)
-            hit = np.nonzero(thick)[0]
-            if len(hit): cut[x] = 96 - y0 + hit[0]
+        # contorno do capo: a linha ciano do capo (diagonal a esquerda, quase reta a direita) -- a estrada termina logo acima dela
+        # e o capo (preto com as linhas ciano) e o painel ficam intactos abaixo
+        XA = ARC_X0
+        cy = np.full(w, np.nan)
+        for x in range(XA, w):
+            hit = np.nonzero(sub[88 - y0:, x] == 1)[0]
+            if len(hit): cy[x] = 88 - y0 + hit[0]
+        ok = np.nonzero(~np.isnan(cy))[0]
+        cut = np.interp(np.arange(w), ok, cy[ok]) - 1            # interpola os vaos entre tracos
         sm = cut.copy()
-        for x in range(54, w):                      # mediana de 15 colunas: ignora as linhas finas isoladas do painel
-            win = np.sort(cut[max(54, x - 7):x + 8]); sm[x] = win[len(win) // 2] - 1
-        cuts = sm.copy(); x0 = 54
-        while x0 < w:                               # faixas adaptativas: a faixa segue o contorno arredondado com tolerancia de TOL px
+        for x in range(XA, w):
+            win = np.sort(cut[max(XA, x - 3):x + 4]); sm[x] = win[len(win) // 2]
+        sm = np.rint(sm).astype(int)
+        cuts = sm.copy(); x0 = XA
+        while x0 < w:                               # faixas adaptativas: a faixa segue a curva com tolerancia de STRIP_TOL px
             x1 = x0 + 2; lo = hi = sm[x0]
-            while x1 < w and max(hi, sm[x1]) - min(lo, sm[x1]) <= STRIP_TOL: lo = min(lo, sm[x1]); hi = max(hi, sm[x1]); x1 += 1
+            while x1 < w and max(hi, sm[x1], sm[x1 + 1]) - min(lo, sm[x1], sm[x1 + 1]) <= STRIP_TOL:   # passos de 2 colunas: HMMM exige x e largura pares
+                lo = min(lo, sm[x1], sm[x1 + 1]); hi = max(hi, sm[x1], sm[x1 + 1]); x1 += 2
+            lo = min(lo, sm[x0 + 1])
             cuts[x0:x1] = lo; x0 = x1
-        for x in range(54, w): glass[cuts[x]:, x] = False
+        if os.environ.get('DBG_CUTS'): print(list(zip(range(XA, w), cuts[XA:], sm[XA:]))[50:90], file=sys.stderr)
+        for x in range(XA, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     return out, cuts
 
@@ -214,12 +222,12 @@ def main():
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
         ov, cuts = overlay(a); np.save(os.path.join(here, 'overlay_px.npy'), ov)
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
-        orects = overlay_rects(ov[:, :54] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
+        orects = overlay_rects(ov[:, :ARC_X0] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
-            x0 = 54
+            x0 = ARC_X0
             while x0 < 256:
                 x1 = x0 + 2
-                while x1 < 256 and cuts[x1] == cuts[x0]: x1 += 1
+                while x1 < 256 and cuts[x1] == cuts[x0]: x1 += 2
                 if cuts[x0] < ov.shape[0]: orects.append([x0, int(cuts[x0]), x1 - x0, ov.shape[0] - int(cuts[x0])])
                 x0 = x1
         ls = light_sheet(lib2)
