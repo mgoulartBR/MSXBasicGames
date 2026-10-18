@@ -23,7 +23,7 @@ ou apostando o *pink slip*) e tenta virar o **King of the County**. O jogo acaba
 |---|---|---|
 | M0 | **Pronto** | Corrida (física original, cockpit, ponteiros, oponente, semáforo, som), menu de teste, ROM ASCII16 de 64 KB |
 | M1 | **Pronto** — Estado do jogo + hub | Dinheiro, data, carros possuídos; tela da garagem (arte original) com menu: garagem, rua, jornal, Bob's |
-| M2 | Jornal | Carros usados (25) e catálogo de peças (43) com preços, compra/venda, limites de espaço |
+| M2 | **Pronto** — Jornal | Carros usados (25) e catálogo de peças (43) com preços, compra/venda, limites de espaço |
 | M3 | Garagem | Trocar de carro, vender, instalar peças (recalcula o *powertrain* por carro+peças), pintura/adereços, gasolina |
 | M4 | Bob's | Escolha do oponente (22 pilotos), tipos de corrida, apostas, pink slip, aceita/recusa; corrida real |
 | M5 | Consequências | Quebra de motor/câmbio/pneus, perda de carro, prêmios, calendário e fim de jogo |
