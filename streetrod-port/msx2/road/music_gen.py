@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Gera as 5 estacoes de radio (composicoes originais, estilos dos anos 50/60) em linhas de sequenciador para o PSG.
 
-Formato de cada musica: N linhas x 3 bytes (canais A=melodia, B=baixo, C=harmonia/percussao).
-Byte: 0 = continua a nota anterior, 1 = silencio, 2 = chimbal (ruido curto, so canal C), 3 = caixa (ruido longo, so canal C), >= 12 = nota MIDI.
+Formato de cada musica: N linhas x 4 bytes (canais A=melodia, B=baixo, C=harmonia, e um byte de bateria).
+Notas: 0 = continua a nota anterior, 1 = silencio, >= 12 = nota MIDI. Bateria: bits 16 bumbo, 8 caixa, 4 tom, 2 prato, 1 chimbal (como o registrador 0x0E do OPLL).
+No FM (MSX-MUSIC) tudo toca; no PSG a bateria vira ruido no canal C (chimbal/prato = curto, caixa = longo).
 Cada linha dura `row_ms` milissegundos; as musicas voltam ao comeco quando acabam (loop sem emenda: todas fecham o ciclo harmonico)."""
 import random
 
+K_BD, K_HH, K_SD, K_TOM, K_CYM = 1, 2, 3, 4, 8                   # bumbo, chimbal, caixa, tom, prato
+DRUM_BIT = {K_BD: 16, K_HH: 1, K_SD: 8, K_TOM: 4, K_CYM: 2}   # bits do registrador de ritmo do OPLL (0x0E)
 NAMES = ["ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK"]
 
 
@@ -15,6 +18,7 @@ class Song:
         s.rpbar = rpb * 4
         s.n = bars * s.rpbar
         s.ch = [[1] * s.n for _ in range(3)]
+        s.dr = [0] * s.n
         s.row_ms = round(60000 / (bpm * rpb))
 
     def put(s, c, row, pitch, ln, gate=0):
@@ -32,11 +36,11 @@ class Song:
             if row + k < s.n: s.ch[c][row + k] = pitch
 
     def drum(s, row, kind):
-        if 0 <= row < s.n: s.ch[2][row] = kind
+        if 0 <= row < s.n: s.dr[row] |= DRUM_BIT[kind]
 
     def data(s):
         out = bytearray()
-        for r in range(s.n): out += bytes(s.ch[c][r] for c in range(3))
+        for r in range(s.n): out += bytes([s.ch[0][r], s.ch[1][r], s.ch[2][r], s.dr[r]])
         return bytes(out)
 
     def seconds(s): return s.n * s.row_ms / 1000
@@ -73,8 +77,10 @@ def rock():
             brk = (b == 11 and cho % 2 == 1)
             for q in range(8):
                 row = r0 + 2 * q
-                if q in (2, 6): S.drum(row, 3)
-                elif not (cho == 0 and b < 4 and q % 2): S.drum(row, 2)
+                if q in (2, 6): S.drum(row, K_SD)
+                elif not (cho == 0 and b < 4 and q % 2): S.drum(row, K_HH)
+                if q in (0, 4): S.drum(row, K_BD)
+                if q == 0 and b == 0 and cho > 0: S.drum(row, K_CYM)
             if brk:                                                                  # quebra de coro: acordes no canal C
                 for k, off in enumerate([0, 4, 7, 12, 7, 4, 0, 4]): S.put(2, r0 + 2 * k, 57 + rt + off, 2, gate=1)
     return S
@@ -108,9 +114,10 @@ def blues():
             # harmonia no canal C: terca e quinta em compasso de shuffle, caixa no 2 e 4
             for beat in range(4):
                 row = r0 + 3 * beat
-                if beat in (1, 3): S.drum(row, 3)
-                else: S.put(2, row, C4 + rt + (4 if beat == 0 else 7), 2, gate=0)
-                S.put(2, row + 2, C4 + rt + (7 if beat % 2 == 0 else 10), 1) if beat in (0, 2) else S.drum(row + 2, 2)
+                S.drum(row, K_HH); S.drum(row + 2, K_HH)                                   # prato em shuffle
+                if beat in (1, 3): S.drum(row, K_SD)
+                else: S.drum(row, K_BD); S.put(2, row, C4 + rt + (4 if beat == 0 else 7), 2, gate=0)
+                if beat in (0, 2): S.put(2, row + 2, C4 + rt + (7 if beat % 2 == 0 else 10), 1)
         # melodia (3 frases por coro: AAB)
         base = cho * 12 * 12
         sel = [(0, 0, 4), (1, 1, 5), (2, 2, 3), (0, 3, 4)][cho]
@@ -203,7 +210,11 @@ def jazz():
                 # canal C: "pe de chimbal" nos tempos 2 e 4 e acordes curtos (terca / setima) no contratempo
                 for beat in range(4):
                     row = r0 + 3 * beat; chord = chs[0] if beat < 2 else chs[1]; root, tones = CH[chord]
-                    if beat in (1, 3): S.drum(row, 2)
+                    S.drum(row, K_HH)                                                      # prato de conducao: toda semínima + o "a" do swing
+                    if beat in (1, 3): S.drum(row + 2, K_HH)
+                    if bar % 32 == 0 and beat == 0: S.drum(row, K_CYM)
+                    if beat == 3 and bar % 4 == 3: S.drum(row + 2, K_SD)
+                    if beat in (1, 3): pass
                     else: S.put(2, row, 60 + (root + tones[1]) % 12, 1)
                     if beat in (0, 2): S.put(2, row + 2, 60 + (root + tones[3]) % 12, 1)
                 # melodia
@@ -253,6 +264,7 @@ def doowop():
             for k in range(12): S.put(2, r0 + k, 48 + root - (12 if root > 6 else 0) + arp[k], 1)
             if name == 'A' or name == 'B':                                        # bateria suave: so a caixa de leve no 2 e no 4 (canal C ja tem o arpejo)
                 pass
+            if name != 'intro' and name != 'tag': S.drum(r0, K_BD); S.drum(r0 + 3, K_SD); S.drum(r0 + 9, K_SD)
             # baixo: fundamental no 1, quinta no 3 (voz grave "bom-bom-bom")
             S.put(1, r0, 36 + root, 6, gate=1); S.put(1, r0 + 6, 43 + root if root < 5 else 31 + root, 3, gate=0); S.put(1, r0 + 9, 36 + root, 3, gate=1)
             if mel:
@@ -306,10 +318,12 @@ def surf():
             S.put(1, r0 + 2 * q, p, 2, gate=1)
         for q in range(8):
             row = r0 + 2 * q
-            if q in (2, 6): S.drum(row, 3)
-            else: S.drum(row, 2)
+            if q in (2, 6): S.drum(row, K_SD)
+            else: S.drum(row, K_HH)
+            if q in (0, 3): S.drum(row, K_BD)
+            if q == 0 and b == 0 and sec % 2 == 0: S.drum(row, K_CYM)
         if bar % 8 == 7 and sec % 2 == 1:                                      # virada de bateria no fim da secao B
-            for k in range(8): S.drum(r0 + 8 + k, 3 if k % 2 == 0 else 2)
+            for k in range(8): S.drum(r0 + 8 + k, K_TOM if k % 2 == 0 else K_SD)
     return S
 
 

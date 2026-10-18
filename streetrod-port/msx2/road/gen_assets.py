@@ -358,6 +358,13 @@ def main():
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
         f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n' % (1 if ents else 0, text_bank, text_base))
         f.write('static const uint8_t mus_bank[5] = {%s};\nstatic const uint16_t mus_rows[5] = {%s};\nstatic const uint16_t mus_ms[5] = {%s};\n' % tuple(','.join(str(m[i]) for m in mus) for i in range(3)))
+        def fmnum(n):                                              # OPLL: f = F * 49716 / 2^(19 - bloco); F de 9 bits, bloco 0..7 -> bits (bloco << 9) | F
+            fr = 440 * 2 ** ((n - 69) / 12)
+            for blk in range(8):
+                F = round(fr / (49716 / 2 ** (19 - blk)))
+                if F <= 511: return (blk << 9) | F
+            return (7 << 9) | 511
+        f.write('static const uint16_t mus_ftab[128] = {%s};\n' % ','.join(str(fmnum(n)) if n >= 12 else '0' for n in range(128)))
         f.write('static const uint16_t mus_per[128] = {%s};\n' % ','.join(str(min(4095, round(55930 / (440 * 2 ** ((n - 69) / 12))))) if n >= 12 else '0' for n in range(128)))
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]

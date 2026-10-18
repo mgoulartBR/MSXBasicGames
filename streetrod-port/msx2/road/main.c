@@ -80,6 +80,9 @@ static const char *txt(char *buf, u16 ofs, u8 len) { g_bk_bank = TEXT_BANK; g_bk
 #define PILN(i) txt(nbd, TXT_PIL_OFS + (i) * 11, 11)
 extern void lz_unpack(void);
 extern void psg_w(void);
+extern void fm_w(void);
+extern void rd_slot(void);
+extern void wr_slot(void);
 extern void pal_one(void);
 extern void pal_load2(void);
 extern void vram_blit(void);
@@ -527,11 +530,28 @@ static void init_static(void) {
 #pragma codeseg BANK3
 /* ---- radio: 5 estacoes (music_gen.py) tocadas no PSG; 1 linha = 3 bytes (A melodia, B baixo, C harmonia/percussao), lidas do banco da estacao ---- */
 static u16 mus_row, mus_due, mus_dur, mus_t0[3], mus_noise;       /* linha atual, jiffy da proxima, duracao da linha (8.8 jiffies), inicio de cada nota, fim do ruido */
-static u8 mus_fr, mus_on[3], mus_lv[3];
-static const u8 mus_env[3][3] = {{12, 7, 6}, {13, 10, 8}, {9, 3, 4}};   /* por canal: volume inicial, piso, jiffies por degrau */
+static u8 mus_fr, mus_on[3], mus_lv[3], mus_fm, mus_hi[3], mus_dp;      /* mus_fm: 1 = ha MSX-MUSIC (OPLL), toca em FM; mus_hi: bloco/F9 do canal; mus_dp: bateria da linha anterior */
+static const u8 mus_env[3][3] = {{12, 7, 6}, {13, 10, 8}, {9, 3, 4}};   /* PSG, por canal: volume inicial, piso, jiffies por degrau */
+static const u8 mus_ins[5][3] = {{0xF3, 0xE2, 0x26}, {0xF3, 0xE2, 0x36}, {0x75, 0xE2, 0x36}, {0x43, 0xE2, 0x36}, {0xF3, 0xE2, 0x26}};   /* FM: instrumento<<4 | atenuacao (A, B, C) por estacao */
+static void fm(u8 r, u8 v) { g_reg = r; g_val = v; fm_w(); }
+static void fm_off(void) { u8 c; for (c = 0; c < 3; c++) fm(0x20 + c, mus_hi[c]); fm(0x0E, 0x20); mus_dp = 0; }
 static void mus_row_play(void) {
-    u8 b[3], c, v; u16 per;
-    g_bk_bank = mus_bank[mus_st - 1]; g_bk_src = 0x8000 + mus_row * 3; g_bk_dst = (u16)b; g_bk_len = 3; bank_copy();
+    u8 b[4], c, v, d; u16 per;
+    g_bk_bank = mus_bank[mus_st - 1]; g_bk_src = 0x8000 + mus_row * 4; g_bk_dst = (u16)b; g_bk_len = 4; bank_copy();
+    d = b[3];
+    if (mus_fm) {
+        for (c = 0; c < 3; c++) {
+            v = b[c];
+            if (v >= 12) {
+                per = mus_ftab[v]; mus_hi[c] = (u8)(per >> 8);
+                fm(0x20 + c, mus_hi[c]); fm(0x10 + c, (u8)per); fm(0x20 + c, mus_hi[c] | 0x10);
+            } else if (v == 1) fm(0x20 + c, mus_hi[c]);
+        }
+        if (mus_dp) fm(0x0E, 0x20);
+        if (d) fm(0x0E, 0x20 | d);
+        mus_dp = d;
+        return;
+    }
     for (c = 0; c < 3; c++) {
         v = b[c];
         if (v >= 12) {
@@ -539,10 +559,10 @@ static void mus_row_play(void) {
             mus_t0[c] = JIFFY; mus_on[c] = 1; mus_lv[c] = 255;
             if (c == 2 && mus_noise) { psg(7, 0xB8); mus_noise = 0; }
         } else if (v == 1) { mus_on[c] = 0; mus_lv[c] = 0; psg(8 + c, 0); }
-        else if (v >= 2 && c == 2) {                                      /* 2 = chimbal, 3 = caixa: ruido no canal C */
-            psg(6, v == 2 ? 4 : 14); psg(7, 0x9C); psg(10, v == 2 ? 8 : 12);
-            mus_noise = JIFFY + (v == 2 ? 2 : 5); mus_on[2] = 0;
-        }
+    }
+    if (d & 15) {                                                         /* bateria no PSG: ruido no canal C (caixa longa; chimbal, prato e tom curtos); o bumbo fica de fora */
+        psg(6, (d & 8) ? 14 : 4); psg(7, 0x9C); psg(10, (d & 8) ? 12 : 8);
+        mus_noise = JIFFY + ((d & 8) ? 5 : 2); mus_on[2] = 0;
     }
 }
 static void mus_tick(void) BK {
@@ -555,6 +575,7 @@ static void mus_tick(void) BK {
         t = (u16)mus_fr + (u8)mus_dur; mus_fr = (u8)t;
         mus_due += (mus_dur >> 8) + (t >> 8);
     }
+    if (mus_fm) return;
     if (mus_noise && (i16)(JIFFY - mus_noise) >= 0) { psg(10, 0); psg(7, 0xB8); mus_noise = 0; }
     for (c = 0; c < 3; c++) if (mus_on[c]) {
         age = JIFFY - mus_t0[c]; if (age > 120) age = 120;
@@ -563,13 +584,48 @@ static void mus_tick(void) BK {
         if (v != mus_lv[c]) { mus_lv[c] = v; psg(8 + c, v); }
     }
 }
-static void mus_pause(void) BK {                                              /* corrida: o PSG e do motor */
+static u8 fm_sig(u8 slot) {                                               /* 1 = ha a ROM do MSX-MUSIC (APRLOPLL) ou do FM-PAC (PAC2OPLL) em 0x4018 deste slot */
+    static const char ap[9] = "APRLOPLL", pc[9] = "PAC2OPLL";
+    u8 i, a = 1, p = 1;
+    for (i = 0; i < 8; i++) {
+        g_bk_bank = slot; g_bk_src = 0x4018 + i; rd_slot();
+        if (g_val != ap[i]) a = 0;
+        if (g_val != pc[i]) p = 0;
+        if (!a && !p) return 0;
+    }
+    if (p) { g_bk_bank = slot; g_bk_src = 0x7FF6; g_val = 1; wr_slot(); }   /* FM-PAC: liga as portas do OPLL */
+    return 1;
+}
+static void fm_detect(void) BK {
+    u8 p, s, sl;
+    mus_fm = 0;
+    for (p = 0; p < 4 && !mus_fm; p++) {
+        if (*(volatile u8 *)(0xFCC1 + p) & 0x80) { for (s = 0; s < 4 && !mus_fm; s++) { sl = 0x80 | (s << 2) | p; mus_fm = fm_sig(sl); } }
+        else mus_fm = fm_sig(p);
+    }
+#ifdef NO_FM
+    mus_fm = 0;
+#endif
+#ifdef FORCE_FM
+    mus_fm = 1;
+#endif
+}
+static void mus_pause(void) BK {                                          /* corrida: o PSG e do motor (o FM segue tocando) */
+    if (mus_fm) return;
     mus_hold = 1; mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
     psg(8, 0); psg(9, 0); psg(10, 0); psg(7, 0xB8);
 }
 static void mus_set(u8 st) BK {                                           /* troca de estacao (0 = desliga) */
-    u16 x;
+    u16 x; u8 c;
     psg(8, 0); psg(9, 0); psg(10, 0); psg(7, 0xB8); mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
+    if (mus_fm) {
+        fm_off();
+        if (st) {
+            for (c = 0; c < 3; c++) fm(0x30 + c, mus_ins[st - 1][c]);
+            fm(0x16, 0x20); fm(0x26, 0x05); fm(0x17, 0x50); fm(0x27, 0x05); fm(0x18, 0xC0); fm(0x28, 0x01);          /* afinacao dos canais de ritmo */
+            fm(0x36, 0x03); fm(0x37, 0x53); fm(0x38, 0x45);                                                           /* volumes: bumbo; chimbal+caixa; tom+prato */
+        }
+    }
     mus_st = st;
     if (!st) return;
     mus_row = 0; mus_due = JIFFY; mus_fr = 0;
@@ -1909,7 +1965,8 @@ void main(void) {
 #endif
     install_hook();
     snd_init();
-    mus_set(1);                                          /* estacao padrao: Rock 'n' Roll */
+    fm_detect();
+    mus_set(1);                                          /* estacao padrao: Rock 'n' Roll (em FM se houver MSX-MUSIC) */
     for (;;) {
         title_screen();
         new_game();

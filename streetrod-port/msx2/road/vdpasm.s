@@ -21,6 +21,9 @@
 	.globl _g_palp
 	.globl _pal_load2
 	.globl _psg_w
+	.globl _fm_w
+	.globl _rd_slot
+	.globl _wr_slot
 	.globl _pal_one
 	.globl _vc
 	.globl _vdp_cmd15
@@ -898,6 +901,41 @@ _psg_w::
 	out (#0xA0),a
 	ld a,(_g_val)
 	out (#0xA1),a
+	ei
+	ret
+
+; _fm_w: escreve g_val no registrador g_reg do OPLL (YM2413, MSX-MUSIC), portas 0x7C/0x7D, com as esperas do chip (endereco 12, dado 84 estados)
+_fm_w::
+	ld a,(_g_reg)
+	di
+	out (#0x7C),a
+	nop
+	nop
+	nop
+	ld a,(_g_val)
+	out (#0x7D),a
+	ei
+	ld b,#9
+fm_w1:
+	djnz fm_w1
+	ret
+
+; _rd_slot: le o byte do endereco g_bk_src no slot g_bk_bank (BIOS RDSLT); resultado em g_val
+_rd_slot::
+	ld a,(_g_bk_bank)
+	ld hl,(_g_bk_src)
+	call 0x000C
+	ei
+	ld (_g_val),a
+	ret
+
+; _wr_slot: escreve g_val em g_bk_src no slot g_bk_bank (BIOS WRSLT)
+_wr_slot::
+	ld a,(_g_val)
+	ld e,a
+	ld a,(_g_bk_bank)
+	ld hl,(_g_bk_src)
+	call 0x0014
 	ei
 	ret
 
