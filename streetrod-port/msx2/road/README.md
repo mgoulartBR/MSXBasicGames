@@ -285,9 +285,9 @@ Depois da rua, aparece a **lanchonete** (LIB2 item 93, grupo 197): clique no car
 **EXIT**/ESC/botão direito voltam à garagem. O nome do alvo ("LOOK FOR OPPONENT") aparece na faixa preta sob a lanchonete. O fluxo de aposta/corrida (`bobs()`, BANK3) não mudou; `bobs_front()` (BANK2) é a tela.
 `bar_news` virou modo da barra de status (1 = jornal, 2 = Bob's). Teste: `bobsfront_test.tcl` (`-DSKIP_STREET -DCUR_X=20 -DCUR_Y=100`).
 
-### Bob's: os carros chegam sozinhos (revisão)
-Como no original: na lanchonete **os carros aparecem sozinhos** no estacionamento (faixa preta sob a arte, `BOB_TOP`=120): chegam deslizando pela esquerda/direita, **ficam parados 6-10 s** com o piloto na janela traseira e,
-se ninguém os desafia, **vão embora**; outro chega depois de 2-4 s. **Clique na cabeça do piloto** (ou leve o cursor até ela: o nome aparece na barra de status): janela com o nome, o carro dele e
-**CHALLENGE / NOT NOW**; CHALLENGE segue para tipo de corrida e aposta (`bobs_race`, BANK3). Sorteio: piloto aleatório (diferente do outro carro) e carro na classe dele (`pick_opp_car`); cada vaga tem sua cor (índices 6 e 7 da paleta).
-Arte: carros vistos de trás (LIB2 itens 11/249/57) em 50 px, fundo opaco (desenhados com HMMM + faixa limpa pelo rastro — sem cintilação), cabeça de piloto desenhada na janela (`HEAD` em `gen_assets.py`, posições `BOB_HEAD`).
+### Bob's: o oponente chega sozinho, igual ao carro da garagem (revisão)
+Um carro de cada vez, **com o mesmo desenho lateral da garagem** (`car_art`/`car_blit`/`car_slide`: corpo + rodas + sombra): **entra deslizando pela esquerda** até o centro, fica **parado 8-12 s** com a cabeça do piloto
+na janela (`bob_head`) e, se ninguém o desafia, **sai para a frente (direita)**; 2-4 s depois chega outro (piloto aleatório diferente, carro da classe dele, cor aleatória = índices 6/7 da paleta).
+**Clique na cabeça** (ou passe o cursor: o nome aparece na barra de status): janela com o nome, o carro e **CHALLENGE / NOT NOW** → tipo de corrida e aposta (`bobs_race`, BANK3). A cena do Bob's (item 93)
+teve os dois carros pintados apagados na geração (copiando faixas limpas da parede/meio-fio/asfalto); a página 2 fica limpa (sem o carro) para restaurar as janelas. Animação com troca de página, como na garagem.
 `pick_hot` ganhou `pick_tick` (função chamada a cada quadro). O fluxo de texto antigo (`bobs()`) continua para os testes. Teste: `bobsfront_test.tcl` (`-DBOB_CUR_X/-DBOB_CUR_Y` posicionam o cursor na cabeça).

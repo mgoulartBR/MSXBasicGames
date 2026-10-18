@@ -290,25 +290,11 @@ def main():
                 hl[top:54, 0 if c_ == 0 else 128:128 if c_ == 0 else 256] = 4
                 hl[top:54, 127] = 1                                # filete entre as colunas
             add((hl[:, 0::2] << 4 | hl[:, 1::2]).astype(np.uint8).tobytes(), news.shape[0] * 128, 3, group=191 + k_)
-        bobs = garage_pixels(lib2, 93)                           # Bob's Drive-In (item 93)
+        bobs = garage_pixels(lib2, 93).copy()                    # Bob's Drive-In (item 93) sem os carros pintados (os oponentes sao os mesmos carros da garagem, vistos de lado)
+        for x0, x1, xs, per in ((8, 73, 0, 6), (174, 252, 128, 10)):          # apaga os carros: parede/meio-fio/asfalto copiados de uma faixa limpa na mesma linha
+            for y in range(80, 121):
+                for x in range(x0, x1): bobs[y, x] = bobs[y, xs + (x - x0) % per]
         add((bobs[:, 0::2] << 4 | bobs[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=197)
-        # carros vistos de tras (itens 11, 249, 57) em 50 px, com fundo OPACO da cor do estacionamento e uma cabeca de piloto na janela; versao A (pintura = indice 6) e B (indice 7)
-        lot = int(bobs[135, 40]); bsheet = np.full((2 * 40, 256), lot, np.uint8); bch = []; bhead = []
-        HEAD = ["..AAA..", ".AAAAA.", ".BBBBB.", "BBBBBBB", ".BBBBB.", ".BBBBB.", "..BBB..", "...B..."]
-        for k_, item in enumerate(BOB_REAR):
-            sm = scale_sprite(np.where(bob_raw(lib2, item) == 12, 6, bob_raw(lib2, item)), 50)
-            hx, hy = BOB_HEAD[k_]
-            for v_ in range(2):
-                sp = np.where(sm == 0, lot, sm).astype(np.uint8)
-                if v_: sp = np.where(sp == 6, 7, sp).astype(np.uint8)
-                for yy, row in enumerate(HEAD):
-                    for xx, ch in enumerate(row):
-                        if ch != '.': sp[hy - 4 + yy, hx - 3 + xx] = 11 if ch == 'B' else 14
-                bsheet[v_ * 40:v_ * 40 + sp.shape[0], k_ * 52:k_ * 52 + 50] = sp
-            bch.append(sm.shape[0]); bhead.append((hx, hy))
-        add((bsheet[:, 0::2] << 4 | bsheet[:, 1::2]).astype(np.uint8).tobytes(), BOB_Y0 * 128, 1, group=198)
-        bobh = ('#define BOB_Y0 %d\n#define BOB_LOT %d\nstatic const uint8_t bc_h[3] = {%s};\nstatic const uint8_t bc_hx[3] = {%s};\nstatic const uint8_t bc_hy[3] = {%s};\n') % (
-            BOB_Y0, lot, ','.join(map(str, bch)), ','.join(str(h[0]) for h in bhead), ','.join(str(h[1]) for h in bhead))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -347,7 +333,7 @@ def main():
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
-        f.write(sprh); f.write(carh); f.write(bobh)
+        f.write(sprh); f.write(carh)
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))

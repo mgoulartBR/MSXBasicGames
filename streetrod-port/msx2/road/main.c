@@ -1410,7 +1410,7 @@ static void hot_label(u8 h) {
     if (lab_mode == 1) { vdp_wait(); cmd_n = 0; cp = cmd_buf; return; }                       /* jornal: as faixas ja dizem o que sao */
     if (lab_mode == 2) {                                                                         /* Bob's: o nome do piloto sob o cursor, na linha de baixo da barra de status */
         push_fill(0, 201, 206, 10, HC_W);
-        if (h != 255 && h < 2) gtext(6, 202, hnames[h], 0);
+        if (h == 0) gtext(6, 202, hnames[0], 0);
         vdp_wait(); cmd_n = 0; cp = cmd_buf; return;
     }
     hub_restore(56, 33, 162, 15);        /* o visor branco no alto da garagem (ou a faixa no pe do jornal) mostra o nome do objeto sob o cursor */
@@ -1503,88 +1503,78 @@ static void newspaper(void) {                  /* a primeira pagina do "Los Ange
     lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     load_garage(); band_save();                  /* de volta a garagem: o hub redesenha o carro */
 }
-/* ---- Bob's: os carros chegam sozinhos, param um tempo (o piloto aparece na janela) e vao embora se ninguem os desafia ---- */
-typedef struct { u8 st, pil, carid, set; i16 x; u16 t; } BSpot;        /* st: 0 vazio, 1 chegando, 2 parado, 3 saindo */
-static BSpot bsp[2];
-static Hot bobs_hot[3];
-static char bpn[2][14];
-static const char *bobs_name[2];
-#define BOB_TOP 120
-#define BOB_PARK0 14
-#define BOB_PARK1 192
-static i16 bob_park(u8 i) { return i ? BOB_PARK1 : BOB_PARK0; }
-static void bob_fill(i16 x0, i16 x1) {                 /* limpa (cor do estacionamento) uma faixa horizontal onde o carro estava */
-    if (x0 < 0) x0 = 0;
-    if (x1 > 256) x1 = 256;
-    if (x1 <= x0) return;
-    vc_w(4, x0 & ~1); vc_w(6, BOB_TOP); vc_w(8, ((x1 + 1) & ~1) - (x0 & ~1)); vc_w(10, 38); vc[12] = BOB_LOT * 17; vc[13] = 0; vc[14] = 0xC0;     /* HMMV */
-    vdp_cmd15();
+/* ---- Bob's: o carro do oponente (o mesmo desenho da garagem) chega sozinho pela esquerda, fica parado e, se ninguem o desafia, sai para a frente (direita) ---- */
+static u8 bst, bpil, bcar;                              /* bst: 0 vazio, 2 parado */
+static u16 bt; static i16 bxl;
+static Hot bobs_hot[2];
+static char bpn[14];
+static const char *bobs_name[1];
+static void cfill(i16 xa, i16 y, i16 w, i16 h, u8 c) {   /* retangulo de uma cor (LMMV) */
+    vc_w(4, xa); vc_w(6, y); vc_w(8, w); vc_w(10, h); vc[12] = c; vc[13] = 0; vc[14] = 0x80; vdp_cmd15();
 }
-static void bob_draw(u8 i) {                           /* carro i na posicao atual, opaco (HMMM), recortado nas bordas */
-    BSpot *b = &bsp[i]; i16 sx = b->set * 52, dx = b->x, w = 50;
-    if (dx < 0) { sx -= dx; w += dx; dx = 0; }
-    if (dx + w > 256) w = 256 - dx;
-    if (w > 0) {
-        vc_w(0, sx); vc_w(2, BOB_Y0 + i * 40); vc_w(4, dx); vc_w(6, BOB_TOP); vc_w(8, w); vc_w(10, bc_h[b->set]); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;      /* HMMM */
-        vdp_cmd15();
+static void bob_head(i16 base) {                        /* a cabeca do piloto na janela do carro (clicavel) */
+    i16 hx = bxl + ((car_wx0[bcar] + car_wx1[bcar]) >> 1) - 2, hy = base + car_yt(bcar) + (car_h[bcar] * 26) / 100;
+    cfill(hx + 2, hy, 3, 1, 14); cfill(hx + 1, hy + 1, 5, 1, 14);                  /* cabelo */
+    cfill(hx + 1, hy + 2, 5, 4, 15); cfill(hx, hy + 3, 1, 2, 15); cfill(hx + 6, hy + 3, 1, 2, 15);      /* rosto e orelhas */
+    cfill(hx + 2, hy + 6, 3, 2, 15);
+}
+static void bob_show(void) {                            /* carro parado + cabeca nas paginas 0 e 1 (a 2 fica limpa: e' a copia para restaurar) */
+    u8 p;
+    for (p = 0; p < 2; p++) { band_cmd(BAND_COPY_Y, p * 256 + BAND_Y); car_blit(p * 256, bcar, bxl); bob_head(p * 256); }
+    vdp_wait(); vdp_reg(2, 0x1F);
+}
+static void bobs_hotup(void) {
+    bobs_hot[0].x0 = 255; bobs_hot[0].x1 = 0;
+    if (bst == 2) {
+        i16 hx = bxl + ((car_wx0[bcar] + car_wx1[bcar]) >> 1) + 1, hy = car_yt(bcar) + (car_h[bcar] * 26) / 100 + 4;
+        bobs_hot[0].x0 = hx - 12; bobs_hot[0].x1 = hx + 12; bobs_hot[0].y0 = hy - 12; bobs_hot[0].y1 = hy + 12; bobs_hot[0].id = 0;
     }
-}
-static void bob_say(u8 i) {                            /* nome do piloto na etiqueta e nos dados do clique */
-    BSpot *b = &bsp[i]; u8 n = 0; const char *p = PILN(b->pil);
-    while (p[n] && n < 12) { bpn[i][n] = p[n]; n++; }
-    bpn[i][n] = 0;
 }
 static void bobs_tick(void) {
-    u8 i; u16 now = JIFFY; i16 old;
-    for (i = 0; i < 2; i++) {
-        BSpot *b = &bsp[i];
-        if (b->st == 0) {
-            if ((i16)(now - b->t) >= 0) {                         /* chega um carro novo (piloto diferente do outro vaga) */
-                u8 p = (u8)(rnd16() % NPILOTS);
-                if (bsp[i ^ 1].st && bsp[i ^ 1].pil == p) p = (p + 1) % NPILOTS;
-                pick_opp_car(p); b->pil = p; b->carid = sel_opp; b->set = car_spr[sel_opp]; bob_say(i);
-                { u8 c = (u8)(rnd16() % 12); g_reg = 6 + i; g_val = pcol_rb[c]; g_sh = pcol_g[c]; pal_one(); }          /* cor propria (indice 6 = vaga da esquerda, 7 = direita) */
-                b->st = 1; b->x = i ? 256 : -50;
-            }
-        } else if (b->st == 1 || b->st == 3) {
-            old = b->x;
-            if (b->st == 1) { b->x += i ? -2 : 2; if ((i && b->x <= bob_park(1)) || (!i && b->x >= bob_park(0))) { b->x = bob_park(i); b->st = 2; b->t = now + (u16)jhz * (6 + rnd16() % 5); } }
-            else { b->x += i ? 2 : -2; if (b->x > 256 || b->x < -50) { b->st = 0; b->t = now + (u16)jhz * (2 + rnd16() % 3); } }
-            if (b->st != 0) bob_draw(i);
-            if (b->x > old) bob_fill(old, b->x); else bob_fill(b->x + 50, old + 50);           /* rastro */
-            if (b->st == 0) bob_fill(old - 2, old + 52);
-        } else if ((i16)(now - b->t) >= 0) b->st = 3;                /* ninguem desafiou: vai embora */
-        bobs_hot[i].x0 = 255; bobs_hot[i].x1 = 0; bobs_hot[i].y0 = 0; bobs_hot[i].y1 = 0;
-        if (b->st == 2) {                                             /* a janela traseira (cabeca do piloto) e clicavel */
-            bobs_hot[i].x0 = b->x + bc_hx[b->set] - 9; bobs_hot[i].x1 = b->x + bc_hx[b->set] + 9;
-            bobs_hot[i].y0 = BOB_TOP + bc_hy[b->set] - 8; bobs_hot[i].y1 = BOB_TOP + bc_hy[b->set] + 8; bobs_hot[i].id = i;
-        }
+    u16 now = JIFFY; u8 p, n = 0; const char *q;
+    if (bst == 0 && (i16)(now - bt) >= 0) {                                  /* chega um carro: piloto e carro sorteados */
+        u8 c;
+        p = (u8)(rnd16() % NPILOTS);
+        if (p == bpil) p = (p + 1) % NPILOTS;
+        pick_opp_car(p); bpil = p; bcar = sel_opp;
+        q = PILN(p); while (q[n] && n < 12) { bpn[n] = q[n]; n++; } bpn[n] = 0;
+        c = (u8)(rnd16() % 12); cvar = 0; cstk = 0;
+        car_art(bcar, (car_flags[bcar] >> 4) & 3); set_paint(c);
+        bxl = (256 - car_w[bcar]) >> 1;
+        car_slide(bcar, -(i16)car_w[bcar], bxl);                              /* entra pela esquerda, como na garagem */
+        bst = 2; bob_show(); bt = JIFFY + (u16)jhz * (8 + rnd16() % 5);
+    } else if (bst == 2 && (i16)(now - bt) >= 0) {                           /* ninguem desafiou: sai para a frente */
+        bst = 0; bobs_hotup();
+        car_slide(bcar, bxl, 256);
+        for (p = 0; p < 2; p++) band_cmd(BAND_COPY_Y, p * 256 + BAND_Y);
+        vdp_wait(); vdp_reg(2, 0x1F);
+        bt = JIFFY + (u16)jhz * (2 + rnd16() % 3);
     }
+    bobs_hotup();
 }
-static void bobs_repaint(void) { u8 i; for (i = 0; i < 2; i++) if (bsp[i].st) bob_draw(i); }
-static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): os carros chegam sozinhos; clique na cabeca do piloto para ver quem e e desafiar. 1 = a corrida vai comecar */
-    u8 r, k, i; char cn[30]; const char *it[3];
-    u16 now;
-    bobs_name[0] = bpn[0]; bobs_name[1] = bpn[1];
-    g_group = 197; load_assets(); g_group = 198; load_assets();
+static void bobs_repaint(void) { if (bst == 2) { car_blit(0, bcar, bxl); bob_head(0); vdp_wait(); } }
+static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): os oponentes chegam sozinhos; clique na cabeca do piloto para ver quem e e desafiar. 1 = a corrida vai comecar */
+    u8 r, k; char cn[30]; const char *it[3];
+    bobs_name[0] = bpn; bpn[0] = 0;
+    g_group = 197; load_assets();
     cmd_n = 0; cp = cmd_buf; bar_news = 2; cur_ymax = 210; hub_status();
-    now = JIFFY; bsp[0].st = bsp[1].st = 0; bsp[0].t = now + jhz / 2; bsp[1].t = now + 2 * jhz;
-    bobs_hot[2].x0 = 214; bobs_hot[2].y0 = 201; bobs_hot[2].x1 = 250; bobs_hot[2].y1 = 211; bobs_hot[2].id = 3;
+    band_save();                                                              /* faixa limpa do cenario (pagina 3), usada pelas animacoes */
+    bst = 0; bpil = 255; bt = JIFFY + jhz; bobs_hot[1].x0 = 214; bobs_hot[1].y0 = 201; bobs_hot[1].x1 = 250; bobs_hot[1].y1 = 211; bobs_hot[1].id = 3;
 #ifdef BOB_CUR_X
     cur_x = BOB_CUR_X; cur_y = BOB_CUR_Y;
 #endif
     for (;;) {
-        hs = bobs_hot; hn = 3; hnames = bobs_name; lab_mode = 2; pick_tick = bobs_tick;
+        hs = bobs_hot; hn = 2; hnames = bobs_name; lab_mode = 2; pick_tick = bobs_tick;
         r = pick_hot(1);
         pick_tick = 0;
         if (r == 254 || r == 3) break;
-        sel_pil = bsp[r].pil; sel_opp = bsp[r].carid;                 /* quem e e com que carro */
-        for (i = 0, k = 0; k < 28 && CARN(sel_opp)[k]; k++) cn[k] = CARN(sel_opp)[k];
+        sel_pil = bpil; sel_opp = bcar;                                       /* quem e e com que carro */
+        for (k = 0; k < 28 && CARN(sel_opp)[k]; k++) cn[k] = CARN(sel_opp)[k];
         cn[k] = 0; it[0] = cn; it[1] = "CHALLENGE"; it[2] = "NOT NOW";
-        do { k = ui_pick(bpn[r], it, 3, 1); } while (k == 0);
+        do { k = ui_pick(bpn, it, 3, 1); } while (k == 0);
         if (k == 1 && bobs_race(sel_pil)) { lab_mode = 0; bar_news = 0; cur_ymax = 187; return 1; }
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 0, 256, 190); hub_status(); bobs_repaint();
-        now = JIFFY; for (i = 0; i < 2; i++) if (bsp[i].st == 2) bsp[i].t = now + (u16)jhz * (6 + rnd16() % 5);       /* o tempo de espera recomeca */
+        if (bst == 2) bt = JIFFY + (u16)jhz * (8 + rnd16() % 5);              /* o tempo de espera recomeca */
     }
     lab_mode = 0; bar_news = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     load_garage(); band_save();
