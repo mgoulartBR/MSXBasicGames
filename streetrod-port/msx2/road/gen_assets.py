@@ -365,9 +365,9 @@ def main():
             ck = np.zeros((kn.shape[0], 256), np.uint8); ck[:, :kn.shape[1]] = kn
             add((ck[:, 0::2] << 4 | ck[:, 1::2]).astype(np.uint8).tobytes(), GEAR_SRC_Y * 128, 1, group=63 + t_)
         # pecas do motor (LIB2): folhas de arte na pagina 1 (livre nos menus), carregadas por grupo sob demanda: 66 = motores 76-78, coletores 79-83/104/105, carburadores 84-86;
-        # 67 = cambios 99-102; 68 = pneus 65-68. Posicoes (x, y, w, h) na folha emitidas como art_x/art_y/art_w/art_h (indices: 0-12 grupo 66, 13-16 grupo 67, 17-20 grupo 68)
+        # 67 = cambios 99-102; 68 = pneus 65-68. Posicoes (x, y, w, h) na folha emitidas como art_x/art_y/art_w/art_h (indices: 0-18 grupo 66 [13-15 parafuso apertado/solto/erguido = itens 89/88/87, 16 furo = 138, 17-18 fiacao ligada/solta = 94/95], 19-22 grupo 67, 23-26 grupo 68)
         art_pos = []
-        for grp_, items_ in ((66, [76, 77, 78, 79, 80, 81, 82, 83, 104, 105, 84, 85, 86]), (67, [99, 100, 101, 102]), (68, [65, 66, 67, 68])):
+        for grp_, items_ in ((66, [76, 77, 78, 79, 80, 81, 82, 83, 104, 105, 84, 85, 86, 87, 88, 89, 138, 94, 95]), (67, [99, 100, 101, 102]), (68, [65, 66, 67, 68])):
             sheet = np.zeros((212, 256), np.uint8); x_ = y_ = rh_ = 0
             for it_ in items_:
                 px_ = garage_pixels(lib2, it_); h_, w_ = px_.shape

@@ -151,7 +151,7 @@ typedef struct { u8 id, eng, trn, man, carb, tir; i8 trim; u16 wear; u8 fuel, br
 static u16 money; static u8 day, nown, cur; static Car gc[MAXCARS];     /* estado do jogo */
 static u16 rnd16(void) { static u16 s = 0x1D2B; s = s * 25173u + 13849u; s ^= JIFFY; return s; }
 #define MAXSPARE 12
-static u8 spare[MAXSPARE], nspare;
+static u8 spare[MAXSPARE], nspare, bay_bad = 255;      /* bay_bad: carro (indice) com peca/parafuso solto no motor: nao anda; 255 = nenhum */
 static u8 offer_day = 255;
 static char pname[13];                       /* nome do jogador (carteira DMV); vazio = SPEEDY */
 static u8 ask_name;                          /* 1 = pedir o nome (jogo novo) */
@@ -721,7 +721,7 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_R 11
 #pragma codeseg BANK2
 static void new_game(void) BK {
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; shown_id = 255; ask_load = 1; ask_name = 1;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; bay_bad = 255; shown_id = 255; ask_load = 1; ask_name = 1;
 #ifdef NO_NAME
     ask_name = 0;                                                                   /* testes automatizados nao digitam o nome */
 #endif
@@ -1743,8 +1743,8 @@ static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 
 /* ---- o motor (clique no capo): janela com o motor, o coletor e o carburador do carro; TUNE (ponto), PARTS (trocar pecas, com a arte de cada peca) e DONE.
    A arte (LIB2: motores 76-78, coletores 79-83, carburadores 84-86, cambios 99-102, pneus 65-68) vem em folhas carregadas na pagina 1 (grupos 66-68) e e copiada por LMMM ---- */
 static u8 art_grp_cur;
-static void art_use(u8 idx) {                          /* garante a folha da peca idx (0-12 = grupo 66, 13-16 = 67, 17-20 = 68) na pagina 1 */
-    u8 g = idx < 13 ? 66 : idx < 17 ? 67 : 68, rg1;
+static void art_use(u8 idx) {                          /* garante a folha da peca idx (0-18 = grupo 66, 19-22 = 67, 23-26 = 68) na pagina 1 */
+    u8 g = idx < 19 ? 66 : idx < 23 ? 67 : 68, rg1;
     if (g == art_grp_cur) return;
     rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40); g_group = g; load_assets(); vdp_reg(1, rg1 | 0x40);
@@ -1764,7 +1764,7 @@ static void win_frame(u8 x, u8 w) {                    /* a moldura da janela: c
     cmd_n = 0; cp = cmd_buf; hub_restore(x, BW_Y, w, BW_H);
     push_fill(x, BW_Y, w, BW_H, 3); push_fill(x + 2, BW_Y + 2, w - 4, BW_H - 4, HC_W); push_fill(x + 4, BW_Y + 4, w - 8, BW_H - 8, HC_K);
 }
-static Hot bay_hot[7];
+static Hot bay_hot[10];
 static void red_btn(u8 i, u8 x, u8 y, u8 w, const char *s) {     /* botao vermelho de borda branca, como o original (e ja registra o clique) */
     u8 n = 0;
     while (s[n]) n++;
@@ -1772,20 +1772,109 @@ static void red_btn(u8 i, u8 x, u8 y, u8 w, const char *s) {     /* botao vermel
     gtext(x + (w - 6 * n) / 2, y + 4, s, 1);
     bay_hot[i].x0 = x; bay_hot[i].y0 = y; bay_hot[i].x1 = x + w - 1; bay_hot[i].y1 = y + 14; bay_hot[i].id = i;
 }
+/* parafusos (manual: "pressione duas vezes para soltar o parafuso; com todos soltos a peca some; clicar no furo vazio devolve o parafuso; duas vezes para apertar").
+   Estado de cada parafuso: 0 apertado, 1 meio solto (soltando), 2 meio apertado (apertando), 3 parafuso erguido sobre o furo, 4 furo vazio.
+   Soltar: 0 -> 1 -> 4. Apertar: 4 -> 3 -> 2 -> 0. Com todos os parafusos em 4 a peca sai e vai para as reservas; a peca nova (PARTS > SELECT) chega com os parafusos em 3.
+   Ordem: carburadores -> coletor -> motor (o motor tambem tem a fiacao, 1 clique: 0 ligada, 4 solta). Encaixes: 0 motor, 1 coletor, 2 carburadores. */
+static u8 bay_pr[3], bay_s[3][3], bay_nd, bay_dsl[8], bay_dix[8];
+static i16 bay_dx[8], bay_dy[8];
+static const u8 bay_cat[3] = {0, 3, 2};
+static const char *const bay_nm[11] = {"TUNE THE ENGINE", "CHANGE THE PARTS", "CLOSE THE HOOD", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT"};
+static const char *bay_msg;
+static u8 bay_nsl(u8 sl) { u8 mm = gcar->man > 6 ? 6 : gcar->man; return sl == 0 ? 2 : sl == 1 ? 2 : mp_n[mm]; }
+static void bay_reset(void) { u8 i, j; for (i = 0; i < 3; i++) { bay_pr[i] = 1; for (j = 0; j < 3; j++) bay_s[i][j] = 0; } }
+static u8 bay_tight(u8 sl) { u8 j, n = bay_nsl(sl); if (!bay_pr[sl]) return 0; for (j = 0; j < n; j++) if (bay_s[sl][j]) return 0; return 1; }
+static u8 bay_ok(void) { return bay_tight(0) && bay_tight(1) && bay_tight(2); }
+#ifdef BOLT_TEST
+static u8 tscr_i;                                       /* teste: roteiro de cliques (0xA0|encaixe = soltar o proximo parafuso do encaixe; 0xB0|encaixe = apertar; 254 = nada) */
+static u8 bay_test_k(u8 n) {
+    static const u8 tscr[] = {0xA2,0xA2, 0xA1,0xA1,0xA1,0xA1, 0xA0,0xA0,0xA0, 1,5,6, 1,3,5,2,5,6,
+                              0xB0,0xB0,0xB0,0xB0, 0xB1,0xB1,0xB1,0xB1,0xB1,0xB1, 0xB2,0xB2,0xB2, 2};
+    u8 k = tscr[tscr_i < sizeof tscr ? tscr_i : sizeof tscr - 1], d, sl, st; u16 j; u8 w;
+    for (w = 0; w < 30; w++) { j = JIFFY; while (JIFFY == j) ; }
+    dbg_t2 = bay_pr[0] | bay_pr[1] << 1 | bay_pr[2] << 2 | (u16)bay_nd << 8; dbg_t3 = bay_s[0][0] | bay_s[0][1] << 3 | bay_s[1][0] << 6 | bay_s[1][1] << 9 | bay_s[2][0] << 12;
+    dbg_t1 = ++tscr_i; for (w = 0; w < 30; w++) { j = JIFFY; while (JIFFY == j) ; }
+    if (k >= 0xA0) {
+        sl = k & 3;
+        for (d = 0; d < bay_nd; d++) if (bay_dsl[d] == sl) { st = bay_s[sl][bay_dix[d]]; if (k < 0xB0 ? st != 4 : st != 0) return 3 + d; }
+        return 254;
+    }
+    return k;
+}
+#endif
 static u8 bay_pick(u8 n, const char *const *names) {  /* espera um clique nos botoes (ESC = 254) */
     u8 k;
     vdp_wait(); cmd_n = 0; cp = cmd_buf;
+#ifdef BOLT_TEST
+    return bay_test_k(n);
+#endif
     hs = bay_hot; hn = n; hnames = names; lab_mode = 3; pick_tick = 0; cur_ymax = 210;
     k = pick_hot(1);
     lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     return k;
 }
-static void bay_engine(i16 cy) {                       /* motor + coletor (assentado na borda do topo do motor) + um carburador por almofada do coletor */
-    u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, ci = 10 + (gcar->carb > 2 ? 2 : gcar->carb), k;
+#define ART_BOLT 13                                     /* 13 apertado, 14 solto, 15 erguido, 16 furo, 17 fiacao ligada, 18 fiacao solta */
+static void bay_dot(i16 x, i16 y, u8 st, u8 wire) {
+    if (wire) { art_put(st == 0 ? 17 : 18, x - 2, y - 5); return; }
+    if (st >= 3) art_put(ART_BOLT + 3, x - 3, y - 3);                                  /* o furo */
+    if (st == 3) art_put(ART_BOLT + 2, x - 3, y - 9);                                  /* parafuso erguido acima do furo */
+    else if (st == 1 || st == 2) art_put(ART_BOLT + 1, x - 3, y - 9);
+    else if (st == 0) art_put(ART_BOLT, x - 3, y - 9);
+}
+static void bay_engine(i16 cy, u8 dots) {              /* motor + coletor (assentado na borda do topo do motor) + um carburador por almofada do coletor */
+    u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, ci = 10 + (gcar->carb > 2 ? 2 : gcar->carb), k, n;
     i16 ex = 128 - art_w[e] / 2, ey = cy + 14, px = ex + eng_cx[e] - art_w[mi] / 2, py = ey + eng_r[e] - art_h[mi];
-    art_put(e, ex, ey);
-    art_put(mi, px, py);
-    for (k = 0; k < mp_n[mm]; k++) art_put(ci, px + mp_x[mm][k] - art_w[ci] / 2, py + 5 - art_h[ci]);
+    bay_nd = 0;
+    if (bay_pr[0]) {
+        art_put(e, ex, ey);
+        if (dots) {
+            bay_dsl[0] = 0; bay_dix[0] = 0; bay_dx[0] = ex + 18; bay_dy[0] = ey + art_h[e] - 8;                                  /* parafuso do motor */
+            bay_dsl[1] = 0; bay_dix[1] = 1; bay_dx[1] = ex + art_w[e] / 2 + 6; bay_dy[1] = ey + art_h[e] - 1; bay_nd = 2;       /* fiacao (ponta do fio) */
+        }
+    }
+    if (bay_pr[1]) {
+        art_put(mi, px, py);
+        if (dots) for (k = 0; k < 2; k++) { n = bay_nd++; bay_dsl[n] = 1; bay_dix[n] = k; bay_dx[n] = k ? px + art_w[mi] - 10 : px + 10; bay_dy[n] = py + 9; }
+    }
+    if (bay_pr[2]) for (k = 0; k < mp_n[mm]; k++) {
+        art_put(ci, px + mp_x[mm][k] - art_w[ci] / 2, py + 5 - art_h[ci]);
+        if (dots) { n = bay_nd++; bay_dsl[n] = 2; bay_dix[n] = k; bay_dx[n] = px + mp_x[mm][k]; bay_dy[n] = py + 1; }
+    }
+    for (k = 0; k < bay_nd; k++) {                      /* parafusos e furos por cima de tudo (a folha das pecas ja esta na pagina 1) */
+        n = bay_dsl[k];
+        bay_dot(bay_dx[k], bay_dy[k], bay_s[n][bay_dix[k]], n == 0 && bay_dix[k] == 1);
+        bay_hot[3 + k].x0 = bay_dx[k] - 5; bay_hot[3 + k].y0 = bay_dy[k] - 7; bay_hot[3 + k].x1 = bay_dx[k] + 5; bay_hot[3 + k].y1 = bay_dy[k] + 5; bay_hot[3 + k].id = 3 + k;
+    }
+}
+static void bay_bubble(const char *m) {                 /* balao de fala no alto da janela */
+    u8 n = 0, x;
+    while (m[n]) n++;
+    x = BW_X + BW_W / 2 - 3 * n;
+    push_fill(x - 4, BW_Y + 6, 6 * n + 8, 14, HC_W); push_fill(x - 3, BW_Y + 7, 6 * n + 6, 12, 3); gtext(x, BW_Y + 9, m, 0);
+}
+static void bay_click(u8 d) {                           /* clique no parafuso/fiacao d */
+    u8 sl = bay_dsl[d], ix = bay_dix[d], n = bay_nsl(sl), i, id, all, *sp = &bay_s[sl][ix];
+    if (sl == 0 && ix == 1) {                           /* fiacao: um clique */
+        if (*sp == 0 && bay_pr[1]) { bay_msg = "TAKE THE MANIFOLD OFF FIRST"; return; }
+        *sp = *sp ? 0 : 4;
+    } else switch (*sp) {
+    case 0:                                             /* comeca a soltar */
+        if (sl == 1 && bay_pr[2]) { bay_msg = "TAKE THE CARBS OFF FIRST"; return; }
+        if (sl == 0 && bay_pr[1]) { bay_msg = "TAKE THE MANIFOLD OFF FIRST"; return; }
+        *sp = 1; break;
+    case 1: *sp = 4; break;                             /* parafuso sai */
+    case 4: *sp = 3; break;                             /* o parafuso volta */
+    case 3: case 2:                                     /* apertando: o encaixe de baixo precisa estar pronto */
+        if (sl == 1 && !bay_tight(0)) { bay_msg = "BOLT THE ENGINE FIRST"; return; }
+        if (sl == 2 && !bay_tight(1)) { bay_msg = "BOLT THE MANIFOLD FIRST"; return; }
+        *sp = *sp == 3 ? 2 : 0; break;
+    }
+    for (i = 0, all = 1; i < n; i++) if (bay_s[sl][i] != 4) all = 0;
+    if (all && bay_pr[sl]) {                            /* todos os parafusos fora: a peca some e vai para as reservas */
+        id = part_find(bay_cat[sl], *car_var(gcar, bay_cat[sl]), car_maker(gcar));
+        if (id == 255 || nspare >= MAXSPARE) { bay_msg = id == 255 ? "CAN'T TAKE THIS ONE OFF" : "NO ROOM FOR MORE SPARES"; *sp = 0; return; }
+        spare[nspare++] = id; bay_pr[sl] = 0;
+    }
 }
 static void car_tune_win(void) {
     static const char *const nm[3] = {"ADVANCE THE TIMING", "RETARD THE TIMING", "DONE TUNING"};
@@ -1793,7 +1882,7 @@ static void car_tune_win(void) {
     for (;;) {
         win_frame(BW_X, BW_W);
         gtext(BW_X + 70, BW_Y + 7, "TUNING", 1);
-        bay_engine(BW_Y + 20);
+        bay_engine(BW_Y + 20, 0);
         n = 0; put_str(b, &n, "TIMING "); if (gcar->trim < 0) b[n++] = '-'; else if (gcar->trim) b[n++] = '+'; put_num(b, &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); b[n] = 0;
         gtext(BW_X + 12, BW_Y + 92, b, 1);
         n = 0; put_str(b, &n, "POWER "); put_num(b, &n, car_power(gcar) / 100); b[n] = 0;
@@ -1806,7 +1895,7 @@ static void car_tune_win(void) {
     }
 }
 static void part_art(u8 cat, i16 cx, i16 cy) {          /* a peca instalada na categoria cat, centrada em (cx, cy) */
-    u8 v = *car_var(gcar, cat), i = cat == 0 ? (v > 2 ? 2 : v) : cat == 1 ? 13 + (v > 3 ? 3 : v) : cat == 2 ? 10 + (v > 2 ? 2 : v) : cat == 3 ? 3 + (v > 6 ? 6 : v) : 17 + (v > 3 ? 3 : v);
+    u8 v = *car_var(gcar, cat), i = cat == 0 ? (v > 2 ? 2 : v) : cat == 1 ? 19 + (v > 3 ? 3 : v) : cat == 2 ? 10 + (v > 2 ? 2 : v) : cat == 3 ? 3 + (v > 6 ? 6 : v) : 23 + (v > 3 ? 3 : v);
     art_put(i, (cx - art_w[i] / 2) & ~1, cy - art_h[i] / 2);
 }
 #define PX 8                                            /* a janela das pecas usa a tela toda: os motores sao largos */
@@ -1817,25 +1906,27 @@ static void parts_win(void) {
 #ifndef PARTS_CAT
 #define PARTS_CAT 0                                      /* (teste: categoria inicial) */
 #endif
-    u8 cat = PARTS_CAT, k, i, r, old, bub = 0, id, n, nxt = 0, fit = car_maker(gcar); char b[30];
+    u8 cat = PARTS_CAT, k, i, r, old, bub = 0, id, n, nxt = 0, fit = car_maker(gcar), sl; char b[30];
 #ifdef PARTS_CUR_X
     cur_x = PARTS_CUR_X; cur_y = PARTS_CUR_Y;
 #endif
     for (;;) {
         win_frame(PX, PW);
         for (i = 0; i < 5; i++) red_btn(i, PX + 8, BW_Y + 8 + 19 * i, 58, lab[i]);
-        part_art(cat, PX + 156, BW_Y + 66);
+        sl = cat == 0 ? 0 : cat == 3 ? 1 : cat == 2 ? 2 : 3;                   /* encaixe do motor (3 = fora do motor: cambio e pneus) */
+        if (sl == 3 || bay_pr[sl]) part_art(cat, PX + 156, BW_Y + 66);
         id = part_find(cat, *car_var(gcar, cat), fit);
-        n = 0; if (id != 255) put_str(b, &n, PARTN(id)); b[n] = 0;
+        n = 0; if (sl == 3 || bay_pr[sl]) { if (id != 255) put_str(b, &n, PARTN(id)); } else put_str(b, &n, "(EMPTY)"); b[n] = 0;
         gtext(PX + 156 - 3 * n, BW_Y + 9, b, 1);
         if (bub) {                                       /* balao de fala: nao ha peca reserva */
-            n = 0; put_str(b, &n, "NO SPARE "); put_str(b, &n, plu[cat]); b[n] = 0;
+            n = 0; if (bub == 2) put_str(b, &n, "UNBOLT THE OLD ONE FIRST"); else { put_str(b, &n, "NO SPARE "); put_str(b, &n, plu[cat]); } b[n] = 0;
             push_fill(PX + 156 - 3 * n - 4, BW_Y + 6, 6 * n + 8, 14, HC_W); push_fill(PX + 156 - 3 * n - 3, BW_Y + 7, 6 * n + 6, 12, 3); gtext(PX + 156 - 3 * n, BW_Y + 9, b, 0);
         }
         red_btn(5, PX + 8, BW_BTN, 100, "SELECT"); red_btn(6, PX + 132, BW_BTN, 100, "DONE");
         k = bay_pick(7, nm);
         if (k < 5) { cat = k; bub = 0; nxt = 0; continue; }
         if (k != 5) return;
+        if (sl < 3 && bay_pr[sl]) { bub = 2; continue; }  /* peca do motor: primeiro desaparafusar a antiga (clique nos pontinhos vermelhos) */
         gsn = 0;                                         /* SELECT: instala a proxima peca reserva desta categoria (a antiga vira reserva: da para voltar) */
         for (i = 0; i < nspare; i++) if (part_cat[spare[i]] == cat && (part_mk[spare[i]] & fit)) gsp[gsn++] = i;
         if (!gsn) { bub = 1; continue; }
@@ -1844,14 +1935,14 @@ static void parts_win(void) {
         *car_var(gcar, cat) = part_var[spare[r]];
         if (cat == 0) gcar->wear = 0;
         if (cat == 4) gcar->tp = 0;
-        if (old != 255) spare[r] = old; else { spare[r] = spare[--nspare]; nxt = 0; }
+        if (sl < 3) { spare[r] = spare[--nspare]; nxt = 0; bay_pr[sl] = 1; bay_s[sl][0] = bay_s[sl][1] = bay_s[sl][2] = 3; if (sl == 0) bay_s[0][1] = 4; }   /* a peca nova aparece solta: aparafusar na janela do motor */
+        else if (old != 255) spare[r] = old; else { spare[r] = spare[--nspare]; nxt = 0; }
     }
 }
 static void engine_bay(void) BK {
-    static const char *const nm[3] = {"TUNE THE ENGINE", "CHANGE THE PARTS", "CLOSE THE HOOD"};
     u8 k;
     if (!nown) { ui_note("NO CAR YET", "BUY ONE FIRST!"); return; }
-    gcar = &gc[cur]; art_grp_cur = 0;
+    gcar = &gc[cur]; art_grp_cur = 0; if (bay_bad != cur) bay_reset(); bay_msg = 0;
 #ifdef TEST_SPARES
     spare[0] = 0; spare[1] = 6; nspare = 2;                  /* testes: dois motores GM de reserva */
 #endif
@@ -1860,10 +1951,14 @@ static void engine_bay(void) BK {
 #endif
     for (;;) {
         win_frame(BW_X, BW_W);
-        bay_engine(BW_Y + 26);
+        bay_engine(BW_Y + 26, 1);
+        if (bay_msg) { bay_bubble(bay_msg); bay_msg = 0; }
         red_btn(0, BW_X + 10, BW_BTN, 52, "TUNE"); red_btn(1, BW_X + 66, BW_BTN, 52, "PARTS"); red_btn(2, BW_X + 122, BW_BTN, 52, "DONE");
-        k = bay_pick(3, nm);
-        if (k == 0) car_tune_win(); else if (k == 1) parts_win(); else return;
+        k = bay_pick(3 + bay_nd, bay_nm);
+        if (k >= 3 && k < 11) bay_click(k - 3);
+        else if (k == 0) { if (bay_ok()) car_tune_win(); else bay_msg = "TIGHTEN ALL THE BOLTS FIRST"; }
+        else if (k == 1) parts_win();
+        else { bay_bad = bay_ok() ? 255 : cur; return; }        /* DONE/ESC: se sobrou parafuso solto o carro nao anda */
     }
 }
 #endif
@@ -2181,6 +2276,7 @@ static u8 sv_save(void) BK {
 static u8 sv_load(void) BK {
     u8 i; u8 *g = (u8 *)gc;
     if (!sv_exists()) return 0;
+    bay_bad = 255;
     nown = sv_buf[4]; cur = sv_buf[5]; day = sv_buf[6]; nspare = sv_buf[7]; wins_drag = sv_buf[8]; wins_road = sv_buf[9]; sel_car = sv_buf[10];
     money = sv_buf[11] | ((u16)sv_buf[12] << 8);
     for (i = 0; i < 13; i++) pname[i] = sv_buf[SV_HDR + i];
@@ -2330,6 +2426,9 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             ui_nohint = 0;
         }
     }
+#ifdef BOLT_TEST
+    engine_bay();
+#endif
 #ifdef TEST_HOW
     ask_name = 0; dbg_t1 = 0; howto(); dbg_t1 = 1;
 #endif
@@ -2347,7 +2446,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         else if (r == 4) gas_station();
         else if (r == 5) {
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
-            else if (gc[cur].brk) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
+            else if (gc[cur].brk || bay_bad == cur) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
             else if (gc[cur].fuel < 3) ui_note("YOU DON'T GOT ENOUGH GAS", "TO CRUISE DOWN TO BOBS");
             else if (street_trip() && bobs_front()) return 0;
         }
@@ -2357,6 +2456,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             r = ui_pick("TIME TO QUIT", dm, 5, 0);
             if (r == 0) {
                 if (!sv_media) ui_note("NO PAC OR DISK FOUND", "TO SAVE THE GAME");
+                else if (bay_bad != 255) ui_note("FINISH THE ENGINE WORK", "BEFORE SAVING");
                 else if (sv_save()) ui_note("GAME SAVED", sv_media == 1 ? "IN THE PAC." : "ON THE DISK.");
                 else ui_note("COULDN'T SAVE THE GAME", "CHECK THE PAC OR DISK");
             } else if (r == 1) {

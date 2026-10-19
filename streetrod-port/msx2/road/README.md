@@ -382,3 +382,9 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - **Encaixe das pecas no motor:** `gen_assets.py` mede a borda do topo de cada motor (`eng_r`, `eng_cx`) e os pads de cada coletor (`mp_n`, `mp_x`); `bay_engine()` assenta o coletor nessa borda e põe um carburador por pad.
 - **Build completo:** use `./fullbuild.sh` (define `LIB2`, `HOT_DATA`, `SRSE_EXE`; ajuste `SR`). Sem `HOT_DATA`/`SRSE_EXE` o `gen_tables.py` cai nos nomes genericos "DEFAULT CAR n" — conferir `grep -c "DEFAULT CAR" textdata.bin` = 0 antes de enviar a ROM.
 - **Tela de nome:** BS apaga (nao e mais "voltar"); RETURN ou DONE fecham. O HOW TO DRIVE so abre pela porta da garagem.
+
+### Parafusos do motor (manual oficial, "POP THE HOOD - PARTS")
+- Arte original da LIB2: itens 89/88/87 (parafuso apertado / meio solto / erguido), 138 (furo), 94/95 (fiacao ligada/solta); entram na folha do grupo 66 (indices de arte 13-18; cambios 19-22, pneus 23-26).
+- Cada peca tem 1-3 parafusos (carburador: um por almofada do coletor; coletor: 2; motor: 1 parafuso + a fiacao). **2 cliques soltam** um parafuso (0 → 1 → furo); com todos fora a peca some e vai para as pecas reservas. **Clicar no furo** devolve o parafuso (erguido) e **2 cliques apertam**. A peca nova (PARTS > SELECT) chega com os parafusos erguidos sobre os furos. A fiacao do motor e 1 clique.
+- Ordem obrigatoria: carburadores → coletor → motor (e o inverso para montar); so da para afinar (TUNE) com tudo apertado. Sair com peca/parafuso solto deixa o carro "NOT RUNNING" (`bay_bad`), e nao salva o jogo ate terminar.
+- Teste: `bolt_test.tcl` com `-DBOLT_TEST -DNO_NAME -DSTART_CAR=2` (roteiro automatico: solta tudo, reinstala as pecas e aperta; um instantaneo por passo).
