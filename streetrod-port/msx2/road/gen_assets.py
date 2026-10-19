@@ -376,7 +376,23 @@ def main():
                 assert y_ + h_ <= 212
                 sheet[y_:y_ + h_, x_:x_ + w_] = px_; art_pos.append((x_, y_, w_, h_)); x_ += w_ + 2; rh_ = max(rh_, h_)
             add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), 256 * 128, 1, group=grp_)
+        eng_r, eng_cx, mp_n, mp_x = [], [], [], []
+        for i_ in (76, 77, 78):                                   # linha da borda frontal do topo do motor (fileira longa de branco): o coletor assenta nela
+            ea = garage_pixels(lib2, i_)
+            for r_ in range(5, 25):
+                cols = np.nonzero(ea[r_] == 4)[0]
+                if len(cols) >= 0.5 * ea.shape[1]: eng_r.append(r_); eng_cx.append(int((cols[0] + cols[-1]) // 2)); break
+        for i_ in (79, 80, 81, 82, 83, 104, 105):                 # almofadas do coletor (onde entram os carburadores): centros das corridas da fileira 0
+            pa = garage_pixels(lib2, i_)[0]; runs_ = []; x_ = 0
+            while x_ < len(pa):
+                if pa[x_] > 1:
+                    s_ = x_
+                    while x_ < len(pa) and pa[x_] > 1: x_ += 1
+                    if x_ - s_ >= 8: runs_.append((s_ + x_) // 2)
+                else: x_ += 1
+            mp_n.append(len(runs_)); mp_x.append((runs_ + [0, 0, 0])[:3])
         parth = ''.join('static const uint8_t art_%s[%d] = {%s};\n' % (c_, len(art_pos), ','.join(str(p_[k_]) for p_ in art_pos)) for k_, c_ in enumerate('xywh'))
+        parth += 'static const uint8_t eng_r[3] = {%s}, eng_cx[3] = {%s}, mp_n[7] = {%s}, mp_x[7][3] = {%s};\n' % (','.join(map(str, eng_r)), ','.join(map(str, eng_cx)), ','.join(map(str, mp_n)), ','.join('{%s}' % ','.join(map(str, r_)) for r_ in mp_x))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

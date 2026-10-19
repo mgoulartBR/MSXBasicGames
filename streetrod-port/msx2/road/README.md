@@ -378,3 +378,5 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - Espaco do nucleo: `pick_hot`/`hot_at`/`hot_label` foram para o nucleo (as janelas do banco 4 os chamam); para abrir espaco, as tabelas de notas (`mus_tab`, banco de assets) e as tabelas so da corrida (`assets_race.h`: sprites do oponente e ponteiros, no banco 1) sairam do nucleo (15846 de 16352 B).
 - Limite: o `bankify.py` le as definicoes na ordem do arquivo, entao uma funcao nao pode aparecer duas vezes em `#ifdef` com bancos diferentes (o stub do OLD_MENU virou macro).
 - Testes: `bay_test.tcl`, `bay2_test.tcl` (PARTS), `tune_test.tcl`, `swap_test.tcl` (`-DTEST_SPARES`, `-DBAY_CUR_X/Y`, `-DPARTS_CUR_X/Y`, `-DPARTS_CAT=n`).
+
+- **Encaixe das pecas no motor:** `gen_assets.py` mede a borda do topo de cada motor (`eng_r`, `eng_cx`) e os pads de cada coletor (`mp_n`, `mp_x`); `bay_engine()` assenta o coletor nessa borda e põe um carburador por pad.

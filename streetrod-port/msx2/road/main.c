@@ -1780,11 +1780,12 @@ static u8 bay_pick(u8 n, const char *const *names) {  /* espera um clique nos bo
     lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     return k;
 }
-static void bay_engine(i16 cy) {                       /* motor + coletor + carburador do carro (de baixo para cima) */
-    u8 e = gcar->eng > 2 ? 2 : gcar->eng, m = 3 + (gcar->man > 6 ? 6 : gcar->man), c = 10 + (gcar->carb > 2 ? 2 : gcar->carb);
-    art_put(e, (128 - art_w[e] / 2) & ~1, cy + 14);
-    art_put(m, (128 - art_w[m] / 2) & ~1, cy + 6);
-    art_put(c, (128 - art_w[c] / 2) & ~1, cy - 8);
+static void bay_engine(i16 cy) {                       /* motor + coletor (assentado na borda do topo do motor) + um carburador por almofada do coletor */
+    u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, ci = 10 + (gcar->carb > 2 ? 2 : gcar->carb), k;
+    i16 ex = 128 - art_w[e] / 2, ey = cy + 14, px = ex + eng_cx[e] - art_w[mi] / 2, py = ey + eng_r[e] - art_h[mi];
+    art_put(e, ex, ey);
+    art_put(mi, px, py);
+    for (k = 0; k < mp_n[mm]; k++) art_put(ci, px + mp_x[mm][k] - art_w[ci] / 2, py + 5 - art_h[ci]);
 }
 static void car_tune_win(void) {
     static const char *const nm[3] = {"ADVANCE THE TIMING", "RETARD THE TIMING", "DONE TUNING"};
