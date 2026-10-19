@@ -351,8 +351,8 @@ def main():
         add((calscr[:, 0::2] << 4 | calscr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=242)
         gus = garage_pixels(lib2, 90)                            # posto "Gus' Gas" (item 90, grupo 243)
         add((gus[:, 0::2] << 4 | gus[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=243)
-        lib1 = os.path.join(os.path.dirname(lib2), 'LIB1')        # telas da LIB1 (mesma paleta do jogo, EGA_PAL): 250 intro, 251 titulo, 252 ranking, 253 vitoria, 254 creditos; 256x200 (320 -> 256) centradas
-        for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3)):
+        lib1 = os.path.join(os.path.dirname(lib2), 'LIB1')        # telas da LIB1 (mesma paleta do jogo, EGA_PAL): 250 intro, 251 titulo, 252 ranking, 253 vitoria, 254 creditos, 245 jukebox (escolha da cor da pintura); 256x200 (320 -> 256) centradas
+        for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3), (245, 7)):
             scr = lib1_screen(lib1, it_)
             add((scr[:, 0::2] << 4 | scr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=grp_)
         ls = light_sheet(lib2)

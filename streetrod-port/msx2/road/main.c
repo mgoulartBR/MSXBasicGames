@@ -1232,7 +1232,9 @@ static void newspaper(void) {
 #endif
 /* ---- Bob's Drive-In: desafiar um piloto (arrancada / estrada / so por diversao / pink slip), apostas ---- */
 #pragma codeseg BANK3
-static const char *const paint_name[12] = {"PURPLE", "RED", "BLUE", "GREEN", "YELLOW", "SILVER", "ORANGE", "TURQUOISE", "BLACK", "WHITE", "PINK", "BROWN"};
+static void hub_draw(void) BK;
+static u8 jukebox(void) BK;
+static void credits(void) BK;
 static const char *const stk_name[9] = {"NO STICKER", "BANANA CLUB", "EXPLOSIVE", "STAR COP", "N.E.D.", "VETERAN", "FOR SALE", "EAGLE", "USA 1"};
 static void body_shop(void) BK {                 /* pintura, adesivos, teto rebaixado, para-choques (uma compra por visita: o carro e redesenhado ao sair) */
     static const char *it[5];
@@ -1243,7 +1245,7 @@ static void body_shop(void) BK {                 /* pintura, adesivos, teto reba
     it[3] = c->bump ? "RESTORE BUMPERS $15" : "STRIP BUMPERS $15"; it[4] = "BACK";
     r = ui_pick("PAINT AND BODY", it, 5, 0);
     if (r == 255 || r == 4) return;
-    if (r == 0) { k = ui_pick("NEW PAINT JOB", paint_name, 12, c->paint); if (k != 255 && try_pay(20)) c->paint = k; }
+    if (r == 0) { k = jukebox(); if (k < 12 && try_pay(20)) c->paint = k; hub_draw(); }
     else if (r == 1) { k = ui_pick("STICKERS", stk_name, 9, c->stick); if (k != 255 && k != c->stick && (k == 0 || try_pay(5))) c->stick = k; }
     else if (r == 2) { if (try_pay(70)) c->roof ^= 1; }
     else if (try_pay(15)) c->bump ^= 1;
@@ -1411,6 +1413,7 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
+static void credits(void) BK { full_screen(254, 1); }          /* LIB1 item 3: a placa "AD 1989" com os creditos (clique ou ESC fecham) */
 #pragma codeseg BANK2
 static void run_race(void) BK;
 static void race_go(void) BK;
@@ -1451,8 +1454,8 @@ static void band_cmd(i16 sy, i16 dy) {
     vdp_cmd15();
 }
 static void band_save(void) { band_cmd(512 + BAND_Y, BAND_COPY_Y); }
-static const u8 pcol_rb[12] = {0x55, 0x60, 0x16, 0x01, 0x70, 0x66, 0x70, 0x05, 0x11, 0x77, 0x75, 0x42};    /* cores da pintura (R<<4|B) e G: as 8 primeiras = as dos oponentes */
-static const u8 pcol_g[12]  = {0, 0, 2, 4, 6, 6, 3, 5, 1, 7, 3, 2};
+static const u8 pcol_rb[12] = {0x44, 0x50, 0x60, 0x74, 0x70, 0x71, 0x00, 0x22, 0x05, 0x27, 0x45, 0x67};    /* cores da pintura (R<<4|B) e G, na ordem do jukebox da LIB1: cinza, marrom, vermelho, rosa, laranja, amarelo, verde escuro/claro, azul escuro/claro, roxo escuro/claro (as cores dos oponentes sao outras: paint_rb) */
+static const u8 pcol_g[12]  = {4, 2, 0, 3, 4, 7, 4, 7, 0, 4, 0, 3};
 static void set_paint(u8 p) {                   /* indice 6 da paleta = pintura, 7 = reflexo (mais claro) */
     u8 rb = pcol_rb[p], g = pcol_g[p], r = (rb >> 4) & 7, b = rb & 7;
     g_reg = 6; g_val = rb; g_sh = g; pal_one();
@@ -2025,13 +2028,27 @@ static void name_screen(void) BK {
     if (!pname[0]) { static const char d[7] = "SPEEDY"; for (i = 0; i < 7; i++) pname[i] = d[i]; }
 }
 #endif
+static u8 jukebox(void) BK {                     /* LIB1 item 7: o jukebox com as 12 cores; devolve 0-11, ou 254 (voltar) */
+    static Hot jh[12];
+    u8 i, k, rg1 = *(volatile u8 *)0xF3E0;
+    clip_l = 0; clip_r = 256; ybase = 0;
+    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_garage; pal_load2(); g_group = 245; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    for (i = 0; i < 12; i++) {                                   /* 2 colunas de 6 etiquetas */
+        jh[i].x0 = i < 6 ? 58 : 130; jh[i].x1 = jh[i].x0 + 69; jh[i].y0 = 98 + 17 * (i % 6); jh[i].y1 = jh[i].y0 + 13; jh[i].id = i;
+    }
+    cmd_n = 0; cp = cmd_buf; gtext(34, 202, "PICK A COLOR - $20 - ESC LEAVES", 1); vdp_wait(); cmd_n = 0; cp = cmd_buf;
+    hs = jh; hn = 12; lab_mode = 1; pick_tick = 0; cur_ymax = 210;
+    k = pick_hot(1);
+    lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+    return k;
+}
 static void howto(void) {                        /* lista de comandos (primeira vez no jogo e na porta da garagem) */
     static const char *const how[6] = {"UP = GAS   DOWN = BRAKE", "LEFT / RIGHT = STEER", "SPACE OR BUTTON A = SHIFT UP", "SHIFT OR BUTTON B = SHIFT DOWN",
                                        "DON'T SHIFT BEFORE THE GREEN!", "ESC = BACK / STOP CRUISING"};
     ui_nohint = 0;
     ui_pick("HOW TO DRIVE", how, 6, 0);
 }
-static void hub_draw(void) {                    /* monta a garagem: cena, cursor, barra de status e o carro */
+static void hub_draw(void) BK {                    /* monta a garagem: cena, cursor, barra de status e o carro */
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cursor_init();
@@ -2075,9 +2092,9 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             else if (street_trip() && bobs_front()) return 0;
         }
         else {                                          /* a porta: salvar, carregar ou sair */
-            static const char *const dm[4] = {"SAVE GAME", "LOAD GAME", "HOW TO DRIVE", "QUIT TO TITLE"};
+            static const char *const dm[5] = {"SAVE GAME", "LOAD GAME", "HOW TO DRIVE", "CREDITS", "QUIT TO TITLE"};
             ui_nohint = 0;
-            r = ui_pick("TIME TO QUIT", dm, 4, 0);
+            r = ui_pick("TIME TO QUIT", dm, 5, 0);
             if (r == 0) {
                 if (!sv_media) ui_note("NO PAC OR DISK FOUND", "TO SAVE THE GAME");
                 else if (sv_save()) ui_note("GAME SAVED", sv_media == 1 ? "IN THE PAC." : "ON THE DISK.");
@@ -2087,7 +2104,8 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
                 else if (sv_load()) ui_note("GAME LOADED", "WELCOME BACK!");
                 else ui_note("NO SAVED GAME FOUND", "");
             } else if (r == 2) howto();
-            else if (r == 3) { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
+            else if (r == 3) { credits(); hub_draw(); }
+            else if (r == 4) { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
         }
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car();
     }

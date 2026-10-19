@@ -346,3 +346,9 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 - `howto()` (banco 2): lista de comandos (`ui_pick`, fecha com Espaco/clique/ESC). Aparece sozinha na primeira vez de um jogo novo (depois da carteira DMV) e sempre pelo item HOW TO DRIVE do menu da porta (SAVE / LOAD / HOW TO DRIVE / QUIT). Comandos conforme `handle_input`: cima = acelerador, baixo = freio, esquerda/direita = direcao, Espaco ou botao A = marcha acima, SHIFT ou botao B = marcha abaixo, ESC = voltar/parar o passeio.
 - Para liberar espaco no nucleo (16285/16352 B) `font_init`, `cursor_init`, `fmt_price` e `fmt_short` foram para o banco 1 (nucleo: 14958 B).
+
+## M7: jukebox (cores da pintura) e creditos
+
+- **Jukebox** (LIB1 item 7, grupo 245): `jukebox()` (banco 2) e a tela de escolha da cor em PAINT AND BODY > NEW PAINT JOB ($20): 12 etiquetas clicaveis (2 colunas de 6, `Hot` montados em tempo de execucao; mouse, cursor ou ESC para sair), na ordem da arte: cinza, marrom, vermelho, rosa, laranja, amarelo, verde escuro/claro, azul escuro/claro, roxo escuro/claro. As cores (`pcol_rb/pcol_g`) agora seguem essa lista (a paleta e uma aproximacao em 3 bits por canal; o original nao foi consultado) e as pinturas de saves antigos mudam de tom. Depois da escolha `hub_draw()` remonta a garagem.
+- **Creditos** (LIB1 item 3, a placa "AD 1989", grupo 254): item CREDITS do menu da porta (`credits()`, banco 3, clique ou ESC fecham). Cores: a paleta do jogo (`EGA_PAL`), que da uma placa cinza-metal com borda ciana; as cores originais nao sao conhecidas.
+- Nao usados ainda: LIB1 item 6 (labios) e item 5 (retrato da garota).
