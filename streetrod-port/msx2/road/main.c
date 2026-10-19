@@ -1412,7 +1412,24 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
-static void credits(void) BK { full_screen(254, 0); cmd_n = 0; cp = cmd_buf; gtext(59, 198, "PORT BY BIGFIVE STUDIOS", 1); vdp_wait(); cmd_n = 0; cp = cmd_buf; wait_click(); }          /* LIB1 item 3: a placa "AD 1989" com os creditos (clique ou ESC fecham) */
+static void cr_mid(i16 y, const char *s) { u8 n = 0; while (s[n]) n++; gtext(128 - 3 * n, y, s, 0); }
+static void credits(void) BK {                     /* LIB1 item 3: a placa "AD 1989"; o texto miudo original (320 -> 256 colunas) ficou ilegivel, entao e refeito na fonte do jogo */
+    full_screen(254, 0);
+    cmd_n = 0; cp = cmd_buf;
+    push_fill(14, 56, 53, 43, 5); push_fill(183, 56, 65, 43, 5); push_fill(35, 101, 186, 7, 5); push_fill(60, 160, 136, 8, 5); push_fill(54, 170, 154, 17, 5);     /* apaga os textos pequenos (indice 5 = fundo da placa) */
+    cr_mid(172, "PORT BY BIGFIVE STUDIOS"); cr_mid(180, "CLICK FOR CREDITS");
+    wait_click();
+    push_fill(12, 30, 234, 157, 5);                                                    /* pagina 2: so o texto, na moldura da placa */
+    gtext(18, 36, "PROGRAM BY:", 0); gtext(18, 47, "ANDRZEJ SANOJCA", 0); gtext(18, 56, "BOGDAN BLASZCZAK", 0); gtext(18, 65, "TOMASZ PAWLOWSKI", 0);
+    gtext(18, 74, "WOJTEK WAS", 0); gtext(18, 83, "JAREK OLSZEWSKI", 0); gtext(18, 92, "PRZEMEK ROKITA", 0);
+    gtext(130, 36, "COMPUTOGRAPHY BY:", 0); gtext(130, 47, "MARCIN SZOSTAKOWSKI", 0); gtext(130, 56, "MACIEJ MARKUSZEWSKI", 0); gtext(130, 65, "HYRU GAU", 0);
+    gtext(130, 80, "SOUNDS BY:", 0); gtext(130, 91, "DOROTA BLASZCZAK", 0);
+    cr_mid(108, "DEVELOPMENT AND PROGRAMMING BY"); cr_mid(117, "P.Z. KAREN CO. DEVELOPMENT GROUP");
+    cr_mid(131, "ORIGINAL CONCEPT DEVELOPED BY"); cr_mid(140, "MAGIC PARTNERS");
+    cr_mid(154, "(C) 1989 LOGICAL DESIGN WORKS, INC."); cr_mid(163, "ALL RIGHTS RESERVED");
+    cr_mid(175, "MSX2 PORT BY BIGFIVE STUDIOS");
+    vdp_wait(); wait_click();
+}
 #pragma codeseg BANK2
 static void run_race(void) BK;
 static void race_go(void) BK;

@@ -10,5 +10,6 @@ after time 24 { snap c0 }
 after time 25 { tap 8 0x01 }
 after time 28 { snap c1 }
 after time 29 { tap 8 0x01 }
+after time 31 { snap c3 }
 after time 34 { snap c2 }
 after time 35 { exit }
