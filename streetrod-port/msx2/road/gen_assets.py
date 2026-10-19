@@ -355,6 +355,15 @@ def main():
         for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3)):
             scr = lib1_screen(lib1, it_)
             add((scr[:, 0::2] << 4 | scr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=grp_)
+        GEAR_PX, GEAR_SRC_Y = 212, 972                           # painel do cambio no cockpit (itens 227 = 3 marchas, 228 = 4 marchas, 229 = automatico) e botao/alavanca (230, 231, 232):
+        mapa = np.array(MAP, np.uint8)                            # grupos 60-62 (painel, na pagina 3 em GEAR_SRC_Y, copiado para as 3 paginas no inicio da corrida) e 63-65 (botao)
+        for t_, (pi_, ki_) in enumerate(((229, 232), (227, 230), (228, 231))):
+            pn = mapa[garage_pixels(lib2, pi_)]
+            cv = np.zeros((pn.shape[0], 256), np.uint8); cv[:, GEAR_PX:GEAR_PX + pn.shape[1]] = pn
+            add((cv[:, 0::2] << 4 | cv[:, 1::2]).astype(np.uint8).tobytes(), GEAR_SRC_Y * 128, 1, group=60 + t_)
+            kraw = garage_pixels(lib2, ki_); kn = mapa[kraw]; kn[kraw == 1] = 11; kn[kraw == 0] = 0          # contorno escuro vira cinza (0 = transparente)
+            ck = np.zeros((kn.shape[0], 256), np.uint8); ck[:, :kn.shape[1]] = kn
+            add((ck[:, 0::2] << 4 | ck[:, 1::2]).astype(np.uint8).tobytes(), GEAR_SRC_Y * 128, 1, group=63 + t_)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []

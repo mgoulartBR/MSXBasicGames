@@ -460,9 +460,6 @@ static void draw_text(i16 x, i16 y, const char *s, u8 c) {
 
 /* instrumentos do cockpit: ponteiros (LINE) sobre o fundo restaurado da pagina 2 (HMMM); so redesenha quando o valor muda
    (cache por pagina, pois ha 2 paginas alternadas) */
-#define GEAR_SHEET_Y 1000        /* digitos 0-9 pre-desenhados na pagina 3 */
-#define HUD_GEAR_X 133
-#define HUD_GEAR_Y 115
 #pragma codeseg BANK1
 static void gauge(i16 cx, i16 cy, i16 tx, i16 ty) {
     i16 dx = tx, dy = ty, ax = tx < 0 ? -tx : tx, ay = ty < 0 ? -ty : ty;
@@ -478,16 +475,48 @@ static void gauge(i16 cx, i16 cy, i16 tx, i16 ty) {
 }
 static u16 hud_c[2][3];
 static void hud_reset(void) { u8 i; for (i = 0; i < 3; i++) hud_c[0][i] = hud_c[1][i] = 0xFFFF; }
+/* manopla de cambio (itens 227-232 da LIB2): o painel (3 marchas, 4 marchas ou automatico) vai para as 3 paginas no inicio da corrida e o botao anda pela grade
+   (ate a barra do meio, ao longo dela e para a marcha) em passos de 3 px por quadro; so redesenha (fundo limpo da pagina 2 + LMMM) quando muda de lugar */
+#define GPX 212
+#define GPY 122
+#define GSRC_Y 972
+static u8 gk_type;                              /* 0 automatico, 1 manual de 3 marchas, 2 de 4 */
+static i16 gk_x[2], gk_y[2], gk_dx[2], gk_dy[2]; /* posicao do centro do botao no painel (automatico: y da alavanca) e o ultimo desenho em cada pagina */
+static i16 toward(i16 v, i16 t, i16 s) { return v < t ? (t - v < s ? t : v + s) : v > t ? (v - t < s ? t : v - s) : v; }
+static void gear_init(void) {
+    u8 p, rg1 = *(volatile u8 *)0xF3E0;
+    gk_type = pt_auto[0] ? 0 : pt_ngears[0] > 3 ? 2 : 1;
+    vdp_reg(1, rg1 & ~0x40);
+    g_group = 60 + gk_type; load_assets();
+    for (p = 0; p < 3; p++) { vc_w(0, GPX); vc_w(2, GSRC_Y); vc_w(4, GPX); vc_w(6, p * 256 + GPY); vc_w(8, 38); vc_w(10, 43); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0; vdp_cmd15(); }
+    vdp_wait();
+    g_group = 63 + gk_type; load_assets();
+    vdp_reg(1, rg1 | 0x40);
+    for (p = 0; p < 2; p++) { gk_x[p] = gk_type ? 20 : 8; gk_y[p] = gk_type ? 19 : 21; gk_dx[p] = -1; }
+}
+static void gear_knob(u8 pg) {
+    i16 x = gk_x[pg], y = gk_y[pg], tx, ty;
+    if (gk_type == 0) { tx = 8; ty = gear ? 26 : 21; y = toward(y, ty, 3); }                 /* alavanca: N no meio, D embaixo */
+    else {
+        tx = gear < 3 ? 20 : 27; ty = gear == 0 ? 19 : (gear & 1) ? 12 : 27;                /* 1 e 3 em cima, 2 e 4 embaixo */
+        if (x != tx && y != 19) y = toward(y, 19, 3); else if (x != tx) x = toward(x, tx, 3); else y = toward(y, ty, 3);
+    }
+    gk_x[pg] = x; gk_y[pg] = y;
+    if (x == gk_dx[pg] && y == gk_dy[pg]) return;
+    gk_dx[pg] = x; gk_dy[pg] = y;
+    vc_w(0, GPX); vc_w(2, 512 + GPY); vc_w(4, GPX); vc_w(6, ybase + GPY); vc_w(8, 38); vc_w(10, 43); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;      /* painel limpo (pagina 2) */
+    vdp_cmd15();
+    vc_w(0, 0); vc_w(2, GSRC_Y); vc_w(4, gk_type ? GPX + x - 10 : GPX + x); vc_w(6, ybase + GPY + y - (gk_type ? 9 : 4)); vc_w(8, 20); vc_w(10, gk_type ? 19 : 8); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;      /* LMMM: cor 0 transparente */
+    vdp_cmd15();
+}
 static void draw_hud_page(void) {
     u8 pg = ybase != 0;
-    u16 sp = speed > NEEDLE_SPD_N - 1 ? NEEDLE_SPD_N - 1 : speed, rp = rpm / 50, g = gear;
+    u16 sp = speed > NEEDLE_SPD_N - 1 ? NEEDLE_SPD_N - 1 : speed, rp = rpm / 50;
     if (rp > NEEDLE_RPM_N - 1) rp = NEEDLE_RPM_N - 1;
     if (hud_c[pg][0] != sp) { hud_c[pg][0] = sp; gauge(GAUGE_SPD_X, GAUGE_SPD_Y, needle_spd[sp * 2], needle_spd[sp * 2 + 1]); }
     if (hud_c[pg][1] != rp) { hud_c[pg][1] = rp; gauge(GAUGE_RPM_X, GAUGE_RPM_Y, needle_rpm[rp * 2], needle_rpm[rp * 2 + 1]); }
     (void)pg;
-    vc_w(0, g * 8); vc_w(2, GEAR_SHEET_Y); vc_w(4, HUD_GEAR_X); vc_w(6, ybase + HUD_GEAR_Y);   /* o overlay apaga o mostrador pequeno: recopia a marcha todo quadro */
-    vc_w(8, 8); vc_w(10, 12); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
-    vdp_cmd15();
+    gear_knob(pg);
 }
 
 #ifdef DEBUG_HUD
@@ -527,10 +556,8 @@ static void init_static(void) {
         vdp_wait();
     }
     load_cockpit();
-    ybase = GEAR_SHEET_Y; cmd_n = 0; cp = cmd_buf;
-    for (pg = 0; pg < 10; pg++) draw_digit(pg * 8, 0, pg, 13);
-    vdp_wait();
     hud_reset();
+    gear_init();
     clip_l = VIEW_X0; clip_r = VIEW_X1;
 }
 
