@@ -341,3 +341,8 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 - LIB2 item 16 ("DRIVER LICENSE", linha `NAME:`) vira o grupo 244 (no alto da tela, copias nas paginas 0-2). `name_screen()` (banco 2) roda no primeiro `hub()` de um jogo novo, depois da pergunta de carregar (se carregou um save, o nome vem dele): digita-se com o teclado do MSX (buffer da BIOS via `key_get`, RETURN termina, BS apaga, ESC aceita) ou clicando no teclado da tela (26 letras, SPACE, DEL, DONE: hotspots para `pick_hot`, acessiveis com o mouse e o cursor). 12 letras no maximo; vazio vira SPEEDY. `pick_abort` deixa um `pick_tick` encerrar o `pick_hot` (RETURN).
 - O nome entra no ranking (linha amarela) e no arquivo de save (versao 2, 104 bytes). Teste: `-DNO_NAME` pula a tela (testes automatizados), `name_test.tcl`.
+
+## M7: HOW TO DRIVE
+
+- `howto()` (banco 2): lista de comandos (`ui_pick`, fecha com Espaco/clique/ESC). Aparece sozinha na primeira vez de um jogo novo (depois da carteira DMV) e sempre pelo item HOW TO DRIVE do menu da porta (SAVE / LOAD / HOW TO DRIVE / QUIT). Comandos conforme `handle_input`: cima = acelerador, baixo = freio, esquerda/direita = direcao, Espaco ou botao A = marcha acima, SHIFT ou botao B = marcha abaixo, ESC = voltar/parar o passeio.
+- Para liberar espaco no nucleo (16285/16352 B) `font_init`, `cursor_init`, `fmt_price` e `fmt_short` foram para o banco 1 (nucleo: 14958 B).

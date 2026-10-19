@@ -698,7 +698,7 @@ static void new_game(void) BK {
 }
 
 #pragma codeseg CODE
-static void font_init(void);
+static void font_init(void) BK;
 static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
     u8 rg1 = *(volatile u8 *)0xF3E0;
     vdp_reg(1, rg1 & ~0x40);
@@ -718,7 +718,8 @@ static void lmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {
 /* ---- fonte da garagem: a fonte 6x8 da BIOS (CGTBL) copiada para a pagina 3 da VRAM (preta e branca) e desenhada por LMMM ---- */
 #define FONT_Y 976
 #define HC_K 1          /* preto */
-static void font_init(void) {
+#pragma codeseg BANK1
+static void font_init(void) BK {
     const u8 *cg = (const u8 *)(*(volatile u16 *)0x0004);
     u8 g, r, b, x, bits; u16 o, off;
     for (o = 0; o < 6144; o++) cmd_buf[o] = 0;
@@ -735,6 +736,7 @@ static void font_init(void) {
     }
     g_vlo = 0xE800; g_vhi = 1; g_vpg = 24; vram_blit();
 }
+#pragma codeseg CODE
 static void gtext(i16 x, i16 y, const char *s, u8 c) {      /* c: 0 = preto, 1 = branco; avanca 6 px por letra */
     i16 sy0 = FONT_Y + c * 24; u8 ch;
     for (; *s; s++, x += 6) {
@@ -773,7 +775,8 @@ static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8,
 #define CUR_Y 110
 #endif
 static u8 cur_x = CUR_X, cur_y = CUR_Y, cur_ymax = 187, mouse_seen;
-static void cursor_init(void) {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
+#pragma codeseg BANK1
+static void cursor_init(void) BK {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
     u8 f[18], i, o;
     for (i = 0; i < 18; i++) f[i] = 0;
     for (i = 0; i < 12; i++) f[i + 1] = cur_shape[i] >> 1;
@@ -788,6 +791,7 @@ static void cursor_init(void) {                /* padroes 0 (miolo, branco) e 4 
     for (i = 0; i < 16; i++) { cmd_buf[i] = HC_W; cmd_buf[16 + i] = 1; }
     g_vlo = 0x7400; vram_blit();
 }
+#pragma codeseg CODE
 static void spr_on(void) {
 #ifdef NO_SPR
     return;
@@ -902,7 +906,8 @@ static void ui_note(const char *a, const char *b) {   /* aviso de 2 linhas, ate 
     ui_pick(a, it + 1, 1, 0);
 }
 /* "NOME....... $1234" em tb[] (nome cortado/preenchido em 21 colunas, preco em 4 digitos) */
-static const char *fmt_price(const char *name, u16 price) {
+#pragma codeseg BANK1
+static const char *fmt_price(const char *name, u16 price) BK {
     u8 i = 0;
     while (i < 20 && name[i]) { tb[i] = name[i]; i++; }
     while (i < 21) tb[i++] = ' ';
@@ -912,7 +917,7 @@ static const char *fmt_price(const char *name, u16 price) {
     tb[i + 4] = 0;
     return tb;
 }
-static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
+static const char *fmt_short(u16 v) BK {       /* "YOU ARE $123 SHORT" */
     u8 i = 0;
     static const char pre[] = "YOU ARE $";
     while (pre[i]) { tb[i] = pre[i]; i++; }
@@ -925,6 +930,7 @@ static const char *fmt_short(u16 v) {       /* "YOU ARE $123 SHORT" */
     return tb;
 }
 
+#pragma codeseg CODE
 /* ---- inventario ---- */
 
 /* ---- garagem: carros, pecas, ajuste do ponto, informacoes, venda ---- */
@@ -2019,6 +2025,12 @@ static void name_screen(void) BK {
     if (!pname[0]) { static const char d[7] = "SPEEDY"; for (i = 0; i < 7; i++) pname[i] = d[i]; }
 }
 #endif
+static void howto(void) {                        /* lista de comandos (primeira vez no jogo e na porta da garagem) */
+    static const char *const how[6] = {"UP = GAS   DOWN = BRAKE", "LEFT / RIGHT = STEER", "SPACE OR BUTTON A = SHIFT UP", "SHIFT OR BUTTON B = SHIFT DOWN",
+                                       "DON'T SHIFT BEFORE THE GREEN!", "ESC = BACK / STOP CRUISING"};
+    ui_nohint = 0;
+    ui_pick("HOW TO DRIVE", how, 6, 0);
+}
 static void hub_draw(void) {                    /* monta a garagem: cena, cursor, barra de status e o carro */
     load_garage();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
@@ -2045,7 +2057,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             ui_nohint = 0;
         }
     }
-    if (ask_name) { ask_name = 0; name_screen(); hub_draw(); }                       /* jogo novo: a carteira DMV pede o nome */
+    if (ask_name) { ask_name = 0; name_screen(); hub_draw(); howto(); }                       /* jogo novo: a carteira DMV pede o nome */
     for (;;) {
         if (game_end) return 1;
         if (!nown && money < 300 && !nspare) { game_end = 3; return 1; }
@@ -2063,9 +2075,9 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             else if (street_trip() && bobs_front()) return 0;
         }
         else {                                          /* a porta: salvar, carregar ou sair */
-            static const char *const dm[3] = {"SAVE GAME", "LOAD GAME", "QUIT TO TITLE"};
+            static const char *const dm[4] = {"SAVE GAME", "LOAD GAME", "HOW TO DRIVE", "QUIT TO TITLE"};
             ui_nohint = 0;
-            r = ui_pick("TIME TO QUIT", dm, 3, 0);
+            r = ui_pick("TIME TO QUIT", dm, 4, 0);
             if (r == 0) {
                 if (!sv_media) ui_note("NO PAC OR DISK FOUND", "TO SAVE THE GAME");
                 else if (sv_save()) ui_note("GAME SAVED", sv_media == 1 ? "IN THE PAC." : "ON THE DISK.");
@@ -2074,7 +2086,8 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
                 if (!sv_media) ui_note("NO PAC OR DISK FOUND", "TO LOAD A GAME");
                 else if (sv_load()) ui_note("GAME LOADED", "WELCOME BACK!");
                 else ui_note("NO SAVED GAME FOUND", "");
-            } else if (r == 2) { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
+            } else if (r == 2) howto();
+            else if (r == 3) { ui_nohint = 1; if (ui_pick("QUIT GAME?", yn, 2, 1) == 0) { ui_nohint = 0; return 1; } ui_nohint = 0; }
         }
         cmd_n = 0; cp = cmd_buf; hub_restore(0, 22, 256, 168); hub_status(); draw_car();
     }
