@@ -32,7 +32,12 @@
 
 	.area _CODE
 init:
-	ld sp,(0xFC4A)
+	ld hl,(0xFC4A)           ; pilha logo abaixo de HIMEM, mas nunca acima de 0xF300: 0xF37D e o gancho do BDOS do Disk BASIC (sem disco, HIMEM = 0xF380 e a pilha cairia em cima dele)
+	ld a,h
+	cp a,#0xF3
+	jr c,sp_ok
+	ld hl,#0xF300
+sp_ok:	ld sp,hl
 	call map_page2           ; mapeia o slot do cartucho tambem na pagina 2
 	xor a,a
 	ld (0x6000),a            ; ASCII16: banco 0 em 0x4000-0x7FFF (codigo fixo)

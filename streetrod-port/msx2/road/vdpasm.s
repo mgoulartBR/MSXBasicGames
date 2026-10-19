@@ -938,6 +938,8 @@ _sr_exec::
 	ldir
 	jp sr_ram
 sr_tpl:                          ; (sem LD (nn),A para enderecos 0x4000-0xBFFF: os emuladores adivinham o mapper contando esses padroes, e so 0x6000/0x7000 podem aparecer)
+	push ix                  ; a BIOS pode estragar IX/IY, que o C usa
+	push iy
 	di
 	ld a,(_g_bk_bank)
 	ld h,#0x40
@@ -1028,6 +1030,8 @@ sr_exit:
 	ld a,(_cart_slot)
 	ld h,#0x40
 	call 0x0024              ; volta o cartucho para a pagina 1
+	pop iy
+	pop ix
 	ei
 	ret
 sr_end:
@@ -1041,6 +1045,8 @@ _bd_exec::
 	ldir
 	jp sr_ram
 bd_tpl:
+	push ix                  ; o BDOS pode estragar IX/IY, que o C usa
+	push iy
 	ld a,(_g_reg)
 	ld c,a
 	ld de,(_g_bk_src)
@@ -1056,6 +1062,8 @@ bd_tpl:
 	call 0x0024
 	ld a,(_cur_bank)
 	ld (0x7000),a
+	pop iy
+	pop ix
 	ei
 	ret
 bd_end:

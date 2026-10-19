@@ -1901,6 +1901,35 @@ static void race_result(void) BK {              /* resultado da corrida: janela 
 #define SV_GC (SV_SP + MAXSPARE)
 #define SV_N (SV_GC + sizeof(gc) + 2)
 static u8 sv_media, sv_slot, sv_buf[128], sv_chk[128], sv_fcb[37];     /* sv_media: 0 nenhum, 1 PAC, 2 disco */
+#ifdef FAKE_DISK
+/* BDOS falso (so para teste): arquivos STREETRO.SAV/.RNK em RAM; confere a sequencia de chamadas do DOS 1 (DTA antes de ler/gravar, FCB com nome em branco-preenchido e tamanho de registro 128) */
+static u8 fk_file[2][256], fk_ex[2], fk_cr[2], fk_len[2], fk_dta_ok, fk_bad, fk_tramp[15]; static u16 fk_dta;
+static void fake_bdos(void) {
+    u8 *f = (u8 *)g_bk_src, i, id = f[9] == 'R', r = 0, k; static const char nm[9] = "STREETRO";
+    g_val = 0;
+    if (g_reg == 0x1A) { fk_dta = g_bk_src; fk_dta_ok = 1; return; }                     /* DE = DTA, nao FCB */
+    for (i = 0; i < 8; i++) if (f[1 + i] != nm[i]) fk_bad = 1;
+    if (f[10] != (id ? 'N' : 'A') || f[11] != (id ? 'K' : 'V')) fk_bad = 1;
+    switch (g_reg) {
+        case 0x1A: fk_dta = g_bk_src; fk_dta_ok = 1; g_val = 0; return;
+        case 0x13: fk_ex[id] = 0; return;
+        case 0x16: fk_ex[id] = 1; fk_len[id] = 0; f[32] = 0; return;
+        case 0x0F: if (!fk_ex[id]) g_val = 0xFF; f[32] = 0; return;
+        case 0x15: if (!fk_dta_ok || f[14] != 128) { fk_bad = 1; g_val = 0xFF; return; } r = f[32]; for (k = 0; k < 128; k++) fk_file[id][r * 128 + k] = ((u8 *)fk_dta)[k]; f[32] = r + 1; if (fk_len[id] < r + 1) fk_len[id] = r + 1; return;
+        case 0x14: if (!fk_dta_ok || f[14] != 128) { fk_bad = 1; g_val = 0xFF; return; } r = f[32]; if (r >= fk_len[id]) { g_val = 1; return; } for (k = 0; k < 128; k++) ((u8 *)fk_dta)[k] = fk_file[id][r * 128 + k]; f[32] = r + 1; return;
+        case 0x10: return;
+        default: fk_bad = 1; g_val = 0xFF;
+    }
+}
+static void fake_install(void) {                 /* JP 0xF37D -> trampolim em RAM: C = funcao, DE = FCB/DTA -> g_reg, g_bk_src; chama fake_bdos; A = g_val */
+    u8 *t = fk_tramp; u16 a;
+    *t++ = 0x79; *t++ = 0x32; a = (u16)&g_reg; *t++ = (u8)a; *t++ = a >> 8;
+    *t++ = 0xED; *t++ = 0x53; a = (u16)&g_bk_src; *t++ = (u8)a; *t++ = a >> 8;
+    *t++ = 0xCD; a = (u16)fake_bdos; *t++ = (u8)a; *t++ = a >> 8;
+    *t++ = 0x3A; a = (u16)&g_val; *t++ = (u8)a; *t++ = a >> 8; *t++ = 0xC9;
+    *(volatile u8 *)0xF37D = 0xC3; *(volatile u16 *)0xF37E = (u16)fk_tramp;
+}
+#endif
 static void sv_probe(u8 sl) {
     if (sl == cart_slot) return;
     g_val = 0; g_bk_bank = sl; sr_exec();
@@ -1909,6 +1938,9 @@ static void sv_probe(u8 sl) {
 static void sv_init(void) BK {
     u8 p, s;
     sv_media = 0;
+#ifdef FAKE_DISK
+    fake_install();
+#endif
     get_cart_slot(); cart_slot = g_val;
     for (p = 0; p < 4 && !sv_media; p++) {
         if (*(volatile u8 *)(0xFCC1 + p) & 0x80) { for (s = 0; s < 4 && !sv_media; s++) sv_probe(0x80 | (s << 2) | p); }
@@ -1949,7 +1981,7 @@ static void sv_fcb_init(u8 rk) {                  /* STREETRO.SAV (jogo salvo) o
 static u8 sv_io(u8 *buf, u8 wr, u8 n, u16 ofs, u8 rk) {   /* le/grava n bytes (PAC: em ofs; disco: registros de 128 bytes do arquivo SAV ou RNK); 1 = ok */
     if (sv_media == 1) { g_val = wr ? 2 : 1; g_bk_bank = sv_slot; g_bk_src = ofs; g_bk_dst = (u16)buf; g_bk_len = n; sr_exec(); return 1; }
     if (sv_media == 2) {
-        u8 r = 0, k;
+        u8 r = 0; u16 k;                                                  /* u16: com u8, k += 128 dava a volta em 256 e o laco do ranking (2 registros) nunca terminava */
         if (wr) { sv_fcb_init(rk); sv_bdos(0x13, sv_fcb); }              /* apaga o antigo */
         sv_fcb_init(rk);
         if (sv_bdos(wr ? 0x16 : 0x0F, sv_fcb)) return 0;
@@ -2103,6 +2135,14 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
     if (pm_on) { ui_note(pmb[0], pmb[1]); pm_on = 0; cmd_n = 0; cp = cmd_buf; hub_status(); }
 #ifdef TEST_SAVE
     money = 777; day = 9; wins_drag = 5; pname[0] = 'Z'; pname[1] = 'E'; pname[2] = 'D'; pname[3] = 0; dbg_t1 = sv_save(); ask_load = 0;
+#endif
+#ifdef TEST_CYCLE
+    money = 777; day = 9; pname[0] = 'Z'; pname[1] = 0; dbg_t1 = sv_save(); money = 1; day = 0; pname[0] = 0; dbg_t1 |= sv_load() << 1;
+    dbg_t2 = money; dbg_t3 = pname[0] | ((u16)day << 8); money = 1700; rk_add(); rk_pts[3] = 0; rk_init(); dbg_power = rk_pts[3];
+#ifdef FAKE_DISK
+    dbg_t1 |= (u16)fk_bad << 4;
+#endif
+    ask_load = 0;
 #endif
 #ifdef TEST_LOAD
     dbg_t1 = sv_load(); dbg_t2 = pname[0] | ((u16)pname[2] << 8); ask_load = 0; cmd_n = 0; cp = cmd_buf; hub_status(); draw_car();
