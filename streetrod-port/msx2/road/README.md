@@ -351,3 +351,9 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 - **Creditos** (LIB1 item 3, a placa "AD 1989", grupo 254, paleta `pal_cred` = EGA_PAL com o indice 5 em azul claro): item CREDITS do menu da porta (`credits()`, banco 3). O texto miudo original ficava ilegivel ao reduzir 320 para 256 colunas (descartando 1 de cada 5), entao `credits()` apaga esses blocos (`push_fill` com o indice 5) e refaz o texto na fonte do jogo: pagina 1 = placa com "PORT BY BIGFIVE STUDIOS", pagina 2 (clique) = lista completa (nomes lidos da arte em tamanho original). Clique ou ESC avancam/fecham.
 - O "jukebox" (LIB1 item 7) era a trava de protecao do jogo original (acertar a cor perguntada): ignorado de proposito; a escolha da pintura segue a lista de nomes. Itens 5 e 6 (retrato da garota, labios) tambem nao sao usados.
+
+## M7: ranking com pontuacao real
+
+- A tabela "King Street Rodders" agora guarda os 10 melhores **bankrolls finais** de verdade (`rk_name/rk_pts`): no fim de cada jogo (`victory_and_ranking` -> `rk_add`) o jogador (nome da carteira DMV, dinheiro final) entra na posicao certa (empate fica abaixo), a linha dele aparece em amarelo e a tabela e regravada. Tabela inicial: 10 pilotos ficticios (KING $2900 ... ROOKIE $350; os nomes sao inventados).
+- Persistencia: mesmo meio do save: PAC em +0x1B00 (155 bytes: 'RK', versao, 10 x (nome 13 + pontos 2), checksum) ou STREETRO.RNK no disco (2 registros; disco nao testado). `rk_init()` le no boot. Sem PAC nem disco a tabela vale so durante a sessao.
+- `sv_io(buf, wr, n, ofs, rk)` generalizou o acesso ao meio. Teste: duas execucoes com `-ext pac`, `-DSTART_END=2 -DSTART_MONEY=1700` e depois 1100 (`rank_test.tcl`).

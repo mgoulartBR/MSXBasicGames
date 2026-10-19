@@ -1377,6 +1377,9 @@ static void full_screen(u8 grp, u8 wait) {      /* tela cheia da LIB1 (paleta EG
     vdp_reg(1, rg1 & ~0x40); g_palp = (u16)(grp == 252 ? pal_rank : grp == 254 ? pal_cred : pal_ega); pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
     if (wait) wait_click();
 }
+static char rk_name[10][13]; static u16 rk_pts[10];       /* ranking (guardado em RAM; ver rk_init) */
+static u8 rk_add(void) BK;
+static void rk_init(void) BK;
 static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela, na fonte do jogo: nome a esquerda, dinheiro a direita */
     char b[8]; u8 n = 1, y = 62 + 11 * pos;
     b[0] = '$'; n += num_str(b + 1, score); b[n] = 0;
@@ -1385,15 +1388,11 @@ static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma lin
     gtext(36, y, name, !you); gtext(162 - 6 * n, y, b, !you);
 }
 static void victory_and_ranking(void) {
-    static const char *const nm[9] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "VINNIE", "BOBBY", "MOUSE", "LEFTY"};
-    static const u16 base[9] = {2900, 2300, 1800, 1500, 1200, 1000, 800, 650, 500};
-    u8 i, k = 0, you = 0;
+    u8 i, pos;
     if (game_end == 2) full_screen(253, 1);                        /* "Well, you've done it, you've beaten the king..." */
+    pos = rk_add();
     full_screen(252, 0);
-    for (i = 0; i < 10; i++) {
-        if (!you && (k >= 9 || money >= base[k])) { put_rank(i, pname[0] ? pname : "SPEEDY", money, 1); you = 1; }
-        else { put_rank(i, nm[k], base[k], 0); k++; }
-    }
+    for (i = 0; i < 10; i++) put_rank(i, rk_name[i], rk_pts[i], i == pos);
     wait_click();
 }
 static void end_screen(void) BK {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
@@ -1919,7 +1918,7 @@ static void sv_init(void) BK {
 #endif
     if (!sv_media && *(volatile u8 *)0xF37D == 0xC3) sv_media = 2;       /* Disk BASIC instalou o gancho do BDOS */
 }
-static u8 sv_sum(const u8 *b) { u16 s = 0; u8 i; for (i = 0; i < SV_N - 2; i++) s += b[i]; return (u8)(s ^ (s >> 8)) ; }
+static u8 sv_sum(const u8 *b, u8 n) { u16 s = 0; u8 i; for (i = 0; i < n; i++) s += b[i]; return (u8)(s ^ (s >> 8)); }
 static void sv_pack(void) {
     u8 i; const u8 *g = (const u8 *)gc;
     for (i = 0; i < 128; i++) sv_buf[i] = 0;
@@ -1928,45 +1927,46 @@ static void sv_pack(void) {
     for (i = 0; i < 13; i++) sv_buf[SV_HDR + i] = pname[i];
     for (i = 0; i < MAXSPARE; i++) sv_buf[SV_SP + i] = spare[i];
     for (i = 0; i < sizeof(gc); i++) sv_buf[SV_GC + i] = g[i];
-    sv_buf[SV_N - 2] = sv_sum(sv_buf); sv_buf[SV_N - 1] = (u8)~sv_buf[SV_N - 2];
+    sv_buf[SV_N - 2] = sv_sum(sv_buf, SV_N - 2); sv_buf[SV_N - 1] = (u8)~sv_buf[SV_N - 2];
 }
 static u8 sv_ok(const u8 *b) {                  /* 1 se o bloco e uma gravacao valida e coerente */
     u8 i;
     if (b[0] != 'S' || b[1] != 'R' || b[2] != 2 || b[3] != SV_N) return 0;
-    if (b[SV_N - 2] != sv_sum(b) || b[SV_N - 1] != (u8)~b[SV_N - 2]) return 0;
+    if (b[SV_N - 2] != sv_sum(b, SV_N - 2) || b[SV_N - 1] != (u8)~b[SV_N - 2]) return 0;
     if (b[4] > MAXCARS || b[7] > MAXSPARE || (b[4] && b[5] >= b[4]) || b[6] > 62) return 0;
     for (i = 0; i < b[4]; i++) if (b[SV_GC + i * sizeof(Car)] >= sizeof(car_w)) return 0;
     return 1;
 }
 static u8 sv_bdos(u8 fn, u8 *de) { g_reg = fn; g_bk_src = (u16)de; bd_exec(); return g_val; }
-static void sv_fcb_init(void) {
-    static const char nm[12] = "STREETRODSAV";
+static void sv_fcb_init(u8 rk) {                  /* STREETRO.SAV (jogo salvo) ou STREETRO.RNK (ranking) */
+    static const char nm[12] = "STREETRODSAV", rn[3] = "RNK";
     u8 i;
     for (i = 0; i < 37; i++) sv_fcb[i] = 0;
     for (i = 0; i < 11; i++) sv_fcb[1 + i] = nm[i + (i > 7)];
+    if (rk) for (i = 0; i < 3; i++) sv_fcb[9 + i] = rn[i];
 }
-static u8 sv_io(u8 *buf, u8 wr) {               /* le/grava SV_N bytes no meio; 1 = ok */
-    if (sv_media == 1) { g_val = wr ? 2 : 1; g_bk_bank = sv_slot; g_bk_src = SV_OFS; g_bk_dst = (u16)buf; g_bk_len = SV_N; sr_exec(); return 1; }
+static u8 sv_io(u8 *buf, u8 wr, u8 n, u16 ofs, u8 rk) {   /* le/grava n bytes (PAC: em ofs; disco: registros de 128 bytes do arquivo SAV ou RNK); 1 = ok */
+    if (sv_media == 1) { g_val = wr ? 2 : 1; g_bk_bank = sv_slot; g_bk_src = ofs; g_bk_dst = (u16)buf; g_bk_len = n; sr_exec(); return 1; }
     if (sv_media == 2) {
-        u8 r;
-        if (wr) { sv_fcb_init(); sv_bdos(0x13, sv_fcb); }               /* apaga o antigo */
-        sv_fcb_init();
+        u8 r = 0, k;
+        if (wr) { sv_fcb_init(rk); sv_bdos(0x13, sv_fcb); }              /* apaga o antigo */
+        sv_fcb_init(rk);
         if (sv_bdos(wr ? 0x16 : 0x0F, sv_fcb)) return 0;
         sv_fcb[14] = 128;
-        sv_bdos(0x1A, buf);                                              /* DTA = buffer de 128 bytes na RAM */
-        r = sv_bdos(wr ? 0x15 : 0x14, sv_fcb);
+        for (k = 0; k < n && !r; k += 128) { sv_bdos(0x1A, buf + k); r = sv_bdos(wr ? 0x15 : 0x14, sv_fcb); }   /* DTA = 128 bytes por vez na RAM */
         sv_bdos(0x10, sv_fcb);
         return r == 0;
     }
     return 0;
 }
-static u8 sv_exists(void) BK { return sv_media && sv_io(sv_buf, 0) && sv_ok(sv_buf); }
+#define SV_IO(b, w) sv_io(b, w, SV_N, SV_OFS, 0)
+static u8 sv_exists(void) BK { return sv_media && SV_IO(sv_buf, 0) && sv_ok(sv_buf); }
 static u8 sv_save(void) BK {
     u8 i;
     if (!sv_media) return 0;
     sv_pack();
-    if (!sv_io(sv_buf, 1)) return 0;
-    if (!sv_io(sv_chk, 0)) return 0;                                      /* confere o que ficou gravado */
+    if (!SV_IO(sv_buf, 1)) return 0;
+    if (!SV_IO(sv_chk, 0)) return 0;                                      /* confere o que ficou gravado */
     for (i = 0; i < SV_N; i++) if (sv_chk[i] != sv_buf[i]) return 0;
     return 1;
 }
@@ -1981,6 +1981,44 @@ static u8 sv_load(void) BK {
     for (i = 0; i < sizeof(gc); i++) g[i] = sv_buf[SV_GC + i];
     offer_day = 255; game_end = 0;
     return 1;
+}
+/* ---- ranking "King Street Rodders": os 10 melhores bankrolls finais, guardados no mesmo meio do save (PAC+0x1B00 ou STREETRO.RNK); sem PAC nem disco vale so na sessao ---- */
+#define RK_OFS 0x1B00
+#define RK_N 155                                /* 'R','K', versao, 10 x (nome 13 + pontos 2), checksum 2 */
+static u8 rk_blob[256];
+static void rk_defaults(void) {
+    static const char *const dn[10] = {"KING", "SLICK", "BIG AL", "DUCKTAIL", "RED", "VINNIE", "BOBBY", "MOUSE", "LEFTY", "ROOKIE"};
+    static const u16 dp[10] = {2900, 2300, 1800, 1500, 1200, 1000, 800, 650, 500, 350};
+    u8 i, k;
+    for (i = 0; i < 10; i++) { for (k = 0; dn[i][k]; k++) rk_name[i][k] = dn[i][k]; rk_name[i][k] = 0; rk_pts[i] = dp[i]; }
+}
+static void rk_pack(void) {
+    u8 i, k, *p = rk_blob + 3;
+    rk_blob[0] = 'R'; rk_blob[1] = 'K'; rk_blob[2] = 1;
+    for (i = 0; i < 10; i++) { for (k = 0; k < 13; k++) *p++ = rk_name[i][k]; *p++ = (u8)rk_pts[i]; *p++ = (u8)(rk_pts[i] >> 8); }
+    rk_blob[RK_N - 2] = sv_sum(rk_blob, RK_N - 2); rk_blob[RK_N - 1] = (u8)~rk_blob[RK_N - 2];
+}
+static u8 rk_unpack(void) {                     /* 1 = bloco valido (copiado para a tabela) */
+    u8 i, k; const u8 *p = rk_blob + 3;
+    if (rk_blob[0] != 'R' || rk_blob[1] != 'K' || rk_blob[2] != 1 || rk_blob[RK_N - 2] != sv_sum(rk_blob, RK_N - 2) || rk_blob[RK_N - 1] != (u8)~rk_blob[RK_N - 2]) return 0;
+    for (i = 0; i < 10; i++) { for (k = 0; k < 13; k++) rk_name[i][k] = *p++; rk_name[i][12] = 0; rk_pts[i] = p[0] | ((u16)p[1] << 8); p += 2; }
+    return 1;
+}
+static void rk_init(void) BK {                  /* no boot: tabela padrao, ou a gravada */
+    rk_defaults();
+    if (sv_media && sv_io(rk_blob, 0, RK_N, RK_OFS, 1)) rk_unpack();
+    else rk_defaults();
+}
+static u8 rk_add(void) BK {                     /* poe o jogador (nome, dinheiro final) na tabela; devolve a posicao 0-9 ou 255 se nao entrou */
+    u8 pos, i, k;
+    for (pos = 0; pos < 10 && money <= rk_pts[pos]; pos++) ;
+    if (pos >= 10) return 255;
+    for (i = 9; i > pos; i--) { for (k = 0; k < 13; k++) rk_name[i][k] = rk_name[i - 1][k]; rk_pts[i] = rk_pts[i - 1]; }
+    for (k = 0; k < 12 && pname[k]; k++) rk_name[pos][k] = pname[k];
+    if (!k) { static const char d[7] = "SPEEDY"; for (k = 0; k < 6; k++) rk_name[pos][k] = d[k]; }
+    rk_name[pos][k] = 0; rk_pts[pos] = money;
+    if (sv_media) { rk_pack(); sv_io(rk_blob, 1, RK_N, RK_OFS, 1); }
+    return pos;
 }
 #pragma codeseg BANK2
 #ifdef OLD_MENU
@@ -2257,6 +2295,7 @@ void main(void) {
     fm_detect();
 #ifndef NO_SV_INIT
     sv_init();
+    rk_init();
 #endif
     mus_set(1);                                          /* estacao padrao: Rock 'n' Roll (em FM se houver MSX-MUSIC) */
     for (;;) {
