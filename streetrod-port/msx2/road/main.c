@@ -2282,8 +2282,8 @@ static void name_screen(void) BK {
     nm_show();
     hs = khot; hn = 29; lab_mode = 1; pick_tick = nm_tick; cur_ymax = 210;
     for (;;) {
-        k = pick_hot(1);
-        if (k >= 253 || k == 28) break;                                          /* RETURN, ESC ou DONE */
+        k = pick_hot(0);                                                         /* sem 'voltar' por teclado: BS apaga, nao sai */
+        if (k >= 253 || k == 28) break;                                          /* RETURN ou DONE */
         nm_key(k);
     }
     pick_tick = 0; lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
@@ -2330,7 +2330,10 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             ui_nohint = 0;
         }
     }
-    if (ask_name) { ask_name = 0; name_screen(); hub_draw(); howto(); }                       /* jogo novo: a carteira DMV pede o nome */
+#ifdef TEST_HOW
+    ask_name = 0; dbg_t1 = 0; howto(); dbg_t1 = 1;
+#endif
+    if (ask_name) { ask_name = 0; name_screen(); hub_draw(); }                       /* jogo novo: a carteira DMV pede o nome */
     for (;;) {
         if (game_end) return 1;
         if (!nown && money < 300 && !nspare) { game_end = 3; return 1; }

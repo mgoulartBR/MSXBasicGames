@@ -380,3 +380,5 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - Testes: `bay_test.tcl`, `bay2_test.tcl` (PARTS), `tune_test.tcl`, `swap_test.tcl` (`-DTEST_SPARES`, `-DBAY_CUR_X/Y`, `-DPARTS_CUR_X/Y`, `-DPARTS_CAT=n`).
 
 - **Encaixe das pecas no motor:** `gen_assets.py` mede a borda do topo de cada motor (`eng_r`, `eng_cx`) e os pads de cada coletor (`mp_n`, `mp_x`); `bay_engine()` assenta o coletor nessa borda e põe um carburador por pad.
+- **Build completo:** use `./fullbuild.sh` (define `LIB2`, `HOT_DATA`, `SRSE_EXE`; ajuste `SR`). Sem `HOT_DATA`/`SRSE_EXE` o `gen_tables.py` cai nos nomes genericos "DEFAULT CAR n" — conferir `grep -c "DEFAULT CAR" textdata.bin` = 0 antes de enviar a ROM.
+- **Tela de nome:** BS apaga (nao e mais "voltar"); RETURN ou DONE fecham. O HOW TO DRIVE so abre pela porta da garagem.
