@@ -2,7 +2,7 @@
 """Gera os assets graficos (cockpit etc.) a partir de LIB2 -> assets.bin (vai em 0x8000 da ROM) + assets.h.
 Uso: LIB2=<caminho> ./gen_assets.py   (sem LIB2, gera assets vazios e o jogo roda sem cockpit).
 Formato LZ4-like por faixas de 4096 bytes: token(lit<<4|mlen-4) [ext lit] literais off16 [ext mlen]; off16==0 encerra."""
-import os, sys
+import os, struct, sys
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tools'))
 
@@ -253,7 +253,7 @@ def main():
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
             ents.append((len(banks) - 1 + ABASE, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
-    sprh = ''; orects = []; carh = ''; headh = ''
+    sprh = ''; orects = []; carh = ''; headh = ''; parth = ''
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
@@ -364,6 +364,19 @@ def main():
             kraw = garage_pixels(lib2, ki_); kn = mapa[kraw]; kn[kraw == 1] = 11; kn[kraw == 0] = 0          # contorno escuro vira cinza (0 = transparente)
             ck = np.zeros((kn.shape[0], 256), np.uint8); ck[:, :kn.shape[1]] = kn
             add((ck[:, 0::2] << 4 | ck[:, 1::2]).astype(np.uint8).tobytes(), GEAR_SRC_Y * 128, 1, group=63 + t_)
+        # pecas do motor (LIB2): folhas de arte na pagina 1 (livre nos menus), carregadas por grupo sob demanda: 66 = motores 76-78, coletores 79-83/104/105, carburadores 84-86;
+        # 67 = cambios 99-102; 68 = pneus 65-68. Posicoes (x, y, w, h) na folha emitidas como art_x/art_y/art_w/art_h (indices: 0-12 grupo 66, 13-16 grupo 67, 17-20 grupo 68)
+        art_pos = []
+        for grp_, items_ in ((66, [76, 77, 78, 79, 80, 81, 82, 83, 104, 105, 84, 85, 86]), (67, [99, 100, 101, 102]), (68, [65, 66, 67, 68])):
+            sheet = np.zeros((212, 256), np.uint8); x_ = y_ = rh_ = 0
+            for it_ in items_:
+                px_ = garage_pixels(lib2, it_); h_, w_ = px_.shape
+                if x_ + w_ > 256: x_ = 0; y_ += rh_; rh_ = 0
+                x_ &= ~1
+                assert y_ + h_ <= 212
+                sheet[y_:y_ + h_, x_:x_ + w_] = px_; art_pos.append((x_, y_, w_, h_)); x_ += w_ + 2; rh_ = max(rh_, h_)
+            add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), 256 * 128, 1, group=grp_)
+        parth = ''.join('static const uint8_t art_%s[%d] = {%s};\n' % (c_, len(art_pos), ','.join(str(p_[k_]) for p_ in art_pos)) for k_, c_ in enumerate('xywh'))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -390,6 +403,18 @@ def main():
     if ents and 'rect_blob' in dir():
         if len(banks[-1]) + len(rect_blob) > 0x4000: banks.append(bytearray())
         rect_base = len(banks[-1]); banks[-1].extend(rect_blob); rect_bank = len(banks) - 1 + ABASE
+    mt_bank = mt_base = 0
+    if ents:                                                       # tabelas de periodos (PSG) e numeros F (OPLL) das notas: 128 x 2 bytes cada, lidas por nota (mus_tab)
+        if len(banks[-1]) + 512 > 0x4000: banks.append(bytearray())
+        mt_base = len(banks[-1]); mt_bank = len(banks) - 1 + ABASE
+        per_ = [min(4095, round(55930 / (440 * 2 ** ((n - 69) / 12)))) if n >= 12 else 0 for n in range(128)]
+        def fmn_(n):
+            fr = 440 * 2 ** ((n - 69) / 12)
+            for blk in range(8):
+                F = round(fr / (49716 / 2 ** (19 - blk)))
+                if F <= 511: return (blk << 9) | F
+            return (7 << 9) | 511
+        banks[-1].extend(b''.join(struct.pack('<H', v) for v in per_ + [fmn_(n) if n >= 12 else 0 for n in range(128)]))
     import music_gen                                              # radio: cada estacao em seu proprio banco (3 bytes por linha de sequenciador)
     mus = []
     if ents:
@@ -407,16 +432,8 @@ def main():
         L = 14
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
-        f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n#define RECT_BANK %d\n#define RECT_BASE %d\n' % (1 if ents else 0, text_bank, text_base, rect_bank, rect_base))
+        f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n#define RECT_BANK %d\n#define RECT_BASE %d\n#define MT_BANK %d\n#define MT_BASE %d\n' % (1 if ents else 0, text_bank, text_base, rect_bank, rect_base, mt_bank, mt_base))
         f.write('static const uint8_t mus_bank[5] = {%s};\nstatic const uint16_t mus_rows[5] = {%s};\nstatic const uint16_t mus_ms[5] = {%s};\n' % tuple(','.join(str(m[i]) for m in mus) for i in range(3)))
-        def fmnum(n):                                              # OPLL: f = F * 49716 / 2^(19 - bloco); F de 9 bits, bloco 0..7 -> bits (bloco << 9) | F
-            fr = 440 * 2 ** ((n - 69) / 12)
-            for blk in range(8):
-                F = round(fr / (49716 / 2 ** (19 - blk)))
-                if F <= 511: return (blk << 9) | F
-            return (7 << 9) | 511
-        f.write('static const uint16_t mus_ftab[128] = {%s};\n' % ','.join(str(fmnum(n)) if n >= 12 else '0' for n in range(128)))
-        f.write('static const uint16_t mus_per[128] = {%s};\n' % ','.join(str(min(4095, round(55930 / (440 * 2 ** ((n - 69) / 12))))) if n >= 12 else '0' for n in range(128)))
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))
@@ -432,16 +449,24 @@ def main():
         pr = []
         for r, g_, b_ in RANK_PAL: pr += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_rank[32] = {%s};\n' % ','.join(map(str, pr)))
-        f.write(sprh); f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
+        f.write(parth)
+        f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
         f.write('static const uint8_t ov_w[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[2] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_h[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[3]) for r in orects) or '0'))
         f.write('#define WIN_Y %d\n#define SKY_TOP %d\n' % (WIN_Y, SKY_TOP))
-        f.write('/* ponteiros dos mostradores do cockpit: (dx,dy) da ponta em relacao ao eixo; tacometro: indice = rpm/50, velocimetro: indice = mph */\n')
-        f.write('#define GAUGE_RPM_X 117\n#define GAUGE_RPM_Y 142\n#define GAUGE_SPD_X 157\n#define GAUGE_SPD_Y 142\n')
-        f.write('#define NEEDLE_RPM_N 108\n#define NEEDLE_SPD_N 144\n')
-        f.write('static const int8_t needle_rpm[NEEDLE_RPM_N * 2] = {%s};\n' % tips(108, lambda i: 225 - (i / 2) / 60 * 270))
-        f.write('static const int8_t needle_spd[NEEDLE_SPD_N * 2] = {%s};\n' % tips(144, lambda j: 225 - j * 270 / 130))
+    with open(os.path.join(here, 'assets_race.h'), 'w') as fr:        # so usado pelo codigo da corrida (banco 1): fica fora do nucleo
+        fr.write(sprh)
+        import math
+        L = 14
+        def tips(n, ang):
+            return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
+        fr.write('/* ponteiros dos mostradores do cockpit: (dx,dy) da ponta em relacao ao eixo; tacometro: indice = rpm/50, velocimetro: indice = mph */\n')
+        fr.write('#define GAUGE_RPM_X 117\n#define GAUGE_RPM_Y 142\n#define GAUGE_SPD_X 157\n#define GAUGE_SPD_Y 142\n')
+        fr.write('#define NEEDLE_RPM_N 108\n#define NEEDLE_SPD_N 144\n')
+        fr.write('static const int8_t needle_rpm[NEEDLE_RPM_N * 2] = {%s};\n' % tips(108, lambda i: 225 - (i / 2) / 60 * 270))
+        fr.write('static const int8_t needle_spd[NEEDLE_SPD_N * 2] = {%s};\n' % tips(144, lambda j: 225 - j * 270 / 130))
+
 if __name__ == '__main__': main()
