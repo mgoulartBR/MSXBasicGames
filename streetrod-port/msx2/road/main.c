@@ -1577,9 +1577,10 @@ static void slide_frame(u8 id, u8 pg, i16 x, i16 px) {
             clmmm(c1, 512 + y, x + c1, base + y, c2 - c1, sg_h[k]);
         }
     }
+    for (k = 0; k < fr_n; k++) hm(fr_x[k], BAND_COPY_Y + (FR_Y - BAND_Y), fr_x[k], base + FR_Y, fr_w[k], BAND_Y + BAND_H - FR_Y);      /* posto: as bombas voltam por cima do carro (da copia limpa da pagina 3; abaixo da faixa o carro nao chega) */
 }
 static void car_slide(u8 id, i16 x0, i16 x1) {          /* anda o carro de x0 a x1 (12 px por quadro), desenhando na pagina oculta e trocando a pagina */
-    i16 x = x0, d = x1 > x0 ? 1 : -1, px[2]; u8 pg = 1, fast = fr_n == 0; u16 j;
+    i16 x = x0, d = x1 > x0 ? 1 : -1, px[2]; u8 pg = 1, fast = 1; u16 j;
     if (fast) { slide_prep(id); px[0] = px[1] = x0; }
     for (;;) {
         if (fast && !(x & 1)) slide_frame(id, pg, x, px[pg]);
