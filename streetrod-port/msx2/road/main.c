@@ -2028,6 +2028,9 @@ static void name_screen(void) BK {
     if (!pname[0]) { static const char d[7] = "SPEEDY"; for (i = 0; i < 7; i++) pname[i] = d[i]; }
 }
 #endif
+#ifdef OLD_MENU
+static u8 jukebox(void) BK { return 254; }
+#else
 static u8 jukebox(void) BK {                     /* LIB1 item 7: o jukebox com as 12 cores; devolve 0-11, ou 254 (voltar) */
     static Hot jh[12];
     u8 i, k, rg1 = *(volatile u8 *)0xF3E0;
@@ -2042,6 +2045,7 @@ static u8 jukebox(void) BK {                     /* LIB1 item 7: o jukebox com a
     lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     return k;
 }
+#endif
 static void howto(void) {                        /* lista de comandos (primeira vez no jogo e na porta da garagem) */
     static const char *const how[6] = {"UP = GAS   DOWN = BRAKE", "LEFT / RIGHT = STEER", "SPACE OR BUTTON A = SHIFT UP", "SHIFT OR BUTTON B = SHIFT DOWN",
                                        "DON'T SHIFT BEFORE THE GREEN!", "ESC = BACK / STOP CRUISING"};
