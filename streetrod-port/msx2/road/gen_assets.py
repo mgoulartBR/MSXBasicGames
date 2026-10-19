@@ -416,6 +416,10 @@ def main():
         f.write('static const uint8_t pal_ega[32] = {%s};\n' % ','.join(map(str, pe)))
         RANK_PAL = [(85,85,85),(0,0,0),(170,85,0),(0,170,170),(255,255,255),(255,85,255),(255,170,0),(0,170,170),
                     (120,120,120),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(0,0,0),(255,255,85)]   # muro de grafite: 0 cinza escuro, 1 preto, 4 branco (texto), 15 amarelo (destaque)
+        CRED_PAL = list(EGA_PAL); CRED_PAL[5] = (110, 175, 255)      # placa "AD 1989": fundo azul claro
+        pc = []
+        for r, g_, b_ in CRED_PAL: pc += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
+        f.write('static const uint8_t pal_cred[32] = {%s};\n' % ','.join(map(str, pc)))
         pr = []
         for r, g_, b_ in RANK_PAL: pr += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_rank[32] = {%s};\n' % ','.join(map(str, pr)))

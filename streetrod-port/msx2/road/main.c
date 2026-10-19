@@ -1374,7 +1374,7 @@ static void wait_click(void) {
 static void full_screen(u8 grp, u8 wait) {      /* tela cheia da LIB1 (paleta EGA) ate um clique */
     u8 rg1 = *(volatile u8 *)0xF3E0;
     clip_l = 0; clip_r = 256; ybase = 0;
-    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)(grp == 252 ? pal_rank : pal_ega); pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)(grp == 252 ? pal_rank : grp == 254 ? pal_cred : pal_ega); pal_load2(); g_group = grp; load_assets(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
     if (wait) wait_click();
 }
 static void put_rank(u8 pos, const char *name, u16 score, u8 you) {   /* uma linha da tabela, na fonte do jogo: nome a esquerda, dinheiro a direita */
@@ -1412,7 +1412,7 @@ static void end_screen(void) BK {                 /* fim de jogo: mensagem e est
     ui_list("THE SUMMER OF 1963", 4, 0);
     game_end = 0;
 }
-static void credits(void) BK { full_screen(254, 1); }          /* LIB1 item 3: a placa "AD 1989" com os creditos (clique ou ESC fecham) */
+static void credits(void) BK { full_screen(254, 0); cmd_n = 0; cp = cmd_buf; gtext(59, 198, "PORT BY BIGFIVE STUDIOS", 1); vdp_wait(); cmd_n = 0; cp = cmd_buf; wait_click(); }          /* LIB1 item 3: a placa "AD 1989" com os creditos (clique ou ESC fecham) */
 #pragma codeseg BANK2
 static void run_race(void) BK;
 static void race_go(void) BK;

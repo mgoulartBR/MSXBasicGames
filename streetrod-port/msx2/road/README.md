@@ -349,5 +349,5 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 ## M7: creditos
 
-- **Creditos** (LIB1 item 3, a placa "AD 1989", grupo 254): item CREDITS do menu da porta (`credits()`, banco 3, clique ou ESC fecham). Cores: a paleta do jogo (`EGA_PAL`), placa cinza-metal com borda ciana; as cores originais nao sao conhecidas.
+- **Creditos** (LIB1 item 3, a placa "AD 1989", grupo 254): item CREDITS do menu da porta (`credits()`, banco 3, clique ou ESC fecham). Paleta propria `pal_cred` (EGA_PAL com o indice 5, o fundo da placa, em azul claro) e o texto "PORT BY BIGFIVE STUDIOS" embaixo.
 - O "jukebox" (LIB1 item 7) era a trava de protecao do jogo original (acertar a cor perguntada): ignorado de proposito; a escolha da pintura segue a lista de nomes. Itens 5 e 6 (retrato da garota, labios) tambem nao sao usados.
