@@ -401,3 +401,6 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 ### Tela TUNING original
 `car_tune_win` usa a janela inteira da LIB2 (item 71, 200x175 -> 160x175, grupo 69 na página 1) copiada por HMMM para (48,8). Setas: **para cima = RETARD**, **para baixo = ADVANCE** (manual); botão DONE; painéis de baixo com `TIMING ±n` e `POWER n`. A correia dentada (colunas 71-75, linhas 53-81, periodo de 4 linhas) é regerada em 4 fases (`gen_assets.py`) e copiada por LMMM IMP conforme o ponto; o entalhe vermelho fica fixo. Ao voltar, `hub_restore` devolve a garagem. Teste: `tune2.tcl` com `-DBOLT_TEST -DTEST_TUNE -DBAY_CUR_X=138 -DBAY_CUR_Y=64`.
+
+### Cursor de chave de boca
+O cursor (garagem, menus, listas) agora é a chave de boca vermelha do original: sprite 16x16 de 2 planos (contorno cor 10 = `cur_wa`, miolo cor 11 = `cur_wb`), com os pixels medidos nas capturas do jogo original; a ponta (no alto à esquerda) é o ponto de clique (`g_sx = cur_x - 3`, `g_sy = cur_y - 1`). A LIB2/LIB1 não têm essa arte (é desenhada pelo EXE). Teste: `cur.tcl` (`-DCUR_X=112 -DCUR_Y=60`, `vram2png.py ... garage spr`).

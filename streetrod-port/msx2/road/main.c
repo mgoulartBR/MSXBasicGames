@@ -803,26 +803,26 @@ static void hub_status(void) {              /* barra branca: dinheiro, data e ca
     }
     ybase = 0;
 }
-static const u8 cur_shape[12] = {0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xF8, 0xD8, 0x18, 0x0C, 0x0C};
 #ifndef CUR_X
 #define CUR_X 128
 #define CUR_Y 110
 #endif
 static u8 cur_x = CUR_X, cur_y = CUR_Y, cur_ymax = 187, mouse_seen;
 #pragma codeseg BANK1
-static void cursor_init(void) BK {                /* padroes 0 (miolo, branco) e 4 (contorno, preto) + cores por linha, na VRAM livre apos a pagina 0 */
-    u8 f[18], i, o;
-    for (i = 0; i < 18; i++) f[i] = 0;
-    for (i = 0; i < 12; i++) f[i + 1] = cur_shape[i] >> 1;
+/* cursor: a chave de boca do original (16x16, ponta no alto a esquerda), 2 planos: contorno vermelho escuro (cor 10) e miolo vermelho (cor 11); pixels medidos nas capturas do jogo original */
+static const u16 cur_wa[16] = {0x2000,0x1000,0x8800,0x8800,0x8800,0x7400,0x0A00,0x0500,0x0280,0x0140,0x00A0,0x005C,0x0022,0x0020,0x0020,0x001C};
+static const u16 cur_wb[16] = {0x1800,0x0C00,0x0400,0x4400,0x7600,0x0B00,0x0580,0x02C0,0x0160,0x00B0,0x005E,0x0023,0x0011,0x0010,0x0018,0x0000};
+static void cursor_init(void) BK {                /* padroes 0 (miolo) e 4 (contorno) 16x16 + cores por linha, na VRAM livre apos a pagina 0 */
+    u8 i;
     for (i = 0; i < 255; i++) cmd_buf[i] = 0;
     cmd_buf[255] = 0;
     for (i = 0; i < 16; i++) {
-        o = f[i] | f[i + 1] | (i ? f[i - 1] : 0); o |= (u8)(o >> 1) | (u8)(o << 1);
-        cmd_buf[i] = f[i]; cmd_buf[32 + i] = o;
+        cmd_buf[i] = (u8)(cur_wb[i] >> 8); cmd_buf[16 + i] = (u8)cur_wb[i];
+        cmd_buf[32 + i] = (u8)(cur_wa[i] >> 8); cmd_buf[48 + i] = (u8)cur_wa[i];
     }
     g_vlo = 0x7800; g_vhi = 0; g_vpg = 1; vram_blit();
     for (i = 0; i < 32; i++) cmd_buf[i] = 0;
-    for (i = 0; i < 16; i++) { cmd_buf[i] = HC_W; cmd_buf[16 + i] = 1; }
+    for (i = 0; i < 16; i++) { cmd_buf[i] = 11; cmd_buf[16 + i] = 10; }
     g_vlo = 0x7400; vram_blit();
 }
 #pragma codeseg CODE
@@ -912,7 +912,7 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
 #endif
         if (mouse_seen) {
             if (!shown) { shown = 1; spr_on(); }
-            g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
+            g_sx = cur_x - 3; g_sy = cur_y - 1; spr_put();
             if (cur_x >= UI_X + 4 && cur_x < UI_X + UI_W - 4 && cur_y >= y0 + 18 && cur_y < y0 + 18 + UI_RH * ul_vis) over = ul_top + (cur_y - y0 - 18) / UI_RH;
             if (moved && over != 255 && over != ul_sel) ul_set(over);          /* passar o cursor seleciona o item */
         }
@@ -1727,7 +1727,7 @@ static u8 pick_hot(u8 allow_back) {            /* devolve o id do objeto clicado
         if (!st) mouse_move();
         hit = hot_at(cur_x, cur_y);
         if (hit != prev) { prev = hit; spr_off(); hot_label(hit); spr_on(); }
-        g_sx = cur_x - 1; g_sy = cur_y - 2; spr_put();
+        g_sx = cur_x - 3; g_sy = cur_y - 1; spr_put();
         if (allow_back && want_back() && !bheld) { spr_off(); return 254; }
         bheld = allow_back && want_back();
         if (go && !held && hit != 255) { spr_off(); return hit; }
