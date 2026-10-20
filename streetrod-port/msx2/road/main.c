@@ -209,7 +209,7 @@ static u8 over_t, badshift;                     /* over_t: ticks acima da rotaca
 static void set_gear(u8 c, u8 ng) {    /* troca de marcha: a velocidade e mantida */
     u32 r;
     if (ng == vgear[c]) return;
-    if (c == 0 && ng > vgear[c] && vrpm[0] > pt_redline[0] + 300 && badshift < 250) badshift++;
+    if (c == 0 && ng > vgear[c] && vrpm[0] > pt_redline[0] + 300 && badshift < 250 && !pt_auto[0]) badshift++;
     r = (u32)vspd[c] * pt_ratio[c * 5 + ng];
     if (ng && r > 5700) { if (ng > vgear[c]) { r = 5700; } else return; }   /* reducao com rotacao excessiva: recusada */
     vgear[c] = ng; vrpm[c] = (u16)r;
@@ -247,8 +247,9 @@ static void handle_input(void) {
 #if AUTOPILOT
     in_throttle = 1; in_brake = 0;
 #endif
+    if (street_mode) { in_throttle = speed < 40; in_brake = speed > 44; in_left = in_right = 0; }      /* a ida ao Bob's e automatica: o carro dirige sozinho (45 mph) */
 #if !AUTOPILOT
-    if (state != 2 && !pt_auto[0]) {
+    if (state != 2 && !pt_auto[0] && !street_mode) {
         if (up && !up_held && gear < pt_ngears[0]) {
             if (state == 0) false_start = 1;                  /* engatou antes do verde */
             set_gear(0, gear + 1);
@@ -269,7 +270,7 @@ static void veh_tick(u8 c, u8 thr, u8 brk) {
     if (brk) { if (r > 500) r -= 500; else r = 0; }
     if (c == 0 && (P > 950 || P < -950) && r > 200) r -= 200;  /* fora da pista */
     vrpm[c] = r;
-    if (c == 0 && r > pt_redline[0] + 50 && over_t < 250) over_t++;
+    if (c == 0 && r > pt_redline[0] + 50 && over_t < 250 && g < n && !pt_auto[0]) over_t++;      /* so conta rotacao acima do corte se ainda ha marcha para engatar (na ultima nao ha o que fazer) e no cambio manual (no automatico e quase impossivel estourar o motor) */
     vspd[c] = g ? r / pt_ratio[i] : 0;
     if (!launched[c]) return;                                   /* ainda na contagem: so acelera o motor */
     if (g == 0) {                                               /* largada */
@@ -283,6 +284,7 @@ static void veh_tick(u8 c, u8 thr, u8 brk) {
 #if AUTOPILOT
         else lim = cap / 100 * 97;
 #else
+        else if (c == 0 && street_mode) lim = cap / 100 * 97;          /* cambio manual na rua: o piloto automatico troca por voce */
         else return;
 #endif
         if (thr && r >= lim) set_gear(c, g + 1);
@@ -304,15 +306,22 @@ static void opp_ai(void) {
 /* direcao e forca centrifuga por frame (dj = jiffies) */
 static void steer_frame(u16 dj) {
     i16 d = 0, e, tgt;
+#if !AUTOPILOT
+    if (street_mode) {
+        tgt = (xoff_ahead >> 1) - 300; e = (tgt - P) >> 2;
+        if (e > 40) e = 40; if (e < -40) e = -40;
+        P += e * (i16)dj;
+    } else {
+        if (in_left) d -= 1;
+        if (in_right) d += 1;
+        P += d * (i16)(4 + (speed >> 4)) * (i16)dj;
+    }
+#endif
 #if AUTOPILOT
     tgt = (xoff_ahead >> 1) - 300;
     e = (tgt - P) >> 2;
     if (e > 40) e = 40; if (e < -40) e = -40;
     P += e * (i16)dj;
-#else
-    if (in_left) d -= 1;
-    if (in_right) d += 1;
-    P += d * (i16)(4 + (speed >> 4)) * (i16)dj;
 #endif
     P -= (i16)(((i32)curve_ram[pos & 255] * speed * dj) >> 9);   /* forca centrifuga */
     if (P > 1400) P = 1400; if (P < -1400) P = -1400;
@@ -1164,9 +1173,9 @@ static void cars_screen(void) BK {
 }
 
 /* ---- jornal: carros usados ---- */
-#define NOFFERS 6
+#define NOFFERS 14
 #pragma codeseg BANK2
-static u8 offer[NOFFERS], offer_pct[NOFFERS], offer_mask;
+static u8 offer[NOFFERS], offer_pct[NOFFERS]; static u16 offer_mask;
 static void make_offers(void) {            /* ofertas do dia: sorteio deterministico por dia; vendidos/recusados ficam marcados */
     u16 r = day * 2713u + 4219u; u8 i, j, id;
     if (offer_day == day) return;
@@ -1193,13 +1202,13 @@ static void buy_car(u8 i) {
         u8 d = ui_pick("HOW ABOUT...", dis, 3, 0), chance;
         if (d == 255) return;
         chance = d == 0 ? 80 : d == 1 ? 50 : 15;
-        if ((u8)(rnd16() >> 8) % 100 >= chance) { ui_note("GET LOST!", "NO DEAL"); offer_mask |= 1 << i; return; }
+        if ((u8)(rnd16() >> 8) % 100 >= chance) { ui_note("GET LOST!", "NO DEAL"); offer_mask |= (u16)1 << i; return; }
         price = (u16)((u32)price * (90 - 10 * d) / 100);
         ui_note("I'LL TAKE IT!", "DEAL");
     }
     if (!try_pay(price)) return;
     car_stock(&gc[nown], offer[i]); gc[nown].wear = (u16)(rnd16() % 3000);         /* usado: 0 a 30% de desgaste */
-    nown++; offer_mask |= 1 << i;
+    nown++; offer_mask |= (u16)1 << i;
     if (nown == 1) { cur = 0; sel_car = gc[0].id; }
     ui_note("IT'S YOURS!", "ENJOY THE RIDE");
 }
@@ -1353,8 +1362,8 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     c->tp = c->tp + 6 + (race_type == 1 ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_type == 1 ? 4 : 0);
     pm_on = 0;
     if (result != 3) {                       /* quebras: motor (rotacao e desgaste), cambio (trocas com o motor passado), pneus (tabela do jogo) */
-        ep = 2 + over_t * 6 + (u8)(c->wear / 500); if (ep > 85) ep = 85;
-        tpr = 1 + badshift * 12; if (tpr > 85) tpr = 85;
+        ep = over_t * 3 + (u8)(c->wear / 1000); if (ep > 60) ep = 60;                 /* so estoura se passou do corte (3% por tick) ou com o motor muito gasto */
+        tpr = badshift * 8; if (tpr > 70) tpr = 70;
 #ifdef TEST_BRK
         brk0 = TEST_BRK;
         (void)ep; (void)tpr;
@@ -1472,7 +1481,7 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
 #ifdef SKIP_STREET
     return 1;
 #endif
-    ui_note("CRUISING IN TOWN...", "MAX SPEED 45 MPH"); ui_nohint = 0;
+    ui_note("CRUISING IN TOWN...", "CLICK TO SKIP"); ui_nohint = 0;
     street_mode = 1; race_type = 1; street_res = 1;
     race_go();
     street_mode = 0;
@@ -2524,6 +2533,7 @@ static void new_race(void) {
 /* janela esquerda (vidro lateral e coluna A, x < RACE_X0): pintada uma vez nas duas paginas (ceu, colinas, grama e a moldura do cockpit); so o resto e redesenhado a cada quadro */
 static void left_static(void) {
     u8 pg, k;
+    if (!RACE_X0) return;
     for (pg = 0; pg < 2; pg++) {
         i16 b = pg ? 256 : 0;
         clip_l = 0; clip_r = RACE_X0; ybase = b + WIN_Y;
@@ -2550,7 +2560,7 @@ u16 prof[12];
 #endif
 static void run_race(void) BK {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
-    u8 shown = 0;
+    u8 shown = 0, skip_held = 1;
     u16 base; u8 k;
 #ifdef PROF
     u16 pj = JIFFY;
@@ -2602,6 +2612,7 @@ static void run_race(void) BK {
                     if (speed > STREET_LIMIT) { street_fine += 5 + (speed - STREET_LIMIT) / 4; street_tix++; beep(60, 20); }
                 }
                 if (want_back()) { street_res = 1; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; }
+                if (g_trig & 3) { if (!skip_held) { street_res = 0; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; } } else skip_held = 0;      /* o seletor pula a viagem (manual) */
                 if (pos >= race_len) { street_res = 0; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; }
             }
             else if (opos == pos && (P - (OLANE * 56)) < 300 && (P - (OLANE * 56)) > -300) {   /* colisao */
@@ -2717,6 +2728,28 @@ static void scn_pole(i16 x, i16 y, i16 h) {                                    /
     if (py < SKY_TOP) { ph -= SKY_TOP - py; py = SKY_TOP; }
     if (ph > 0) push_fill(x, py, 1 + (h >> 4), ph, 15);
 }
+/* retrovisor superior: vista traseira (mostra o que ficou para tras: a pista que foge para o horizonte, grama e as arvores/predios dos segmentos ja passados) */
+#define MIR_X 194
+#define MIR_W 61
+#define MIR_Y (-2)
+static void rearview(void) {
+    u8 j, n = 0, e, side, t; i16 x, h, w, yb;
+    static const u8 rdx[4] = {26, 22, 18, 16}, rby[4] = {20, 15, 13, 12}, rh[4] = {8, 5, 3, 3}, rw[4] = {6, 4, 3, 2};
+    push_fill(MIR_X, MIR_Y, MIR_W, 21, 0);                                   /* ceu */
+    push_fill(MIR_X, MIR_Y + 10, MIR_W, 11, 13);                             /* grama */
+    push_fill(MIR_X + 22, MIR_Y + 10, 17, 3, 0); push_fill(MIR_X + 17, MIR_Y + 13, 27, 4, 0); push_fill(MIR_X + 11, MIR_Y + 17, 39, 4, 0);      /* pista (trapezio) */
+    if (pos & 1) push_fill(MIR_X + 29, MIR_Y + 18, 3, 3, 7); else push_fill(MIR_X + 30, MIR_Y + 14, 1, 2, 7);                                        /* tracejado */
+    for (j = 0; j < 4 && n < 3; j++) {
+        e = scn_tab[(u8)(pos - 1 - j)];
+        for (side = 0; side < 2 && n < 3; side++) {
+            t = (e >> (3 * side)) & 7;
+            if (t != 1 && t != 6) continue;
+            x = MIR_X + 30 + (side ? rdx[j] : -(i16)rdx[j]) - (rw[j] >> 1); h = rh[j]; w = rw[j]; yb = MIR_Y + rby[j];
+            push_fill(x, yb - h, w, h, t == 1 ? 3 : 15);
+            n++;
+        }
+    }
+}
 static void scn_side(u8 t, u8 side, u8 off, i16 xc, i16 y, i16 hw) {           /* um objeto do lado side (0 esquerda, 1 direita) na linha do chao y, largura da meia pista hw */
     i16 x, ph; u8 k;
 #ifdef SCN_SKIP
@@ -2799,6 +2832,7 @@ static void draw_scn(void) BK {
         t = e & 7; if (t) scn_side(t, 0, e >> 6, XC[r - 1], y, hw);
         t = (e >> 3) & 7; if (t) scn_side(t, 1, e >> 6, XC[r - 1], y, hw);
     }
+    rearview();
 }
 
 #pragma codeseg CODE

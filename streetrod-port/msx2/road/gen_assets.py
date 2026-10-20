@@ -91,7 +91,7 @@ GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a es
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
 TREE_Y, SIGA_Y, SIGB_Y, SIGC_Y = 212, 468, 704, 734            # cenario da corrida: arvores/predios (pagina 0, linhas 212-255), placas A (pagina 1, 468-511), B e C (pagina 2, 704-767)
-RACE_X0 = 54                                                  # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
+RACE_X0 = 0                                                   # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
 BG_Y, BG_H = 768, 15                                         # colinas + grama do horizonte (item 267 da LIB2) na pagina 3 (corrida), copiadas por cima do ceu a cada quadro
 SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
 
@@ -108,7 +108,8 @@ def overlay(a):
         if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
             glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
     cuts = None
-    glass[108 - y0:, :54] = False             # abaixo da janela lateral o preto e a porta (opaco)
+    # (o preto da janela lateral, inclusive abaixo do retrovisor, e vidro: mostra a estrada; o interior do retrovisor lateral (x 7-33, y 101-125 da tela) continua opaco)
+    glass[101 - y0:, 7:34] = False
     if GLASS_MODE == 'flat':
         glass[GLASS_BOT - y0:, 54:] = False         # capo/painel: abaixo do para-brisa (linhas ciano) tudo e cockpit opaco
     else:
