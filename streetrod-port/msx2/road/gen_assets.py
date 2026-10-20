@@ -90,6 +90,9 @@ GLASS_MODE = os.environ.get('GLASS_MODE', 'dash')    # flat: vidro termina em y=
 GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a estrada nao e desenhada abaixo)     # janela da estrada (tem de bater com build.sh: VIEW_BOT)
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
+TREE_Y, SIGA_Y, SIGB_Y, SIGC_Y = 212, 468, 704, 734            # cenario da corrida: arvores/predios (pagina 0, linhas 212-255), placas A (pagina 1, 468-511), B e C (pagina 2, 704-767)
+RACE_X0 = 54                                                  # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
+BG_Y, BG_H = 768, 15                                         # colinas + grama do horizonte (item 267 da LIB2) na pagina 3 (corrida), copiadas por cima do ceu a cada quadro
 SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
 
 def overlay(a):
@@ -269,7 +272,7 @@ def main():
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
             if len(banks[-1]) + len(enc) > 0x4000: banks.append(bytearray())     # faixa nunca cruza dois bancos
             ents.append((len(banks) - 1 + ABASE, group, 0x8000 + len(banks[-1]), vaddr + s, len(chunk) // 256, copies)); banks[-1].extend(enc)
-    sprh = ''; orects = []; carh = ''; headh = ''; parth = ''
+    sprh = ''; orects = []; carh = ''; headh = ''; parth = ''; scnh = ''
     if lib2:
         a = cockpit_pixels(lib2)
         np.save(os.path.join(here, 'cockpit_px.npy'), a)
@@ -414,6 +417,76 @@ def main():
         eng_bf = [(83, 32), (94, 31), (106, 37)]; eng_wf = [(44, 45), (55, 44), (67, 50)]
         parth = ''.join('static const uint8_t art_%s[%d] = {%s};\n' % (c_, len(art_pos), ','.join(str(p_[k_]) for p_ in art_pos)) for k_, c_ in enumerate('xywh'))
         parth += 'static const uint8_t eng_r[3] = {%s}, eng_lf[3] = {%s}, eng_bxf[3] = {%s}, eng_byf[3] = {%s}, eng_wxf[3] = {%s}, eng_wyf[3] = {%s}, cw_f[3] = {%s}, pw_f[7] = {%s}, mp_n[7] = {%s}, pc_f[7][3] = {%s};\n' % (','.join(map(str, eng_r)), ','.join(map(str, eng_lf)), ','.join(str(p_[0]) for p_ in eng_bf), ','.join(str(p_[1]) for p_ in eng_bf), ','.join(str(p_[0]) for p_ in eng_wf), ','.join(str(p_[1]) for p_ in eng_wf), ','.join(map(str, cw_f)), ','.join(map(str, pw_f)), ','.join(map(str, mp_n)), ','.join('{%s}' % ','.join(map(str, r_)) for r_ in pc_f))
+        bs_ = garage_pixels(lib2, 267)[5:5 + BG_H]; bg_ = np.zeros((BG_H, 256), np.uint8)       # 267: colinas (vermelho com dither) + grama (linhas 5-19); copia OPACA (HMMM): o ceu preto e cor 0
+        for y_ in range(BG_H):
+            for x_ in range(256):
+                v_ = int(bs_[y_, x_])
+                bg_[y_, x_] = {14: 8 if (x_ + 2 * y_) % 5 == 0 else (6 if (x_ + y_) % 2 == 0 else 10), 10: 10, 9: 13, 13: 3}.get(v_, 0)
+        add((bg_[:, 0::2] << 4 | bg_[:, 1::2]).astype(np.uint8).tobytes(), BG_Y * 128, 1)
+        # ---- cenario da rua: arvores e predios (procedurais), placas (LIB2 258, 236 e 238, quadros de 7 tamanhos) e tabela de objetos por segmento ----
+        # VRAM livre na corrida: linhas 212-255 da pagina 0 e 468-511 da pagina 1 (fora da tela de 212 linhas) e 704-767 da pagina 2
+        rng_ = np.random.RandomState(11)
+        def make_tree(w, h):
+            t_ = np.zeros((h, w), np.uint8); ch_ = max(4, round(h * 0.72)); tw_ = max(1, round(w / 5)); tx_ = (w - tw_) // 2
+            cx_, cy_ = (w - 1) / 2, (ch_ - 1) / 2
+            lobes_ = [(0, 0, 0.55), (-0.28, 0.15, 0.40), (0.28, 0.15, 0.40), (0, -0.25, 0.38)]       # copa: circulos (dx, dy em frac. da largura/altura, raio em frac. da largura)
+            for r_ in range(ch_):
+                for c_ in range(w):
+                    for dx_, dy_, rr_ in lobes_:
+                        if ((c_ - cx_ - dx_ * w) / (rr_ * w)) ** 2 + ((r_ - cy_ - dy_ * ch_) / (rr_ * w * 0.95)) ** 2 <= 1:
+                            lit_ = ((c_ - cx_) / w + (r_ - cy_) / ch_) < -0.12 + (rng_.rand() - 0.5) * 0.25
+                            t_[r_, c_] = 13 if lit_ else 3
+                            break
+            for r_ in range(ch_ - 1, h): t_[r_, tx_:tx_ + tw_] = 10
+            if tw_ > 1: t_[ch_ - 1:h, tx_] = 6
+            return t_
+        def make_bld(w, h):
+            t_ = np.full((h, w), 15, np.uint8); t_[0, :] = 4; t_[1:2, :] = 11; t_[:, 0] = 11; t_[:, -1] = 11
+            ws_ = max(1, w // 8); gx_ = max(2, w // 5)
+            for r_ in range(3, h - 2, ws_ + max(2, h // 9)):
+                for c_ in range(gx_ // 2 + 1, w - ws_ - 1, gx_ + ws_):
+                    t_[r_:r_ + ws_ + (1 if w > 20 else 0), c_:c_ + ws_] = 8 if rng_.rand() < 0.55 else 11
+            return t_
+        tree_wh = [(7, 10), (11, 16), (16, 24), (23, 34)]; bld_wh = [(12, 14), (18, 21), (26, 31), (40, 44)]
+        sheet_ = np.zeros((44, 256), np.uint8); tree_x = []; bld_x = []; x_ = 0
+        for w_, h_ in tree_wh:
+            sheet_[:h_, x_:x_ + w_] = make_tree(w_, h_); tree_x.append(x_); x_ += w_ + 1
+        x_ = 96                                                     # (x par: os predios usam HMMM)
+        for w_, h_ in bld_wh:
+            sheet_[:h_, x_:x_ + w_] = make_bld(w_, h_); bld_x.append(x_); x_ += w_ + 2
+        add((sheet_[:, 0::2] << 4 | sheet_[:, 1::2]).astype(np.uint8).tobytes(), TREE_Y * 128, 1)
+        FR_X = [0, 64, 120, 168, 208, 240, 256]; FR_W = [64, 56, 48, 40, 32, 16, 8]; FR_H = [43, 37, 30, 24, 19, 13, 8]
+        def sign_sheet(item, frames, y0, hmax):
+            a_ = garage_full(lib2, item); mp_ = np.array(MAP, np.uint8); out_ = np.zeros((hmax, 256), np.uint8); xs_ = []; ws_ = []; hs_ = []; x_ = 0
+            for fi_ in frames:
+                f_ = a_[:FR_H[fi_], FR_X[fi_]:FR_X[fi_] + FR_W[fi_]]
+                f_ = f_[:, [c_ for c_ in range(f_.shape[1]) if c_ % 5 != 4]]
+                m_ = mp_[f_]; m_[(f_ == 1) | (f_ == 6)] = 11; m_[f_ == 0] = 0           # preto interno vira cinza escuro (0 = transparente)
+                if m_.shape[1] % 2: m_ = np.hstack([m_, m_[:, -1:]])                       # largura par (copia opaca por bytes)
+                out_[:m_.shape[0], x_:x_ + m_.shape[1]] = m_; xs_.append(x_); ws_.append(m_.shape[1]); hs_.append(m_.shape[0]); x_ += m_.shape[1] + 2
+            add((out_[:, 0::2] << 4 | out_[:, 1::2]).astype(np.uint8).tobytes(), y0 * 128, 1)
+            return xs_, ws_, hs_
+        sa_ = sign_sheet(258, [1, 2, 3, 4, 5, 6], SIGA_Y, 37)      # COUNTY LINE: 6 tamanhos (45x37 ... 7x8)
+        sb_ = sign_sheet(236, [2, 3, 4, 5, 6], SIGB_Y, 30)         # DRIVE-IN: 5 tamanhos
+        sc_ = sign_sheet(238, [2, 3, 4, 5, 6], SIGC_Y, 30)         # GUS' GAS
+        scn = []                                                    # por segmento: bits 0-2 objeto da esquerda, 3-5 da direita (1 arvore, 2/3/4 placas, 5 poste, 6 predio), bits 6-7 afastamento
+        for s_ in range(256):
+            e_ = 0
+            for side_ in range(2):
+                k_ = 0; r_ = rng_.rand()
+                if s_ % 4 == (0 if side_ == 0 else 2): k_ = 5
+                elif r_ < 0.20: k_ = 1
+                elif r_ < 0.26: k_ = 2 + int(rng_.randint(0, 3))
+                elif r_ < 0.32: k_ = 6
+                e_ |= k_ << (3 * side_)
+            e_ |= int(rng_.randint(0, 3)) << 6
+            scn.append(e_)
+        def arr_(n, v): return 'static const uint8_t %s[%d] = {%s};\n' % (n, len(v), ','.join(map(str, v)))
+        scnh = '#define TREE_Y %d\n#define SIGA_Y %d\n#define SIGB_Y %d\n#define SIGC_Y %d\n' % (TREE_Y, SIGA_Y, SIGB_Y, SIGC_Y)
+        scnh += arr_('tr_x', tree_x) + arr_('tr_w', [w_ for w_, h_ in tree_wh]) + arr_('tr_h', [h_ for w_, h_ in tree_wh])
+        scnh += arr_('bl_x', bld_x) + arr_('bl_w', [w_ for w_, h_ in bld_wh]) + arr_('bl_h', [h_ for w_, h_ in bld_wh])
+        for nm_, s3_ in (('sga', sa_), ('sgb', sb_), ('sgc', sc_)): scnh += arr_(nm_ + '_x', s3_[0]) + arr_(nm_ + '_w', s3_[1]) + arr_(nm_ + '_h', s3_[2])
+        scnh += arr_('scn_tab', scn)
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
@@ -488,12 +561,14 @@ def main():
         f.write('static const uint8_t pal_rank[32] = {%s};\n' % ','.join(map(str, pr)))
         f.write(parth)
         f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
-        f.write('#define OV_N %d\n#define LIGHT_Y %d\n' % (len(orects), LIGHT_Y))
+        f.write('#define OV_N %d\n#define LIGHT_Y %d\n#define BG_Y %d\n#define BG_H %d\n' % (len(orects), LIGHT_Y, BG_Y, BG_H))
+        f.write('#define RACE_X0 %d\n#define OV_LEFT %d\n' % (RACE_X0, sum(1 for o_ in orects if (o_[0] + o_[2]) * 2 <= RACE_X0)))     # a janela esquerda (x < RACE_X0: vidro lateral e coluna A) e pintada uma vez; a estrada comeca em RACE_X0
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
         f.write('static const uint8_t ov_w[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[2] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_h[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[3]) for r in orects) or '0'))
         f.write('#define WIN_Y %d\n#define SKY_TOP %d\n' % (WIN_Y, SKY_TOP))
+    open(os.path.join(here, 'assets_scn.h'), 'w').write(scnh)         # cenario da rua: dados do BANK5 (draw_scn)
     with open(os.path.join(here, 'assets_race.h'), 'w') as fr:        # so usado pelo codigo da corrida (banco 1): fica fora do nucleo
         fr.write(sprh)
         import math

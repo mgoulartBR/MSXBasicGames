@@ -95,7 +95,7 @@ extern void mul12(void);
 extern void mul16x8(void);
 extern void vdp_wait(void);
 u8 rec[11]; u8 g_dry; i16 clip_l, clip_r;
-u8 s_yt, s_rem, s_rc, s_kc, s_gc, s_mode, t_y; i16 s_xlf, s_xrf, s_sl2, s_sr2, s_kw, t_xl, t_xr, t_w;
+u8 s_yt, s_rem, s_rc, s_kc, s_gc, s_mode, s_dash, t_y; i16 s_xlf, s_xrf, s_sl2, s_sr2, s_kw, t_xl, t_xr, t_w;
 extern void strip_run(void);
 extern void draw_road_asm(void);
 extern void fill_g(void);
@@ -341,8 +341,9 @@ static void push_fill_v(i16 x, i16 y, i16 w, i16 h, u8 c) {
 u8 vc[15];
 extern void vdp_cmd15(void);
 #pragma codeseg CODE
-static void vc_w(u8 i, i16 v) { vc[i] = (u8)v; vc[i + 1] = (u8)(v >> 8); }
+#define vc_w(i, v) do { i16 vw_ = (i16)(v); vc[i] = (u8)vw_; vc[(i) + 1] = (u8)(vw_ >> 8); } while (0)      /* macro: sem chamada de funcao (comandos de VDP diretos sao frequentes) */
 
+static void draw_scn(void) BK;
 #pragma codeseg BANK1
 #include "assets_race.h"                  /* tabelas so da corrida (sprites do oponente, ponteiros): nos dados do banco 1, fora do nucleo */
 static void draw_opp(void) {
@@ -2502,21 +2503,56 @@ static void new_race(void) {
     }
 }
 
+/* janela esquerda (vidro lateral e coluna A, x < RACE_X0): pintada uma vez nas duas paginas (ceu, colinas, grama e a moldura do cockpit); so o resto e redesenhado a cada quadro */
+static void left_static(void) {
+    u8 pg, k;
+    for (pg = 0; pg < 2; pg++) {
+        i16 b = pg ? 256 : 0;
+        clip_l = 0; clip_r = RACE_X0; ybase = b + WIN_Y;
+        cmd_n = 0; cp = cmd_buf;
+        push_fill(0, SKY_TOP, RACE_X0, 15, 0);
+        vc_w(0, 0); vc_w(2, BG_Y); vc_w(4, 0); vc_w(6, ybase + SKY_TOP); vc_w(8, RACE_X0); vc_w(10, BG_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+        vdp_cmd15();
+        push_fill(0, SKY_TOP + BG_H, RACE_X0, VIEW_BOT - SKY_TOP - BG_H, 13);
+        vdp_wait();
+        for (k = 0; k < OV_LEFT; k++) {
+            i16 ox = ov_x[k] << 1, oy = ov_y[k];
+            vc_w(0, ox); vc_w(2, 512 + WIN_Y + SKY_TOP + oy); vc_w(4, ox); vc_w(6, b + WIN_Y + SKY_TOP + oy);
+            vc_w(8, ov_w[k] << 1); vc_w(10, ov_h[k]); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+            vdp_cmd15();
+        }
+    }
+    vdp_wait();
+}
+#ifdef PROF
+u16 prof[12];
+#define PT(i) { u16 j_ = JIFFY; prof[i] += j_ - pj; pj = j_; }
+#else
+#define PT(i)
+#endif
 static void run_race(void) BK {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
     u8 shown = 0;
     u16 base; u8 k;
+#ifdef PROF
+    u16 pj = JIFFY;
+#endif
     dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
     pal_load();
     new_race();
     init_static();
+    left_static();
+    clip_l = RACE_X0; clip_r = VIEW_X1;
     ybase = 256;
     tickacc = 0;
     last_j = JIFFY; j0 = last_j; fr0 = 0; start_j = last_j;
     for (;;) {
         t = JIFFY; dj = t - last_j; last_j = t;
         if (dj > 12) dj = 12;
+#ifdef PROF
+        pj = JIFFY; prof[11]++;
+#endif
         read_input(); combine_input();
         handle_input();
         snd_engine(1);
@@ -2567,17 +2603,42 @@ static void run_race(void) BK {
             }
         }
         dbg_rpm = rpm; dbg_gear = gear; dbg_state = state; dbg_opos = opos; dbg_ospeed = vspd[1];
+        PT(0)
         cmd_n = 0; cp = cmd_buf;
         project();
+        PT(1)
         base = ybase; ybase = base + WIN_Y;                 /* janela da estrada: y relativo ao para-brisa */
-        push_fill(0, SKY_TOP, 256, Y[N_ROWS - 1] - SKY_TOP, 0);
+        {                                                    /* horizonte: ceu preto + colinas e grama (item 267) alinhados ao fim da estrada; copia opaca (HMMM) so abaixo do vidro */
+            i16 yh = Y[N_ROWS - 1] - BG_H, hh = BG_H, sy = 0;
+            if (yh < SKY_TOP) { hh += yh - SKY_TOP; sy = SKY_TOP - yh; yh = SKY_TOP; }
+            else if (yh > SKY_TOP) push_fill(0, SKY_TOP, 256, yh - SKY_TOP, 0);
+#ifndef NO_BG
+            if (hh > 0) {
+                vc_w(0, RACE_X0); vc_w(2, BG_Y + sy); vc_w(4, RACE_X0); vc_w(6, ybase + yh);
+                vc_w(8, 256 - RACE_X0); vc_w(10, hh); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;      /* HMMM */
+                vdp_cmd15();
+            }
+#endif
+        }
+        push_fill(0, Y[N_ROWS - 1], 256, VIEW_BOT - Y[N_ROWS - 1], 13);     /* grama lisa: 1 retangulo (a pista e a borda amarela vem por cima) */
+        PT(2)
         draw_road_asm();
+        PT(3)
+#ifndef NO_SCN
+#ifdef PROF_SCN
+        { u16 jj = JIFFY; draw_scn(); dbg_t2 += JIFFY - jj; dbg_t3++; }
+#else
+        draw_scn();
+#endif
+#endif
+        PT(4)
         if (!street_mode) { draw_opp(); draw_lights(state == 0 || (state == 1 && (u16)(JIFFY - start_j) < 2 * jhz)); }
+        PT(5)
 #if HAVE_COCKPIT
 #ifndef NO_OV
         /* moldura da esquerda (porta/coluna A) por cima da estrada: HMMM de retangulos justos da copia limpa (pagina 2).
            A estrada nao desce alem do para-brisa (VIEW_BOT), entao o painel/capo nunca e sobrescrito. */
-        for (k = 0; k < OV_N; k++) {
+        for (k = OV_LEFT; k < OV_N; k++) {
             i16 ox = ov_x[k] << 1, oy = ov_y[k];
             vc_w(0, ox); vc_w(2, 512 + WIN_Y + SKY_TOP + oy); vc_w(4, ox); vc_w(6, ybase + SKY_TOP + oy);
             vc_w(8, ov_w[k] << 1); vc_w(10, ov_h[k]); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
@@ -2585,14 +2646,17 @@ static void run_race(void) BK {
         }
 #endif
 #endif
+        PT(6)
         ybase = base;
         clip_l = 0; clip_r = 256;
 #ifndef NO_HUD
         draw_hud_page();
 #endif
-        clip_l = VIEW_X0; clip_r = VIEW_X1;
+        PT(7)
+        clip_l = RACE_X0; clip_r = VIEW_X1;
         dbg_cmds = cmd_n; dbg_speed = speed; dbg_pos = pos;
         vdp_wait();
+        PT(8)
 #if VSYNC
         while (JIFFY == t) ;
 #endif
@@ -2608,6 +2672,77 @@ static void run_race(void) BK {
             ybase = shown ? 0 : 256;
 #endif
         }
+    }
+}
+
+#pragma codeseg BANK5
+#include "assets_scn.h"
+/* cenario da rua: por segmento da pista (scn_tab) ha arvores, placas e postes dos dois lados; tamanho e posicao seguem a largura da pista (hw) na linha do chao */
+static void scn_blit(u16 sx, u16 sy, i16 x, i16 y, i16 w, i16 h, u8 opq) {   /* (x, y) = base do objeto, centrado em x; recorta na janela (nunca acima do vidro); opq: retangulo opaco (HMMM, x e largura pares) */
+    i16 dx0 = x - (w >> 1), dx1, ty = y - h;
+    if (opq) dx0 &= ~1;
+    dx1 = dx0 + w;
+    if (dx0 < clip_l) { sx += clip_l - dx0; dx0 = clip_l; }
+    if (dx1 > clip_r) dx1 = clip_r;
+    if (dx1 <= dx0) return;
+    if (ty < SKY_TOP) { sy += SKY_TOP - ty; h -= SKY_TOP - ty; ty = SKY_TOP; }
+    if (y > VIEW_BOT) h -= y - VIEW_BOT;
+    if (h <= 0) return;
+    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx0); vc_w(6, ybase + ty);
+    vc_w(8, (dx1 - dx0 + (opq ? 1 : 0)) & (opq ? ~1 : ~0)); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = opq ? 0xD0 : 0x98;   /* HMMM (opaco) ou LMMM com TIMP: cor 0 transparente */
+    vdp_cmd15();
+}
+static void scn_pole(i16 x, i16 y, i16 h) {                                    /* poste da placa: cinza, da base ate a placa */
+    i16 py = y - h, ph = h;
+    if (x < clip_l || x >= clip_r) return;
+    if (y > VIEW_BOT) ph -= y - VIEW_BOT;
+    if (py < SKY_TOP) { ph -= SKY_TOP - py; py = SKY_TOP; }
+    if (ph > 0) push_fill(x, py, 1 + (h >> 4), ph, 15);
+}
+static void scn_side(u8 t, u8 side, u8 off, i16 xc, i16 y, i16 hw) {           /* um objeto do lado side (0 esquerda, 1 direita) na linha do chao y, largura da meia pista hw */
+    i16 x, ph; u8 k;
+#ifdef SCN_SKIP
+    if ((SCN_SKIP >> t) & 1) return;                                   /* (teste de desempenho: pula tipos de objeto) */
+#endif
+    if (t == 5) {                                                      /* poste branco ao lado da pista */
+        x = side ? xc + hw + (hw >> 2) : xc - hw - (hw >> 2);
+        ph = (hw >> 4) + 2;
+        if (y > VIEW_BOT) ph -= y - VIEW_BOT;
+        if (ph > 0) push_fill(x, y - (hw >> 4) - 2, (hw >> 6) + 1, ph, 7);
+        return;
+    }
+    if (t == 1) {                                                      /* arvore */
+        x = off == 0 ? hw + (hw >> 2) + (hw >> 3) : off == 1 ? hw + (hw >> 1) + (hw >> 2) : (hw << 1) + (hw >> 2);
+        k = hw >= 50 ? 3 : hw >= 34 ? 2 : hw >= 22 ? 1 : 0;
+        while (k && tr_h[k] > y - SKY_TOP + 4) k--;
+        scn_blit(tr_x[k], TREE_Y, side ? xc + x : xc - x, y, tr_w[k], tr_h[k], 0);
+    } else if (t == 6) {                                               /* predio, mais afastado da pista */
+        x = off == 0 ? 3 * hw + (hw >> 3) : off == 1 ? 3 * hw + (hw >> 1) + (hw >> 3) : (hw << 2) + (hw >> 3);
+        k = hw >= 58 ? 3 : hw >= 38 ? 2 : hw >= 24 ? 1 : 0;
+        while (k && bl_h[k] > y - SKY_TOP + 4) k--;
+        scn_blit(bl_x[k], TREE_Y, side ? xc + x : xc - x, y, bl_w[k], bl_h[k], 1);
+    } else {                                                           /* placas (num poste) */
+        x = hw + (hw >> 1); if (side) x = xc + x; else x = xc - x;
+        if (t == 2) { k = hw >= 110 ? 0 : hw >= 85 ? 1 : hw >= 60 ? 2 : hw >= 38 ? 3 : hw >= 22 ? 4 : 5; ph = sga_h[k] >> 1; scn_pole(x, y, ph + 2); scn_blit(sga_x[k], SIGA_Y, x, y - ph, sga_w[k], sga_h[k], 1); }
+        else {
+            k = hw >= 85 ? 0 : hw >= 60 ? 1 : hw >= 38 ? 2 : hw >= 22 ? 3 : 4;
+            if (t == 3) { ph = sgb_h[k] >> 1; scn_pole(x, y, ph + 2); scn_blit(sgb_x[k], SIGB_Y, x, y - ph, sgb_w[k], sgb_h[k], 1); }
+            else { ph = sgc_h[k] >> 1; scn_pole(x, y, ph + 2); scn_blit(sgc_x[k], SIGC_Y, x, y - ph, sgc_w[k], sgc_h[k], 1); }
+        }
+    }
+}
+static void draw_scn(void) BK {
+    u8 r, e, t;
+    i16 y, hw;
+    for (r = N_ROWS - 1; r >= 2; r--) {
+        e = scn_tab[(u8)(pos + r - 3)];
+        if (!(e & 63)) continue;
+        y = Y[r - 1];
+        if (y >= VIEW_BOT || y < SKY_TOP) continue;
+        hw = 2 * (y - HZ) + ((y - HZ) >> 5);              /* = hwy_tab[y] (largura da meia pista na linha y), sem a tabela */
+        if (hw < 12) continue;
+        t = e & 7; if (t) scn_side(t, 0, e >> 6, XC[r - 1], y, hw);
+        t = (e >> 3) & 7; if (t) scn_side(t, 1, e >> 6, XC[r - 1], y, hw);
     }
 }
 

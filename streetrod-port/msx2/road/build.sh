@@ -8,7 +8,7 @@ python3 gen_assets.py
 SH=$(echo "$@" | sed -n 's/.*-DSTEP_SH=\([0-9]*\).*/\1/p'); SH=${SH:-2}
 NR=$(echo "$@" | sed -n 's/.*-DN_ROWS=\([0-9]*\).*/\1/p'); NR=${NR:-15}
 VB=$(echo "$@" | sed -n 's/.*-DVIEW_BOT=\([0-9]*\).*/\1/p'); VB=${VB:-95}
-DM=$(echo "$@" | sed -n 's/.*-DDRAW_MODE=\([0-9]*\).*/\1/p'); DM=${DM:-2}
+DM=$(echo "$@" | sed -n 's/.*-DDRAW_MODE=\([0-9]*\).*/\1/p'); DM=${DM:-4}
 printf '\t.equ STEP, %s\n\t.equ STEP_SH, %s\n\t.equ NROWS, %s\n\t.equ VIEW_BOT, %s\n\t.equ DRAW_MODE, %s\n\t.equ CX, %s\n' $((1<<SH)) $SH $NR $VB $DM ${CX:-160} > config.inc
 sdasz80 -plosgff crt0.rel crt0.s
 sdasz80 -plosgff vdpasm.rel vdpasm.s

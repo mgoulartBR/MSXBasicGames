@@ -79,6 +79,7 @@
 	.globl _s_gc
 	.globl _s_kc
 	.globl _s_rc
+	.globl _s_dash
 	.globl _s_kw
 	.globl _s_sr2
 	.globl _s_sl2
@@ -452,7 +453,31 @@ grp:
 	ld hl,(_t_w)
 	ld a,(_s_rc)
 	call fill_regs
-	ld a,(_s_mode)
+	ld a,(_s_dash)           ; tracejado branco no centro da pista (segmentos alternados): largura (w >> 6) + 1
+	or a,a
+	jr z,6$
+	ld hl,(_t_w)
+	ld b,#6
+7$:	srl h
+	rr l
+	djnz 7$
+	inc hl                   ; HL = cw
+	push hl
+	srl h
+	rr l                     ; cw / 2
+	ex de,hl
+	ld hl,(_t_w)
+	srl h
+	rr l
+	ld bc,(_t_xl)
+	add hl,bc                ; xc
+	or a,a
+	sbc hl,de                ; x = xc - cw/2
+	ex de,hl
+	pop hl
+	ld a,#7
+	call fill_regs
+6$:	ld a,(_s_mode)
 	and a,#2
 	jp z,next
 	ld hl,(_t_xr)            ; gramado direito: x = xr+kw, w = 256 - x
@@ -601,21 +626,13 @@ dr_loop:
 	ld hl,#_PAR
 	add hl,de
 	ld a,(hl)
-	or a,a
-	jr z,3$
-	ld a,#5
-	ld (_s_rc),a
-	ld a,#6
-	ld (_s_kc),a
-	ld a,#3
-	ld (_s_gc),a
-	jr 4$
-3$:	ld a,#4
-	ld (_s_rc),a
-	ld a,#7
-	ld (_s_kc),a
-	ld a,#2
-	ld (_s_gc),a
+	ld (_s_dash),a           ; paridade do segmento: tracejado
+	xor a,a
+	ld (_s_rc),a             ; asfalto preto
+	ld a,#8
+	ld (_s_kc),a             ; faixa amarela na borda
+	ld a,#13
+	ld (_s_gc),a             ; grama verde lisa
 4$:	ld a,#DRAW_MODE
 	ld (_s_mode),a
 	and a,#6                 ; bit1 = gramado por scanline, bit2 = sem gramado (fundo estatico)
