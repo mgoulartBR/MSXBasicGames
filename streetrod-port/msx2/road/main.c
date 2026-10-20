@@ -1764,7 +1764,7 @@ static void win_frame(u8 x, u8 w) {                    /* a moldura da janela: c
     cmd_n = 0; cp = cmd_buf; hub_restore(x, BW_Y, w, BW_H);
     push_fill(x, BW_Y, w, BW_H, 3); push_fill(x + 2, BW_Y + 2, w - 4, BW_H - 4, HC_W); push_fill(x + 4, BW_Y + 4, w - 8, BW_H - 8, HC_K);
 }
-static Hot bay_hot[10];
+static Hot bay_hot[13];
 static void red_btn(u8 i, u8 x, u8 y, u8 w, const char *s) {     /* botao vermelho de borda branca, como o original (e ja registra o clique) */
     u8 n = 0;
     while (s[n]) n++;
@@ -1776,25 +1776,25 @@ static void red_btn(u8 i, u8 x, u8 y, u8 w, const char *s) {     /* botao vermel
    Estado de cada parafuso: 0 apertado, 1 meio solto (soltando), 2 meio apertado (apertando), 3 parafuso erguido sobre o furo, 4 furo vazio.
    Soltar: 0 -> 1 -> 4. Apertar: 4 -> 3 -> 2 -> 0. Com todos os parafusos em 4 a peca sai e vai para as reservas; a peca nova (PARTS > SELECT) chega com os parafusos em 3.
    Ordem: carburadores -> coletor -> motor (o motor tambem tem a fiacao, 1 clique: 0 ligada, 4 solta). Encaixes: 0 motor, 1 coletor, 2 carburadores. */
-static u8 bay_pr[3], bay_s[3][3], bay_nd, bay_dsl[8], bay_dix[8];
-static i16 bay_dx[8], bay_dy[8];
+static u8 bay_pr[3], bay_s[3][6], bay_nd, bay_dsl[10], bay_dix[10];
+static i16 bay_dx[10], bay_dy[10];
 static const u8 bay_cat[3] = {0, 3, 2};
-static const char *const bay_nm[11] = {"TUNE THE ENGINE", "CHANGE THE PARTS", "CLOSE THE HOOD", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT"};
+static const char *const bay_nm[13] = {"TUNE THE ENGINE", "CHANGE THE PARTS", "CLOSE THE HOOD", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT", "THE BOLT"};
 static const char *bay_msg;
-static u8 bay_nsl(u8 sl) { u8 mm = gcar->man > 6 ? 6 : gcar->man; return sl == 0 ? 2 : sl == 1 ? 2 : mp_n[mm]; }
-static void bay_reset(void) { u8 i, j; for (i = 0; i < 3; i++) { bay_pr[i] = 1; for (j = 0; j < 3; j++) bay_s[i][j] = 0; } }
+static u8 bay_nsl(u8 sl) { u8 mm = gcar->man > 6 ? 6 : gcar->man; return sl == 2 ? 2 * mp_n[mm] : 2; }
+static void bay_reset(void) { u8 i, j; for (i = 0; i < 3; i++) { bay_pr[i] = 1; for (j = 0; j < 6; j++) bay_s[i][j] = 0; } }
 static u8 bay_tight(u8 sl) { u8 j, n = bay_nsl(sl); if (!bay_pr[sl]) return 0; for (j = 0; j < n; j++) if (bay_s[sl][j]) return 0; return 1; }
 static u8 bay_ok(void) { return bay_tight(0) && bay_tight(1) && bay_tight(2); }
 #ifdef BOLT_TEST
 static u8 tscr_i;                                       /* teste: roteiro de cliques (0xA0|encaixe = soltar o proximo parafuso do encaixe; 0xB0|encaixe = apertar; 254 = nada) */
 static u8 bay_test_k(u8 n) {
-    static const u8 tscr[] = {0xA2,0xA2, 0xA1,0xA1,0xA1,0xA1, 0xA0,0xA0,0xA0, 1,5,6, 1,3,5,2,5,6,
-                              0xB0,0xB0,0xB0,0xB0, 0xB1,0xB1,0xB1,0xB1,0xB1,0xB1, 0xB2,0xB2,0xB2, 2};
+    static const u8 tscr[] = {255,255,255,0xA2,0xA2,0xA2,0xA2, 0xA1,0xA1,0xA1,0xA1, 0xA0,0xA0,0xA0, 1,5,6, 1,3,5,2,5,6,
+                              0xB0,0xB0,0xB0, 0xB1,0xB1,0xB1,0xB1, 0xB2,0xB2,0xB2,0xB2, 2};
     u8 k = tscr[tscr_i < sizeof tscr ? tscr_i : sizeof tscr - 1], d, sl, st; u16 j; u8 w;
     for (w = 0; w < 30; w++) { j = JIFFY; while (JIFFY == j) ; }
     dbg_t2 = bay_pr[0] | bay_pr[1] << 1 | bay_pr[2] << 2 | (u16)bay_nd << 8; dbg_t3 = bay_s[0][0] | bay_s[0][1] << 3 | bay_s[1][0] << 6 | bay_s[1][1] << 9 | bay_s[2][0] << 12;
     dbg_t1 = ++tscr_i; for (w = 0; w < 30; w++) { j = JIFFY; while (JIFFY == j) ; }
-    if (k >= 0xA0) {
+    if (k >= 0xA0 && k != 255) {
         sl = k & 3;
         for (d = 0; d < bay_nd; d++) if (bay_dsl[d] == sl) { st = bay_s[sl][bay_dix[d]]; if (k < 0xB0 ? st != 4 : st != 0) return 3 + d; }
         return 254;
@@ -1813,37 +1813,40 @@ static u8 bay_pick(u8 n, const char *const *names) {  /* espera um clique nos bo
     lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     return k;
 }
-#define ART_BOLT 13                                     /* 13 apertado, 14 solto, 15 erguido, 16 furo, 17 fiacao ligada, 18 fiacao solta */
-static void bay_dot(i16 x, i16 y, u8 st, u8 wire) {
-    if (wire) { art_put(st == 0 ? 17 : 18, x - 2, y - 5); return; }
-    if (st >= 3) art_put(ART_BOLT + 3, x - 3, y - 3);                                  /* o furo */
-    if (st == 3) art_put(ART_BOLT + 2, x - 3, y - 9);                                  /* parafuso erguido acima do furo */
-    else if (st == 1 || st == 2) art_put(ART_BOLT + 1, x - 3, y - 9);
-    else if (st == 0) art_put(ART_BOLT, x - 3, y - 9);
+#define ART_BOLT 13                                     /* 13 apertado (item 89), 14 meio solto (88), 15 erguido (87), 16 furo (138), 17 fiacao solta (94), 18 fiacao ligada (95) */
+static void bay_dot(i16 x, i16 y, u8 st, u8 wire) {      /* (x, y) = canto da arte do parafuso (7x11, a base fica na linha 10) */
+    if (wire) { art_put(st == 0 ? 18 : 17, x, y); return; }
+    if (st >= 3) art_put(ART_BOLT + 3, x, y + 4);                                      /* o furo */
+    if (st == 3) art_put(ART_BOLT + 2, x, y);                                          /* parafuso erguido sobre o furo */
+    else if (st == 1 || st == 2) art_put(ART_BOLT + 1, x, y);
+    else if (st == 0) art_put(ART_BOLT, x, y);
 }
-static void bay_engine(i16 cy, u8 dots) {              /* motor + coletor (assentado na borda do topo do motor) + um carburador por almofada do coletor */
-    u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, ci = 10 + (gcar->carb > 2 ? 2 : gcar->carb), k, n;
-    i16 ex = 128 - art_w[e] / 2, ey = cy + 14, px = ex + eng_sx[e] - mp_c[mm], py = ey + eng_r[e] - art_h[mi];
+static void bay_add(u8 sl, u8 ix, i16 x, i16 y) { u8 n = bay_nd++; bay_dsl[n] = sl; bay_dix[n] = ix; bay_dx[n] = x; bay_dy[n] = y; }
+/* motor, coletor e carburadores nas posicoes medidas no jogo original (README): o coletor comeca na borda do topo do motor com a base na borda frontal;
+   cada carburador fica sobre uma almofada do coletor (base 9 linhas abaixo do topo do coletor), com 2 parafusos; o coletor tem 1 parafuso em cada ponta; o motor, 1 no "rosto" de baixo mais a fiacao */
+#define AX(d) ((d) - ((d) + 1) / 5)                     /* coluna nativa (320 px, relativa ao motor) -> coluna da arte (a 5a coluna foi removida) */
+static void bay_engine(i16 cy, u8 dots) {
+    u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, cc = gcar->carb > 2 ? 2 : gcar->carb, ci = 10 + cc, k, n;
+    i16 ex = 128 - art_w[e] / 2, ey = cy + 14, pf = eng_lf[e], py = ey + eng_r[e] - art_h[mi], cf, cyy;       /* pf, cf: colunas nativas relativas ao motor */
     bay_nd = 0;
     if (bay_pr[0]) {
         art_put(e, ex, ey);
-        if (dots) {
-            bay_dsl[0] = 0; bay_dix[0] = 0; bay_dx[0] = ex + 18; bay_dy[0] = ey + art_h[e] - 8;                                  /* parafuso do motor */
-            bay_dsl[1] = 0; bay_dix[1] = 1; bay_dx[1] = ex + art_w[e] / 2 + 6; bay_dy[1] = ey + art_h[e] - 1; bay_nd = 2;       /* fiacao (ponta do fio) */
-        }
+        if (dots) { bay_add(0, 0, ex + AX(eng_bxf[e]), ey + eng_byf[e]); bay_add(0, 1, ex + AX(eng_wxf[e]), ey + eng_wyf[e]); }
+        else art_put(18, ex + AX(eng_wxf[e]), ey + eng_wyf[e]);
     }
     if (bay_pr[1]) {
-        art_put(mi, px, py);
-        if (dots) for (k = 0; k < 2; k++) { n = bay_nd++; bay_dsl[n] = 1; bay_dix[n] = k; bay_dx[n] = k ? px + art_w[mi] - 10 : px + 10; bay_dy[n] = py + 9; }
+        art_put(mi, ex + AX(pf), py);
+        if (dots) { bay_add(1, 0, ex + AX(pf + 10), py + 3); bay_add(1, 1, ex + AX(pf + pw_f[mm] - 10), py + 3); }
     }
     if (bay_pr[2]) for (k = 0; k < mp_n[mm]; k++) {
-        art_put(ci, px + mp_x[mm][k] - art_w[ci] / 2, py + 5 - art_h[ci]);
-        if (dots) { n = bay_nd++; bay_dsl[n] = 2; bay_dix[n] = k; bay_dx[n] = px + mp_x[mm][k]; bay_dy[n] = py + 1; }
+        cf = pf + pc_f[mm][k] + 1 + k - cw_f[cc] / 2; cyy = py + 9 - art_h[ci];
+        art_put(ci, ex + AX(cf), cyy);
+        if (dots) { bay_add(2, 2 * k, ex + AX(cf + 9), cyy + 6); bay_add(2, 2 * k + 1, ex + AX(cf + cw_f[cc] - 13), cyy + 6); }
     }
-    for (k = 0; k < bay_nd; k++) {                      /* parafusos e furos por cima de tudo (a folha das pecas ja esta na pagina 1) */
+    for (k = 0; k < bay_nd; k++) {                      /* parafusos e furos por cima de tudo */
         n = bay_dsl[k];
         bay_dot(bay_dx[k], bay_dy[k], bay_s[n][bay_dix[k]], n == 0 && bay_dix[k] == 1);
-        bay_hot[3 + k].x0 = bay_dx[k] - 5; bay_hot[3 + k].y0 = bay_dy[k] - 7; bay_hot[3 + k].x1 = bay_dx[k] + 5; bay_hot[3 + k].y1 = bay_dy[k] + 5; bay_hot[3 + k].id = 3 + k;
+        bay_hot[3 + k].x0 = bay_dx[k] - 1; bay_hot[3 + k].y0 = bay_dy[k]; bay_hot[3 + k].x1 = bay_dx[k] + (n == 0 && bay_dix[k] == 1 ? 14 : 8); bay_hot[3 + k].y1 = bay_dy[k] + 11; bay_hot[3 + k].id = 3 + k;
     }
 }
 static void bay_bubble(const char *m) {                 /* balao de fala no alto da janela */
@@ -1935,7 +1938,7 @@ static void parts_win(void) {
         *car_var(gcar, cat) = part_var[spare[r]];
         if (cat == 0) gcar->wear = 0;
         if (cat == 4) gcar->tp = 0;
-        if (sl < 3) { spare[r] = spare[--nspare]; nxt = 0; bay_pr[sl] = 1; bay_s[sl][0] = bay_s[sl][1] = bay_s[sl][2] = 3; if (sl == 0) bay_s[0][1] = 4; }   /* a peca nova aparece solta: aparafusar na janela do motor */
+        if (sl < 3) { spare[r] = spare[--nspare]; nxt = 0; bay_pr[sl] = 1; for (i = 0; i < 6; i++) bay_s[sl][i] = 3; if (sl == 0) bay_s[0][1] = 4; }   /* a peca nova aparece solta: aparafusar na janela do motor */
         else if (old != 255) spare[r] = old; else { spare[r] = spare[--nspare]; nxt = 0; }
     }
 }
@@ -1943,6 +1946,9 @@ static void engine_bay(void) BK {
     u8 k;
     if (!nown) { ui_note("NO CAR YET", "BUY ONE FIRST!"); return; }
     gcar = &gc[cur]; art_grp_cur = 0; if (bay_bad != cur) bay_reset(); bay_msg = 0;
+#ifdef FORCE_PARTS
+    gcar->eng = FORCE_PARTS >> 8; gcar->man = (FORCE_PARTS >> 4) & 15; gcar->carb = FORCE_PARTS & 15;     /* testes: motor, coletor e carburador (0x2 5 2 = motor 78, coletor 104, carburador 86) */
+#endif
 #ifdef TEST_SPARES
     spare[0] = 0; spare[1] = 6; nspare = 2;                  /* testes: dois motores GM de reserva */
 #endif
@@ -1955,10 +1961,10 @@ static void engine_bay(void) BK {
         if (bay_msg) { bay_bubble(bay_msg); bay_msg = 0; }
         red_btn(0, BW_X + 10, BW_BTN, 52, "TUNE"); red_btn(1, BW_X + 66, BW_BTN, 52, "PARTS"); red_btn(2, BW_X + 122, BW_BTN, 52, "DONE");
         k = bay_pick(3 + bay_nd, bay_nm);
-        if (k >= 3 && k < 11) bay_click(k - 3);
+        if (k >= 3 && k < 13) bay_click(k - 3);
         else if (k == 0) { if (bay_ok()) car_tune_win(); else bay_msg = "TIGHTEN ALL THE BOLTS FIRST"; }
         else if (k == 1) parts_win();
-        else { bay_bad = bay_ok() ? 255 : cur; return; }        /* DONE/ESC: se sobrou parafuso solto o carro nao anda */
+        else if (k != 255) { bay_bad = bay_ok() ? 255 : cur; return; }         /* (255 = nada: so o roteiro de teste) */        /* DONE/ESC: se sobrou parafuso solto o carro nao anda */
     }
 }
 #endif

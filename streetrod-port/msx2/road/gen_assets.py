@@ -190,6 +190,22 @@ def garage_pixels(lib2, k=32):
     idx = (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
     return idx[:, [x for x in range(it.w) if x % 5 != 4]]
 
+def garage_full(lib2, k):
+    """Item da LIB2 em colunas originais (320 px), sem remover a 5a coluna."""
+    import srlib
+    it = srlib.load(lib2)[k]
+    p = np.frombuffer(it.decode(), np.uint8).reshape(4, it.h, (it.w + 7) // 8)
+    b = np.unpackbits(p, axis=2)[:, :, :it.w]
+    return (b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3)).astype(np.uint8)
+
+def garage_pixels_thin(lib2, k):
+    """Como garage_pixels, mas a coluna removida (x % 5 == 4) empresta seus pixels a coluna anterior se ela estiver vazia: preserva fios de 1 pixel."""
+    f = garage_full(lib2, k).copy()
+    for x in range(4, f.shape[1], 5):
+        e = (f[:, x - 1] == 0) & (f[:, x] != 0)
+        f[e, x - 1] = f[e, x]
+    return f[:, [x for x in range(f.shape[1]) if x % 5 != 4]]
+
 def light_sheet(lib2):
     """Semaforo (item 13: duas cabecas de 24x32, lampada vermelha na da direita, verde na da esquerda) em 3 estados: apagado, vermelho, verde."""
     import srlib
@@ -370,40 +386,34 @@ def main():
         for grp_, items_ in ((66, [76, 77, 78, 79, 80, 81, 82, 83, 104, 105, 84, 85, 86, 87, 88, 89, 138, 94, 95]), (67, [99, 100, 101, 102]), (68, [65, 66, 67, 68])):
             sheet = np.zeros((212, 256), np.uint8); x_ = y_ = rh_ = 0
             for it_ in items_:
-                px_ = garage_pixels(lib2, it_); h_, w_ = px_.shape
+                px_ = (garage_pixels_thin if it_ in (94, 95) else garage_pixels)(lib2, it_); h_, w_ = px_.shape
                 if x_ + w_ > 256: x_ = 0; y_ += rh_; rh_ = 0
                 x_ &= ~1
                 assert y_ + h_ <= 212
                 sheet[y_:y_ + h_, x_:x_ + w_] = px_; art_pos.append((x_, y_, w_, h_)); x_ += w_ + 2; rh_ = max(rh_, h_)
             add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), 256 * 128, 1, group=grp_)
-        eng_r, eng_sx, mp_n, mp_x, mp_c = [], [], [], [], []
-        def brun(row, val, minl):                                  # centros das corridas de 'val' com pelo menos minl pixels
-            out_ = []; x_ = 0
-            while x_ < len(row):
-                if row[x_] == val:
-                    s_ = x_
-                    while x_ < len(row) and row[x_] == val: x_ += 1
-                    if x_ - s_ >= minl: out_.append((s_ + x_ - 1) / 2)
-                else: x_ += 1
-            return out_
-        for i_ in (76, 77, 78):                                   # eng_r: borda frontal do topo do motor (1a fileira com >= 50% de branco/borda); eng_sx: centro dos 3-4 encaixes do topo (onde as almofadas do coletor entram)
+        # posicoes do jogo original em colunas nativas (320 px): o main.c converte engine-relativo com ax(d) = d - (d + 1) / 5 (a mesma regra da 5a coluna removida)
+        # medidas na captura original (320x200; motor 78 em (112,77), coletor 104 em (152,69), carburador 86 em (167,60) e (211,60), parafusos 87/89 em carb+9 e carb+w-13 (y carb+6),
+        # nas pontas do coletor (+10 / w-10, y+3), no "rosto" do motor (106,37); fiacao 95 em (67,50)). Motores 76/77: parafuso (83,32) e (94,31), fiacao a (-39,+13) dele (correlacao com o rosto do 78)
+        eng_r, eng_lf, pw_f, pc_f, mp_n, cw_f = [], [], [], [], [], []
+        for i_ in (76, 77, 78):
             ea = garage_pixels(lib2, i_)
             for r_ in range(5, 25):
                 if np.count_nonzero((ea[r_] == 4) | (ea[r_] == 5)) >= 0.5 * ea.shape[1]: eng_r.append(r_); break
-            for r_ in range(1, 9):
-                sl_ = [c_ for c_ in brun(ea[r_], 1, 4) if c_ < ea.shape[1] - 20]
-                if len(sl_) >= 3: eng_sx.append(int(round(sum(sl_) / len(sl_)))); break
-        for i_ in (79, 80, 81, 82, 83, 104, 105):                 # almofadas do coletor (onde entram os carburadores): centros das corridas da fileira 0
-            pa = garage_pixels(lib2, i_)[0]; runs_ = []; x_ = 0
+            eng_lf.append(int(np.nonzero(garage_full(lib2, i_)[0])[0][0]))
+        for i_ in (79, 80, 81, 82, 83, 104, 105):             # coletor: largura e centros das almofadas (corridas da fileira 0) em colunas nativas
+            pa = garage_full(lib2, i_)[0]; runs_ = []; x_ = 0
             while x_ < len(pa):
                 if pa[x_] > 1:
                     s_ = x_
                     while x_ < len(pa) and pa[x_] > 1: x_ += 1
-                    if x_ - s_ >= 8: runs_.append((s_ + x_) // 2)
+                    if x_ - s_ >= 10: runs_.append((s_ + x_) // 2)
                 else: x_ += 1
-            mp_n.append(len(runs_)); mp_x.append((runs_ + [0, 0, 0])[:3]); mp_c.append(int(round(sum(runs_) / len(runs_))) if runs_ else 0)
+            mp_n.append(len(runs_)); pw_f.append(len(pa)); pc_f.append((runs_ + [0, 0, 0])[:3])
+        cw_f = [garage_full(lib2, i_).shape[1] for i_ in (84, 85, 86)]
+        eng_bf = [(83, 32), (94, 31), (106, 37)]; eng_wf = [(44, 45), (55, 44), (67, 50)]
         parth = ''.join('static const uint8_t art_%s[%d] = {%s};\n' % (c_, len(art_pos), ','.join(str(p_[k_]) for p_ in art_pos)) for k_, c_ in enumerate('xywh'))
-        parth += 'static const uint8_t eng_r[3] = {%s}, eng_sx[3] = {%s}, mp_c[7] = {%s}, mp_n[7] = {%s}, mp_x[7][3] = {%s};\n' % (','.join(map(str, eng_r)), ','.join(map(str, eng_sx)), ','.join(map(str, mp_c)), ','.join(map(str, mp_n)), ','.join('{%s}' % ','.join(map(str, r_)) for r_ in mp_x))
+        parth += 'static const uint8_t eng_r[3] = {%s}, eng_lf[3] = {%s}, eng_bxf[3] = {%s}, eng_byf[3] = {%s}, eng_wxf[3] = {%s}, eng_wyf[3] = {%s}, cw_f[3] = {%s}, pw_f[7] = {%s}, mp_n[7] = {%s}, pc_f[7][3] = {%s};\n' % (','.join(map(str, eng_r)), ','.join(map(str, eng_lf)), ','.join(str(p_[0]) for p_ in eng_bf), ','.join(str(p_[1]) for p_ in eng_bf), ','.join(str(p_[0]) for p_ in eng_wf), ','.join(str(p_[1]) for p_ in eng_wf), ','.join(map(str, cw_f)), ','.join(map(str, pw_f)), ','.join(map(str, mp_n)), ','.join('{%s}' % ','.join(map(str, r_)) for r_ in pc_f))
         ls = light_sheet(lib2)
         add((ls[:, 0::2] << 4 | ls[:, 1::2]).astype(np.uint8).tobytes(), LIGHT_Y * 128, 1)
         hs = []; xs = []
