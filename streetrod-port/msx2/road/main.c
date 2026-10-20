@@ -1823,7 +1823,7 @@ static void bay_dot(i16 x, i16 y, u8 st, u8 wire) {
 }
 static void bay_engine(i16 cy, u8 dots) {              /* motor + coletor (assentado na borda do topo do motor) + um carburador por almofada do coletor */
     u8 e = gcar->eng > 2 ? 2 : gcar->eng, mm = gcar->man > 6 ? 6 : gcar->man, mi = 3 + mm, ci = 10 + (gcar->carb > 2 ? 2 : gcar->carb), k, n;
-    i16 ex = 128 - art_w[e] / 2, ey = cy + 14, px = ex + eng_cx[e] - art_w[mi] / 2, py = ey + eng_r[e] - art_h[mi];
+    i16 ex = 128 - art_w[e] / 2, ey = cy + 14, px = ex + eng_sx[e] - mp_c[mm], py = ey + eng_r[e] - art_h[mi];
     bay_nd = 0;
     if (bay_pr[0]) {
         art_put(e, ex, ey);
