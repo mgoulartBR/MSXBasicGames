@@ -398,3 +398,6 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 - **Janela esquerda estática:** x < `RACE_X0` (54: vidro lateral e coluna A) é pintada uma vez nas duas páginas (`left_static`), e só o resto é redesenhado por quadro (menos 16 retângulos de moldura por quadro).
 - **Desempenho (openMSX, C-BIOS, piloto automático):** antes 8,0 fps → agora ~6,9 fps. Fases (ms/quadro, `-DPROF`, soma por fase em `prof[]`): entrada/física 10, projeção 14, fundo+grama 10, estrada 61 (VDP), cenário 19, moldura 24, HUD 7. `-DNO_SCN`/`-DNO_BG`/`-DSCN_SKIP=mask` desligam partes para medir. `vc_w` virou macro (comando direto de VDP sem chamada de função).
 - Teste: `rshot.sh N` (capturas da corrida em `rs/`), `race_snap.tcl`, `fps.tcl`, `prof2.tcl`.
+
+### Tela TUNING original
+`car_tune_win` usa a janela inteira da LIB2 (item 71, 200x175 -> 160x175, grupo 69 na página 1) copiada por HMMM para (48,8). Setas: **para cima = RETARD**, **para baixo = ADVANCE** (manual); botão DONE; painéis de baixo com `TIMING ±n` e `POWER n`. A correia dentada (colunas 71-75, linhas 53-81, periodo de 4 linhas) é regerada em 4 fases (`gen_assets.py`) e copiada por LMMM IMP conforme o ponto; o entalhe vermelho fica fixo. Ao voltar, `hub_restore` devolve a garagem. Teste: `tune2.tcl` com `-DBOLT_TEST -DTEST_TUNE -DBAY_CUR_X=138 -DBAY_CUR_Y=64`.

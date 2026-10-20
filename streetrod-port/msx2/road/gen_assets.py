@@ -398,6 +398,14 @@ def main():
         # posicoes do jogo original em colunas nativas (320 px): o main.c converte engine-relativo com ax(d) = d - (d + 1) / 5 (a mesma regra da 5a coluna removida)
         # medidas na captura original (320x200; motor 78 em (112,77), coletor 104 em (152,69), carburador 86 em (167,60) e (211,60), parafusos 87/89 em carb+9 e carb+w-13 (y carb+6),
         # nas pontas do coletor (+10 / w-10, y+3), no "rosto" do motor (106,37); fiacao 95 em (67,50)). Motores 76/77: parafuso (83,32) e (94,31), fiacao a (-39,+13) dele (correlacao com o rosto do 78)
+        # tela TUNING (item 71 = janela inteira 200x175 -> 160x175): na pagina 1 (grupo 69); a direita da arte, 4 quadros da correia dentada (colunas 71-75, linhas 53-81, periodo de 4 linhas)
+        # em 4 fases, com o entalhe vermelho (linhas 70-72) fixo
+        t71_ = garage_pixels(lib2, 71); cv71_ = np.zeros((212, 256), np.uint8); cv71_[:175, :160] = t71_
+        for s_ in range(4):
+            for r_ in range(53, 82):
+                if 70 <= r_ <= 72: cv71_[r_ - 53, 164 + 6 * s_:164 + 6 * s_ + 5] = t71_[r_, 71:76]
+                else: cv71_[r_ - 53, 164 + 6 * s_:164 + 6 * s_ + 5] = t71_[53 + (r_ - 53 - s_) % 4, 71:76]
+        add((cv71_[:, 0::2] << 4 | cv71_[:, 1::2]).astype(np.uint8).tobytes(), 256 * 128, 1, group=69)
         eng_r, eng_lf, pw_f, pc_f, mp_n, cw_f = [], [], [], [], [], []
         for i_ in (76, 77, 78):
             ea = garage_pixels(lib2, i_)

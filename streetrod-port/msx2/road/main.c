@@ -1880,22 +1880,37 @@ static void bay_click(u8 d) {                           /* clique no parafuso/fi
         spare[nspare++] = id; bay_pr[sl] = 0;
     }
 }
+/* TUNING (original): janela inteira da LIB2 (item 71, 160x175) na pagina 1; setas (cima = atrasar, baixo = adiantar) e DONE; a correia dentada gira conforme o ponto */
+#define TX 48
+#define TY 8
+static Hot tune_hot[3] = {{TX + 84, TY + 46, TX + 98, TY + 70, 0}, {TX + 84, TY + 78, TX + 98, TY + 100, 1}, {TX + 62, TY + 146, TX + 98, TY + 162, 2}};
+static void tune_blit(u16 sx, u16 sy, i16 dx, i16 dy, u8 w, u8 h, u8 cmd) {
+    vc_w(0, sx); vc_w(2, sy); vc_w(4, dx); vc_w(6, dy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = cmd;
+    vdp_cmd15();
+}
 static void car_tune_win(void) {
-    static const char *const nm[3] = {"ADVANCE THE TIMING", "RETARD THE TIMING", "DONE TUNING"};
-    char b[28]; u8 n, k;
+    static const char *const nm[3] = {"RETARD THE TIMING", "ADVANCE THE TIMING", "DONE TUNING"};
+    char b[10]; u8 n, k, rg1;
+    cmd_n = 0; cp = cmd_buf; hub_restore(BW_X, BW_Y, BW_W, BW_H); vdp_wait();             /* apaga a janela do motor (a TUNING e mais alta e mais estreita) */
+    rg1 = *(volatile u8 *)0xF3E0;
+    vdp_reg(1, rg1 & ~0x40); g_group = 69; load_assets(); vdp_reg(1, rg1 | 0x40); art_grp_cur = 69;
     for (;;) {
-        win_frame(BW_X, BW_W);
-        gtext(BW_X + 70, BW_Y + 7, "TUNING", 1);
-        bay_engine(BW_Y + 20, 0);
-        n = 0; put_str(b, &n, "TIMING "); if (gcar->trim < 0) b[n++] = '-'; else if (gcar->trim) b[n++] = '+'; put_num(b, &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); b[n] = 0;
-        gtext(BW_X + 12, BW_Y + 92, b, 1);
-        n = 0; put_str(b, &n, "POWER "); put_num(b, &n, car_power(gcar) / 100); b[n] = 0;
-        gtext(BW_X + BW_W - 12 - 6 * n, BW_Y + 92, b, 1);
-        red_btn(0, BW_X + 10, BW_BTN, 54, "ADVANCE"); red_btn(1, BW_X + 66, BW_BTN, 54, "RETARD"); red_btn(2, BW_X + 122, BW_BTN, 52, "DONE");
-        k = bay_pick(3, nm);
-        if (k >= 2) return;
-        if (k == 0 && gcar->trim < 8) gcar->trim++;
-        if (k == 1 && gcar->trim > -8) gcar->trim--;
+        tune_blit(0, 256, TX, TY, 160, 175, 0xD0);                                          /* HMMM: a arte inteira */
+        tune_blit(164 + 6 * ((gcar->trim + 8) & 3), 256, TX + 71, TY + 53, 5, 29, 0x90);    /* LMMM IMP: correia dentada na fase do ponto */
+        cmd_n = 0; cp = cmd_buf;
+        gtext(TX + 9, TY + 146, "TIMING", 1);
+        n = 0; if (gcar->trim < 0) b[n++] = '-'; else if (gcar->trim) b[n++] = '+'; put_num(b, &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); b[n] = 0;
+        gtext(TX + 9, TY + 156, b, 1);
+        gtext(TX + 117, TY + 146, "POWER", 1);
+        n = 0; put_num(b, &n, car_power(gcar) / 100); b[n] = 0;
+        gtext(TX + 117, TY + 156, b, 1);
+        vdp_wait(); cmd_n = 0; cp = cmd_buf;
+        hs = tune_hot; hn = 3; hnames = nm; lab_mode = 3; pick_tick = 0; cur_ymax = 210;
+        k = pick_hot(1);
+        lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
+        if (k >= 2) { cmd_n = 0; cp = cmd_buf; hub_restore(TX, TY, 160, 175); vdp_wait(); return; }     /* devolve a garagem por baixo da janela alta */
+        if (k == 1 && gcar->trim < 8) gcar->trim++;
+        if (k == 0 && gcar->trim > -8) gcar->trim--;
     }
 }
 static void part_art(u8 cat, i16 cx, i16 cy) {          /* a peca instalada na categoria cat, centrada em (cx, cy) */
@@ -1960,6 +1975,9 @@ static void engine_bay(void) BK {
 #endif
 #ifdef BAY_CUR_X
     cur_x = BAY_CUR_X; cur_y = BAY_CUR_Y;                  /* so para testes automatizados */
+#endif
+#ifdef TEST_TUNE
+    car_tune_win();
 #endif
     for (;;) {
         win_frame(BW_X, BW_W);
