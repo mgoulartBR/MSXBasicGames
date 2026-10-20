@@ -1788,7 +1788,7 @@ static u8 bay_ok(void) { return bay_tight(0) && bay_tight(1) && bay_tight(2); }
 #ifdef BOLT_TEST
 static u8 tscr_i;                                       /* teste: roteiro de cliques (0xA0|encaixe = soltar o proximo parafuso do encaixe; 0xB0|encaixe = apertar; 254 = nada) */
 static u8 bay_test_k(u8 n) {
-    static const u8 tscr[] = {255,255,255,0xA2,0xA2,0xA2,0xA2, 0xA1,0xA1,0xA1,0xA1, 0xA0,0xA0,0xA0, 1,5,6, 1,3,5,2,5,6,
+    static const u8 tscr[] = {255,255,255,0xA2,0xA2,0xA2,0xA2, 0xA1,0xA1,0xA1,0xA1, 0xA0,0xA0,0xA0, 1,0,3,2,6,
                               0xB0,0xB0,0xB0, 0xB1,0xB1,0xB1,0xB1, 0xB2,0xB2,0xB2,0xB2, 2};
     u8 k = tscr[tscr_i < sizeof tscr ? tscr_i : sizeof tscr - 1], d, sl, st; u16 j; u8 w;
     for (w = 0; w < 30; w++) { j = JIFFY; while (JIFFY == j) ; }
@@ -1813,13 +1813,13 @@ static u8 bay_pick(u8 n, const char *const *names) {  /* espera um clique nos bo
     lab_mode = 0; cur_ymax = 187; if (cur_y > 187) cur_y = 187;
     return k;
 }
-#define ART_BOLT 13                                     /* 13 apertado (item 89), 14 meio solto (88), 15 erguido (87), 16 furo (138), 17 fiacao solta (94), 18 fiacao ligada (95) */
+#define ART_BOLT 13                                     /* indices da folha: 13 = item 87 (parafuso alto = solto), 14 = 88 (meio), 15 = 89 (so a cabeca = apertado), 16 = furo (138), 17 fiacao solta (94), 18 fiacao ligada (95) */
 static void bay_dot(i16 x, i16 y, u8 st, u8 wire) {      /* (x, y) = canto da arte do parafuso (7x11, a base fica na linha 10) */
     if (wire) { art_put(st == 0 ? 18 : 17, x, y); return; }
     if (st >= 3) art_put(ART_BOLT + 3, x, y + 4);                                      /* o furo */
-    if (st == 3) art_put(ART_BOLT + 2, x, y);                                          /* parafuso erguido sobre o furo */
+    if (st == 3) art_put(ART_BOLT, x, y);                                              /* parafuso solto sobre o furo: alto (original) */
     else if (st == 1 || st == 2) art_put(ART_BOLT + 1, x, y);
-    else if (st == 0) art_put(ART_BOLT, x, y);
+    else if (st == 0) art_put(ART_BOLT + 2, x, y);                                     /* apertado: so a cabeca vermelha (original) */
 }
 static void bay_add(u8 sl, u8 ix, i16 x, i16 y) { u8 n = bay_nd++; bay_dsl[n] = sl; bay_dix[n] = ix; bay_dx[n] = x; bay_dy[n] = y; }
 /* motor, coletor e carburadores nas posicoes medidas no jogo original (README): o coletor comeca na borda do topo do motor com a base na borda frontal;
@@ -1904,12 +1904,12 @@ static void part_art(u8 cat, i16 cx, i16 cy) {          /* a peca instalada na c
 #define PX 8                                            /* a janela das pecas usa a tela toda: os motores sao largos */
 #define PW 240
 static void parts_win(void) {
-    static const char *const nm[7] = {"THE ENGINE", "THE TRANSMISSION", "THE CARBURETOR", "THE MANIFOLD", "THE TIRES", "INSTALL THE NEXT SPARE PART", "BACK TO THE ENGINE"};
+    static const char *const nm[7] = {"THE ENGINE", "THE TRANSMISSION", "THE CARBURETOR", "THE MANIFOLD", "THE TIRES", "LIST THE SPARE PARTS", "BACK TO THE ENGINE"};
     static const char *const lab[5] = {"ENGINE", "TRANS", "CARB", "MANIFOLD", "TIRES"}, *const plu[5] = {"ENGINES", "TRANSMISSIONS", "CARBURETORS", "MANIFOLDS", "TIRES"};
 #ifndef PARTS_CAT
 #define PARTS_CAT 0                                      /* (teste: categoria inicial) */
 #endif
-    u8 cat = PARTS_CAT, k, i, r, old, bub = 0, id, n, nxt = 0, fit = car_maker(gcar), sl; char b[30];
+    u8 cat = PARTS_CAT, k, i, r, old, bub = 0, id, n, fit = car_maker(gcar), sl; char b[30];
 #ifdef PARTS_CUR_X
     cur_x = PARTS_CUR_X; cur_y = PARTS_CUR_Y;
 #endif
@@ -1925,21 +1925,26 @@ static void parts_win(void) {
             n = 0; if (bub == 2) put_str(b, &n, "UNBOLT THE OLD ONE FIRST"); else { put_str(b, &n, "NO SPARE "); put_str(b, &n, plu[cat]); } b[n] = 0;
             push_fill(PX + 156 - 3 * n - 4, BW_Y + 6, 6 * n + 8, 14, HC_W); push_fill(PX + 156 - 3 * n - 3, BW_Y + 7, 6 * n + 6, 12, 3); gtext(PX + 156 - 3 * n, BW_Y + 9, b, 0);
         }
-        red_btn(5, PX + 8, BW_BTN, 100, "SELECT"); red_btn(6, PX + 132, BW_BTN, 100, "DONE");
+        red_btn(5, PX + 8, BW_BTN, 100, "CHOOSE"); red_btn(6, PX + 132, BW_BTN, 100, "DONE");
         k = bay_pick(7, nm);
-        if (k < 5) { cat = k; bub = 0; nxt = 0; continue; }
-        if (k != 5) return;
-        if (sl < 3 && bay_pr[sl]) { bub = 2; continue; }  /* peca do motor: primeiro desaparafusar a antiga (clique nos pontinhos vermelhos) */
-        gsn = 0;                                         /* SELECT: instala a proxima peca reserva desta categoria (a antiga vira reserva: da para voltar) */
+        if (k < 5) cat = k;                              /* clicar numa secao abre a lista das pecas reservas dela; SELECT repete a lista da secao atual */
+        else if (k != 5) return;
+        sl = cat == 0 ? 0 : cat == 3 ? 1 : cat == 2 ? 2 : 3;
+        bub = 0;
+        if (sl < 3 && bay_pr[sl]) { bub = 2; continue; }  /* peca do motor: primeiro desaparafusar a antiga (clique nos parafusos) */
+        gsn = 0;
         for (i = 0; i < nspare; i++) if (part_cat[spare[i]] == cat && (part_mk[spare[i]] & fit)) gsp[gsn++] = i;
         if (!gsn) { bub = 1; continue; }
-        bub = 0; r = gsp[nxt % gsn]; nxt++;
+        ui_get = spare_cat_get; ui_nohint = 0;
+        r = ui_list(cat_label[cat], gsn, 0);             /* lista das pecas disponiveis (X ou ESC cancela) */
+        if (r == 255) continue;
+        r = gsp[r];
         old = part_find(cat, *car_var(gcar, cat), fit);
         *car_var(gcar, cat) = part_var[spare[r]];
         if (cat == 0) gcar->wear = 0;
         if (cat == 4) gcar->tp = 0;
-        if (sl < 3) { spare[r] = spare[--nspare]; nxt = 0; bay_pr[sl] = 1; for (i = 0; i < 6; i++) bay_s[sl][i] = 3; if (sl == 0) bay_s[0][1] = 4; }   /* a peca nova aparece solta: aparafusar na janela do motor */
-        else if (old != 255) spare[r] = old; else { spare[r] = spare[--nspare]; nxt = 0; }
+        if (sl < 3) { spare[r] = spare[--nspare]; bay_pr[sl] = 1; for (i = 0; i < 6; i++) bay_s[sl][i] = 3; if (sl == 0) bay_s[0][1] = 4; }   /* a peca nova aparece solta: aparafusar na janela do motor */
+        else if (old != 255) spare[r] = old; else spare[r] = spare[--nspare];
     }
 }
 static void engine_bay(void) BK {
