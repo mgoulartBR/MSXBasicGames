@@ -2533,7 +2533,7 @@ static void new_race(void) {
 /* janela esquerda (vidro lateral e coluna A, x < RACE_X0): pintada uma vez nas duas paginas (ceu, colinas, grama e a moldura do cockpit); so o resto e redesenhado a cada quadro */
 static void left_static(void) {
     u8 pg, k;
-    if (!RACE_X0) return;
+    if (!OV_LEFT) return;                                   /* (a janela esquerda ja vem pronta na imagem do cockpit) */
     for (pg = 0; pg < 2; pg++) {
         i16 b = pg ? 256 : 0;
         clip_l = 0; clip_r = RACE_X0; ybase = b + WIN_Y;
@@ -2541,7 +2541,7 @@ static void left_static(void) {
         push_fill(0, SKY_TOP, RACE_X0, 15, 0);
         vc_w(0, 0); vc_w(2, BG_Y); vc_w(4, 0); vc_w(6, ybase + SKY_TOP); vc_w(8, RACE_X0); vc_w(10, BG_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
         vdp_cmd15();
-        push_fill(0, SKY_TOP + BG_H, RACE_X0, VIEW_BOT - SKY_TOP - BG_H, 13);
+        push_fill(0, SKY_TOP + BG_H, RACE_X0, 129 - SKY_TOP - BG_H, 13);          /* grama ate o fim do vidro lateral (y 152 da tela) */
         vdp_wait();
         for (k = 0; k < OV_LEFT; k++) {
             i16 ox = ov_x[k] << 1, oy = ov_y[k];
@@ -2729,23 +2729,23 @@ static void scn_pole(i16 x, i16 y, i16 h) {                                    /
     if (ph > 0) push_fill(x, py, 1 + (h >> 4), ph, 15);
 }
 /* retrovisor superior: vista traseira (mostra o que ficou para tras: a pista que foge para o horizonte, grama e as arvores/predios dos segmentos ja passados) */
-#define MIR_X 194
-#define MIR_W 61
-#define MIR_Y (-2)
-static void rearview(void) {
-    u8 j, n = 0, e, side, t; i16 x, h, w, yb;
+static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: retangulo (x0, wy) w x h (wy relativo a janela da estrada) */
+    u8 j, n = 0, e, side, t; i16 x, ph, pw, yb, hz = (h * 10) / 21, cx = x0 + (w >> 1), dx, hh, ww;
     static const u8 rdx[4] = {26, 22, 18, 16}, rby[4] = {20, 15, 13, 12}, rh[4] = {8, 5, 3, 3}, rw[4] = {6, 4, 3, 2};
-    push_fill(MIR_X, MIR_Y, MIR_W, 21, 0);                                   /* ceu */
-    push_fill(MIR_X, MIR_Y + 10, MIR_W, 11, 13);                             /* grama */
-    push_fill(MIR_X + 22, MIR_Y + 10, 17, 3, 0); push_fill(MIR_X + 17, MIR_Y + 13, 27, 4, 0); push_fill(MIR_X + 11, MIR_Y + 17, 39, 4, 0);      /* pista (trapezio) */
-    if (pos & 1) push_fill(MIR_X + 29, MIR_Y + 18, 3, 3, 7); else push_fill(MIR_X + 30, MIR_Y + 14, 1, 2, 7);                                        /* tracejado */
+    push_fill(x0, wy, w, h, 0);                                              /* ceu */
+    push_fill(x0, wy + hz, w, h - hz, 13);                                   /* grama */
+    pw = (w * 17) / 61; push_fill(cx - (pw >> 1), wy + hz, pw, (h * 3) / 21 + 1, 0);                         /* pista (trapezio) */
+    pw = (w * 27) / 61; push_fill(cx - (pw >> 1), wy + hz + (h * 3) / 21, pw, (h * 4) / 21 + 1, 0);
+    pw = (w * 39) / 61; push_fill(cx - (pw >> 1), wy + hz + (h * 7) / 21, pw, h - hz - (h * 7) / 21, 0);
+    if (pos & 1) push_fill(cx - 1, wy + hz + (h * 8) / 21, (w * 3) / 61 + 1, (h * 3) / 21, 7); else push_fill(cx, wy + hz + (h * 4) / 21, 1, (h * 2) / 21, 7);       /* tracejado */
     for (j = 0; j < 4 && n < 3; j++) {
         e = scn_tab[(u8)(pos - 1 - j)];
         for (side = 0; side < 2 && n < 3; side++) {
             t = (e >> (3 * side)) & 7;
             if (t != 1 && t != 6) continue;
-            x = MIR_X + 30 + (side ? rdx[j] : -(i16)rdx[j]) - (rw[j] >> 1); h = rh[j]; w = rw[j]; yb = MIR_Y + rby[j];
-            push_fill(x, yb - h, w, h, t == 1 ? 3 : 15);
+            dx = (rdx[j] * w) / 61; ww = (rw[j] * w) / 61 + 1; hh = (rh[j] * h) / 21 + 1; yb = wy + (rby[j] * h) / 21;
+            x = cx + (side ? dx : -dx) - (ww >> 1);
+            push_fill(x, yb - hh, ww, hh, t == 1 ? 3 : 15);
             n++;
         }
     }
@@ -2832,7 +2832,8 @@ static void draw_scn(void) BK {
         t = e & 7; if (t) scn_side(t, 0, e >> 6, XC[r - 1], y, hw);
         t = (e >> 3) & 7; if (t) scn_side(t, 1, e >> 6, XC[r - 1], y, hw);
     }
-    rearview();
+    rearview(194, 61, -2, 21);                                               /* retrovisor de cima */
+    { i16 cl = clip_l; clip_l = 0; rearview(8, 24, 79, 21); clip_l = cl; }         /* retrovisor lateral esquerdo (interior x 8-31, y 103-123 da tela) */
 }
 
 #pragma codeseg CODE

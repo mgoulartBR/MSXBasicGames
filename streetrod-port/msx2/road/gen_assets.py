@@ -91,7 +91,7 @@ GLASS_BOT = WIN_Y + VIEW_BOT              # y da tela onde o vidro termina (a es
 OV_SY = 702                                # sobreposicao do cockpit (so as partes opacas) na pagina 2, abaixo do cockpit limpo
 SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do carro (visto por tras)
 TREE_Y, SIGA_Y, SIGB_Y, SIGC_Y = 212, 468, 704, 734            # cenario da corrida: arvores/predios (pagina 0, linhas 212-255), placas A (pagina 1, 468-511), B e C (pagina 2, 704-767)
-RACE_X0 = 0                                                   # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
+RACE_X0 = 54                                                  # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
 BG_Y, BG_H = 768, 15                                         # colinas + grama do horizonte (item 267 da LIB2) na pagina 3 (corrida), copiadas por cima do ceu a cada quadro
 SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
 
@@ -138,6 +138,25 @@ def overlay(a):
         for x in range(ARC_XL, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
     return out, cuts, (sm if GLASS_MODE != 'flat' else None)
+
+def left_glass(a, y0, y1, x1):
+    """Mascara do vidro da janela esquerda (x < x1, linhas y0..y1 da tela): o preto ligado ao miolo da janela, exceto o interior do retrovisor lateral (x 7-33, y 101-125)."""
+    sub = a[y0:y1, :x1]; h, w = sub.shape; glass = np.zeros((h, w), bool); st = [(60 - y0, 25), (110 - y0, 35), (135 - y0, 9), (140 - y0, 14)]
+    while st:
+        y, x = st.pop()
+        if 0 <= y < h and 0 <= x < w and not glass[y, x] and sub[y, x] == 0:
+            glass[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    glass[101 - y0:126 - y0, 7:34] = False
+    return glass
+
+def bg_image(lib2):
+    """Colinas + grama do horizonte (item 267 da LIB2, linhas 5..19): BG_H x 256 indices da paleta do jogo; 0 = ceu preto."""
+    bs_ = garage_pixels(lib2, 267)[5:5 + BG_H]; bg_ = np.zeros((BG_H, 256), np.uint8)
+    for y_ in range(BG_H):
+        for x_ in range(256):
+            v_ = int(bs_[y_, x_])
+            bg_[y_, x_] = {14: 8 if (x_ + 2 * y_) % 5 == 0 else (6 if (x_ + y_) % 2 == 0 else 10), 10: 10, 9: 13, 13: 3}.get(v_, 0)
+    return bg_
 
 def overlay_rects(ov, band=2, gap=4):
     """Retangulos (x, y, w, h) que cobrem os pixels opacos do overlay, em faixas de `band` linhas (x e w pares, para HMMM)."""
@@ -283,8 +302,15 @@ def main():
             for x in range(ARC_XL, 256):
                 y = WIN_Y + SKY_TOP + int(sm[x])
                 if a[y, x] in (0, 1): a[y, x] = 1          # nao pinta sobre a coluna A
+        if cuts is not None:                        # janela lateral esquerda: o vidro vira cenario ESTATICO ja na imagem do cockpit (ceu, colinas e grama ate o fim do vidro); so o interior do retrovisor fica preto (a vista traseira e desenhada a cada quadro)
+            gl_ = left_glass(a, WIN_Y + SKY_TOP, 153, ARC_XL); bgi_ = bg_image(lib2); a = a.copy()
+            for y_ in range(WIN_Y + SKY_TOP, 153):
+                for x_ in range(ARC_XL):
+                    if gl_[y_ - WIN_Y - SKY_TOP, x_]:
+                        wy_ = y_ - WIN_Y
+                        a[y_, x_] = bgi_[wy_ - SKY_TOP, x_] if wy_ < SKY_TOP + BG_H else 13
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
-        orects = overlay_rects(ov[:, :ARC_XL] if cuts is not None else ov, band=8, gap=4)    # moldura da esquerda (porta/coluna A): retangulos HMMM justos
+        orects = []                                                              # (a moldura da esquerda ja esta na imagem: nada a repor por quadro)
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas
             x0 = ARC_XL
             while x0 < 256:
@@ -426,11 +452,7 @@ def main():
         eng_bf = [(83, 32), (94, 31), (106, 37)]; eng_wf = [(44, 45), (55, 44), (67, 50)]
         parth = ''.join('static const uint8_t art_%s[%d] = {%s};\n' % (c_, len(art_pos), ','.join(str(p_[k_]) for p_ in art_pos)) for k_, c_ in enumerate('xywh'))
         parth += 'static const uint8_t eng_r[3] = {%s}, eng_lf[3] = {%s}, eng_bxf[3] = {%s}, eng_byf[3] = {%s}, eng_wxf[3] = {%s}, eng_wyf[3] = {%s}, cw_f[3] = {%s}, pw_f[7] = {%s}, mp_n[7] = {%s}, pc_f[7][3] = {%s};\n' % (','.join(map(str, eng_r)), ','.join(map(str, eng_lf)), ','.join(str(p_[0]) for p_ in eng_bf), ','.join(str(p_[1]) for p_ in eng_bf), ','.join(str(p_[0]) for p_ in eng_wf), ','.join(str(p_[1]) for p_ in eng_wf), ','.join(map(str, cw_f)), ','.join(map(str, pw_f)), ','.join(map(str, mp_n)), ','.join('{%s}' % ','.join(map(str, r_)) for r_ in pc_f))
-        bs_ = garage_pixels(lib2, 267)[5:5 + BG_H]; bg_ = np.zeros((BG_H, 256), np.uint8)       # 267: colinas (vermelho com dither) + grama (linhas 5-19); copia OPACA (HMMM): o ceu preto e cor 0
-        for y_ in range(BG_H):
-            for x_ in range(256):
-                v_ = int(bs_[y_, x_])
-                bg_[y_, x_] = {14: 8 if (x_ + 2 * y_) % 5 == 0 else (6 if (x_ + y_) % 2 == 0 else 10), 10: 10, 9: 13, 13: 3}.get(v_, 0)
+        bg_ = bg_image(lib2)
         add((bg_[:, 0::2] << 4 | bg_[:, 1::2]).astype(np.uint8).tobytes(), BG_Y * 128, 1)
         # ---- cenario da rua: arvores e predios (procedurais), placas (LIB2 258, 236 e 238, quadros de 7 tamanhos) e tabela de objetos por segmento ----
         # VRAM livre na corrida: linhas 212-255 da pagina 0 e 468-511 da pagina 1 (fora da tela de 212 linhas) e 704-767 da pagina 2
@@ -588,7 +610,7 @@ def main():
         f.write(parth)
         f.write(carh); f.write(headh); f.write('#define CAL_X0 %d\n#define CAL_Y0 %d\n' % (CAL_X0, CAL_Y0))
         f.write('#define OV_N %d\n#define LIGHT_Y %d\n#define BG_Y %d\n#define BG_H %d\n' % (len(orects), LIGHT_Y, BG_Y, BG_H))
-        f.write('#define RACE_X0 %d\n#define OV_LEFT %d\n' % (RACE_X0, sum(1 for o_ in orects if (o_[0] + o_[2]) * 2 <= RACE_X0)))     # a janela esquerda (x < RACE_X0: vidro lateral e coluna A) e pintada uma vez; a estrada comeca em RACE_X0
+        f.write('#define RACE_X0 %d\n#define OV_LEFT %d\n' % (RACE_X0, sum(1 for o_ in orects if o_[0] + o_[2] <= RACE_X0)))     # a janela esquerda (x < RACE_X0: vidro lateral e coluna A) e pintada uma vez; a estrada comeca em RACE_X0
         f.write('static const uint8_t ov_x[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[0] // 2) for r in orects) or '0'))
         f.write('static const uint8_t ov_y[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[1]) for r in orects) or '0'))
         f.write('static const uint8_t ov_w[%d] = {%s};\n' % (max(1, len(orects)), ','.join(str(r[2] // 2) for r in orects) or '0'))
