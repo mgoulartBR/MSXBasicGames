@@ -404,3 +404,6 @@ Atenção: BANK2 está com ~15,2 KB de 16 KB e o núcleo com ~16,0 KB de 16,35 K
 
 ### Cursor de chave de boca
 O cursor (garagem, menus, listas) agora é a chave de boca vermelha do original: sprite 16x16 de 2 planos (contorno cor 10 = `cur_wa`, miolo cor 11 = `cur_wb`), com os pixels medidos nas capturas do jogo original; a ponta (no alto à esquerda) é o ponto de clique (`g_sx = cur_x - 3`, `g_sy = cur_y - 1`). A LIB2/LIB1 não têm essa arte (é desenhada pelo EXE). Teste: `cur.tcl` (`-DCUR_X=112 -DCUR_Y=60`, `vram2png.py ... garage spr`).
+
+### Portico "CITY LIMITS"
+Na viagem de rua (`street_mode`) um portico fica no segmento `GNT_SEG` (8): duas colunas vermelhas, a barra e a placa branca pendurada ("CITY"/"LIMITS", fonte de pixels propria 5x7/3x5 gerada em `gen_assets.py`, 3 tamanhos na pagina 0, x=200). A altura é 0,75 da meia largura da pista (acima do horizonte), entao ele sobe pelo para-brisa ao passar. Como parte dele fica acima da janela da estrada, `gantry()` (BANK5) restaura o vidro da copia limpa (pagina 2) a cada quadro enquanto ele aparece (+2 quadros, uma por pagina) e repoe o retrovisor por cima. Teste: `st2.tcl` (capturas g01..g14 na viagem).

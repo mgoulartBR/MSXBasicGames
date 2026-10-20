@@ -462,6 +462,23 @@ def main():
         x_ = 96                                                     # (x par: os predios usam HMMM)
         for w_, h_ in bld_wh:
             sheet_[:h_, x_:x_ + w_] = make_bld(w_, h_); bld_x.append(x_); x_ += w_ + 2
+        # placa CITY LIMITS (portico da rua): 3 tamanhos em fonte de pixels propria, na pagina 0 (linhas 212-255), a direita dos predios: grande 40x18 (5x7), media 26x13 (3x5), pequena 14x7
+        F57 = {'C': ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'], 'I': ['.###.', '..#..', '..#..', '..#..', '..#..', '..#..', '.###.'], 'T': ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+               'Y': ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'], 'L': ['#....', '#....', '#....', '#....', '#....', '#....', '#####'], 'M': ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'],
+               'S': ['.####', '#....', '#....', '.###.', '....#', '....#', '####.']}
+        F35 = {'C': ['###', '#..', '#..', '#..', '###'], 'I': ['###', '.#.', '.#.', '.#.', '###'], 'T': ['###', '.#.', '.#.', '.#.', '.#.'], 'Y': ['#.#', '#.#', '.#.', '.#.', '.#.'],
+               'L': ['#..', '#..', '#..', '#..', '###'], 'M': ['#.#', '###', '###', '#.#', '#.#'], 'S': ['###', '#..', '###', '..#', '###']}
+        def sign_img(w, h, font, gw, gh):
+            im_ = np.full((h, w), 7, np.uint8)
+            for li_, txt_ in enumerate(('CITY', 'LIMITS')):
+                x0_ = (w - (len(txt_) * (gw + 1) - 1)) // 2; y0_ = 1 + li_ * (gh + 1)
+                for ci_, ch_ in enumerate(txt_):
+                    for r_, row_ in enumerate(font[ch_]):
+                        for c_, v_ in enumerate(row_):
+                            if v_ == '#': im_[y0_ + r_, x0_ + ci_ * (gw + 1) + c_] = 0
+            return im_
+        sg_big = sign_img(40, 18, F57, 5, 7); sg_med = sign_img(26, 13, F35, 3, 5); sg_sml = np.full((7, 14), 7, np.uint8); sg_sml[2, 2:12] = 0; sg_sml[4, 3:11] = 0
+        sheet_[0:18, 200:240] = sg_big; sheet_[19:32, 200:226] = sg_med; sheet_[19:26, 230:244] = sg_sml
         add((sheet_[:, 0::2] << 4 | sheet_[:, 1::2]).astype(np.uint8).tobytes(), TREE_Y * 128, 1)
         FR_X = [0, 64, 120, 168, 208, 240, 256]; FR_W = [64, 56, 48, 40, 32, 16, 8]; FR_H = [43, 37, 30, 24, 19, 13, 8]
         def sign_sheet(item, frames, y0, hmax):

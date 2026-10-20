@@ -2749,7 +2749,40 @@ static void scn_side(u8 t, u8 side, u8 off, i16 xc, i16 y, i16 hw) {           /
         }
     }
 }
+/* portico "CITY LIMITS" (so na viagem de rua): barra vermelha entre dois postes, com a placa pendurada; fica acima do horizonte e sobe pelo para-brisa ao passar.
+   Acima da janela da estrada (y < SKY_TOP) restaura-se o vidro da copia limpa (pagina 2) a cada quadro enquanto ele esta a vista, e depois repoe o retrovisor por cima. */
+#define GNT_SEG 8
+#define GNT_TOP (-4)
+static u8 gnt_clr;
+static void gnt_restore(i16 x, i16 w, i16 wy, i16 h) {
+    vc_w(0, x); vc_w(2, 512 + WIN_Y + wy); vc_w(4, x); vc_w(6, ybase + wy); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15();
+}
+static void gantry(void) {
+    i16 r = GNT_SEG + 3 - (i16)pos, y, xc, hw, yt, bt, pw, xl, xr, fw, fh, fx, fy;
+    u8 on = r >= 2 && r < N_ROWS;
+    if (on) {
+        y = Y[r - 1]; xc = XC[r - 1]; hw = 2 * (y - HZ) + ((y - HZ) >> 5);
+        yt = y - ((hw * 3) >> 2);
+        if (hw < 14 || yt < GNT_TOP || y >= VIEW_BOT) on = 0;
+    }
+    if (!on && !gnt_clr) return;
+    gnt_restore(RACE_X0, 256 - RACE_X0, GNT_TOP, SKY_TOP - GNT_TOP);                 /* vidro limpo (os restos do quadro anterior nesta pagina) */
+    if (on) {
+        gnt_clr = 2;
+        pw = (hw >> 5) + 1; bt = (hw >> 4) + 1; xl = xc - hw - (hw >> 2); xr = xc + hw + (hw >> 2);
+        push_fill(xl, yt, pw, y - yt, 6); push_fill(xr, yt, pw, y - yt, 6);       /* postes */
+        push_fill(xl, yt, xr - xl + pw, bt, 6);                                    /* barra */
+        if (hw >= 50) { fw = 40; fh = 18; fx = 200; fy = TREE_Y; }
+        else if (hw >= 26) { fw = 26; fh = 13; fx = 200; fy = TREE_Y + 19; }
+        else { fw = 14; fh = 7; fx = 230; fy = TREE_Y + 19; }
+        vc_w(0, fx); vc_w(2, fy); vc_w(4, (xc - (fw >> 1)) & ~1); vc_w(6, ybase + yt + bt + 1); vc_w(8, fw); vc_w(10, fh); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+        vdp_cmd15();
+        gnt_restore(192, 64, GNT_TOP, 24);                                         /* retrovisor por cima do portico */
+    } else gnt_clr--;
+}
 static void draw_scn(void) BK {
+    if (street_mode) gantry();
     u8 r, e, t;
     i16 y, hw;
     for (r = N_ROWS - 1; r >= 2; r--) {
