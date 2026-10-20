@@ -2761,6 +2761,10 @@ static void gnt_restore(i16 x, i16 w, i16 wy, i16 h) {
 static void gantry(void) {
     i16 r = GNT_SEG + 3 - (i16)pos, y, xc, hw, yt, bt, pw, xl, xr, fw, fh, fx, fy;
     u8 on = r >= 2 && r < N_ROWS;
+    if (on) {                                                                      /* faixa amarela do limite da cidade: atravessa a pista na base do portico */
+        y = Y[r - 1]; xc = XC[r - 1]; hw = 2 * (y - HZ) + ((y - HZ) >> 5);
+        if (hw >= 10 && y < VIEW_BOT && y > SKY_TOP + 2) push_fill(xc - hw, y - (hw >> 4) - 1, 2 * hw, (hw >> 4) + 1, 8);
+    }
     if (on) {
         y = Y[r - 1]; xc = XC[r - 1]; hw = 2 * (y - HZ) + ((y - HZ) >> 5);
         yt = y - ((hw * 3) >> 2);
