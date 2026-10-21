@@ -425,3 +425,11 @@ Na arrancada, depois que voce ultrapassa o oponente ele aparece nos dois retrovi
 - As folhas de arte do motor/TUNING vao para a pagina 1 (fora da tela) e agora carregam sem apagar a tela.
 
 - Musica desligada durante a corrida (tambem com FM); volta ao terminar.
+
+### Regras do oponente (aceitar/recusar), portadas do original
+Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
+- Menus como no original: **DRAG RACE** (so por diversao, $10, $50) ou **ROAD RACE** ($25, $100, pink slips); sair de qualquer menu = "CHICKEN!". Duas tentativas de aposta por desafio; recusas sem repetir a frase.
+- Chance de aceitar = tabela por (tipo de aposta x se o carro dele e mais forte/parelho/mais fraco que o seu, pela classe do carro e tamanho do motor) + `(2*vitorias dele - corridas valendo)/4` da chance (quem te venceu topa de novo) + 4/6 pontos se o carro tem adesivo.
+- Gasolina minima: 1 galao para qualquer corrida, 3 para estrada (7/17 unidades de 140 no original), 4 para o Rei.
+- O Rei so corre depois de 3/7 vitorias (e 6 de cada tipo, com metade das corridas ganhas); primeiro uma arrancada por diversao, depois a estrada valendo o carro; perder zera a progressao (-3 arrancadas, -2 estradas). Pink slip agora e sempre corrida de estrada.
+- Save versao 3 (acrescenta 22 contadores de rivalidade, total de corridas e etapa do Rei); saves antigos nao carregam.

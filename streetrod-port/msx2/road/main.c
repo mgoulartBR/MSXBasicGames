@@ -158,6 +158,8 @@ static u8 ask_name;                          /* 1 = pedir o nome (jogo novo) */
 static u8 ask_load;                          /* 1 = no comeco do jogo, oferecer o carregamento de um jogo salvo */
 static u8 game_end;                          /* 0 jogando, 1 acabou o verao, 2 rei do condado, 3 faliu */
 static u8 wins_drag, wins_road;
+static u8 race_road, races_tot, king_st;         /* race_road: pista de estrada; races_tot: corridas valendo (fora as por diversao); king_st: 1 = ja venceu o Rei na arrancada */
+static i8 pil_net[22];                           /* por piloto: 2 x (vezes que ele ganhou) - (corridas valendo contra ele): quem te venceu topa de novo */
 #ifdef START_WINS
 #define WINS0 START_WINS
 #else
@@ -730,7 +732,8 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #define HC_R 11
 #pragma codeseg BANK2
 static void new_game(void) BK {
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; bay_bad = 255; shown_id = 255; ask_load = 1; ask_name = 1;
+    u8 i;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; races_tot = 0; king_st = 0; race_road = 0; for (i = 0; i < 22; i++) pil_net[i] = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; bay_bad = 255; shown_id = 255; ask_load = 1; ask_name = 1;
 #ifdef NO_NAME
     ask_name = 0;                                                                   /* testes automatizados nao digitam o nome */
 #endif
@@ -1307,39 +1310,71 @@ static void pick_opp_car(u8 pil) BK {           /* pilotos melhores (indice maio
     }
     sel_opp = c;
 }
-static const char *const yes_msg[6] = {"YOU'RE ON!", "ALRIGHT!", "LET'S GO!", "COOL!", "O.K.!", "LET'S HIT IT!"};
-static const char *const no_msg[10] = {"CHICKEN!", "GET LOST!", "GIVE ME A BREAK", "GET OUTTA MY FACE", "BUZZ OFF", "WHADDA LOSER", "BLOW IT OUT YOUR EAR", "FORGET IT, GEEK", "BEAT IT, TWERP", "NO WAY, YA NERD"};
-static u8 refuses(u8 pct) {                  /* 1 = o oponente recusa (pct = chance de ACEITAR); -DTEST_ACCEPT aceita sempre */
+static const char *const yes_msg[6] = {"COOL!", "O.K.!", "LET'S HIT IT!", "YOU'RE ON!", "ALRIGHT!", "LET'S GO!"};      /* 0-2 arrancada, 3-5 estrada */
+static const char *const no_msg[10] = {"BLOW IT OUT YOUR EAR!", "FORGET IT, GEEK!", "BEAT IT, TWERP!", "NO WAY, YA NERD!", "GET LOST!", "GET LOST!", "GIVE ME A BREAK!", "GET OUTTA MY FACE!", "BUZZ OFF!", "WHADDA LOSER!"};
+/* decisao do oponente de aceitar a aposta: porte de SRSE.EXE img 0x9BC5 (tabelas 9/10/11 do HOT_DATA). kind: 0 so por diversao, 1 $10, 2 $50, 3 $25, 4 $100, 5 pink slip */
+static const u8 acc_t9[9] = {210, 180, 150, 175, 150, 125, 140, 120, 100};      /* "tempo" por classe do carro x motor: menor = mais forte */
+static const u8 acc_t10[9] = {60, 45, 30, 55, 40, 20, 50, 30, 10};              /* piloto (4 / 7 / 11 por nivel) x tipo de aposta */
+static const u8 acc_t11[12] = {40, 60, 90, 70, 65, 25, 90, 70, 15, 90, 35, 0};  /* tipo de aposta x (voce bem mais forte / parelho / ele mais fraco) */
+static u8 perf_class(u8 id) { u8 p = car_perf[id]; return p < 3 ? 0 : p < 7 ? 1 : 2; }
+static u8 opp_accepts(u8 kind, u8 p) {
+    u8 col = kind == 0 ? 0 : kind == 5 ? 2 : 1, row = kind == 0 ? 0 : kind <= 2 ? 1 : kind <= 4 ? 2 : 3, rel, cool, oe = (car_flags[sel_opp] >> 8) & 7, pe = gc[cur].eng;
+    i16 a = acc_t10[(p < 4 ? 0 : p < 11 ? 3 : 6) + col], b, c, ch;
 #ifdef TEST_ACCEPT
-    (void)pct; return 0;
-#else
-    return (u8)(rnd16() >> 8) % 100 >= pct;
+    (void)kind; (void)p; return 1;
 #endif
+    if (oe > 2) oe = 2;
+    if (pe > 2) pe = 2;
+    b = acc_t9[perf_class(sel_opp) * 3 + oe]; c = acc_t9[perf_class(gc[cur].id) * 3 + pe];
+    rel = a + b < c ? 0 : b > c ? 2 : 1;
+    cool = gc[cur].stick == 0 ? 0 : (gc[cur].stick & 1) ? 4 : 6;                       /* adesivo: o original soma 4 (numero impar) ou 6 */
+    ch = acc_t11[row * 3 + rel];
+    ch += (i16)pil_net[p] * ch / 4 + cool;
+    return (rnd16() % 100) <= ch;
 }
-static u8 bobs_race(u8 p) BK {                  /* piloto p e carro sel_opp ja escolhidos: tipo de corrida e aposta. 1 = a corrida vai comecar; 0 = desistiu */
-    static const char *const types[5] = {"DRAG RACE", "ROAD RACE", "JUST FOR KICKS", "PINK SLIPS", "BACK"};
-    static const char *const betm[5] = {"BET $10", "BET $25", "BET $50", "BET $100", "BACK"};
-    u8 t = 0, b;
-    sel_pil = p;
-    for (;;) {
-        t = ui_pick("WHAT KIND OF RACE?", types, 5, t);
-        if (t == 255 || t == 4) return 0;
-        race_type = t; bet = 0;
-        if (t == 3) {                               /* pink slip: o carro de um contra o do outro */
-            if ((u8)(wins_drag + wins_road) < 1 + p / 2) { ui_note("YOU'RE GONNA HAFTA", "WIN MORE RACES!"); continue; }
-            if (refuses(70)) { ui_note(no_msg[rnd16() % 10], "NOT FOR PINK SLIPS"); continue; }
-            ui_note("COOL, DUDE! GET YOUR", "PINK SLIP OUT, LET'S GO!");
-        } else if (t != 2) {
-            b = ui_pick("HOW MUCH?", betm, 5, 1);
-            if (b == 255 || b == 4) continue;
-            if (money < bets[b]) { ui_note("YOU DON'T HAVE", "ENOUGH DOUGH FOR THAT"); continue; }
-            if (refuses(100 - 15 * b)) { ui_note(no_msg[rnd16() % 10], "TOO RICH FOR HIM"); continue; }
-            bet = bets[b];
-            ui_note(yes_msg[rnd16() % 6], "LET'S HIT THE STRIP");
-        } else ui_note(yes_msg[rnd16() % 6], "JUST FOR KICKS");
-        race_len = t == 1 ? ROAD_LEN : RACE_LEN;
+static void gas_note(void) { ui_note("YOU'RE GONNA HAFTA", "GET MORE GAS"); }
+static u8 bobs_race(u8 p) BK {                  /* piloto p e carro sel_opp ja escolhidos: tipo de corrida e aposta (regras do original). 1 = a corrida vai comecar; 0 = desistiu ou ele foi embora */
+    static const char *const types[3] = {"DRAG RACE", "ROAD RACE", "NEVER MIND"};
+    static const char *const bd[4] = {"JUST FOR KICKS", "BET $10", "BET $50", "NEVER MIND"};
+    static const char *const br[4] = {"BET $25", "BET $100", "PINK SLIPS", "NEVER MIND"};
+    static const u16 bv[6] = {0, 10, 50, 25, 100, 0};
+    u8 t, b, kind, tries, last = 255, m;
+    sel_pil = p; bet = 0;
+    if (gc[cur].fuel < 1) { gas_note(); return 0; }
+    if (p == NPILOTS - 1) {                         /* o Rei so corre com quem ja venceu bastante (original 0x9556) */
+        u16 w = (u16)wins_drag + wins_road; u8 g;
+        g = w < 3 ? 2 : (wins_drag < 6 && wins_road < 6) ? (w < 7 ? 2 : 3) : wins_drag < 6 ? 4 : wins_road < 6 ? 5 : (w < (races_tot >> 1) ? 3 : 0);
+        if (g) {
+            if (g == 2) ui_note("I DON'T GOT TIME FOR", "AMATEURS LIKE YOU!");
+            else if (g == 3) ui_note("YOU'RE DOING OK KID,", "BUT NEED TO WIN MORE RACES!");
+            else ui_note("YOU'RE GONNA HAFTA WIN", g == 4 ? "MORE DRAG RACES!" : "MORE ROAD RACES!");
+            return 0;
+        }
+        if (gc[cur].fuel < 4) { gas_note(); return 0; }
+        race_road = king_st; race_type = king_st ? 3 : 2;
+        ui_note(king_st ? "COOL, DUDE! GET YOUR" : "YOU'RE ON! LET'S HIT", king_st ? "PINK SLIP OUT, LET'S GO!" : "THE DRAG RACE!");
+        race_len = king_st ? ROAD_LEN : RACE_LEN;
         return 1;
     }
+    t = ui_pick("WHAT KIND OF RACE?", types, 3, 0);
+    if (t >= 2) { ui_note("CHICKEN!", PILN(p)); return 0; }
+    if (t == 1 && gc[cur].fuel < 3) { gas_note(); return 0; }
+    for (tries = 0; tries < 2; tries++) {
+        b = ui_pick("HOW MUCH?", t ? br : bd, 4, 0);
+        if (b >= 3) { ui_note("CHICKEN!", PILN(p)); return 0; }
+        kind = t ? 3 + b : b;
+        if (money < bv[kind]) { ui_note("YOU DON'T HAVE ENOUGH", "DOUGH FOR THAT BET!"); continue; }
+        if (opp_accepts(kind, p)) {
+            race_road = t; race_type = kind == 0 ? 2 : kind == 5 ? 3 : t; bet = bv[kind];
+            ui_note(yes_msg[t * 3 + rnd16() % 3], PILN(p));
+            race_len = t ? ROAD_LEN : RACE_LEN;
+            return 1;
+        }
+        do m = (u8)(rnd16() % 5); while (m == last);                       /* nao repete a frase da recusa anterior */
+        last = m;
+        ui_note(no_msg[t * 5 + m], PILN(p));
+    }
+    return 0;
 }
 static u8 bobs(void) BK {                       /* fluxo de texto (testes automaticos): lista de pilotos -> bobs_race. 1 = a corrida vai comecar */
     u8 p = 0;
@@ -1358,7 +1393,7 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     u8 win, ep, tpr, brk0 = 0, gone = 0, n;
     c->fuel = c->fuel > 3 ? c->fuel - 3 : 0;
     c->wear = c->wear + 100 + over_t * 30 > 10000 ? 10000 : c->wear + 100 + over_t * 30;
-    c->tp = c->tp + 6 + (race_type == 1 ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_type == 1 ? 4 : 0);
+    c->tp = c->tp + 6 + (race_road ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_road ? 4 : 0);
     pm_on = 0;
     if (result != 3) {                       /* quebras: motor (rotacao e desgaste), cambio (trocas com o motor passado), pneus (tabela do jogo) */
         ep = over_t * 3 + (u8)(c->wear / 1000); if (ep > 60) ep = 60;                 /* so estoura se passou do corte (3% por tick) ou com o motor muito gasto */
@@ -1387,8 +1422,17 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
         pm_put(0, win ? "YOU WON!" : result == 3 ? "YA JUMPED THE LIGHT," : "YOU LOSE, SUCKER.");
         pm_put(1, win ? "TOO BAD YOU DIDN'T BET" : result == 3 ? "SPEEDY!" : "TAKE A WALK.");
     }
-    if (win && race_type < 2) { if (race_type == 0) wins_drag++; else wins_road++; }
-    if (win && sel_pil == NPILOTS - 1 && race_type != 2) game_end = 2;            /* venceu The King */
+    if (result != 3 && !street_mode && sel_pil != NPILOTS - 1 && race_type != 2) {       /* corridas valendo: contam vitorias, total e a rivalidade com o piloto */
+        if (races_tot < 255) races_tot++;
+        if (win) { if (race_road) { if (wins_road < 255) wins_road++; } else if (wins_drag < 255) wins_drag++; }
+        if (pil_net[sel_pil] > -100 && win) pil_net[sel_pil]--;
+        else if (pil_net[sel_pil] < 100 && !win) pil_net[sel_pil] += 2;
+    }
+    if (result != 3 && sel_pil == NPILOTS - 1 && !street_mode) {                          /* o Rei: arrancada por diversao, depois estrada valendo o carro */
+        if (!win) { king_st = 0; wins_drag = wins_drag > 3 ? wins_drag - 3 : 0; wins_road = wins_road > 2 ? wins_road - 2 : 0; }
+        else if (king_st) game_end = 2;                                                 /* venceu o Rei */
+        else king_st = 1;
+    }
     if (race_type == 3) {
         if (win) {
             pm_put(0, "YOU JUST WON A"); pm_put(1, "HELLUVA CAR!");
@@ -1481,7 +1525,7 @@ static u8 street_trip(void) {                /* 1 = chegou ao Bobs; 0 = desistiu
     return 1;
 #endif
     ui_note("CRUISING IN TOWN...", "CLICK TO SKIP"); ui_nohint = 0;
-    street_mode = 1; race_type = 1; street_res = 1;
+    street_mode = 1; race_type = 1; race_road = 1; street_res = 1;
     race_go();
     street_mode = 0;
     load_garage(); ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
@@ -2205,7 +2249,8 @@ static void race_result(void) BK {              /* resultado da corrida: janela 
 #define SV_HDR 13
 #define SV_SP (SV_HDR + 13)                    /* depois do nome (12 letras + 0) */
 #define SV_GC (SV_SP + MAXSPARE)
-#define SV_N (SV_GC + sizeof(gc) + 2)
+#define SV_PN (SV_GC + sizeof(gc))                  /* 22 bytes pil_net + races_tot + king_st */
+#define SV_N (SV_PN + 24 + 2)
 static u8 sv_media, sv_slot, sv_buf[128], sv_chk[128], sv_fcb[37];     /* sv_media: 0 nenhum, 1 PAC, 2 disco */
 #ifdef FAKE_DISK
 /* BDOS falso (so para teste): arquivos STREETRO.SAV/.RNK em RAM; confere a sequencia de chamadas do DOS 1 (DTA antes de ler/gravar, FCB com nome em branco-preenchido e tamanho de registro 128) */
@@ -2261,16 +2306,18 @@ static u8 sv_sum(const u8 *b, u8 n) { u16 s = 0; u8 i; for (i = 0; i < n; i++) s
 static void sv_pack(void) {
     u8 i; const u8 *g = (const u8 *)gc;
     for (i = 0; i < 128; i++) sv_buf[i] = 0;
-    sv_buf[0] = 'S'; sv_buf[1] = 'R'; sv_buf[2] = 2; sv_buf[3] = SV_N; sv_buf[4] = nown; sv_buf[5] = cur; sv_buf[6] = day; sv_buf[7] = nspare;
+    sv_buf[0] = 'S'; sv_buf[1] = 'R'; sv_buf[2] = 3; sv_buf[3] = SV_N; sv_buf[4] = nown; sv_buf[5] = cur; sv_buf[6] = day; sv_buf[7] = nspare;
     sv_buf[8] = wins_drag; sv_buf[9] = wins_road; sv_buf[10] = sel_car; sv_buf[11] = (u8)money; sv_buf[12] = (u8)(money >> 8);
     for (i = 0; i < 13; i++) sv_buf[SV_HDR + i] = pname[i];
     for (i = 0; i < MAXSPARE; i++) sv_buf[SV_SP + i] = spare[i];
     for (i = 0; i < sizeof(gc); i++) sv_buf[SV_GC + i] = g[i];
+    for (i = 0; i < 22; i++) sv_buf[SV_PN + i] = (u8)pil_net[i];
+    sv_buf[SV_PN + 22] = races_tot; sv_buf[SV_PN + 23] = king_st;
     sv_buf[SV_N - 2] = sv_sum(sv_buf, SV_N - 2); sv_buf[SV_N - 1] = (u8)~sv_buf[SV_N - 2];
 }
 static u8 sv_ok(const u8 *b) {                  /* 1 se o bloco e uma gravacao valida e coerente */
     u8 i;
-    if (b[0] != 'S' || b[1] != 'R' || b[2] != 2 || b[3] != SV_N) return 0;
+    if (b[0] != 'S' || b[1] != 'R' || b[2] != 3 || b[3] != SV_N) return 0;
     if (b[SV_N - 2] != sv_sum(b, SV_N - 2) || b[SV_N - 1] != (u8)~b[SV_N - 2]) return 0;
     if (b[4] > MAXCARS || b[7] > MAXSPARE || (b[4] && b[5] >= b[4]) || b[6] > 62) return 0;
     for (i = 0; i < b[4]; i++) if (b[SV_GC + i * sizeof(Car)] >= sizeof(car_w)) return 0;
@@ -2319,6 +2366,8 @@ static u8 sv_load(void) BK {
     pname[12] = 0;
     for (i = 0; i < MAXSPARE; i++) spare[i] = sv_buf[SV_SP + i];
     for (i = 0; i < sizeof(gc); i++) g[i] = sv_buf[SV_GC + i];
+    for (i = 0; i < 22; i++) pil_net[i] = (i8)sv_buf[SV_PN + i];
+    races_tot = sv_buf[SV_PN + 22]; king_st = sv_buf[SV_PN + 23];
     offer_day = 255; game_end = 0;
     return 1;
 }
@@ -2510,7 +2559,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
 #pragma codeseg BANK1
 static void new_race(void) {
     u8 k = (u8)(JIFFY & 7);
-    set_track(race_type == 1);
+    set_track(race_road);
     load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
     g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
     over_t = badshift = 0;
@@ -2882,3 +2931,4 @@ void main(void) {
         if (game_end) end_screen();                    /* o jogo acabou: depois do aviso, volta ao titulo */
     }
 }
+typedef char sv_size_check[(SV_N <= 128) ? 1 : -1];
