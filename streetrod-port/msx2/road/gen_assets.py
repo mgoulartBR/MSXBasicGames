@@ -81,6 +81,8 @@ def cockpit_pixels(lib2):
     return np.array(MAP, np.uint8)[idx]
 
 STRIP = 4096
+HOOD_IDX = 2                                # cor da paleta para o capo (pintura); a linha ciano (1) vira o reflexo
+HOOD = None
 WIN_Y, SKY_TOP = 24, 22
 VIEW_BOT = int(os.environ.get('VIEW_BOT', '95'))       # altura da janela da estrada (igual ao -DVIEW_BOT do build)
 STRIP_TOL = 1
@@ -137,6 +139,13 @@ def overlay(a):
         if os.environ.get('DBG_CUTS'): print(list(zip(range(XA, w), cuts[XA:], sm[XA:]))[50:90], file=sys.stderr)
         for x in range(ARC_XL, w): glass[cuts[x]:, x] = False
     out = np.where(sub == 0, 11, sub).astype(np.uint8); out[glass] = 0
+    global HOOD
+    HOOD = np.zeros(a.shape, bool)                  # capo: o preto entre a linha ciano e o painel recebe a cor da pintura do carro (indice HOOD_IDX, paleta trocada a cada corrida)
+    if GLASS_MODE != 'flat':
+        for x in range(ARC_XL, w):
+            y = y0 + int(sm[x]) + 1
+            while y < a.shape[0] and a[y, x] == 0: HOOD[y, x] = True; y += 1
+        out[HOOD[y0:y1]] = HOOD_IDX
     return out, cuts, (sm if GLASS_MODE != 'flat' else None)
 
 def left_glass(a, y0, y1, x1):
@@ -309,6 +318,7 @@ def main():
                     if gl_[y_ - WIN_Y - SKY_TOP, x_]:
                         wy_ = y_ - WIN_Y
                         a[y_, x_] = bgi_[wy_ - SKY_TOP, x_] if wy_ < SKY_TOP + BG_H else 13
+        if sm is not None: a = a.copy(); a[HOOD] = HOOD_IDX
         add((a[:, 0::2] << 4 | a[:, 1::2]).astype(np.uint8).tobytes(), 0, 3)    # copias: paginas 0, 1 e 2 (limpa, para restaurar)
         orects = []                                                              # (a moldura da esquerda ja esta na imagem: nada a repor por quadro)
         if cuts is not None:                                                             # painel/capo: uma faixa vertical por STRIP_W colunas

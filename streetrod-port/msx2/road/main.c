@@ -1564,6 +1564,12 @@ static void set_paint(u8 p) {                   /* indice 6 da paleta = pintura,
     r = r > 5 ? 7 : r + 2; b = b > 5 ? 7 : b + 2; g = g > 5 ? 7 : g + 2;
     g_reg = 7; g_val = (u8)(r << 4 | b); g_sh = g; pal_one();
 }
+static void set_hood(u8 p) BK {                  /* corrida: capo na cor da pintura (indice 2 da paleta) e a linha do capo no reflexo (indice 1) */
+    u8 rb = pcol_rb[p], g = pcol_g[p], r = (rb >> 4) & 7, b = rb & 7;
+    g_reg = 2; g_val = rb; g_sh = g; pal_one();
+    r = r > 5 ? 7 : r + 2; b = b > 5 ? 7 : b + 2; g = g > 5 ? 7 : g + 2;
+    g_reg = 1; g_val = (u8)(r << 4 | b); g_sh = g; pal_one();
+}
 #define CH(id) car_h[cvar * NCARS + (id)]
 #define CWY(id) car_wy[cvar * NCARS + (id)]
 static void car_art(u8 id, u8 tir) {                    /* descomprime o corpo (variante cvar), a roda e o adesivo no rascunho da pagina 3 */
@@ -2558,11 +2564,13 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
 }
 
 #pragma codeseg BANK1
+static void set_hood(u8 p) BK;
 static void new_race(void) {
     u8 k = (u8)(JIFFY & 7);
     set_track(race_road);
     load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
     g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
+    set_hood(gc[cur].paint);
     over_t = badshift = 0;
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
