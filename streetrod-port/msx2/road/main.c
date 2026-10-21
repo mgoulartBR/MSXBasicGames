@@ -224,10 +224,11 @@ extern void install_hook(void);
 #pragma codeseg CODE
 static u8 mus_st = 1, mus_hold;                 /* radio: estacao 1..5 (0 = desligado); mus_hold = corrida em andamento (o PSG e do motor) */
 static void mus_tick(void) BK;
+static u8 mouse_seen;                       /* 1 = ja mexeu o mouse (porta 1): os pinos de direcao dela passam a ser dados do mouse, nao um joystick */
 static void combine_input(void) {
     u8 e;
     if (mus_st && !mus_hold) mus_tick();
-    g_stick = g_st0 ? g_st0 : g_st1;
+    g_stick = g_st0 ? g_st0 : mouse_seen ? 0 : g_st1;          /* com mouse na porta 1 o GTSTCK(1) le lixo (nibble do protocolo) e o cursor derivava sozinho */
     g_trig = (g_t0 ? 1 : 0) | (g_t1 ? 2 : 0) | (g_t3 ? 4 : 0);
     e = ev_space; if (e) { ev_space = 0; g_trig |= 1; }       /* toque curto travado pela interrupcao */
     e = ev_shift; if (e) { ev_shift = 0; g_trig |= 4; }
@@ -818,7 +819,7 @@ static void hub_status(void) {              /* barra branca: dinheiro, data e ca
 #define CUR_X 128
 #define CUR_Y 110
 #endif
-static u8 cur_x = CUR_X, cur_y = CUR_Y, cur_ymax = 187, mouse_seen;
+static u8 cur_x = CUR_X, cur_y = CUR_Y, cur_ymax = 187;
 #pragma codeseg BANK1
 /* cursor: a chave de boca do original (16x16, ponta no alto a esquerda), 2 planos: contorno vermelho escuro (cor 10) e miolo vermelho (cor 11); pixels medidos nas capturas do jogo original */
 static const u16 cur_wa[16] = {0x2000,0x1000,0x8800,0x8800,0x8800,0x7400,0x0A00,0x0500,0x0280,0x0140,0x00A0,0x005C,0x0022,0x0020,0x0020,0x001C};

@@ -433,3 +433,5 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 - Gasolina minima: 1 galao para qualquer corrida, 3 para estrada (7/17 unidades de 140 no original), 4 para o Rei.
 - O Rei so corre depois de 3/7 vitorias (e 6 de cada tipo, com metade das corridas ganhas); primeiro uma arrancada por diversao, depois a estrada valendo o carro; perder zera a progressao (-3 arrancadas, -2 estradas). Pink slip agora e sempre corrida de estrada.
 - Save versao 3 (acrescenta 22 contadores de rivalidade, total de corridas e etapa do Rei); saves antigos nao carregam.
+
+- Mouse na porta 1: depois do primeiro movimento do mouse o GTSTCK(1) e ignorado (os pinos de direcao carregam o protocolo do mouse e o cursor derivava para baixo/direita no MSX real).
