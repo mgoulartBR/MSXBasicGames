@@ -142,9 +142,14 @@ def overlay(a):
     global HOOD
     HOOD = np.zeros(a.shape, bool)                  # capo: o preto entre a linha ciano e o painel recebe a cor da pintura do carro (indice HOOD_IDX, paleta trocada a cada corrida)
     if GLASS_MODE != 'flat':
+        yb = np.zeros(w, int)                       # limite inferior do capo por coluna: primeiro pixel claro do painel depois da linha (mediana de 9 colunas: sem serrilhado)
         for x in range(ARC_XL, w):
-            y = y0 + int(sm[x]) + 1
-            while y < a.shape[0] and a[y, x] == 0: HOOD[y, x] = True; y += 1
+            y = y0 + int(sm[x]) + 1; k = y
+            while k < a.shape[0] and k - y < 14 and a[k, x] not in (7, 15): k += 1
+            yb[x] = k
+        for x in range(ARC_XL, w):
+            win = np.sort(yb[max(ARC_XL, x - 4):x + 5]); yb[x] = win[len(win) // 2]
+            for y in range(y0 + int(sm[x]) + 1, yb[x]): HOOD[y, x] = True
         out[HOOD[y0:y1]] = HOOD_IDX
     return out, cuts, (sm if GLASS_MODE != 'flat' else None)
 
