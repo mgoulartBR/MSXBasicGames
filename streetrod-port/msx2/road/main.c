@@ -2632,6 +2632,9 @@ static void run_race(void) BK {
             }
         }
         dbg_rpm = rpm; dbg_gear = gear; dbg_state = state; dbg_opos = opos; dbg_ospeed = vspd[1];
+#ifdef TEST_MIRROR
+        if (pos > 6) { opos = pos - 2 - (pos & 3) * 3; osub = sub; }          /* teste: oponente atras de voce, a 2-11 segmentos */
+#endif
         PT(0)
         cmd_n = 0; cp = cmd_buf;
         project();
@@ -2738,6 +2741,22 @@ static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: re
     pw = (w * 27) / 61; push_fill(cx - (pw >> 1), wy + hz + (h * 3) / 21, pw, (h * 4) / 21 + 1, 0);
     pw = (w * 39) / 61; push_fill(cx - (pw >> 1), wy + hz + (h * 7) / 21, pw, h - hz - (h * 7) / 21, 0);
     if (pos & 1) push_fill(cx - 1, wy + hz + (h * 8) / 21, (w * 3) / 61 + 1, (h * 3) / 21, 7); else push_fill(cx, wy + hz + (h * 4) / 21, 1, (h * 2) / 21, 7);       /* tracejado */
+    if (
+#ifndef TEST_MIRROR
+        !street_mode &&
+#endif
+        (pos > opos || (pos == opos && sub >= osub))) {            /* o oponente ficou para tras (ultrapassado): aparece no espelho, menor e mais perto do horizonte quanto mais longe */
+        i16 d8 = (i16)(pos - opos) * 8 + (i16)sub - (i16)osub;                  /* distancia em 1/8 de segmento */
+        if (d8 <= 112) {
+            i16 cw = (w * 40) / (100 + 4 * d8) + 1, ch = (cw * 5) / 8 + 1, y2 = hz + ((h - 1 - hz) * 24) / (24 + (d8 >> 1)), half = (w * 39) / 122;
+            i32 lat = (i32)(OLANE * 56) - P;
+            x = cx + (i16)((lat * ((i32)half * (y2 - hz) / (h - hz))) / 900);
+            push_fill(x - (cw >> 1), wy + y2 - ch, cw, ch, 12);                                    /* carro (cor 12: a pintura do oponente) */
+            push_fill(x - (cw >> 2), wy + y2 - ch, (cw >> 1) + 1, (ch >> 1), 15);                 /* vidro traseiro (cinza claro: o carro pode ser preto) */
+            push_fill(x - (cw >> 1), wy + y2 - 1, cw, 1, 7);                                       /* para-choque */
+            push_fill(x - (cw >> 1), wy + y2 - 2, 1 + (cw >> 3), 1, 6); push_fill(x + (cw >> 1) - (cw >> 3) - 1, wy + y2 - 2, 1 + (cw >> 3), 1, 6);     /* lanternas */
+        }
+    }
     for (j = 0; j < 4 && n < 3; j++) {
         e = scn_tab[(u8)(pos - 1 - j)];
         for (side = 0; side < 2 && n < 3; side++) {
