@@ -1754,10 +1754,9 @@ static u8 scene_pick(void) { hs = hot; hn = NHOT; hnames = hot_name; lab_mode = 
    A arte (LIB2: motores 76-78, coletores 79-83, carburadores 84-86, cambios 99-102, pneus 65-68) vem em folhas carregadas na pagina 1 (grupos 66-68) e e copiada por LMMM ---- */
 static u8 art_grp_cur;
 static void art_use(u8 idx) {                          /* garante a folha da peca idx (0-18 = grupo 66, 19-22 = 67, 23-26 = 68) na pagina 1 */
-    u8 g = idx < 19 ? 66 : idx < 23 ? 67 : 68, rg1;
+    u8 g = idx < 19 ? 66 : idx < 23 ? 67 : 68;
     if (g == art_grp_cur) return;
-    rg1 = *(volatile u8 *)0xF3E0;
-    vdp_reg(1, rg1 & ~0x40); g_group = g; load_assets(); vdp_reg(1, rg1 | 0x40);
+    g_group = g; load_assets();                          /* a folha vai para a pagina 1 (fora da tela): sem apagar a tela */
     art_grp_cur = g;
 }
 static void art_put(u8 idx, i16 x, i16 y) {            /* a peca vai da folha (pagina 1) para a tela (pagina 0); cor 0 e transparente */
@@ -1899,10 +1898,9 @@ static void tune_blit(u16 sx, u16 sy, i16 dx, i16 dy, u8 w, u8 h, u8 cmd) {
 }
 static void car_tune_win(void) {
     static const char *const nm[3] = {"RETARD THE TIMING", "ADVANCE THE TIMING", "DONE TUNING"};
-    char b[10]; u8 n, k, rg1;
+    char b[10]; u8 n, k;
     cmd_n = 0; cp = cmd_buf; hub_restore(BW_X, BW_Y, BW_W, BW_H); vdp_wait();             /* apaga a janela do motor (a TUNING e mais alta e mais estreita) */
-    rg1 = *(volatile u8 *)0xF3E0;
-    vdp_reg(1, rg1 & ~0x40); g_group = 69; load_assets(); vdp_reg(1, rg1 | 0x40); art_grp_cur = 69;
+    g_group = 69; load_assets(); art_grp_cur = 69;
     for (;;) {
         tune_blit(0, 256, TX, TY, 160, 175, 0xD0);                                          /* HMMM: a arte inteira */
         tune_blit(164 + 6 * ((gcar->trim + 8) & 3), 256, TX + 71, TY + 53, 5, 29, 0x90);    /* LMMM IMP: correia dentada na fase do ponto */
@@ -2186,7 +2184,7 @@ static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): o
 #ifdef OLD_MENU
 static u8 bobs_front(void) { return bobs(); }
 #endif
-static void race_go(void) BK { mus_pause(); run_race(); mus_hold = 0; mus_due = JIFFY; }
+static void race_go(void) BK { mus_pause(); run_race(); mus_hold = 0; mus_due = JIFFY; cursor_init(); cmd_n = 0; cp = cmd_buf; }   /* a corrida usa a VRAM dos sprites: recria o cursor */
 static void race_result(void) BK {              /* resultado da corrida: janela sobre a lanchonete (tempo e velocidade media) */
     static char tb1[22], tb2[22];
     const char *it[2]; u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0; u8 n;

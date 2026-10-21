@@ -419,3 +419,7 @@ Na viagem de rua (`street_mode`) um portico fica no segmento `GNT_SEG` (8): duas
 
 ### Oponente nos retrovisores (M7)
 Na arrancada, depois que voce ultrapassa o oponente ele aparece nos dois retrovisores (superior e esquerdo), menor e mais perto do horizonte quanto mais longe ele estiver (ate ~14 segmentos). Na corrida de rua nao ha oponente. Build de teste: `-DTEST_MIRROR` forca o oponente logo atras de voce.
+
+### Correcoes (m15d)
+- O cursor (sprite) sumia depois da viagem ao Bob's: a corrida sobrescreve a VRAM dos sprites; `race_go` agora recria o cursor ao voltar.
+- As folhas de arte do motor/TUNING vao para a pagina 1 (fora da tela) e agora carregam sem apagar a tela.
