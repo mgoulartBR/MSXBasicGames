@@ -660,9 +660,8 @@ static void fm_detect(void) BK {
     mus_fm = 1;
 #endif
 }
-static void mus_pause(void) BK {                                          /* corrida: o PSG e do motor (o FM segue tocando) */
-    if (mus_fm) return;
-    mus_hold = 1; mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
+static void mus_pause(void) BK {                                          /* corrida: sem musica (o PSG e do motor; o FM e silenciado) */
+    mus_hold = 1; if (mus_fm) fm_off(); mus_noise = 0; mus_on[0] = mus_on[1] = mus_on[2] = 0;
     psg(8, 0); psg(9, 0); psg(10, 0); psg(7, 0xB8);
 }
 static void mus_set(u8 st) BK {                                           /* troca de estacao (0 = desliga) */

@@ -423,3 +423,5 @@ Na arrancada, depois que voce ultrapassa o oponente ele aparece nos dois retrovi
 ### Correcoes (m15d)
 - O cursor (sprite) sumia depois da viagem ao Bob's: a corrida sobrescreve a VRAM dos sprites; `race_go` agora recria o cursor ao voltar.
 - As folhas de arte do motor/TUNING vao para a pagina 1 (fora da tela) e agora carregam sem apagar a tela.
+
+- Musica desligada durante a corrida (tambem com FM); volta ao terminar.
