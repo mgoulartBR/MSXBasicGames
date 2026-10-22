@@ -1815,7 +1815,7 @@ static void art_use(u8 idx) {                          /* garante a folha da pec
 }
 static void art_put(u8 idx, i16 x, i16 y) {            /* a peca vai da folha (pagina 1) para a tela (pagina 0); cor 0 e transparente */
     art_use(idx);
-    vc_w(0, art_x[idx]); vc_w(2, 256 + art_y[idx]); vc_w(4, x); vc_w(6, y); vc_w(8, art_w[idx]); vc_w(10, art_h[idx]); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
+    vc_w(0, art_x[idx]); vc_w(2, 256 + art_y[idx]); vc_w(4, x); vc_w(6, y + ybase); vc_w(8, art_w[idx]); vc_w(10, art_h[idx]); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;
     vdp_cmd15();
 }
 #define BW_X 36
@@ -1823,9 +1823,21 @@ static void art_put(u8 idx, i16 x, i16 y) {            /* a peca vai da folha (p
 #define BW_W 184
 #define BW_H 126
 #define BW_BTN (BW_Y + BW_H - 24)                      /* y dos botoes de baixo */
+/* as janelas do motor e de PARTS sao montadas fora da tela (pagina 3, a partir da linha WBUF_Y; o rascunho dos carros e recarregado pelo draw_car) e copiadas de uma vez
+   para a tela: sem o piscar de apagar e redesenhar a janela a cada clique */
+#define WBUF_Y 848
+static u8 win_new = 1, win_buf, win_x, win_w;                /* win_new: ha outra coisa na tela (apaga a area antes) */
 static void win_frame(u8 x, u8 w) {                    /* a moldura da janela: cinza e branco por fora, preto por dentro */
-    cmd_n = 0; cp = cmd_buf; hub_restore(x, BW_Y, w, BW_H);
+    cmd_n = 0; cp = cmd_buf;
+    if (win_new) { hub_restore(0, 22, 256, 168); vdp_wait(); win_new = 0; }
+    win_x = x; win_w = w; win_buf = 1; ybase = WBUF_Y - BW_Y;
     push_fill(x, BW_Y, w, BW_H, 3); push_fill(x + 2, BW_Y + 2, w - 4, BW_H - 4, HC_W); push_fill(x + 4, BW_Y + 4, w - 8, BW_H - 8, HC_K);
+}
+static void win_flush(void) {                          /* copia a janela montada para a tela (HMMM) */
+    if (!win_buf) return;
+    win_buf = 0; ybase = 0; vdp_wait();
+    vc_w(0, win_x); vc_w(2, WBUF_Y); vc_w(4, win_x); vc_w(6, BW_Y); vc_w(8, win_w); vc_w(10, BW_H); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+    vdp_cmd15(); vdp_wait();
 }
 static Hot bay_hot[13];
 static void red_btn(u8 i, u8 x, u8 y, u8 w, const char *s) {     /* botao vermelho de borda branca, como o original (e ja registra o clique) */
@@ -1867,7 +1879,7 @@ static u8 bay_test_k(u8 n) {
 #endif
 static u8 bay_pick(u8 n, const char *const *names) {  /* espera um clique nos botoes (ESC = 254) */
     u8 k;
-    vdp_wait(); cmd_n = 0; cp = cmd_buf;
+    vdp_wait(); win_flush(); cmd_n = 0; cp = cmd_buf;
 #ifdef BOLT_TEST
     return bay_test_k(n);
 #endif
@@ -2013,7 +2025,7 @@ static void parts_win(void) {
         for (i = 0; i < nspare; i++) if (part_cat[spare[i]] == cat && (part_mk[spare[i]] & fit)) gsp[gsn++] = i;
         if (!gsn) { bub = 1; continue; }
         ui_get = spare_cat_get; ui_nohint = 0;
-        r = ui_list(cat_label[cat], gsn, 0);             /* lista das pecas disponiveis (X ou ESC cancela) */
+        r = ui_list(cat_label[cat], gsn, 0); win_new = 1;             /* lista das pecas disponiveis (X ou ESC cancela) */
         if (r == 255) continue;
         r = gsp[r];
         old = part_find(cat, *car_var(gcar, cat), fit);
@@ -2027,7 +2039,7 @@ static void parts_win(void) {
 static void engine_bay(void) BK {
     u8 k;
     if (!nown) { ui_note("NO CAR YET", "BUY ONE FIRST!"); return; }
-    gcar = &gc[cur]; art_grp_cur = 0; if (bay_bad != cur) bay_reset(); bay_msg = 0;
+    gcar = &gc[cur]; art_grp_cur = 0; win_new = 1; if (bay_bad != cur) bay_reset(); bay_msg = 0;
 #ifdef FORCE_PARTS
     gcar->eng = FORCE_PARTS >> 8; gcar->man = (FORCE_PARTS >> 4) & 15; gcar->carb = FORCE_PARTS & 15;     /* testes: motor, coletor e carburador (0x2 5 2 = motor 78, coletor 104, carburador 86) */
 #endif
@@ -2047,8 +2059,8 @@ static void engine_bay(void) BK {
         red_btn(0, BW_X + 10, BW_BTN, 52, "TUNE"); red_btn(1, BW_X + 66, BW_BTN, 52, "PARTS"); red_btn(2, BW_X + 122, BW_BTN, 52, "DONE");
         k = bay_pick(3 + bay_nd, bay_nm);
         if (k >= 3 && k < 13) bay_click(k - 3);
-        else if (k == 0) { if (bay_ok()) car_tune_win(); else bay_msg = "TIGHTEN ALL THE BOLTS FIRST"; }
-        else if (k == 1) parts_win();
+        else if (k == 0) { if (bay_ok()) { car_tune_win(); win_new = 1; } else bay_msg = "TIGHTEN ALL THE BOLTS FIRST"; }
+        else if (k == 1) { parts_win(); win_new = 1; }
         else if (k != 255) { bay_bad = bay_ok() ? 255 : cur; return; }         /* (255 = nada: so o roteiro de teste) */        /* DONE/ESC: se sobrou parafuso solto o carro nao anda */
     }
 }
@@ -2522,7 +2534,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
             ui_nohint = 0;
         }
     }
-#ifdef BOLT_TEST
+#if defined(BOLT_TEST) || defined(BAY_OPEN)
     engine_bay();
 #endif
 #ifdef TEST_HOW

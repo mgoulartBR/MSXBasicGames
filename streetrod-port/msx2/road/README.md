@@ -441,3 +441,5 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 - Mouse: as janelas (ui_list) rodavam sem sincronismo e liam o mouse milhares de vezes por segundo (o mouse real devolvia lixo e o cursor derivava para a direita/baixo); agora 1 leitura por quadro, com interrupcoes desligadas durante a leitura, e deslocamento identico por mais de 50 quadros e ignorado.
 
 - Bob's: o carro (e a sombra) para na faixa preta do asfalto (base em y=154) e nao invade a moldura cinza da porta do carro com o pino.
+
+- Janelas do motor e de PARTS sem piscar: sao montadas fora da tela (pagina 3, a partir da linha 848) e copiadas para a tela por um unico HMMM (`win_frame`/`win_flush`); `win_new` apaga a area da tela so quando outra janela (lista, TUNING) esteve por cima. Teste: `bay3_test.tcl` com `-DBAY_OPEN -DBAY_CUR_X=128 -DBAY_CUR_Y=133`.
