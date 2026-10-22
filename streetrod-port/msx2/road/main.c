@@ -366,6 +366,7 @@ extern void vdp_cmd15(void);
 
 static void draw_scn(void) BK;
 static u8 hazards(u16 dj, u8 nt) BK;
+static void crash_fx(void) BK;
 #pragma codeseg BANK1
 #include "assets_race.h"                  /* tabelas so da corrida (sprites do oponente, ponteiros): nos dados do banco 1, fora do nucleo */
 static void draw_opp(void) {
@@ -2754,7 +2755,7 @@ static void run_race(void) BK {
             }
             else {                                                  /* batidas, dano fora da pista e guarda (BANK5) */
                 if (cop_st >= 2) siren_beep();
-                if (hazards(dj, ntk)) { state = 2; dbg_state = 2; race_silence(); return; }
+                if (hazards(dj, ntk)) { state = 2; dbg_state = 2; race_silence(); if (result == 4) crash_fx(); return; }
             }
             if (!dbg_t60 && speed >= 60) dbg_t60 = (u16)(JIFFY - start_j);
             if (!dbg_t100 && speed >= 100) dbg_t100 = (u16)(JIFFY - start_j);
@@ -2910,6 +2911,49 @@ static u8 hazards(u16 dj, u8 nt) BK {
     if (cop_st == 1 && pos >= cop_trig && speed > COP_LIM) { cop8 = p8 - 120; cop_acc = 0; cop_st = 2; }      /* acima do limite no ponto sorteado: o guarda vem 15 segmentos atras */
     else if (cop_st == 2 && cop8 + 2 >= p8) { crash_spd = speed; result = 5; return 1; }                      /* alcancou: multa */
     return 0;
+}
+/* efeito do acidente (so desenho, 🔴 inventado): para-brisa trincado a partir do ponto de impacto + sangue escorrendo, com ruido; depois a tela de acidente */
+static void cr_line(i16 x, i16 y, i16 dx, i16 dy, u8 c) BK {
+    i16 ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+    u8 maj = ay > ax;
+    vc_w(4, x); vc_w(6, ybase + y); vc_w(8, maj ? ay : ax); vc_w(10, maj ? ax : ay); vc[12] = c;
+    vc[13] = (maj ? 1 : 0) | (dx < 0 ? 4 : 0) | (dy < 0 ? 8 : 0); vc[14] = 0x70;
+    vdp_cmd15();
+}
+static void cr_rect(i16 x, i16 y, i16 w, i16 h, u8 c) BK {
+    vc_w(4, x); vc_w(6, ybase + y); vc_w(8, w); vc_w(10, h); vc[12] = c; vc[13] = 0; vc[14] = 0xC0;
+    vdp_cmd15();
+}
+static void crash_fx(void) BK {
+    static const i8 sp[10][2] = {{-52, -6}, {-38, -30}, {-14, -38}, {18, -36}, {40, -24}, {50, 2}, {38, 26}, {10, 34}, {-18, 32}, {-40, 22}};
+    const i16 cx = 140, cy = 62;
+    u8 pg, i, k;
+    i16 x, y, px, py;
+    u16 j;
+    for (pg = 0; pg < 2; pg++) {
+        ybase = pg ? 256 : 0;
+        for (i = 0; i < 10; i++) {
+            x = cx + sp[i][0]; y = cy + sp[i][1];
+            cr_line(cx, cy, x - cx, y - cy, 7);                                         /* raio da rachadura */
+            cr_line(cx + sp[i][0] / 2, cy + sp[i][1] / 2, (i & 1 ? 9 : -9), (i & 2 ? 7 : -7), 7);   /* ramificacao */
+            k = (i + 1) % 10;                                                          /* anel irregular a 40% e 75% */
+            cr_line(cx + sp[i][0] * 2 / 5, cy + sp[i][1] * 2 / 5, (sp[k][0] - sp[i][0]) * 2 / 5, (sp[k][1] - sp[i][1]) * 2 / 5, 7);
+            cr_line(cx + sp[i][0] * 3 / 4, cy + sp[i][1] * 3 / 4, (sp[k][0] - sp[i][0]) * 3 / 4, (sp[k][1] - sp[i][1]) * 3 / 4, 7);
+        }
+        cr_rect(cx - 6, cy - 4, 13, 9, 6); cr_rect(cx - 3, cy - 6, 7, 3, 6); cr_rect(cx - 9, cy - 1, 4, 3, 6);                                               /* mancha de sangue no impacto */
+        for (i = 0; i < 22; i++) {                                                      /* respingos */
+            px = cx - 30 + (i16)(rnd16() % 60); py = cy - 20 + (i16)(rnd16() % 40);
+            cr_rect(px, py, 2 + (i & 1), 2 + (i & 1), 6);
+        }
+        for (i = 0; i < 5; i++) {                                                       /* escorridos */
+            px = cx - 10 + i * 5 + (i16)(rnd16() & 3); py = cy + 2;
+            cr_rect(px, py, 2, 6 + (i16)(rnd16() % 24), 6);
+        }
+    }
+    psg(6, 20); psg(7, 0x98); psg(10, 15);                                              /* ruido de batida */
+    for (i = 0; i < 6; i++) { psg(6, 12 + i * 4); j = JIFFY; while ((u16)(JIFFY - j) < 6) ; }
+    psg(10, 0); psg(7, 0xB8);
+    j = JIFFY; while ((u16)(JIFFY - j) < 60) ;                                           /* segura a imagem ~1 s */
 }
 /* retrovisor superior: vista traseira (mostra o que ficou para tras: a pista que foge para o horizonte, grama e as arvores/predios dos segmentos ja passados) */
 static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: retangulo (x0, wy) w x h (wy relativo a janela da estrada) */
