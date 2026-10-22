@@ -2925,20 +2925,22 @@ static void cr_rect(i16 x, i16 y, i16 w, i16 h, u8 c) BK {
     vdp_cmd15();
 }
 static void crash_fx(void) BK {
-    static const i8 sp[10][2] = {{-52, -6}, {-38, -30}, {-14, -38}, {18, -36}, {40, -24}, {50, 2}, {38, 26}, {10, 34}, {-18, 32}, {-40, 22}};
+    static const i8 sp[12][2] = {{-84, -4}, {-70, -34}, {-40, -42}, {-6, -42}, {30, -42}, {64, -38}, {100, -24}, {112, 4}, {96, 30}, {58, 44}, {10, 42}, {-34, 40}};
     const i16 cx = 140, cy = 62;
     u8 pg, i, k;
     i16 x, y, px, py;
     u16 j;
     for (pg = 0; pg < 2; pg++) {
         ybase = pg ? 256 : 0;
-        for (i = 0; i < 10; i++) {
+        for (i = 0; i < 12; i++) {
             x = cx + sp[i][0]; y = cy + sp[i][1];
             cr_line(cx, cy, x - cx, y - cy, 7);                                         /* raio da rachadura */
-            cr_line(cx + sp[i][0] / 2, cy + sp[i][1] / 2, (i & 1 ? 9 : -9), (i & 2 ? 7 : -7), 7);   /* ramificacao */
-            k = (i + 1) % 10;                                                          /* anel irregular a 40% e 75% */
+            cr_line(cx + sp[i][0] / 2, cy + sp[i][1] / 2, (i & 1 ? 16 : -16), (i & 2 ? 12 : -12), 7);   /* ramificacoes */
+            cr_line(cx + sp[i][0] * 4 / 5, cy + sp[i][1] * 4 / 5, (i & 1 ? -12 : 12), (i & 2 ? -9 : 9), 7);
+            k = (i + 1) % 12;                                                          /* anel irregular a 40% e 75% */
             cr_line(cx + sp[i][0] * 2 / 5, cy + sp[i][1] * 2 / 5, (sp[k][0] - sp[i][0]) * 2 / 5, (sp[k][1] - sp[i][1]) * 2 / 5, 7);
             cr_line(cx + sp[i][0] * 3 / 4, cy + sp[i][1] * 3 / 4, (sp[k][0] - sp[i][0]) * 3 / 4, (sp[k][1] - sp[i][1]) * 3 / 4, 7);
+            cr_line(cx + sp[i][0] * 9 / 10, cy + sp[i][1] * 9 / 10, (sp[k][0] - sp[i][0]) * 9 / 10, (sp[k][1] - sp[i][1]) * 9 / 10, 7);
         }
         cr_rect(cx - 6, cy - 4, 13, 9, 6); cr_rect(cx - 3, cy - 6, 7, 3, 6); cr_rect(cx - 9, cy - 1, 4, 3, 6);                                               /* mancha de sangue no impacto */
         for (i = 0; i < 22; i++) {                                                      /* respingos */
