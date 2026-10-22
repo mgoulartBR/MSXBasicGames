@@ -134,6 +134,19 @@ def strip(a):
             if b[y, x] in (2, 3, 4, 5): b[y, x] = 0
     return b
 
+def fillwin(a):
+    """vidros: o transparente (0) cercado pelo corpo (nao ligado a borda da imagem: as cavas das rodas ficam abertas embaixo) vira preto opaco (1);
+    senao o cenario (Bob's: lanchonete, poste) aparecia pelas janelas do carro"""
+    h, w = a.shape; out = np.zeros((h, w), bool); st = []
+    for x in range(w): st += [(0, x), (h - 1, x)]
+    for y in range(h): st += [(y, 0), (y, w - 1)]
+    while st:
+        y, x = st.pop()
+        if 0 <= y < h and 0 <= x < w and not out[y, x] and a[y, x] == 0:
+            out[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    b = a.copy(); b[(a == 0) & ~out] = 1
+    return b
+
 def variants(c):
     """4 corpos por carro: v = teto_rebaixado + 2*sem_para_choques -> (imagem, wy)"""
     out = []
@@ -141,7 +154,7 @@ def variants(c):
         a, wy = c['body'], c['wy']
         if v & 2: a = strip(a)
         if v & 1: a, wy = chop(a, wy)
-        out.append((a, wy))
+        out.append((fillwin(a), wy))
     return out
 
 def stickers(lib2):
