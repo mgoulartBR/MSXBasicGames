@@ -383,12 +383,13 @@ def main():
         flat = lambda f: ','.join(str(f(i, v)) for v in range(4) for i in range(len(carart)))
         carh = ('#define CAR_Y0 %d\n#define WHEEL_Y0 %d\n#define STK_Y0 %d\n#define BAND_COPY_Y %d\n#define WH_W %d\n#define WH_H %d\n'
                 'static const uint8_t car_w[%d] = {%s};\nstatic const uint8_t car_h[%d] = {%s};\nstatic const uint8_t car_wx0[%d] = {%s};\n'
-                'static const uint8_t car_wx1[%d] = {%s};\nstatic const uint8_t car_wy[%d] = {%s};\n'
+                'static const uint8_t car_wx1[%d] = {%s};\nstatic const uint8_t car_wy[%d] = {%s};\nstatic const uint8_t car_hx[%d] = {%s};\nstatic const uint8_t car_hy[%d] = {%s};\n'
                 'static const uint8_t stk_w[8] = {%s};\nstatic const uint8_t stk_h[8] = {%s};\n') % (
             CAR_Y0, WHEEL_Y0, STK_Y0, BAND_COPY_Y, wheelart[0].shape[1], wheelart[0].shape[0],
             len(carart), ','.join(str(c['w']) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][0].shape[0]),
             len(carart), ','.join(str(c['wx'][0]) for c in carart),
             len(carart), ','.join(str(c['wx'][1]) for c in carart), 4 * len(carart), flat(lambda i, v: varart[i][v][1]),
+            len(carart), ','.join(str(c['head'][0]) for c in carart), len(carart), ','.join(str(c['head'][1]) for c in carart),
             ','.join(str(st.shape[1]) for st in stkart), ','.join(str(st.shape[0]) for st in stkart))
         lic = garage_pixels(lib2, 16)                            # carteira DMV (item 16): grupo 244, no alto da tela (o teclado do nome fica embaixo)
         canvas = np.zeros((212, 256), np.uint8); lx0 = ((256 - lic.shape[1]) // 2) & ~1

@@ -1605,8 +1605,8 @@ static void clmmm(i16 sx, i16 sy, i16 dx, i16 dy, i16 w, i16 h) {      /* LMMM r
 static i16 car_floor = CAR_FLOOR;                        /* y da base das rodas (garagem 152; Bob's mais baixo) */
 static u8 chead = 255;                                   /* piloto cuja cabeca aparece na janela (255 = nenhuma) */
 static i16 car_yt(u8 id) { return car_floor - (CWY(id) + (WH_H >> 1)); }
-static i16 head_x(u8 id, i16 xl) { return xl + ((car_wx0[id] + car_wx1[id]) >> 1) - 16 - (head_w[chead] >> 1); }   /* canto da cabeca: atras do meio do carro (lugar do motorista) */
-static i16 head_y(u8 id) { return car_yt(id) + (CH(id) * 28) / 100 - (head_h[chead] >> 1) - 4; }
+static i16 head_x(u8 id, i16 xl) { return xl + car_hx[id] - (head_w[chead] >> 1); }   /* canto da cabeca: centro da janela do motorista (medida na arte do carro) */
+static i16 head_y(u8 id) { return car_yt(id) + (u16)car_hy[id] * CH(id) / car_h[id] - (head_h[chead] >> 1); }
 static void cshadow(i16 xa, i16 y, i16 xb, i16 h) {     /* retangulo preto (LMMV) */
     if (xa < 0) xa = 0;
     if (xb > 256) xb = 256;

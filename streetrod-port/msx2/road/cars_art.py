@@ -79,6 +79,65 @@ def _arch(a, cx, cy, thr=4):
     m = (l + r) // 2
     return m if 22 <= r - l + 1 <= 52 and abs(m - cx) <= 10 else cx
 
+def arch_centers(a):
+    """centro x das cavas das rodas pelo contorno inferior do corpo: as colunas onde a ultima linha opaca sobe mais de 7 px acima da soleira; centro = media das colunas do topo da cava
+    (ate 4 px abaixo do apice). Devolve [(x, apice)] ordenado da traseira (esquerda) para a dianteira (direita)"""
+    h, w = a.shape; yl = np.full(w, -1)
+    for x in range(w):
+        nz = np.nonzero(a[:, x])[0]
+        if len(nz): yl[x] = nz.max()
+    valid = yl >= 0
+    thr = np.percentile(yl[valid], 85) - 7
+    ivs, s0 = [], None
+    for x in range(w):
+        up = valid[x] and yl[x] <= thr
+        if up and s0 is None: s0 = x
+        if not up and s0 is not None: ivs.append((s0, x - 1)); s0 = None
+    if s0 is not None: ivs.append((s0, w - 1))
+    m = []
+    for iv in ivs:
+        if m and iv[0] - m[-1][1] <= 3: m[-1] = (m[-1][0], iv[1])
+        else: m.append(iv)
+    out = []
+    for lo, hi in m:
+        if hi - lo < 14: continue
+        seg = yl[lo:hi + 1]; ap = int(seg.min()); xs = np.nonzero(seg <= ap + 4)[0] + lo
+        out.append((int(round(xs.mean())), ap))
+    return out
+
+
+def top_row(a):
+    """primeira linha larga (>= 12 pixels opacos): ignora antenas"""
+    nz = (a != 0).sum(axis=1)
+    return int(np.nonzero(nz >= 12)[0][0])
+
+
+def driver_window(a, wx0, wx1):
+    """janela do motorista: o transparente cercado pelo corpo (vidros) na metade de cima, escolhendo a maior janela cujo centro cai entre 30% e 80% do entre-eixos;
+    devolve (x, y) do centro (a cabeca fica la), ou None"""
+    h, w = a.shape; out = np.zeros((h, w), bool); st = []
+    for x in range(w): st += [(0, x), (h - 1, x)]
+    for y in range(h): st += [(y, 0), (y, w - 1)]
+    while st:
+        y, x = st.pop()
+        if 0 <= y < h and 0 <= x < w and not out[y, x] and a[y, x] == 0:
+            out[y, x] = True; st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    enc = (a == 0) & ~out; seen = np.zeros_like(enc); best = None
+    for y0 in range(h):
+        for x0 in range(w):
+            if enc[y0, x0] and not seen[y0, x0]:
+                pts = []; st = [(y0, x0)]
+                while st:
+                    y, x = st.pop()
+                    if not (0 <= y < h and 0 <= x < w) or seen[y, x] or not enc[y, x]: continue
+                    seen[y, x] = True; pts.append((y, x)); st += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+                ys = [p[0] for p in pts]; xs = [p[1] for p in pts]
+                cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+                if len(pts) >= 30 and cy < h * 0.6 and wx0 + 0.30 * (wx1 - wx0) <= cx <= wx0 + 0.80 * (wx1 - wx0):
+                    if best is None or len(pts) > best[0]: best = (len(pts), int(round(cx)), int(round(cy)))
+    return None if best is None else best[1:]
+
+
 def load(lib2):
     items = srlib.load(lib2)
     cars = []
@@ -91,7 +150,12 @@ def load(lib2):
             cx1, cx2, cy = (runs[0][0] + runs[0][1]) // 2, (runs[1][0] + runs[1][1]) // 2, r
         if k not in MANUAL:
             cx1, cx2 = _arch(a, cx1, cy), _arch(a, cx2, cy) - FRONT_BACK       # a dianteira (lado direito) um pouco para tras do centro medido (ajuste visual)
-        cars.append(dict(item=k, body=a, w=w, h=h, wx=(cx1 + REAR_FWD, cx2), wy=cy))          # traseira: REAR_FWD px para a frente (todos os carros, inclusive os manuais)
+        wx0, wx1 = cx1 + REAR_FWD, cx2
+        ar = arch_centers(a)                                   # centros das cavas medidos no contorno: tem prioridade sobre a deteccao antiga
+        if len(ar) >= 2: wx0, wx1 = ar[0][0], ar[-1][0]
+        elif len(ar) == 1 and ar[0][0] > w // 2: wx1 = ar[0][0]; wx0 = wx1 - (cx2 - cx1 - REAR_FWD)       # so a dianteira aparece (saia no traseiro): mantem o entre-eixos antigo
+        if len(ar) >= 1 and k not in MANUAL: cy = ar[-1][1] + 13                                          # topo da roda logo abaixo do apice da cava dianteira
+        cars.append(dict(item=k, body=a, w=w, h=h, wx=(wx0, wx1), wy=cy, head=driver_window(a, wx0, wx1) or (int(wx0 + 0.48 * (wx1 - wx0)), top_row(a) + 10)))          # traseira: REAR_FWD px para a frente (todos os carros, inclusive os manuais)
     wheels = [_scale(_img(items[k])) for k in WHEEL]
     return cars, wheels
 

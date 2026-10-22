@@ -6,5 +6,5 @@ after time 8 { tap 8 0x01 }
 after time 14 { keymatrixdown 8 0x10 }
 after time 16 { keymatrixup 8 0x10 }
 after time 17 { tap 8 0x01 }
-foreach t {19 19.5 20 20.5 21 22 24} { after time $t "snap a$t" }
-after time 26 { exit }
+foreach t {24 36 48 60 72 84} { after time $t "snap a$t" }
+after time 86 { exit }
