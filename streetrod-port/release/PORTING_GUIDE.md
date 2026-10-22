@@ -548,7 +548,8 @@ Decodificado no `SRSE.EXE` 🟢: a polícia só existe em **corridas de estrada*
 - `hazards()` (BANK5), a cada quadro: fora da pista (|P|>950) soma `ticks·(vel/16+1)` ao dano; bater na traseira do oponente soma `2·fechamento+10` (e o freia/empurra); ser atingido soma `fechamento+10`; lado a lado esterçando para ele o empurra e, em 30% dos casos, ele bate de volta (+20, +40 sem para-choques). Dano ≥ 100 (`DMG_MAX`) = acidente (`result 4`). O oponente volta à sua faixa (`olat`).
 - Polícia: `cop_st` 0/1/2; ao disparar o guarda aparece 15 segmentos atrás, sobe mais rápido que você (vel+32 acima de 50) e aparece no retrovisor (carro branco; sirene = `siren_beep`); alcançou = `result 5` (multa).
 - `crash_ask()` (BANK3): conserto = `preço/10 + (preço/4)·(vel/4)/25`; sucata = `preço/10`; só sucata se vel ≥ 90, já consertado 3 vezes (`brk>>3`) ou sem dinheiro; pink slip: o carro vai de qualquer jeito. `ticket_ask()`: multa `20/50/75 + vel/4`; sem dinheiro → `game_end = 4` (cadeia). Contagem de consertos nos bits 3–4 de `Car.brk` (macro `BRK()` = quebras de peças).
-- `crash_fx()` (BANK5): ao acidentar-se (`result 4`) desenha sobre o último quadro, nas duas páginas, o para-brisa trincado (12 raios até as bordas do vidro, ramificações e três anéis irregulares via LINE do VDP) e sangue (mancha, respingos e escorridos), com ruído no PSG por ~0,6 s e ~1 s de pausa antes da tela de acidente 🔴.
+- **Assets originais do acidente/polícia (LIB2, 🟢 achados no catálogo de itens):** 259 = para-brisa quebrado (320×108 → 256×108, entra sobre o cockpit em y=11, posição achada por correlação com o item 14); 264–266 = manchas de sangue; 241 = viatura vista por trás (vira a 4ª folha de sprites, só 4 larguras 8/11/15/22 px e 12 linhas, porque a página 3 da VRAM está cheia); 110 = talão SPEEDING TICKET (NAME e VEHICLE preenchidos com `gtext` na página 2 antes de mostrar a cena; carro cortado em 17 letras); 233 = cela (2×) na prisão. Grupos de assets 246 (para-brisa), 247 (sangue), 248 (talão), 249 (cela). `crash_fx()` (BANK5) carrega 246 num rascunho da página 3 (linha 860), copia por HMMM nas duas páginas, carrega 247 e aplica o sangue por LMMM/TIMP, com ruído no PSG e ~1,5 s de pausa; roda uma vez, sem custo por quadro. No espelho, `mcar()` (BANK1, por LMMM) desenha o oponente (folhas 0–2) e a viatura (folha 3) em vez de retângulos.
+- **Lição de memória (núcleo na página 1):** a tabela de faixas de assets (`asset_tab`, 9 bytes por faixa de 4 KB) mora no núcleo: 22 faixas novas estouraram o limite. Corrigido (a) juntando pedaços contíguos do mesmo grupo no `add()` e (b) comprimindo cada entrada para 7 bytes (A16, "3 cópias" e páginas−1 num único byte de flags; o carregador em `vdpasm.s` decodifica). O núcleo ficou com ~650 bytes livres.
 - Flags de teste: `-DTEST_RACE` (vai direto para uma corrida de estrada), `-DTEST_OFFROAD` (empurra o carro para fora), `-DCOP_FORCE` (guarda sempre, gatilho no segmento 20). Verificado no openMSX: conserto (−$67), sucata (+$17, carro removido), multa e retrovisor com o carro da polícia.
 
 ### 9.6 Resultado e ranking
@@ -715,7 +716,8 @@ Ordem aproximada e problemas notáveis:
 | m15p | tema original como estação padrão |
 | m15q | rodas nas arcadas e motorista na janela |
 | m15r | batidas, dano fora da pista, tela de acidente e perseguição policial |
-| **final** | = m15r |
+| m15s | assets originais no acidente (para-brisa quebrado, sangue), viatura no retrovisor, talão de multa e cela |
+| **final** | = m15s |
 
 ---
 

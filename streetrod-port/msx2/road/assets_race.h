@@ -3,7 +3,7 @@
 #define SPR_STRIDE 40
 static const uint8_t spr_x[SPR_N] = {0,8,19,34,56,86,128};
 static const uint8_t spr_w[SPR_N] = {8,11,15,22,30,42,64};
-static const uint8_t spr_h[3][SPR_N] = {{5,6,9,13,17,24,37},{5,7,9,13,18,25,38},{5,6,9,13,17,24,37}};
+static const uint8_t spr_h[4][SPR_N] = {{5,6,9,13,17,24,37},{5,7,9,13,18,25,38},{5,6,9,13,17,24,37},{4,5,7,11,0,0,0}};
 static const uint8_t spr_sel[128] = {255,255,255,255,255,255,255,255,0,0,0,1,1,1,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6};
 /* ponteiros dos mostradores do cockpit: (dx,dy) da ponta em relacao ao eixo; tacometro: indice = rpm/50, velocimetro: indice = mph */
 #define GAUGE_RPM_X 117

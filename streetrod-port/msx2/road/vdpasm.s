@@ -1183,8 +1183,8 @@ la_next:
 	inc hl
 	cp a,c
 	jr z,la_go
-	ld de,#7
-	add hl,de                 ; faixa de outro grupo: pula src(2) vlo(2) vhi pg cp
+	ld de,#5
+	add hl,de                 ; faixa de outro grupo: pula src(2) vlo(2) flags
 	jr la_done
 la_go:
 	ld a,b
@@ -1199,15 +1199,22 @@ la_go:
 	ld d,(hl)
 	inc hl
 	ld (_g_vlo),de
-	ld a,(hl)
+	ld a,(hl)                 ; flags: bit 7 = A16 do destino, bit 6 = 3 copias (senao 1), bits 0-3 = paginas de 256 bytes - 1
 	inc hl
-	ld (_g_vhi),a
-	ld a,(hl)
-	inc hl
+	ld c,a
+	and a,#0x0F
+	inc a
 	ld (_g_vpg),a
-	ld a,(hl)
-	inc hl
-	push af
+	ld a,c
+	rlca
+	and a,#1
+	ld (_g_vhi),a
+	ld a,c
+	and a,#0x40
+	ld a,#1
+	jr z,la_c1
+	ld a,#3
+la_c1:	push af
 	push hl
 	call _lz_unpack
 	ld a,(_g_hide0)
@@ -1246,7 +1253,7 @@ la_done:
 	dec bc
 	ld a,b
 	or a,c
-	jr nz,la_next
+	jp nz,la_next
 	ld a,(_cur_bank)
 	ld (0x7000),a             ; volta o banco de codigo corrente em 0x8000
 	ret

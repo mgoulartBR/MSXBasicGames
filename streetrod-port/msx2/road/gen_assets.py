@@ -95,7 +95,7 @@ SPR_W = [8, 11, 15, 22, 30, 42, 64]      # larguras das versoes reduzidas do car
 TREE_Y, SIGA_Y, SIGB_Y, SIGC_Y = 212, 468, 704, 734            # cenario da corrida: arvores/predios (pagina 0, linhas 212-255), placas A (pagina 1, 468-511), B e C (pagina 2, 704-767)
 RACE_X0 = 54                                                  # a estrada (por quadro) comeca nesta coluna; a esquerda e estatica
 BG_Y, BG_H = 768, 15                                         # colinas + grama do horizonte (item 267 da LIB2) na pagina 3 (corrida), copiadas por cima do ceu a cada quadro
-SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57)                                     # a folha de sprites fica na pagina 3 da VRAM
+SPR_Y0 = 808; SPR_STRIDE = 40; REAR_ITEMS = (11, 249, 57, 241)                                     # a folha de sprites fica na pagina 3 da VRAM
 
 def overlay(a):
     """Parte do cockpit que fica POR CIMA da estrada: vidro (preto ligado ao para-brisa e a janela lateral) vira transparente (0);
@@ -300,7 +300,18 @@ def main():
     ABASE = int(os.environ.get('ASSET_BANK0', '6'))     # primeiro banco de assets (antes dele: nucleo + bancos de codigo)
     banks = [bytearray()]; ents = []       # banco de 16 KB por vez (a partir do banco 2 da ROM); ents: (banco, endereco 0x8000+, vaddr, paginas_256, copias)
     lib2 = os.environ.get('LIB2')
-    def add(raw, vaddr, copies, group=0):
+    pend = []
+    def add(raw, vaddr, copies, group=0):                  # junta pedacos contiguos do mesmo grupo (menos faixas = tabela menor na pagina 1)
+        if pend and pend[0][3] == group and pend[0][2] == copies and pend[0][1] + len(pend[0][0]) == vaddr and len(pend[0][0]) % 128 == 0:
+            pend[0] = (pend[0][0] + bytes(raw), pend[0][1], copies, group)
+        else:
+            flush()
+            pend.append((bytes(raw), vaddr, copies, group))
+    def flush():
+        if not pend: return
+        raw, vaddr, copies, group = pend.pop()
+        add_now(raw, vaddr, copies, group)
+    def add_now(raw, vaddr, copies, group=0):
         for s in range(0, len(raw), STRIP):
             chunk = bytes(raw[s:s + STRIP]); chunk += bytes(-len(chunk) % 256)
             enc = lz_encode(chunk); assert lz_decode(enc) == chunk
@@ -417,6 +428,22 @@ def main():
         for grp_, it_ in ((250, 2), (251, 0), (252, 4), (253, 8), (254, 3)):
             scr = lib1_screen(lib1, it_)
             add((scr[:, 0::2] << 4 | scr[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=grp_)
+        crk = np.array(MAP, np.uint8)[garage_full(lib2, 259)][:, [x_ for x_ in range(320) if x_ % 5 != 4]]      # para-brisa quebrado (item 259, 320x108 -> 256x108): vai sobre o cockpit em y=11 (calculado por correlacao com o item 14); rascunho na pagina 3, linha 860
+        add((crk[:, 0::2] << 4 | crk[:, 1::2]).astype(np.uint8).tobytes(), 860 * 128, 1, group=246)
+        bl_ = []; bx_ = 0; bl_canvas = np.zeros((80, 86), np.uint8)
+        for it_ in (264, 265, 266):                                # sangue (itens 264-266), preto = transparente
+            b_ = np.array(MAP, np.uint8)[garage_pixels(lib2, it_)]; b_[b_ == MAP[0]] = 0
+            bl_canvas[:b_.shape[0], bx_:bx_ + b_.shape[1]] = b_; bl_.append((bx_, b_.shape[1], b_.shape[0])); bx_ += b_.shape[1]
+        assert bx_ <= 86
+        add(packrows(bl_canvas, 86), 860 * 128, 1, group=247)
+        assert bl_ == [(0, 26, 80), (26, 32, 23), (58, 26, 32)]      # main.c (crash_fx) assume estas posicoes/tamanhos
+        tk = garage_pixels(lib2, 110); tcv = np.zeros((212, 256), np.uint8); tx0 = ((256 - tk.shape[1]) // 2) & ~1; TK_Y0 = 4
+        tcv[TK_Y0:TK_Y0 + tk.shape[0], tx0:tx0 + tk.shape[1]] = tk                       # multa (item 110, 136x141) no centro de uma tela preta (grupo 248)
+        add((tcv[:, 0::2] << 4 | tcv[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=248)
+        carh += '#define TK_X0 %d\n#define TK_Y0 %d\n' % (tx0, TK_Y0)
+        jl = garage_pixels(lib2, 233).repeat(2, axis=0).repeat(2, axis=1)               # cela (item 233, 144x64) em 2x (grupo 249)
+        jcv = np.zeros((212, 256), np.uint8); jx0 = ((256 - jl.shape[1]) // 2) & ~1; jcv[8:8 + jl.shape[0], jx0:jx0 + jl.shape[1]] = jl[:, :256]
+        add((jcv[:, 0::2] << 4 | jcv[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=249)
         GEAR_PX, GEAR_SRC_Y = 212, 972                           # painel do cambio no cockpit (itens 227 = 3 marchas, 228 = 4 marchas, 229 = automatico) e botao/alavanca (230, 231, 232):
         mapa = np.array(MAP, np.uint8)                            # grupos 60-62 (painel, na pagina 3 em GEAR_SRC_Y, copiado para as 3 paginas no inicio da corrida) e 63-65 (botao)
         for t_, (pi_, ki_) in enumerate(((229, 232), (227, 230), (228, 231))):
@@ -557,16 +584,24 @@ def main():
         for k, item in enumerate(REAR_ITEMS):
             col = rear_sprite(lib2, item)
             sheet = np.zeros((SPR_STRIDE, 256), np.uint8); xs = []; x = 0; hh = []
-            for w in SPR_W:
-                sp = scale_sprite(col, w); sheet[:sp.shape[0], x:x + w] = sp; xs.append(x); hh.append(sp.shape[0]); x += w
+            for wi, w in enumerate(SPR_W):
+                sp = scale_sprite(col, w)
+                if k == 3:                                      # viatura (item 241): so as 4 menores larguras (retrovisor), 12 linhas: o resto da pagina 3 (semaforo, painel do cambio) esta ocupado
+                    if wi >= 4: hh.append(0); continue
+                    assert sp.shape[0] <= 12
+                sheet[:sp.shape[0], x:x + w] = sp; xs.append(x); hh.append(sp.shape[0]); x += w
             assert max(hh) <= SPR_STRIDE
+            if k == 3: sheet = sheet[:12]
             add((sheet[:, 0::2] << 4 | sheet[:, 1::2]).astype(np.uint8).tobytes(), (SPR_Y0 + k * SPR_STRIDE) * 128, 1)
+            if k < 3: xs0 = xs
             hs.append(hh)
+        xs = xs0
         sel = [255 if w < SPR_W[0] else max(i for i, s in enumerate(SPR_W) if s <= w) for w in range(128)]
         sprh = ('#define SPR_N %d\n#define SPR_Y0 %d\n#define SPR_STRIDE %d\nstatic const uint8_t spr_x[SPR_N] = {%s};\nstatic const uint8_t spr_w[SPR_N] = {%s};\n'
-                'static const uint8_t spr_h[3][SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
+                'static const uint8_t spr_h[4][SPR_N] = {%s};\nstatic const uint8_t spr_sel[128] = {%s};\n') % (
             len(SPR_W), SPR_Y0, SPR_STRIDE, ','.join(map(str, xs)), ','.join(map(str, SPR_W)),
             ','.join('{%s}' % ','.join(map(str, h)) for h in hs), ','.join(map(str, sel)))
+    flush()
     tdat = os.path.join(here, 'textdata.bin')
     text_bank = 0; text_base = 0
     if ents and os.path.exists(tdat):
@@ -600,7 +635,8 @@ def main():
     with open(os.path.join(here, 'assets.inc'), 'w') as f:       # tabela lida pelo carregador em assembly (fica na pagina 1, fixa)
         f.write('\t.equ ASSET_N, %d\nasset_tab:\n' % len(ents))
         for b, grp, src, v, pg, cp in ents:
-            f.write('\t.db %d, %d\n\t.dw %d\n\t.dw %d\n\t.db %d, %d, %d\n' % (b, grp, src, v & 0xFFFF, v >> 16, pg, cp))
+            assert 1 <= pg <= 16 and cp in (1, 3) and v >> 16 in (0, 1)
+            f.write('\t.db %d, %d\n\t.dw %d\n\t.dw %d\n\t.db %d\n' % (b, grp, src, v & 0xFFFF, (v >> 16) << 7 | (cp == 3) << 6 | (pg - 1)))
     with open(os.path.join(here, 'assets.h'), 'w') as f:
         import math
         L = 14

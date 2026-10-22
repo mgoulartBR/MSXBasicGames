@@ -367,6 +367,8 @@ extern void vdp_cmd15(void);
 static void draw_scn(void) BK;
 static u8 hazards(u16 dj, u8 nt) BK;
 static void crash_fx(void) BK;
+static void mcar(i16 cx, i16 w, i16 wy, i16 h, i16 hz, i16 d8, i16 lat0, u8 set) BK;
+static void ticket_fill(void) BK;
 #pragma codeseg BANK1
 #include "assets_race.h"                  /* tabelas so da corrida (sprites do oponente, ponteiros): nos dados do banco 1, fora do nucleo */
 static void draw_opp(void) {
@@ -1441,12 +1443,25 @@ static void crash_ask(void) BK {                 /* acidente (manual, CRASHING):
         money -= cost; c->brk = (u8)((rep < 3 ? rep + 1 : 3) << 3); c->tir = (car_flags[c->id] >> 4) & 3; c->tp = 0;
     } else { money += scrap; remove_car(cur); crash_gone = 1; }
 }
+static void ticket_fill(void) BK {               /* campos NAME e VEHICLE do talao (itens do original em branco); o carro e cortado em 17 letras (largura do campo) */
+    char b[18]; u8 i;
+    const char *cn = CARN(gc[cur].id);
+    for (i = 0; i < 17 && cn[i]; i++) b[i] = cn[i];
+    b[i] = 0;
+    ybase = 512;
+    gtext(TK_X0 + 5, TK_Y0 + 52, pname, 0);
+    gtext(TK_X0 + 5, TK_Y0 + 81, b, 0);
+    ybase = 0;
+}
 static void ticket_ask(void) BK {                /* o guarda alcancou (manual, THE POLICE): multa proporcional a velocidade; sem dinheiro = cadeia e fim de jogo */
     u16 fine = (crash_spd <= 50 ? 20 : crash_spd <= 80 ? 50 : 75) + crash_spd / 4; u8 n = 0;
     ui_nohint = 0;
     ui_note("THE COP PULLED YOU OVER!", "SPEEDING TICKET");
     put_str(pbuf, &n, "$"); put_num(pbuf, &n, fine); put_str(pbuf, &n, " FOR SPEEDING"); pbuf[n] = 0;
-    if (money < fine) { ui_note("YOU CAN'T PAY THE FINE", "OFF TO THE SLAMMER!"); game_end = 4; return; }
+    if (money < fine) {
+        scene_load(249); scene_present(); ybase = 0; vdp_reg(2, 0x1F); cmd_n = 0; cp = cmd_buf; hub_status();      /* cela (item 233) */
+        ui_note("YOU CAN'T PAY THE FINE", "OFF TO THE SLAMMER!"); game_end = 4; return;
+    }
     money -= fine;
     ui_note("YOU HAVE BEEN FINED", pbuf);
 }
@@ -2310,7 +2325,9 @@ static void race_go(void) BK { mus_pause(); run_race(); mus_hold = 0; mus_due = 
 static void race_result(void) BK {              /* resultado da corrida: janela sobre a lanchonete (tempo e velocidade media) */
     static char tb1[22], tb2[22];
     const char *it[2]; u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0; u8 n;
-    scene_load(197); font_init(); scene_present();
+    scene_load(result == 5 ? 248 : 197); font_init();
+    if (result == 5) ticket_fill();                                   /* multa (item 110): nome e carro nos campos, escritos na pagina 2 antes de mostrar a cena */
+    scene_present();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
     ui_dbg = 2; dbg_result = result;
@@ -2870,15 +2887,22 @@ static void scn_pole(i16 x, i16 y, i16 h) {                                    /
     if (py < SKY_TOP) { ph -= SKY_TOP - py; py = SKY_TOP; }
     if (ph > 0) push_fill(x, py, 1 + (h >> 4), ph, 15);
 }
-static void mcar(i16 cx, i16 w, i16 wy, i16 h, i16 hz, i16 d8, i16 lat0, u8 body, u8 glass) {      /* carro visto por tras no espelho: d8 = distancia em 1/8 de segmento, lat0 = lateral dele (unidades de P) */
-    i16 cw = (w * 40) / (100 + 4 * d8) + 1, ch = (cw * 5) / 8 + 1, y2 = hz + ((h - 1 - hz) * 24) / (24 + (d8 >> 1)), half = (w * 39) / 122, x;
+#pragma codeseg BANK1
+static void mcar(i16 cx, i16 w, i16 wy, i16 h, i16 hz, i16 d8, i16 lat0, u8 set) BK {      /* carro visto por tras no espelho (sprite da folha: set 0-2 = oponente, 3 = viatura); d8 = distancia em 1/8 de segmento, lat0 = lateral dele (unidades de P) */
+    i16 cw = (w * 40) / (100 + 4 * d8) + 1, y2 = hz + ((h - 1 - hz) * 24) / (24 + (d8 >> 1)), half = (w * 39) / 122, x, dx0;
     i32 lat = (i32)lat0 - P;
+    u8 si, sw, sh;
     x = cx + (i16)((lat * ((i32)half * (y2 - hz) / (h - hz))) / 900);
-    push_fill(x - (cw >> 1), wy + y2 - ch, cw, ch, body);
-    push_fill(x - (cw >> 2), wy + y2 - ch, (cw >> 1) + 1, (ch >> 1), glass);
-    push_fill(x - (cw >> 1), wy + y2 - 1, cw, 1, 7);                                       /* para-choque */
-    push_fill(x - (cw >> 1), wy + y2 - 2, 1 + (cw >> 3), 1, 6); push_fill(x + (cw >> 1) - (cw >> 3) - 1, wy + y2 - 2, 1 + (cw >> 3), 1, 6);     /* lanternas */
+    if (set == 3) cw += cw >> 1;                                                           /* a viatura aparece maior (so ha ate 22 px de largura) */
+    si = spr_sel[cw > 127 ? 127 : cw];
+    if (si == 255) return;
+    if (si > 3) si = 3;
+    sw = spr_w[si]; sh = spr_h[set][si]; dx0 = x - (sw >> 1);
+    vc_w(0, spr_x[si]); vc_w(2, SPR_Y0 + set * SPR_STRIDE); vc_w(4, dx0); vc_w(6, ybase + wy + y2 - sh);
+    vc_w(8, sw); vc_w(10, sh); vc[12] = 0; vc[13] = 0; vc[14] = 0x98;                       /* LMMM com TIMP */
+    vdp_cmd15();
 }
+#pragma codeseg BANK5
 /* acidentes e policia por quadro (corrida valendo): dano fora da pista, batidas com o oponente, perseguicao do guarda. 1 = a corrida acabou (result 4 = acidente, 5 = multa) */
 static u8 hazards(u16 dj, u8 nt) BK {
     i16 gap8 = (i16)(opos - pos) * 8 + (i16)osub - (i16)sub, lat = P - olat, la = lat < 0 ? -lat : lat, clo;
@@ -2912,50 +2936,23 @@ static u8 hazards(u16 dj, u8 nt) BK {
     else if (cop_st == 2 && cop8 + 2 >= p8) { crash_spd = speed; result = 5; return 1; }                      /* alcancou: multa */
     return 0;
 }
-/* efeito do acidente (so desenho, 🔴 inventado): para-brisa trincado a partir do ponto de impacto + sangue escorrendo, com ruido; depois a tela de acidente */
-static void cr_line(i16 x, i16 y, i16 dx, i16 dy, u8 c) BK {
-    i16 ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
-    u8 maj = ay > ax;
-    vc_w(4, x); vc_w(6, ybase + y); vc_w(8, maj ? ay : ax); vc_w(10, maj ? ax : ay); vc[12] = c;
-    vc[13] = (maj ? 1 : 0) | (dx < 0 ? 4 : 0) | (dy < 0 ? 8 : 0); vc[14] = 0x70;
-    vdp_cmd15();
-}
-static void cr_rect(i16 x, i16 y, i16 w, i16 h, u8 c) BK {
-    vc_w(4, x); vc_w(6, ybase + y); vc_w(8, w); vc_w(10, h); vc[12] = c; vc[13] = 0; vc[14] = 0xC0;
-    vdp_cmd15();
-}
+/* efeito do acidente (itens originais): o para-brisa quebrado (LIB2 259) por cima do cockpit e as manchas de sangue (264-266), com ruido; depois a tela de acidente (so desenho, uma vez: nao pesa no quadro) */
 static void crash_fx(void) BK {
-    static const i8 sp[12][2] = {{-84, -4}, {-70, -34}, {-40, -42}, {-6, -42}, {30, -42}, {64, -38}, {100, -24}, {112, 4}, {96, 30}, {58, 44}, {10, 42}, {-34, 40}};
-    const i16 cx = 140, cy = 62;
-    u8 pg, i, k;
-    i16 x, y, px, py;
+    u8 pg, i, b, bw;                                                                        /* pecas do sangue na folha (gen_assets, grupo 247): x 0/26/58, largura 26/32/26, altura 80/23/32 */
     u16 j;
+    vdp_wait(); g_group = 246; load_assets();                                              /* para-brisa -> rascunho da pagina 3 (linha 860) */
     for (pg = 0; pg < 2; pg++) {
-        ybase = pg ? 256 : 0;
-        for (i = 0; i < 12; i++) {
-            x = cx + sp[i][0]; y = cy + sp[i][1];
-            cr_line(cx, cy, x - cx, y - cy, 7);                                         /* raio da rachadura */
-            cr_line(cx + sp[i][0] / 2, cy + sp[i][1] / 2, (i & 1 ? 16 : -16), (i & 2 ? 12 : -12), 7);   /* ramificacoes */
-            cr_line(cx + sp[i][0] * 4 / 5, cy + sp[i][1] * 4 / 5, (i & 1 ? -12 : 12), (i & 2 ? -9 : 9), 7);
-            k = (i + 1) % 12;                                                          /* anel irregular a 40% e 75% */
-            cr_line(cx + sp[i][0] * 2 / 5, cy + sp[i][1] * 2 / 5, (sp[k][0] - sp[i][0]) * 2 / 5, (sp[k][1] - sp[i][1]) * 2 / 5, 7);
-            cr_line(cx + sp[i][0] * 3 / 4, cy + sp[i][1] * 3 / 4, (sp[k][0] - sp[i][0]) * 3 / 4, (sp[k][1] - sp[i][1]) * 3 / 4, 7);
-            cr_line(cx + sp[i][0] * 9 / 10, cy + sp[i][1] * 9 / 10, (sp[k][0] - sp[i][0]) * 9 / 10, (sp[k][1] - sp[i][1]) * 9 / 10, 7);
-        }
-        cr_rect(cx - 6, cy - 4, 13, 9, 6); cr_rect(cx - 3, cy - 6, 7, 3, 6); cr_rect(cx - 9, cy - 1, 4, 3, 6);                                               /* mancha de sangue no impacto */
-        for (i = 0; i < 22; i++) {                                                      /* respingos */
-            px = cx - 30 + (i16)(rnd16() % 60); py = cy - 20 + (i16)(rnd16() % 40);
-            cr_rect(px, py, 2 + (i & 1), 2 + (i & 1), 6);
-        }
-        for (i = 0; i < 5; i++) {                                                       /* escorridos */
-            px = cx - 10 + i * 5 + (i16)(rnd16() & 3); py = cy + 2;
-            cr_rect(px, py, 2, 6 + (i16)(rnd16() % 24), 6);
-        }
+        vc_w(0, 0); vc_w(2, 860); vc_w(4, 0); vc_w(6, pg * 256 + 11); vc_w(8, 256); vc_w(10, 108); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
+        vdp_cmd15();
     }
-    psg(6, 20); psg(7, 0x98); psg(10, 15);                                              /* ruido de batida */
+    vdp_wait(); g_group = 247; load_assets();                                              /* sangue -> mesmo rascunho */
+    for (pg = 0; pg < 2; pg++)
+        for (i = 0; i < 4; i++) { b = i == 0 ? 0 : i == 2 ? 2 : 1; bw = b == 1 ? 32 : 26; lmmm(b == 0 ? 0 : b == 1 ? 26 : 58, 860, 70 + i * 40, pg * 256 + 18 + (i & 1) * 20 + (i == 2) * 8, bw, b == 0 ? 80 : b == 1 ? 23 : 32); }
+    vdp_wait();
+    psg(6, 20); psg(7, 0x98); psg(10, 15);                                                 /* ruido de batida */
     for (i = 0; i < 6; i++) { psg(6, 12 + i * 4); j = JIFFY; while ((u16)(JIFFY - j) < 6) ; }
     psg(10, 0); psg(7, 0xB8);
-    j = JIFFY; while ((u16)(JIFFY - j) < 60) ;                                           /* segura a imagem ~1 s */
+    j = JIFFY; while ((u16)(JIFFY - j) < 90) ;                                             /* segura a imagem ~1,5 s */
 }
 /* retrovisor superior: vista traseira (mostra o que ficou para tras: a pista que foge para o horizonte, grama e as arvores/predios dos segmentos ja passados) */
 static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: retangulo (x0, wy) w x h (wy relativo a janela da estrada) */
@@ -2973,9 +2970,9 @@ static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: re
 #endif
         (pos > opos || (pos == opos && sub >= osub))) {            /* o oponente ficou para tras (ultrapassado): aparece no espelho, menor e mais perto do horizonte quanto mais longe */
         i16 d8 = (i16)(pos - opos) * 8 + (i16)sub - (i16)osub;                  /* distancia em 1/8 de segmento */
-        if (d8 <= 112) mcar(cx, w, wy, h, hz, d8, olat, 12, 15);              /* cor 12 = a pintura do oponente; vidro cinza claro (o carro pode ser preto) */
+        if (d8 <= 112) mcar(cx, w, wy, h, hz, d8, olat, opp_set);              /* cor 12 = a pintura do oponente; vidro cinza claro (o carro pode ser preto) */
     }
-    if (cop_st >= 2 && (u16)(pos * 8 + sub) >= cop8 && (u16)(pos * 8 + sub) - cop8 <= 112) mcar(cx, w, wy, h, hz, (u16)(pos * 8 + sub) - cop8, P, 7, 11);      /* o guarda atras de voce (branco, vidro escuro) */
+    if (cop_st >= 2 && (u16)(pos * 8 + sub) >= cop8 && (u16)(pos * 8 + sub) - cop8 <= 112) mcar(cx, w, wy, h, hz, (u16)(pos * 8 + sub) - cop8, P, 3);      /* o guarda atras de voce (branco, vidro escuro) */
     for (j = 0; j < 4 && n < 3; j++) {
         e = scn_tab[(u8)(pos - 1 - j)];
         for (side = 0; side < 2 && n < 3; side++) {
@@ -3096,7 +3093,7 @@ void main(void) {
         title_screen();
         new_game();
 #ifdef TEST_RACE
-        sel_pil = 0; sel_opp = 3; race_road = 1; race_type = 1; bet = 25; pal_load(); race_go(); race_result(); settle_race();
+        pname[0] = 'Z'; pname[1] = 'E'; pname[2] = 'D'; sel_pil = 0; sel_opp = 3; race_road = 1; race_type = 1; bet = 25; pal_load(); race_go(); race_result(); settle_race();
 #endif
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();

@@ -457,3 +457,4 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 
 - m15r — acidentes e polícia: `hazards()` (dano fora da pista, batida na traseira/lateral), `crash_ask()` (conserto/sucata), `ticket_ask()` (multa/cadeia), guarda no retrovisor e sirene; só em corridas de estrada (1 em 4). Fórmulas calibradas 🔴; gatilho da polícia decodificado do EXE 🟢. Testes: `-DTEST_RACE -DTEST_OFFROAD`, `-DCOP_FORCE`. Núcleo 16282 B.
 - m15r+: efeito visual do acidente (`crash_fx`): para-brisa trincado e sangue, com ruído.
+- m15s: acidente/polícia com assets originais (para-brisa 259, sangue 264-266, viatura 241, talão 110, cela 233); tabela de assets do núcleo compactada (7 B/faixa).
