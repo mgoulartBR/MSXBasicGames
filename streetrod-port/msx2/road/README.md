@@ -437,3 +437,5 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 - Mouse na porta 1: depois do primeiro movimento do mouse o GTSTCK(1) e ignorado (os pinos de direcao carregam o protocolo do mouse e o cursor derivava para baixo/direita no MSX real).
 
 - Capo na cor da pintura do carro: o preto entre a linha ciano e o painel usa a cor 2 da paleta e a linha do capo (cor 1) o reflexo; `set_hood` ajusta as duas no inicio de cada corrida.
+
+- Mouse: as janelas (ui_list) rodavam sem sincronismo e liam o mouse milhares de vezes por segundo (o mouse real devolvia lixo e o cursor derivava para a direita/baixo); agora 1 leitura por quadro, com interrupcoes desligadas durante a leitura, e deslocamento identico por mais de 50 quadros e ignorado.

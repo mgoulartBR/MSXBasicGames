@@ -854,6 +854,9 @@ static u8 mouse_move(void) {                     /* mouse na porta 1: aplica o d
 #else
     read_mouse();
 #endif
+    { static i8 lx, ly; static u8 rep;                  /* o mesmo deslocamento por mais de 1 s e leitura corrompida (mouse fora de fase), nao movimento */
+      if (g_mdx == lx && g_mdy == ly && (lx || ly)) { if (rep < 255) rep++; } else { rep = 0; lx = g_mdx; ly = g_mdy; }
+      if (rep > 50) return 0; }
     if ((g_mdx || g_mdy) && g_mdx > -64 && g_mdx < 64 && g_mdy > -64 && g_mdy < 64) {
         nx = cur_x + g_mdx; ny = cur_y + g_mdy;
         cur_x = nx < 1 ? 1 : nx > 254 ? 254 : (u8)nx; cur_y = ny < 0 ? 0 : ny > cur_ymax ? cur_ymax : (u8)ny;
@@ -916,6 +919,7 @@ static u8 ui_list(const char *title, u8 n, u8 sel) {
     vdp_wait();
     for (;;) {
         u8 st, back, ns = ul_sel, over = 255, moved;
+        { u16 j = JIFFY; while (JIFFY == j) ; }                   /* um quadro por volta: a leitura do mouse sempre logo apos a interrupcao */
         read_input(); combine_input();
         moved = mouse_move();
         st = g_stick; back = want_back();

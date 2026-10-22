@@ -1333,6 +1333,7 @@ _g_mdy::
 _read_mouse::
 	push ix
 	push iy
+	di                       ; a interrupcao no meio da leitura estraga os nibbles do protocolo do mouse (cursor derivando sozinho)
 	ld a,#12
 	call 0x00DB
 	ld a,#13
@@ -1341,6 +1342,7 @@ _read_mouse::
 	ld a,#14
 	call 0x00DB
 	ld (_g_mdy),a
+	ei
 	pop iy
 	pop ix
 	ret
