@@ -156,8 +156,15 @@ static u8 offer_day = 255;
 static char pname[13];                       /* nome do jogador (carteira DMV); vazio = SPEEDY */
 static u8 ask_name;                          /* 1 = pedir o nome (jogo novo) */
 static u8 ask_load;                          /* 1 = no comeco do jogo, oferecer o carregamento de um jogo salvo */
-static u8 game_end;                          /* 0 jogando, 1 acabou o verao, 2 rei do condado, 3 faliu */
+static u8 game_end;                          /* 0 jogando, 1 acabou o verao, 2 rei do condado, 3 faliu, 4 preso (multa sem dinheiro) */
 static u8 wins_drag, wins_road;
+/* acidentes e policia (manual: BUMPING AND PASSING, CRASHING, THE POLICE) */
+#define DMG_MAX 100                      /* dano acumulado que causa o acidente */
+#define COP_LIM 50                       /* mph: acima disso o guarda vem atras (no original ele corre a velocidade + 32 acima de 50) */
+static i16 olat;                         /* posicao lateral do oponente (unidades de P) */
+static u16 dmg, crash_spd, cop_trig, cop8, cop_acc;      /* dano; velocidade no acidente/multa; segmento do aviso do guarda; posicao do guarda (1/8 de segmento); acumulador de avanco */
+static u8 bump_cd, cop_st, siren_n, crash_gone, crash_cause;      /* cop_st: 0 sem guarda, 1 espera, 2 perseguicao; crash_cause: 1 saiu da pista, 2 batida entre carros */
+#define BRK(c) ((c)->brk & 7)           /* brk: bits 0-2 = peca quebrada; bits 3-4 = quantas vezes o carro ja foi consertado depois de um acidente */
 static u8 race_road, races_tot, king_st;         /* race_road: pista de estrada; races_tot: corridas valendo (fora as por diversao); king_st: 1 = ja venceu o Rei na arrancada */
 static u8 pil_st[22];                            /* por piloto: 0 normal, 1 ja perdeu o carro uma vez (volta com um melhor), 2 foi embora (perdeu o segundo carro) */
 static i8 pil_net[22];                           /* por piloto: 2 x (vezes que ele ganhou) - (corridas valendo contra ele): quem te venceu topa de novo */
@@ -339,6 +346,7 @@ static void advance(u16 dj) {
     while (adv_acc[0] >= 256) { adv_acc[0] -= 256; sub++; if (sub >= 8) { sub = 0; pos++; } }
     adv_acc[1] += step_drag(vspd[1]) * dj * ADV_K;
     while (adv_acc[1] >= 256) { adv_acc[1] -= 256; osub++; if (osub >= 8) { osub = 0; opos++; } }
+    if (cop_st >= 2) { cop_acc += step_drag(speed > COP_LIM ? speed + 32 : speed + 8) * dj * ADV_K; while (cop_acc >= 256) { cop_acc -= 256; cop8++; } }      /* o guarda: velocidade + 32 mph acima do limite (original), senao +8 */
 }
 
 static void project(void) { project_asm(); }
@@ -357,6 +365,7 @@ extern void vdp_cmd15(void);
 #define vc_w(i, v) do { i16 vw_ = (i16)(v); vc[i] = (u8)vw_; vc[(i) + 1] = (u8)(vw_ >> 8); } while (0)      /* macro: sem chamada de funcao (comandos de VDP diretos sao frequentes) */
 
 static void draw_scn(void) BK;
+static u8 hazards(u16 dj, u8 nt) BK;
 #pragma codeseg BANK1
 #include "assets_race.h"                  /* tabelas so da corrida (sprites do oponente, ponteiros): nos dados do banco 1, fora do nucleo */
 static void draw_opp(void) {
@@ -370,7 +379,7 @@ static void draw_opp(void) {
     if (y < 0 || y > 250) return;
     xc = XC[r - 1];
     hw = hwy_tab[y];
-    x = xc + ((hw * OLANE) >> 4);
+    x = xc + (hw * (olat >> 3)) / 112;           /* olat/896 da meia pista (olat = OLANE*56 -> 6/16) */
     w = hw >> 1;
 #if HAVE_COCKPIT
     if (w > 127) w = 127;
@@ -420,6 +429,7 @@ static void beep(u16 period, u8 jf) {
     psg(4, (u8)period); psg(5, (u8)(period >> 8)); psg(10, 12);
     beep_end = JIFFY + jf; beep_on = 1;
 }
+static void siren_beep(void) { siren_n++; beep((siren_n & 2) ? 110 : 170, 5); }          /* sirene: dois tons alternados no canal C */
 static void snd_engine(u8 on) {
     u16 r = rpm < 600 ? 600 : rpm, per;
     if (beep_on && (i16)(JIFFY - beep_end) >= 0) { psg(10, 0); beep_on = 0; }
@@ -1085,7 +1095,7 @@ static u8 fix_car(u8 ci) {                              /* 1 = o carro saiu da l
         if (!try_pay(cost)) return 0;
         if (gcar->brk & 1) gcar->wear = 0;
         if (gcar->brk & 4) gcar->tp = 0;
-        gcar->brk = 0;
+        gcar->brk &= ~7;
         ui_note("OH, WELL, IT COULD", "HAVE BEEN WORSE.");
     } else if (r == 1) {
         money += scrap_value(gcar); remove_car(ci);
@@ -1116,7 +1126,7 @@ static void car_info(void) {
     n = 0; put_str(info_buf[2], &n, gcar->trn == 0 ? "AUTOMATIC" : "MANUAL"); put_str(info_buf[2], &n, "  WEAR "); put_num(info_buf[2], &n, gcar->wear / 100); put_str(info_buf[2], &n, "%"); info_buf[2][n] = 0;
     n = 0; put_str(info_buf[3], &n, "TIMING "); if (gcar->trim < 0) info_buf[3][n++] = '-'; put_num(info_buf[3], &n, gcar->trim < 0 ? -gcar->trim : gcar->trim); info_buf[3][n] = 0;
     n = 0; put_str(info_buf[4], &n, "FUEL "); put_num(info_buf[4], &n, gcar->fuel); put_str(info_buf[4], &n, " GAL  TIRES "); put_num(info_buf[4], &n, gcar->tp); put_str(info_buf[4], &n, "% WORN"); info_buf[4][n] = 0;
-    n = 0; put_str(info_buf[5], &n, gcar->brk ? "BROKEN:" : "RUNS GREAT"); if (gcar->brk & 1) put_str(info_buf[5], &n, " ENGINE"); if (gcar->brk & 2) put_str(info_buf[5], &n, " TRANS"); if (gcar->brk & 4) put_str(info_buf[5], &n, " TIRES"); info_buf[5][n] = 0;
+    n = 0; put_str(info_buf[5], &n, BRK(gcar) ? "BROKEN:" : "RUNS GREAT"); if (gcar->brk & 1) put_str(info_buf[5], &n, " ENGINE"); if (gcar->brk & 2) put_str(info_buf[5], &n, " TRANS"); if (gcar->brk & 4) put_str(info_buf[5], &n, " TIRES"); info_buf[5][n] = 0;
     ui_get = info_get;
     ui_list(CARN(gcar->id), 6, 0);
 }
@@ -1406,15 +1416,49 @@ static u8 bobs(void) BK {                       /* fluxo de texto (testes automa
         if (bobs_race(p)) return 1;
     }
 }
-static char pbuf[30];
+static char pbuf[30], cb1[26], cb2[26];
+static void crash_ask(void) BK {                 /* acidente (manual, CRASHING): custo do conserto cresce com a velocidade; batida feia ou carro ja consertado muitas vezes = so sucata; consertado volta com pneus de fabrica */
+    Car *c = &gc[cur];
+    u16 pr = car_price[c->id], cost = pr / 10 + ((pr >> 2) * (crash_spd >> 2)) / 25, scrap = scrap_value(c);
+    u8 n, rep = c->brk >> 3, k; const char *it[2];
+    crash_gone = 0;
+    if (cost > pr - pr / 10) cost = pr - pr / 10;
+    ui_nohint = 0;
+    if (race_type == 3) { ui_note("YOU CRASHED!", "AND LOST YOUR CAR"); return; }          /* pink slip: o carro vai de qualquer jeito (settle_race) */
+    if (crash_spd >= 90 || rep >= 3 || money < cost) {
+        n = 0; put_str(pbuf, &n, "YOU GET $"); put_num(pbuf, &n, scrap); put_str(pbuf, &n, " FOR SCRAP"); pbuf[n] = 0;
+        ui_note("LUCKY YOU WEREN'T KILLED,", "THE CAR IS TOTALED!");
+        ui_note(crash_cause == 1 ? "YOU RAN OFF THE ROAD." : "YOU WRECKED.", pbuf);
+        money += scrap; remove_car(cur); crash_gone = 1;
+        return;
+    }
+    n = 0; put_str(cb1, &n, "REPAIR IT  $"); put_num(cb1, &n, cost); cb1[n] = 0;
+    n = 0; put_str(cb2, &n, "JUNK IT  $"); put_num(cb2, &n, scrap); cb2[n] = 0;
+    it[0] = cb1; it[1] = cb2;
+    do k = ui_pick(crash_cause == 1 ? "YOU RAN OFF THE ROAD!" : "YOU CRASHED!", it, 2, 0); while (k == 255);
+    if (k == 0) {                                                                       /* conserto: sai do bolso, volta a garagem so com pneus de fabrica */
+        money -= cost; c->brk = (u8)((rep < 3 ? rep + 1 : 3) << 3); c->tir = (car_flags[c->id] >> 4) & 3; c->tp = 0;
+    } else { money += scrap; remove_car(cur); crash_gone = 1; }
+}
+static void ticket_ask(void) BK {                /* o guarda alcancou (manual, THE POLICE): multa proporcional a velocidade; sem dinheiro = cadeia e fim de jogo */
+    u16 fine = (crash_spd <= 50 ? 20 : crash_spd <= 80 ? 50 : 75) + crash_spd / 4; u8 n = 0;
+    ui_nohint = 0;
+    ui_note("THE COP PULLED YOU OVER!", "SPEEDING TICKET");
+    put_str(pbuf, &n, "$"); put_num(pbuf, &n, fine); put_str(pbuf, &n, " FOR SPEEDING"); pbuf[n] = 0;
+    if (money < fine) { ui_note("YOU CAN'T PAY THE FINE", "OFF TO THE SLAMMER!"); game_end = 4; return; }
+    money -= fine;
+    ui_note("YOU HAVE BEEN FINED", pbuf);
+}
 static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, carros, vitorias e a mensagem do resultado */
     Car *c = &gc[cur];
-    u8 win, ep, tpr, brk0 = 0, gone = 0, n;
-    c->fuel = c->fuel > 3 ? c->fuel - 3 : 0;
-    c->wear = c->wear + 100 + over_t * 30 > 10000 ? 10000 : c->wear + 100 + over_t * 30;
-    c->tp = c->tp + 6 + (race_road ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_road ? 4 : 0);
+    u8 win, ep, tpr, brk0 = 0, gone = crash_gone, n;
+    if (!gone) {
+        c->fuel = c->fuel > 3 ? c->fuel - 3 : 0;
+        c->wear = c->wear + 100 + over_t * 30 > 10000 ? 10000 : c->wear + 100 + over_t * 30;
+        c->tp = c->tp + 6 + (race_road ? 4 : 0) > 100 ? 100 : c->tp + 6 + (race_road ? 4 : 0);
+    }
     pm_on = 0;
-    if (result != 3) {                       /* quebras: motor (rotacao e desgaste), cambio (trocas com o motor passado), pneus (tabela do jogo) */
+    if (result == 1 || result == 2) {                       /* quebras: motor (rotacao e desgaste), cambio (trocas com o motor passado), pneus (tabela do jogo) */
         ep = over_t * 3 + (u8)(c->wear / 1000); if (ep > 60) ep = 60;                 /* so estoura se passou do corte (3% por tick) ou com o motor muito gasto */
         tpr = badshift * 8; if (tpr > 70) tpr = 70;
 #ifdef TEST_BRK
@@ -1429,11 +1473,6 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
             c->brk |= brk0; result = 2;
             pm_put(0, brk0 == 1 ? "BLEW YOUR ENGINE AGAIN?" : brk0 == 2 ? "YOU JUST DROPPED YOUR" : "BLEW YOUR TIRES AGAIN?");
             pm_put(1, brk0 == 2 ? "TRANSMISSION, KLUTZ!" : "YOU LOSE. TAKE A WALK.");
-        } else if (result == 2 && dbg_top >= 90 && rnd16() % 100 < 6) {      /* perdeu a alta velocidade: pode destruir o carro */
-            u16 scrap = scrap_value(c);
-            n = 0; put_str(pbuf, &n, "CAR TOTALED. $"); put_num(pbuf, &n, scrap); put_str(pbuf, &n, " SCRAP"); pbuf[n] = 0;
-            money += scrap; remove_car(cur); gone = 1;
-            pm_put(0, "LUCKY YOU WEREN'T KILLED!"); pm_put(1, pbuf);
         }
     }
     win = result == 1;
@@ -1502,8 +1541,8 @@ static void victory_and_ranking(void) {
     wait_click();
 }
 static void end_screen(void) BK {                 /* fim de jogo: mensagem e estatisticas, depois volta ao titulo */
-    static const char *const l1[4] = {"", "YOU'RE DONE FER", "YOU DESERVE TO BE", "YOU'RE OUTTA DOUGH."};
-    static const char *const l2[4] = {"", "THE SUMMER!", "KING OF THE COUNTY!", "LOOKS LIKE YOU'RE DONE"};
+    static const char *const l1[5] = {"", "YOU'RE DONE FER", "YOU DESERVE TO BE", "YOU'RE OUTTA DOUGH.", "THE COPS HAULED YOU OFF"};
+    static const char *const l2[5] = {"", "THE SUMMER!", "KING OF THE COUNTY!", "LOOKS LIKE YOU'RE DONE", "TO THE SLAMMER!"};
     u8 n;
     victory_and_ranking();
     load_garage(); ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
@@ -2275,6 +2314,8 @@ static void race_result(void) BK {              /* resultado da corrida: janela 
     cmd_n = 0; cp = cmd_buf; hub_status();
     ui_dbg = 2; dbg_result = result;
     if (result == 3) { ui_note("YA JUMPED THE LIGHT,", "SPEEDY!"); ui_dbg = 7; return; }
+    if (result == 4) { crash_ask(); ui_dbg = 7; return; }
+    if (result == 5) { ticket_ask(); ui_dbg = 7; return; }
     n = 0; put_str(tb1, &n, "TIME  "); put_num(tb1, &n, t10 / 10); tb1[n++] = '.'; put_num(tb1, &n, t10 % 10); put_str(tb1, &n, " SEC"); tb1[n] = 0;
     n = 0; put_str(tb2, &n, "AVERAGE  "); put_num(tb2, &n, avg); put_str(tb2, &n, " MPH"); tb2[n] = 0;
     it[0] = tb1; it[1] = tb2;
@@ -2570,7 +2611,7 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
         else if (r == 4) gas_station();
         else if (r == 5) {
             if (!nown) ui_note("BOBS DRIVE-IN", "BUY A CAR FIRST!");
-            else if (gc[cur].brk || bay_bad == cur) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
+            else if (BRK(&gc[cur]) || bay_bad == cur) ui_note("YOUR CAR'S NOT RUNNING,", "SPEEDY!");
             else if (gc[cur].fuel < 3) ui_note("YOU DON'T GOT ENOUGH GAS", "TO CRUISE DOWN TO BOBS");
             else if (street_trip() && bobs_front()) return 0;
         }
@@ -2602,6 +2643,12 @@ static void new_race(void) {
     opp_pk = (u8)(JIFFY & 7);
     set_track(race_road);
     load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
+    olat = OLANE * 56; dmg = 0; bump_cd = 0; crash_cause = 0; crash_gone = 0; crash_spd = 0; cop8 = cop_acc = 0; siren_n = 0;
+    cop_st = (!street_mode && race_road && sel_pil != NPILOTS - 1 && (rnd16() & 3) == 0) ? 1 : 0;      /* original (img 0xD067): so corrida de estrada, fora a do Rei, 1 chance em 4 */
+    cop_trig = 260 + rnd16() % 130;                                                          /* original: segmento 510..764 de 1020; aqui a estrada tem 520 */
+#ifdef COP_FORCE
+    cop_st = 1; cop_trig = 20;
+#endif
     over_t = badshift = 0;
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
@@ -2650,7 +2697,7 @@ u16 prof[12];
 #endif
 static void run_race(void) BK {
     u16 last_j, t, dj, j0, fr0, tickacc = 0, nt, start_j;
-    u8 shown = 0, skip_held = 1;
+    u8 shown = 0, skip_held = 1, ntk;
     u16 base; u8 k;
 #ifdef PROF
     u16 pj = JIFFY;
@@ -2689,6 +2736,7 @@ static void run_race(void) BK {
         tickacc += dj * tick_inc;
         nt = tickacc >> 8; tickacc &= 255;
         if (state == 1) { advance(dj); steer_frame(dj); }
+        ntk = nt > 8 ? 8 : (u8)nt;
         while (nt--) {
             veh_tick(0, in_throttle, in_brake);
             if (!street_mode) opp_ai();
@@ -2704,8 +2752,9 @@ static void run_race(void) BK {
                 if (g_trig & 3) { if (!skip_held) { street_res = 0; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; } } else skip_held = 0;      /* o seletor pula a viagem (manual) */
                 if (pos >= race_len) { street_res = 0; psg(8, 0); psg(9, 0); psg(10, 0); beep_on = 0; return; }
             }
-            else if (opos == pos && (P - (OLANE * 56)) < 300 && (P - (OLANE * 56)) > -300) {   /* colisao */
-                vrpm[0] -= vrpm[0] >> 4; vrpm[1] -= vrpm[1] >> 4;
+            else {                                                  /* batidas, dano fora da pista e guarda (BANK5) */
+                if (cop_st >= 2) siren_beep();
+                if (hazards(dj, ntk)) { state = 2; dbg_state = 2; race_silence(); return; }
             }
             if (!dbg_t60 && speed >= 60) dbg_t60 = (u16)(JIFFY - start_j);
             if (!dbg_t100 && speed >= 100) dbg_t100 = (u16)(JIFFY - start_j);
@@ -2820,6 +2869,48 @@ static void scn_pole(i16 x, i16 y, i16 h) {                                    /
     if (py < SKY_TOP) { ph -= SKY_TOP - py; py = SKY_TOP; }
     if (ph > 0) push_fill(x, py, 1 + (h >> 4), ph, 15);
 }
+static void mcar(i16 cx, i16 w, i16 wy, i16 h, i16 hz, i16 d8, i16 lat0, u8 body, u8 glass) {      /* carro visto por tras no espelho: d8 = distancia em 1/8 de segmento, lat0 = lateral dele (unidades de P) */
+    i16 cw = (w * 40) / (100 + 4 * d8) + 1, ch = (cw * 5) / 8 + 1, y2 = hz + ((h - 1 - hz) * 24) / (24 + (d8 >> 1)), half = (w * 39) / 122, x;
+    i32 lat = (i32)lat0 - P;
+    x = cx + (i16)((lat * ((i32)half * (y2 - hz) / (h - hz))) / 900);
+    push_fill(x - (cw >> 1), wy + y2 - ch, cw, ch, body);
+    push_fill(x - (cw >> 2), wy + y2 - ch, (cw >> 1) + 1, (ch >> 1), glass);
+    push_fill(x - (cw >> 1), wy + y2 - 1, cw, 1, 7);                                       /* para-choque */
+    push_fill(x - (cw >> 1), wy + y2 - 2, 1 + (cw >> 3), 1, 6); push_fill(x + (cw >> 1) - (cw >> 3) - 1, wy + y2 - 2, 1 + (cw >> 3), 1, 6);     /* lanternas */
+}
+/* acidentes e policia por quadro (corrida valendo): dano fora da pista, batidas com o oponente, perseguicao do guarda. 1 = a corrida acabou (result 4 = acidente, 5 = multa) */
+static u8 hazards(u16 dj, u8 nt) BK {
+    i16 gap8 = (i16)(opos - pos) * 8 + (i16)osub - (i16)sub, lat = P - olat, la = lat < 0 ? -lat : lat, clo;
+    u16 p8 = (u16)pos * 8 + sub;
+    u8 off = (P > 950 || P < -950);
+    (void)dj;
+#ifdef TEST_OFFROAD
+    P += 60;
+#endif
+    olat += ((OLANE * 56) - olat) >> 2;                                    /* o oponente volta para a faixa dele */
+    if (off) dmg += (u16)nt * ((speed >> 4) + 1);                          /* fora da pista voce vai acumulando dano (a velocidade ja cai: motor perde potencia) */
+    if (bump_cd) bump_cd--;
+    else if (la < 300 && gap8 > -12 && gap8 < 12) {
+        clo = (i16)speed - (i16)vspd[1];
+        if (gap8 > 3) {                                                    /* voce bateu na traseira do oponente */
+            if (clo > 0) { dmg += clo * 2 + 10; vrpm[0] -= vrpm[0] >> 2; vrpm[1] += 150; bump_cd = 2; crash_cause = 2; }
+        } else if (gap8 < -3) {                                            /* o oponente bateu na sua traseira */
+            clo = -clo;
+            if (clo > 0) { dmg += clo + 10; vrpm[0] += 100; vrpm[1] -= vrpm[1] >> 3; bump_cd = 2; crash_cause = 2; }
+        } else if ((lat < 0 && in_right) || (lat > 0 && in_left)) {         /* lado a lado, esterçando para cima dele: voce o empurra e ele cai para tras */
+            olat += lat < 0 ? 150 : -150; vrpm[1] -= vrpm[1] >> 3; vrpm[0] -= vrpm[0] >> 5; bump_cd = 3;
+            if (rnd16() % 100 < 30) { P += lat < 0 ? -200 : 200; dmg += gc[cur].bump ? 40 : 20; crash_cause = 2; }       /* ele bate de volta (sem para-choques o estrago e maior) */
+        }
+    }
+    if (dmg >= DMG_MAX) {
+        if (off) crash_cause = 1;
+        else if (!crash_cause) crash_cause = 2;
+        crash_spd = speed; result = 4; return 1;
+    }
+    if (cop_st == 1 && pos >= cop_trig && speed > COP_LIM) { cop8 = p8 - 120; cop_acc = 0; cop_st = 2; }      /* acima do limite no ponto sorteado: o guarda vem 15 segmentos atras */
+    else if (cop_st == 2 && cop8 + 2 >= p8) { crash_spd = speed; result = 5; return 1; }                      /* alcancou: multa */
+    return 0;
+}
 /* retrovisor superior: vista traseira (mostra o que ficou para tras: a pista que foge para o horizonte, grama e as arvores/predios dos segmentos ja passados) */
 static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: retangulo (x0, wy) w x h (wy relativo a janela da estrada) */
     u8 j, n = 0, e, side, t; i16 x, ph, pw, yb, hz = (h * 10) / 21, cx = x0 + (w >> 1), dx, hh, ww;
@@ -2836,16 +2927,9 @@ static void rearview(i16 x0, i16 w, i16 wy, i16 h) {              /* espelho: re
 #endif
         (pos > opos || (pos == opos && sub >= osub))) {            /* o oponente ficou para tras (ultrapassado): aparece no espelho, menor e mais perto do horizonte quanto mais longe */
         i16 d8 = (i16)(pos - opos) * 8 + (i16)sub - (i16)osub;                  /* distancia em 1/8 de segmento */
-        if (d8 <= 112) {
-            i16 cw = (w * 40) / (100 + 4 * d8) + 1, ch = (cw * 5) / 8 + 1, y2 = hz + ((h - 1 - hz) * 24) / (24 + (d8 >> 1)), half = (w * 39) / 122;
-            i32 lat = (i32)(OLANE * 56) - P;
-            x = cx + (i16)((lat * ((i32)half * (y2 - hz) / (h - hz))) / 900);
-            push_fill(x - (cw >> 1), wy + y2 - ch, cw, ch, 12);                                    /* carro (cor 12: a pintura do oponente) */
-            push_fill(x - (cw >> 2), wy + y2 - ch, (cw >> 1) + 1, (ch >> 1), 15);                 /* vidro traseiro (cinza claro: o carro pode ser preto) */
-            push_fill(x - (cw >> 1), wy + y2 - 1, cw, 1, 7);                                       /* para-choque */
-            push_fill(x - (cw >> 1), wy + y2 - 2, 1 + (cw >> 3), 1, 6); push_fill(x + (cw >> 1) - (cw >> 3) - 1, wy + y2 - 2, 1 + (cw >> 3), 1, 6);     /* lanternas */
-        }
+        if (d8 <= 112) mcar(cx, w, wy, h, hz, d8, olat, 12, 15);              /* cor 12 = a pintura do oponente; vidro cinza claro (o carro pode ser preto) */
     }
+    if (cop_st >= 2 && (u16)(pos * 8 + sub) >= cop8 && (u16)(pos * 8 + sub) - cop8 <= 112) mcar(cx, w, wy, h, hz, (u16)(pos * 8 + sub) - cop8, P, 7, 11);      /* o guarda atras de voce (branco, vidro escuro) */
     for (j = 0; j < 4 && n < 3; j++) {
         e = scn_tab[(u8)(pos - 1 - j)];
         for (side = 0; side < 2 && n < 3; side++) {
@@ -2965,6 +3049,9 @@ void main(void) {
     for (;;) {
         title_screen();
         new_game();
+#ifdef TEST_RACE
+        sel_pil = 0; sel_opp = 3; race_road = 1; race_type = 1; bet = 25; pal_load(); race_go(); race_result(); settle_race();
+#endif
         while (!hub()) {                                /* hub: garagem; 0 = Bobs Drive-In */
             pal_load();
             race_go();

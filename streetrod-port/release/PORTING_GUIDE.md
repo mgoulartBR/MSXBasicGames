@@ -539,9 +539,16 @@ Parâmetros de build: `DRAW_MODE` (0 faixa+zebra, 2 pixel único, 4 só pista co
 ### 9.5 Quebras e consequências (corrida) 🔴 (exceto pneus 🟢)
 - Desgaste: motor `+100 + 30·ticks_acima_do_corte`, pneus `+6` (`+10` na estrada), gasolina `−3` galões.
 - Quebras (a corrida vira derrota; a aposta se perde): motor `3% por tick acima do corte + desgaste/1000` (máx. 60%); câmbio `8% por troca com o motor passado` (só manual, máx. 70%); pneus pela tabela do jogo (5 níveis × 3 tipos).
-- Destruição: perdendo a mais de 90 mph, **6%** de chance de perder o carro (sucata = 10% do preço): "LUCKY YOU WEREN'T KILLED!".
+- (removido na m15r) a antiga destruição aleatória de 6% foi substituída pelo sistema de acidentes (§9.5.1).
 - Largada falsa (queimar o semáforo): "YA JUMPED THE LIGHT, SPEEDY!" — corrida cancelada, nada se perde.
 - **FIX OR JUNK IT:** consertar custa o preço das peças quebradas; sucatear paga a sucata.
+
+### 9.5.1 Batidas, dano fora da pista, acidente e polícia (m15r)
+Decodificado no `SRSE.EXE` 🟢: a polícia só existe em **corridas de estrada** (exceto contra o Rei), com **1 chance em 4** por corrida; o gatilho é sorteado entre os segmentos 510–764 de 1020 (aqui, 260–390 de 520) e só dispara se você estiver acima do limite; máquina de estados do guarda em `[0x7f88]` (rotina 0xDAA6), preparação em 0xD067, caminho da multa em 0xC8E4, teste de "fora da pista" em 0x284BB. Manual 🟡: multa proporcional à velocidade; sem dinheiro = cadeia (fim de jogo); acidente → conserto ou sucata; carro consertado várias vezes ou destruído = só sucata; consertado volta só com pneus de fábrica; custo cresce com a velocidade. As **fórmulas numéricas não foram decodificadas** e são 🔴 (calibradas por feeling):
+- `hazards()` (BANK5), a cada quadro: fora da pista (|P|>950) soma `ticks·(vel/16+1)` ao dano; bater na traseira do oponente soma `2·fechamento+10` (e o freia/empurra); ser atingido soma `fechamento+10`; lado a lado esterçando para ele o empurra e, em 30% dos casos, ele bate de volta (+20, +40 sem para-choques). Dano ≥ 100 (`DMG_MAX`) = acidente (`result 4`). O oponente volta à sua faixa (`olat`).
+- Polícia: `cop_st` 0/1/2; ao disparar o guarda aparece 15 segmentos atrás, sobe mais rápido que você (vel+32 acima de 50) e aparece no retrovisor (carro branco; sirene = `siren_beep`); alcançou = `result 5` (multa).
+- `crash_ask()` (BANK3): conserto = `preço/10 + (preço/4)·(vel/4)/25`; sucata = `preço/10`; só sucata se vel ≥ 90, já consertado 3 vezes (`brk>>3`) ou sem dinheiro; pink slip: o carro vai de qualquer jeito. `ticket_ask()`: multa `20/50/75 + vel/4`; sem dinheiro → `game_end = 4` (cadeia). Contagem de consertos nos bits 3–4 de `Car.brk` (macro `BRK()` = quebras de peças).
+- Flags de teste: `-DTEST_RACE` (vai direto para uma corrida de estrada), `-DTEST_OFFROAD` (empurra o carro para fora), `-DCOP_FORCE` (guarda sempre, gatilho no segmento 20). Verificado no openMSX: conserto (−$67), sucata (+$17, carro removido), multa e retrovisor com o carro da polícia.
 
 ### 9.6 Resultado e ranking
 - `race_result`: janela "YOU WIN!/YOU LOSE!" com tempo (décimos) e velocidade média; mensagens do original ("BIG DEAL.", "FIFTY SMACKERS.", "YOU JUST WON A HELLUVA CAR!").
@@ -706,7 +713,8 @@ Ordem aproximada e problemas notáveis:
 | m15o | regras do Rei (pilotos saem; "todos fora" libera) |
 | m15p | tema original como estação padrão |
 | m15q | rodas nas arcadas e motorista na janela |
-| **final** | = m15q |
+| m15r | batidas, dano fora da pista, tela de acidente e perseguição policial |
+| **final** | = m15r |
 
 ---
 
