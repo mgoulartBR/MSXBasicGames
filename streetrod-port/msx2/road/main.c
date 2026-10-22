@@ -159,6 +159,7 @@ static u8 ask_load;                          /* 1 = no comeco do jogo, oferecer 
 static u8 game_end;                          /* 0 jogando, 1 acabou o verao, 2 rei do condado, 3 faliu */
 static u8 wins_drag, wins_road;
 static u8 race_road, races_tot, king_st;         /* race_road: pista de estrada; races_tot: corridas valendo (fora as por diversao); king_st: 1 = ja venceu o Rei na arrancada */
+static u8 pil_st[22];                            /* por piloto: 0 normal, 1 ja perdeu o carro uma vez (volta com um melhor), 2 foi embora (perdeu o segundo carro) */
 static i8 pil_net[22];                           /* por piloto: 2 x (vezes que ele ganhou) - (corridas valendo contra ele): quem te venceu topa de novo */
 #ifdef START_WINS
 #define WINS0 START_WINS
@@ -736,7 +737,7 @@ static const u8 paint_g[8]  = {0, 0, 2, 4, 6, 6, 3, 5};
 #pragma codeseg BANK2
 static void new_game(void) BK {
     u8 i;
-    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; races_tot = 0; king_st = 0; race_road = 0; for (i = 0; i < 22; i++) pil_net[i] = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; bay_bad = 255; shown_id = 255; ask_load = 1; ask_name = 1;
+    money = START_MONEY; day = START_DAY; wins_drag = WINS0; wins_road = 0; races_tot = 0; king_st = 0; race_road = 0; for (i = 0; i < 22; i++) pil_net[i] = pil_st[i] = 0; game_end = START_END; nown = 0; cur = 0; sel_car = 0; offer_day = 255; nspare = 0; bay_bad = 255; shown_id = 255; ask_load = 1; ask_name = 1;
 #ifdef NO_NAME
     ask_name = 0;                                                                   /* testes automatizados nao digitam o nome */
 #endif
@@ -1318,6 +1319,7 @@ static const u16 bets[4] = {10, 25, 50, 100};
 static const char *pil_get(u8 i) { return PILN(i); }
 static void pick_opp_car(u8 pil) BK {           /* pilotos melhores (indice maior) correm com carros de classe mais alta */
     u8 target = (u8)((u16)pil * 8 / 21), c, tries;
+    if (pil_st[pil] == 1 && target < 7) target += 2;                      /* quem ja perdeu o carro uma vez volta com um melhor */
     for (tries = 0; tries < 60; tries++) {
         i16 d;
         c = (u8)(rnd16() % 25); d = (i16)car_perf[c] - target;
@@ -1357,8 +1359,10 @@ static u8 bobs_race(u8 p) BK {                  /* piloto p e carro sel_opp ja e
     sel_pil = p; bet = 0;
     if (gc[cur].fuel < 1) { gas_note(); return 0; }
     if (p == NPILOTS - 1) {                         /* o Rei so corre com quem ja venceu bastante (original 0x9556) */
-        u16 w = (u16)wins_drag + wins_road; u8 g;
+        u16 w = (u16)wins_drag + wins_road; u8 g, i, gone = 1;
+        for (i = 0; i < NPILOTS - 1; i++) if (pil_st[i] != 2) gone = 0;       /* os 21 pilotos ja perderam dois carros: o Rei corre sem exigir vitorias */
         g = w < 3 ? 2 : (wins_drag < 6 && wins_road < 6) ? (w < 7 ? 2 : 3) : wins_drag < 6 ? 4 : wins_road < 6 ? 5 : (w < (races_tot >> 1) ? 3 : 0);
+        if (gone) g = 0;
         if (g) {
             if (g == 2) ui_note("I DON'T GOT TIME FOR", "AMATEURS LIKE YOU!");
             else if (g == 3) ui_note("YOU'RE DOING OK KID,", "BUT NEED TO WIN MORE RACES!");
@@ -1440,8 +1444,8 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     if (result != 3 && !street_mode && sel_pil != NPILOTS - 1 && race_type != 2) {       /* corridas valendo: contam vitorias, total e a rivalidade com o piloto */
         if (races_tot < 255) races_tot++;
         if (win) { if (race_road) { if (wins_road < 255) wins_road++; } else if (wins_drag < 255) wins_drag++; }
-        if (pil_net[sel_pil] > -100 && win) pil_net[sel_pil]--;
-        else if (pil_net[sel_pil] < 100 && !win) pil_net[sel_pil] += 2;
+        if (pil_net[sel_pil] > -30 && win) pil_net[sel_pil]--;
+        else if (pil_net[sel_pil] < 29 && !win) pil_net[sel_pil] += 2;
     }
     if (result != 3 && sel_pil == NPILOTS - 1 && !street_mode) {                          /* o Rei: arrancada por diversao, depois estrada valendo o carro */
         if (!win) { king_st = 0; wins_drag = wins_drag > 3 ? wins_drag - 3 : 0; wins_road = wins_road > 2 ? wins_road - 2 : 0; }
@@ -1451,6 +1455,7 @@ static void settle_race(void) BK {              /* desgaste, quebras, dinheiro, 
     if (race_type == 3) {
         if (win) {
             pm_put(0, "YOU JUST WON A"); pm_put(1, "HELLUVA CAR!");
+            if (sel_pil != NPILOTS - 1) pil_st[sel_pil] = pil_st[sel_pil] ? 2 : 1;
             if (nown < MAXCARS) { car_stock(&gc[nown], sel_opp); nown++; }
             else { money += car_price[sel_opp] / 2; pm_put(1, "HELLUVA CAR! (SOLD IT)"); }
         } else {
@@ -2210,8 +2215,9 @@ static void bobs_tick(void) {
     u16 now = JIFFY; u8 p, n = 0; const char *q;
     if (bst == 0 && (i16)(now - bt) >= 0) {                                  /* chega um carro: piloto e carro sorteados */
         u8 c;
-        p = (u8)(rnd16() % NPILOTS);
-        if (p == bpil) p = (p + 1) % NPILOTS;
+        u8 tr = 0;
+        do p = (u8)(rnd16() % NPILOTS); while ((p == bpil || pil_st[p] == 2) && ++tr < 40);
+        if (pil_st[p] == 2) p = NPILOTS - 1;                                   /* so sobrou o Rei */
         pick_opp_car(p); bpil = p; bcar = sel_opp;
         q = PILN(p); while (q[n] && n < 12) { bpn[n] = q[n]; n++; } bpn[n] = 0;
         c = (u8)(rnd16() % 12); cvar = 0; cstk = 0; chead = p;
@@ -2344,7 +2350,7 @@ static void sv_pack(void) {
     for (i = 0; i < 13; i++) sv_buf[SV_HDR + i] = pname[i];
     for (i = 0; i < MAXSPARE; i++) sv_buf[SV_SP + i] = spare[i];
     for (i = 0; i < sizeof(gc); i++) sv_buf[SV_GC + i] = g[i];
-    for (i = 0; i < 22; i++) sv_buf[SV_PN + i] = (u8)pil_net[i];
+    for (i = 0; i < 22; i++) sv_buf[SV_PN + i] = (u8)((pil_net[i] & 0x3F) | (pil_st[i] << 6));      /* rivalidade em 6 bits (-32..31) + estado do piloto em 2 */
     sv_buf[SV_PN + 22] = races_tot; sv_buf[SV_PN + 23] = king_st;
     sv_buf[SV_N - 2] = sv_sum(sv_buf, SV_N - 2); sv_buf[SV_N - 1] = (u8)~sv_buf[SV_N - 2];
 }
@@ -2399,7 +2405,7 @@ static u8 sv_load(void) BK {
     pname[12] = 0;
     for (i = 0; i < MAXSPARE; i++) spare[i] = sv_buf[SV_SP + i];
     for (i = 0; i < sizeof(gc); i++) g[i] = sv_buf[SV_GC + i];
-    for (i = 0; i < 22; i++) pil_net[i] = (i8)sv_buf[SV_PN + i];
+    for (i = 0; i < 22; i++) { pil_net[i] = (i8)((sv_buf[SV_PN + i] & 0x3F) | ((sv_buf[SV_PN + i] & 0x20) ? 0xC0 : 0)); pil_st[i] = sv_buf[SV_PN + i] >> 6; }
     races_tot = sv_buf[SV_PN + 22]; king_st = sv_buf[SV_PN + 23];
     offer_day = 255; game_end = 0;
     return 1;

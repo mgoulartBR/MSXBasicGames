@@ -445,3 +445,5 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 - Janelas do motor e de PARTS sem piscar: sao montadas fora da tela (pagina 3, a partir da linha 848) e copiadas para a tela por um unico HMMM (`win_frame`/`win_flush`); `win_new` apaga a area da tela so quando outra janela (lista, TUNING) esteve por cima. Teste: `bay3_test.tcl` com `-DBAY_OPEN -DBAY_CUR_X=128 -DBAY_CUR_Y=133`.
 
 - Trocas de cena sem tela preta: a cena nova (garagem, posto, calendario, jornal, Bob's, carteira, cockpit da corrida) e carregada so nas paginas 1 e 2 (`g_hide0` no `load_assets`) com a tela ainda mostrando a anterior; `scene_present`/`init_static` copiam 2 -> 1, trocam a paleta e a pagina visivel no mesmo quadro e copiam 1 -> 0. A tela so apaga no titulo e nas telas cheias da LIB1. Teste: log do bit 6 do R#1 (nenhum apagao depois do titulo).
+
+- Rei (original 0xC83C/0x9556): cada piloto que perde o carro num pink slip volta com um carro melhor (estado 1) e, ao perder o segundo, vai embora de vez (estado 2, nao chega mais ao Bob's); com os 21 pilotos fora, o Rei corre sem exigir vitorias. Save: rivalidade em 6 bits + estado em 2 bits por piloto.
