@@ -606,7 +606,7 @@ def main():
         def tips(n, ang):
             return ','.join('%d,%d' % (round(L * math.cos(math.radians(ang(i)))), -round(L * math.sin(math.radians(ang(i))))) for i in range(n))
         f.write('#define HAVE_COCKPIT %d\n#define TEXT_BANK %d\n#define TEXT_BASE %d\n#define RECT_BANK %d\n#define RECT_BASE %d\n#define MT_BANK %d\n#define MT_BASE %d\n' % (1 if ents else 0, text_bank, text_base, rect_bank, rect_base, mt_bank, mt_base))
-        f.write('static const uint8_t mus_bank[5] = {%s};\nstatic const uint16_t mus_rows[5] = {%s};\nstatic const uint16_t mus_ms[5] = {%s};\n' % tuple(','.join(str(m[i]) for m in mus) for i in range(3)))
+        f.write('static const uint8_t mus_bank[%d] = {%s};\nstatic const uint16_t mus_rows[%d] = {%s};\nstatic const uint16_t mus_ms[%d] = {%s};\n' % tuple(x for i in range(3) for x in (len(mus), ','.join(str(m[i]) for m in mus))))
         gp = []
         for r, g_, b_ in EGA_PAL: gp += [(round(r * 7 / 255) << 4) | round(b_ * 7 / 255), round(g_ * 7 / 255)]
         f.write('static const uint8_t pal_garage[32] = {%s};\n' % ','.join(map(str, gp)))

@@ -9,7 +9,7 @@ import random
 
 K_BD, K_HH, K_SD, K_TOM, K_CYM = 1, 2, 3, 4, 8                   # bumbo, chimbal, caixa, tom, prato
 DRUM_BIT = {K_BD: 16, K_HH: 1, K_SD: 8, K_TOM: 4, K_CYM: 2}   # bits do registrador de ritmo do OPLL (0x0E)
-NAMES = ["ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK"]
+NAMES = ["STREET ROD THEME", "ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK"]
 
 
 class Song:
@@ -327,8 +327,28 @@ def surf():
     return S
 
 
+class Theme:
+    """o tema original (theme_data.py): as notas ja vem por linha; repetir a nota anterior = continuar (0)"""
+    def __init__(s):
+        import theme_data as t
+        s.n, s.row_ms = len(t.THEME_A), t.ROW_MS
+        def enc(ch):
+            out, prev = [], 1
+            for v in ch:
+                if v == 1: out.append(1); prev = 1
+                elif v == prev: out.append(0)
+                else: out.append(v); prev = v
+            return out
+        s.ch = [enc(t.THEME_A), enc(t.THEME_B), enc(t.THEME_C)]
+    def data(s):
+        out = bytearray()
+        for r in range(s.n): out += bytes([s.ch[0][r], s.ch[1][r], s.ch[2][r], 0])
+        return bytes(out)
+    def seconds(s): return s.n * s.row_ms / 1000
+
+
 def all_songs():
-    return [rock(), blues(), jazz(), doowop(), surf()]
+    return [Theme(), rock(), blues(), jazz(), doowop(), surf()]
 
 
 if __name__ == '__main__':

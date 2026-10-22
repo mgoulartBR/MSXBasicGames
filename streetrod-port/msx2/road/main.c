@@ -583,7 +583,7 @@ static void init_static(void) {
 static u16 mus_row, mus_due, mus_dur, mus_t0[3], mus_noise;       /* linha atual, jiffy da proxima, duracao da linha (8.8 jiffies), inicio de cada nota, fim do ruido */
 static u8 mus_fr, mus_on[3], mus_lv[3], mus_fm, mus_hi[3], mus_dp;      /* mus_fm: 1 = ha MSX-MUSIC (OPLL), toca em FM; mus_hi: bloco/F9 do canal; mus_dp: bateria da linha anterior */
 static const u8 mus_env[3][3] = {{12, 7, 6}, {13, 10, 8}, {9, 3, 4}};   /* PSG, por canal: volume inicial, piso, jiffies por degrau */
-static const u8 mus_ins[5][3] = {{0xF3, 0xE2, 0x26}, {0xF3, 0xE2, 0x36}, {0x75, 0xE2, 0x36}, {0x43, 0xE2, 0x36}, {0xF3, 0xE2, 0x26}};   /* FM: instrumento<<4 | atenuacao (A, B, C) por estacao */
+static const u8 mus_ins[6][3] = {{0xA3, 0xD2, 0xA6}, {0xF3, 0xE2, 0x26}, {0xF3, 0xE2, 0x36}, {0x75, 0xE2, 0x36}, {0x43, 0xE2, 0x36}, {0xF3, 0xE2, 0x26}};   /* FM: instrumento<<4 | atenuacao (A, B, C) por estacao */
 static void fm(u8 r, u8 v) { g_reg = r; g_val = v; fm_w(); }
 static void fm_off(void) { u8 c; for (c = 0; c < 3; c++) fm(0x20 + c, mus_hi[c]); fm(0x0E, 0x20); mus_dp = 0; }
 static u16 mus_tab(u8 v, u8 fm) {                 /* periodo PSG (fm = 0) ou numero F do OPLL (fm = 1) da nota v: tabelas no banco de assets (MT_BANK) */
@@ -2146,18 +2146,18 @@ static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 ite
     load_garage(); band_save();
 }
 #endif
-static const char *const rd_name[6] = {"ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK", "RADIO OFF"};
+static const char *const rd_name[7] = {"STREET ROD THEME", "ROCK 'N' ROLL", "SLOW BLUES", "SWING JAZZ", "DOO-WOP", "SURF ROCK", "RADIO OFF"};
 static char rd_buf[24];
 static const char *radio_get(u8 i) {
     u8 n = 0;
-    rd_buf[n++] = (i == 5 ? !mus_st : mus_st == i + 1) ? '>' : ' '; rd_buf[n++] = ' ';
+    rd_buf[n++] = (i == 6 ? !mus_st : mus_st == i + 1) ? '>' : ' '; rd_buf[n++] = ' ';
     put_str(rd_buf, &n, rd_name[i]); rd_buf[n] = 0;
     return rd_buf;
 }
 static void radio(void) {                                              /* o radio da prateleira: 5 estacoes ou desligar */
     u8 r;
-    ui_get = radio_get; r = ui_list("CATCH SOME TUNES", 6, mus_st ? mus_st - 1 : 5);
-    if (r != 255) mus_set(r == 5 ? 0 : r + 1);
+    ui_get = radio_get; r = ui_list("CATCH SOME TUNES", 7, mus_st ? mus_st - 1 : 6);
+    if (r != 255) mus_set(r == 6 ? 0 : r + 1);
 }
 #ifndef OLD_MENU
 static const Hot news_hot[5] = {{0, 0, 255, 31, 0}, {0, 32, 255, 66, 1}, {0, 67, 255, 135, 2}, {132, 201, 208, 211, 2}, {214, 201, 250, 211, 3}};

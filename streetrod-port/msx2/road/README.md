@@ -447,3 +447,8 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 - Trocas de cena sem tela preta: a cena nova (garagem, posto, calendario, jornal, Bob's, carteira, cockpit da corrida) e carregada so nas paginas 1 e 2 (`g_hide0` no `load_assets`) com a tela ainda mostrando a anterior; `scene_present`/`init_static` copiam 2 -> 1, trocam a paleta e a pagina visivel no mesmo quadro e copiam 1 -> 0. A tela so apaga no titulo e nas telas cheias da LIB1. Teste: log do bit 6 do R#1 (nenhum apagao depois do titulo).
 
 - Rei (original 0xC83C/0x9556): cada piloto que perde o carro num pink slip volta com um carro melhor (estado 1) e, ao perder o segundo, vai embora de vez (estado 2, nao chega mais ao Bob's); com os 21 pilotos fora, o Rei corre sem exigir vitorias. Save: rivalidade em 6 bits + estado em 2 bits por piloto.
+
+### Tema original (STREET ROD THEME)
+- Transcrito da gravacao `06. Intro_Ingame1.mp3` (nao ha musica no `SRSE.EXE`, so o som do motor no alto-falante): analise CQT, remocao de harmonicos, grade de 16avos a 103,4 bpm (145 ms por linha), loop de 191 linhas (27,7 s; a gravacao toca o loop duas vezes) e 3 vozes: A melodia (>= C4), B baixo, C harmonia. Sem bateria (a gravacao nao tem percussao). Os dados ficam em `theme_data.py`.
+- E a **primeira estacao do radio e a padrao** (`mus_st = 1`); as 5 estacoes de antes passam a 2-6 e RADIO OFF a 7. No FM: sintetizador (A e C) e baixo sintetizado (B).
+- Conferencia: render do ROM gravado no openMSX x original, similaridade de croma 0,77 (timbres diferentes; 87% da energia das notas dominantes coberta).
