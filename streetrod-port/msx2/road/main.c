@@ -67,7 +67,7 @@ u8 cmd_buf[CMD_MAX * 11];
 u16 cmd_n; u8 *cp; u16 g_ybase;
 u8 g_trig, g_row6, g_row7, g_st0, g_st1, g_t0, g_t1, g_t3;
 u8 cart_slot, g_s0, g_s1, g_reg, g_val, g_stick, g_sh, g_sgn, g_fc;
-u16 g_lzsrc, g_vlo, g_palp, g_bk_src, g_bk_dst; u8 g_vhi, g_vpg, g_group, g_bk_bank, g_bk_len;
+u16 g_lzsrc, g_vlo, g_palp, g_bk_src, g_bk_dst; u8 g_vhi, g_vpg, g_group, g_bk_bank, g_bk_len, g_hide0;
 extern void bank_copy(void);
 extern void spr_put(void);
 extern u8 g_sx, g_sy;
@@ -498,14 +498,12 @@ static u8 gk_type;                              /* 0 automatico, 1 manual de 3 m
 static i16 gk_x[2], gk_y[2], gk_dx[2], gk_dy[2]; /* posicao do centro do botao no painel (automatico: y da alavanca) e o ultimo desenho em cada pagina */
 static i16 toward(i16 v, i16 t, i16 s) { return v < t ? (t - v < s ? t : v + s) : v > t ? (v - t < s ? t : v - s) : v; }
 static void gear_init(void) {
-    u8 p, rg1 = *(volatile u8 *)0xF3E0;
+    u8 p;
     gk_type = pt_auto[0] ? 0 : pt_ngears[0] > 3 ? 2 : 1;
-    vdp_reg(1, rg1 & ~0x40);
     g_group = 60 + gk_type; load_assets();
     for (p = 0; p < 3; p++) { vc_w(0, GPX); vc_w(2, GSRC_Y); vc_w(4, GPX); vc_w(6, p * 256 + GPY); vc_w(8, 38); vc_w(10, 43); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0; vdp_cmd15(); }
     vdp_wait();
     g_group = 63 + gk_type; load_assets();
-    vdp_reg(1, rg1 | 0x40);
     for (p = 0; p < 2; p++) { gk_x[p] = gk_type ? 20 : 8; gk_y[p] = gk_type ? 19 : 21; gk_dx[p] = -1; }
 }
 static void gear_knob(u8 pg) {
@@ -553,23 +551,27 @@ static void draw_hud(void) {                /* escrito nas duas paginas, 1x por 
 extern void load_assets(void);
 static void load_cockpit(void) {            /* descomprime os assets (cockpit nas paginas 0/1/2, sprites na 3) para a VRAM */
 #if HAVE_COCKPIT
-    u8 rg1 = *(volatile u8 *)0xF3E0;
-    vdp_reg(1, rg1 & ~0x40);                /* tela apagada: acesso a VRAM sem espera */
-    g_group = 0; load_assets();             /* troca de banco ASCII16 dentro do carregador (pagina 1) */
-    vdp_reg(1, rg1 | 0x40);
+    vdp_reg(2, 0x1F);                       /* a tela segue mostrando a cena anterior (pagina 0) enquanto o cockpit vai para as paginas 1 e 2 */
+    g_hide0 = 1; g_group = 0; load_assets(); g_hide0 = 0;
 #endif
 }
 
+static void race_pal(void);
 static void init_static(void) {
-    u8 pg;
+    u8 pg; u16 j;
     clip_l = 0; clip_r = 256;
-    for (pg = 0; pg < 2; pg++) {
-        ybase = pg ? 256 : 0;
+    load_cockpit();                                         /* paginas 1 e 2 (e sprites na 3), com a tela ainda na cena anterior */
+    for (pg = 1; pg < 3; pg++) {                            /* linhas abaixo do cockpit: pretas */
+        ybase = pg * 256;
         cmd_n = 0; cp = cmd_buf;
-        push_fill(0, 0, 256, 212, 0);
+        push_fill(0, 190, 256, 22, 0);
         vdp_wait();
     }
-    load_cockpit();
+    ybase = 0;
+    vc_w(0, 0); vc_w(2, 256); vc_w(4, 0); vc_w(6, 0); vc_w(8, 256); vc_w(10, 212); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;      /* pagina 1 -> 0 */
+    j = JIFFY; while (JIFFY == j) ;
+    pal_load(); race_pal(); vdp_reg(2, 0x3F);               /* paleta da corrida e pagina 1 visivel no mesmo quadro */
+    vdp_cmd15(); vdp_wait(); vdp_reg(2, 0x1F);
     hud_reset();
     gear_init();
     clip_l = VIEW_X0; clip_r = VIEW_X1;
@@ -745,13 +747,21 @@ static void new_game(void) BK {
 
 #pragma codeseg CODE
 static void font_init(void) BK;
+static void scene_present(void);
+static void scene_load(u8 grp) {            /* carrega a cena grp so nas paginas 1 e 2: a tela continua mostrando a cena antiga (sem tela preta) */
+    vdp_reg(2, 0x1F);
+    g_hide0 = 1; g_group = grp; load_assets(); g_hide0 = 0;
+}
 static void load_garage(void) {             /* cena da garagem (LIB2 item 32) nas paginas 0/1/2, paleta propria */
-    u8 rg1 = *(volatile u8 *)0xF3E0;
-    vdp_reg(1, rg1 & ~0x40);
-    g_palp = (u16)pal_garage; pal_load2();
-    g_group = 1; load_assets();
+    scene_load(1);
     font_init();
-    vdp_reg(1, rg1 | 0x40);
+    scene_present();
+}
+static void scene_present(void) {          /* a cena montada na pagina 2 aparece de uma vez: copia 2 -> 1, troca a paleta e a pagina visivel no mesmo quadro, copia 1 -> 0 */
+    u16 j;
+    vc_w(0, 0); vc_w(2, 512); vc_w(4, 0); vc_w(6, 256); vc_w(8, 256); vc_w(10, 212); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0; vdp_cmd15(); vdp_wait();
+    g_palp = (u16)pal_garage; j = JIFFY; while (JIFFY == j) ; pal_load2(); vdp_reg(2, 0x3F);
+    vc_w(0, 0); vc_w(2, 256); vc_w(4, 0); vc_w(6, 0); vdp_cmd15(); vdp_wait(); vdp_reg(2, 0x1F);
 }
 static void hub_restore(i16 x, i16 y, i16 w, i16 h) {   /* devolve um pedaco da cena limpa (copia na pagina 2) */
     vc_w(0, x); vc_w(2, 512 + y); vc_w(4, x); vc_w(6, y); vc_w(8, w); vc_w(10, h); vc[12] = 0; vc[13] = 0; vc[14] = 0xD0;
@@ -2091,7 +2101,7 @@ static void gas_station(void) {                /* o posto Gus' Gas (LIB2 item 90
     u8 id, r, p, done = 0; i16 xl;
     if (!nown) { ui_note("BUY A CAR FIRST!", "NOTHING TO FILL"); return; }
     id = gc[cur].id; cvar = gc[cur].roof | (gc[cur].bump << 1); cstk = gc[cur].stick; chead = 255;
-    g_group = 243; load_assets();
+    scene_load(243); scene_present();
     bar_news = 2; cur_ymax = 210; car_floor = 162; fr_n = 2;
     cmd_n = 0; cp = cmd_buf; hub_status(); band_save();
     car_art(id, gc[cur].tir); set_paint(gc[cur].paint);
@@ -2119,7 +2129,7 @@ static void calendar_screen(void) {            /* o calendario AGO/SET (LIB2 ite
     static const u8 colx[7] = {35, 50, 63, 77, 91, 106, 120};
     u8 mo = day >= 31, dm = mo ? day - 30 : day + 1, first = mo ? 0 : 4, k = first + dm - 1, col = k % 7, row = k / 7;   /* agosto comeca na quinta (coluna 4), setembro no domingo */
     i16 cx, cy;
-    g_group = 242; load_assets();
+    scene_load(242); scene_present();
     cx = CAL_X0 + colx[col]; cy = CAL_Y0 + (mo ? 110 : 19) + row * 7 - (mo ? 0 : 0);
     cmd_n = 0; cp = cmd_buf;
     cfill(cx - 8, cy - 4, 17, 1, 9); cfill(cx - 8, cy + 6, 17, 1, 9); cfill(cx - 8, cy - 4, 1, 11, 9); cfill(cx + 8, cy - 4, 1, 11, 9);     /* moldura verde em volta de hoje */
@@ -2157,12 +2167,12 @@ static const char *const news_body[5][2][4] = {
 static void newspaper(void) {                  /* a primeira pagina do "Los Angeles News" (LIB2 item 21): clique em AUTO PARTS / USED CARS; o titulo vende pecas avulsas */
     u8 r;
     u8 k, c, l;
-    g_group = 190; load_assets(); g_group = 191 + day % 5; load_assets();
+    vdp_reg(2, 0x1F); g_hide0 = 1; g_group = 190; load_assets(); g_group = 191 + day % 5; load_assets(); g_hide0 = 0;
     ybase = 512; k = day % 5;                                    /* texto legivel (fonte da garagem) no lugar dos rabiscos, desenhado na copia (pagina 2) e copiado para a tela */
     for (c = 0; c < 2; c++)
         for (l = 0; l < 4 && news_body[k][c][l]; l++)
             if (news_top[k][c] + 2 + 9 * l + 8 <= 53) gtext(c ? 134 : 6, 136 + news_top[k][c] + 2 + 9 * l, news_body[k][c][l], 0);
-    ybase = 0; hub_restore(0, 0, 256, 190);
+    ybase = 0; scene_present();
     bar_news = 1; cur_ymax = 210;
     cmd_n = 0; cp = cmd_buf; hub_status();
     for (;;) {
@@ -2222,7 +2232,7 @@ static void bobs_repaint(void) { if (bst == 2) { car_blit(0, bcar, bxl); vdp_wai
 static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): os oponentes chegam sozinhos; clique na cabeca do piloto para ver quem e e desafiar. 1 = a corrida vai comecar */
     u8 r, k; char cn[30]; const char *it[3];
     bobs_name[0] = bpn; bpn[0] = 0; car_floor = 154;
-    g_group = 197; load_assets();
+    scene_load(197); scene_present();
     cmd_n = 0; cp = cmd_buf; bar_news = 2; cur_ymax = 210; hub_status();
     band_save();                                                              /* faixa limpa do cenario (pagina 3), usada pelas animacoes */
     bst = 0; bpil = 255; bt = JIFFY + jhz; bobs_hot[1].x0 = 214; bobs_hot[1].y0 = 201; bobs_hot[1].x1 = 250; bobs_hot[1].y1 = 211; bobs_hot[1].id = 3;
@@ -2254,7 +2264,7 @@ static void race_go(void) BK { mus_pause(); run_race(); mus_hold = 0; mus_due = 
 static void race_result(void) BK {              /* resultado da corrida: janela sobre a lanchonete (tempo e velocidade media) */
     static char tb1[22], tb2[22];
     const char *it[2]; u16 t10 = (u16)(((u32)race_ticks * 1687) >> 10), avg = race_ticks ? (u16)(sum_spd / race_ticks) : 0; u8 n;
-    load_garage(); g_group = 197; load_assets();
+    scene_load(197); font_init(); scene_present();
     ybase = 0; clip_l = 0; clip_r = 256; vdp_reg(2, 0x1F);
     cmd_n = 0; cp = cmd_buf; hub_status();
     ui_dbg = 2; dbg_result = result;
@@ -2464,7 +2474,7 @@ static void name_screen(void) BK {
     u8 i, r, x, y, k; char b[2];
     u8 rg1 = *(volatile u8 *)0xF3E0;
     clip_l = 0; clip_r = 256; ybase = 0;
-    vdp_reg(1, rg1 & ~0x40); g_palp = (u16)pal_garage; pal_load2(); g_group = 244; load_assets(); font_init(); vdp_reg(2, 0x1F); vdp_reg(1, rg1 | 0x40);
+    scene_load(244); font_init(); scene_present(); (void)rg1;
     cmd_n = 0; cp = cmd_buf;
     for (i = 0; i < 26; i++) {                                                   /* teclas: duas fileiras de 13 */
         x = 4 + 19 * (i % 13); y = 157 + 13 * (i / 13);
@@ -2581,12 +2591,11 @@ static u8 hub(void) BK {                       /* 0 = ir ao Bob's (corrida), 1 =
 
 #pragma codeseg BANK1
 static void set_hood(u8 p) BK;
+static u8 opp_pk;
 static void new_race(void) {
-    u8 k = (u8)(JIFFY & 7);
+    opp_pk = (u8)(JIFFY & 7);
     set_track(race_road);
     load_pt(0, &gc[cur]); load_car(1, sel_opp); opp_a = pil_a[sel_pil]; opp_b = pil_b[sel_pil]; opp_set = car_spr[sel_opp];
-    g_reg = 12; g_val = paint_rb[k]; g_sh = paint_g[k]; pal_one();                    /* pintura do oponente (cor 12 da paleta) */
-    set_hood(gc[cur].paint);
     over_t = badshift = 0;
     gear = 0; rpm = 1500; speed = 0; pos = 0; sub = 0; P = -300;
     vgear[1] = 0; vrpm[1] = 1500; vspd[1] = 0; opos = OPP_START; osub = 0;
@@ -2601,6 +2610,10 @@ static void new_race(void) {
     }
 }
 
+static void race_pal(void) {                    /* paleta da corrida: pintura do oponente (cor 12) e capo (cores 1 e 2) */
+    g_reg = 12; g_val = paint_rb[opp_pk]; g_sh = paint_g[opp_pk]; pal_one();
+    set_hood(gc[cur].paint);
+}
 /* janela esquerda (vidro lateral e coluna A, x < RACE_X0): pintada uma vez nas duas paginas (ceu, colinas, grama e a moldura do cockpit); so o resto e redesenhado a cada quadro */
 static void left_static(void) {
     u8 pg, k;
@@ -2638,7 +2651,6 @@ static void run_race(void) BK {
 #endif
     dbg_frames = 0; dbg_t60 = 0; dbg_t100 = 0; dbg_top = 0;
     clip_l = VIEW_X0; clip_r = VIEW_X1;
-    pal_load();
     new_race();
     init_static();
     left_static();

@@ -9,6 +9,7 @@
 	.globl _bank_copy
 	.globl _spr_put
 	.globl _read_mouse
+	.globl _g_hide0
 	.globl _g_mdx
 	.globl _g_mdy
 	.globl _g_sx
@@ -1209,7 +1210,17 @@ la_go:
 	push af
 	push hl
 	call _lz_unpack
-	call _vram_blit
+	ld a,(_g_hide0)
+	or a,a
+	jr z,la_b0               ; g_hide0: so as paginas 1 e 2 (a pagina 0 e a tela visivel); copia unica vai sempre para a pagina 0
+	pop hl
+	pop af
+	push af
+	push hl
+	cp a,#1
+	jr nz,la_skip0
+la_b0:	call _vram_blit
+la_skip0:
 	pop hl
 	pop af
 	cp a,#1
