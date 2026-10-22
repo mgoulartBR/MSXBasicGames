@@ -440,4 +440,4 @@ Decodificadas de SRSE.EXE (rotina 0x9BC5 e tabelas 9/10/11 do HOT_DATA):
 
 - Mouse: as janelas (ui_list) rodavam sem sincronismo e liam o mouse milhares de vezes por segundo (o mouse real devolvia lixo e o cursor derivava para a direita/baixo); agora 1 leitura por quadro, com interrupcoes desligadas durante a leitura, e deslocamento identico por mais de 50 quadros e ignorado.
 
-- Vidros dos carros opacos (preto): o transparente cercado pelo corpo (janelas) nao deixa mais o cenario do Bob's aparecer atras das portas (`cars_art.fillwin`).
+- Bob's: o carro (e a sombra) para na faixa preta do asfalto (base em y=154) e nao invade a moldura cinza da porta do carro com o pino.

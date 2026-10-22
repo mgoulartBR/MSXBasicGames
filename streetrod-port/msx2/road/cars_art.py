@@ -154,7 +154,7 @@ def variants(c):
         a, wy = c['body'], c['wy']
         if v & 2: a = strip(a)
         if v & 1: a, wy = chop(a, wy)
-        out.append((fillwin(a), wy))
+        out.append((a, wy))
     return out
 
 def stickers(lib2):

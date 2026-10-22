@@ -2209,7 +2209,7 @@ static void bobs_tick(void) {
 static void bobs_repaint(void) { if (bst == 2) { car_blit(0, bcar, bxl); vdp_wait(); } }
 static u8 bobs_front(void) {                   /* a lanchonete (LIB2 item 93): os oponentes chegam sozinhos; clique na cabeca do piloto para ver quem e e desafiar. 1 = a corrida vai comecar */
     u8 r, k; char cn[30]; const char *it[3];
-    bobs_name[0] = bpn; bpn[0] = 0; car_floor = 157;
+    bobs_name[0] = bpn; bpn[0] = 0; car_floor = 154;
     g_group = 197; load_assets();
     cmd_n = 0; cp = cmd_buf; bar_news = 2; cur_ymax = 210; hub_status();
     band_save();                                                              /* faixa limpa do cenario (pagina 3), usada pelas animacoes */
