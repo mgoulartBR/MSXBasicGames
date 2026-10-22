@@ -1459,7 +1459,6 @@ static void ticket_ask(void) BK {                /* o guarda alcancou (manual, T
     ui_note("THE COP PULLED YOU OVER!", "SPEEDING TICKET");
     put_str(pbuf, &n, "$"); put_num(pbuf, &n, fine); put_str(pbuf, &n, " FOR SPEEDING"); pbuf[n] = 0;
     if (money < fine) {
-        scene_load(249); scene_present(); ybase = 0; vdp_reg(2, 0x1F); cmd_n = 0; cp = cmd_buf; hub_status();      /* cela (item 233) */
         ui_note("YOU CAN'T PAY THE FINE", "OFF TO THE SLAMMER!"); game_end = 4; return;
     }
     money -= fine;

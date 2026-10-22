@@ -441,9 +441,7 @@ def main():
         tcv[TK_Y0:TK_Y0 + tk.shape[0], tx0:tx0 + tk.shape[1]] = tk                       # multa (item 110, 136x141) no centro de uma tela preta (grupo 248)
         add((tcv[:, 0::2] << 4 | tcv[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=248)
         carh += '#define TK_X0 %d\n#define TK_Y0 %d\n' % (tx0, TK_Y0)
-        jl = garage_pixels(lib2, 233).repeat(2, axis=0).repeat(2, axis=1)               # cela (item 233, 144x64) em 2x (grupo 249)
-        jcv = np.zeros((212, 256), np.uint8); jx0 = ((256 - jl.shape[1]) // 2) & ~1; jcv[8:8 + jl.shape[0], jx0:jx0 + jl.shape[1]] = jl[:, :256]
-        add((jcv[:, 0::2] << 4 | jcv[:, 1::2]).astype(np.uint8).tobytes(), 0, 3, group=249)
+        # item 233 (144x64) = frentistas do posto dormindo (NAO e cela): reservado para o posto de gasolina
         GEAR_PX, GEAR_SRC_Y = 212, 972                           # painel do cambio no cockpit (itens 227 = 3 marchas, 228 = 4 marchas, 229 = automatico) e botao/alavanca (230, 231, 232):
         mapa = np.array(MAP, np.uint8)                            # grupos 60-62 (painel, na pagina 3 em GEAR_SRC_Y, copiado para as 3 paginas no inicio da corrida) e 63-65 (botao)
         for t_, (pi_, ki_) in enumerate(((229, 232), (227, 230), (228, 231))):
