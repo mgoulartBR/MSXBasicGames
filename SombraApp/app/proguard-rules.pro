@@ -1,0 +1,2 @@
+-keep class rikka.shizuku.** { *; }
+-keep class app.sombra.core.Freezer { *; }
