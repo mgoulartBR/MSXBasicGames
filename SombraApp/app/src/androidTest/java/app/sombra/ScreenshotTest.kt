@@ -89,6 +89,8 @@ class ScreenshotTest {
         dev.wait(Until.findObject(By.res("app_row")), 8000).click()
         dev.wait(Until.hasObject(By.res("btn_apply")), 8000)
         shot("06_escolher_metodo")
+        dev.swipe(540, 2000, 540, 600, 25)
+        shot("06b_notificacoes")
         dev.pressBack()
 
         dev.wait(Until.findObject(By.res("tab_settings")), 8000).click()
