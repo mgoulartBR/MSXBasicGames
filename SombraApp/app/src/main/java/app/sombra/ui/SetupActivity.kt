@@ -30,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,7 @@ class SetupActivity : ComponentActivity() {
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun SetupScreen(startStep: Int = 0, onDone: (String) -> Unit) {
     var step by remember { mutableIntStateOf(startStep) }
@@ -61,6 +64,7 @@ fun SetupScreen(startStep: Int = 0, onDone: (String) -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Pal.Bg)
+            .semantics { testTagsAsResourceId = true }
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())

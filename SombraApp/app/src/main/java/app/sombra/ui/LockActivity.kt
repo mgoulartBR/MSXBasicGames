@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,7 +91,7 @@ class LockActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun FakeCrashScreen(
     pkg: String,
@@ -102,7 +104,7 @@ fun FakeCrashScreen(
     var pin by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF000000)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF000000)).semantics { testTagsAsResourceId = true }, contentAlignment = Alignment.Center) {
         Column(
             Modifier
                 .statusBarsPadding()
