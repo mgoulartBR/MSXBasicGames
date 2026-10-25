@@ -15,7 +15,7 @@ import javax.crypto.spec.PBEKeySpec
 
 enum class HideMode { LOCK, FREEZE, HOME }
 
-data class HiddenApp(val pkg: String, val label: String, val mode: HideMode)
+data class HiddenApp(val pkg: String, val label: String, val mode: HideMode, val muteNotifications: Boolean = true)
 
 /** Preferências + lista de apps protegidos. Tudo em SharedPreferences privado do app. */
 object Store {
@@ -44,11 +44,11 @@ object Store {
     private fun readHidden(): List<HiddenApp> =
         (sp.getStringSet("hidden", emptySet()) ?: emptySet()).mapNotNull {
             val p = it.split('\u0001')
-            if (p.size < 3) null else runCatching { HiddenApp(p[1], p[2], HideMode.valueOf(p[0])) }.getOrNull()
+            if (p.size < 3) null else runCatching { HiddenApp(p[1], p[2], HideMode.valueOf(p[0]), p.getOrNull(3) != "0") }.getOrNull()
         }.sortedBy { it.label.lowercase() }
 
     private fun writeHidden(list: List<HiddenApp>) {
-        sp.edit().putStringSet("hidden", list.map { "${it.mode.name}\u0001${it.pkg}\u0001${it.label}" }.toSet()).apply()
+        sp.edit().putStringSet("hidden", list.map { "${it.mode.name}\u0001${it.pkg}\u0001${it.label}\u0001${if (it.muteNotifications) 1 else 0}" }.toSet()).apply()
         _hidden.value = list.sortedBy { it.label.lowercase() }
     }
 
@@ -57,6 +57,9 @@ object Store {
     fun put(app: HiddenApp) = writeHidden(_hidden.value.filter { it.pkg != app.pkg } + app)
 
     fun remove(pkg: String) = writeHidden(_hidden.value.filter { it.pkg != pkg })
+
+    fun mutedPackages(): Set<String> =
+        _hidden.value.filter { it.muteNotifications }.map { it.pkg }.toSet()
 
     fun lockedPackages(): Set<String> =
         _hidden.value.filter { it.mode == HideMode.LOCK }.map { it.pkg }.toSet()

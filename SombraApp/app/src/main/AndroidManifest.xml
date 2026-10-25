@@ -79,6 +79,16 @@
                 android:resource="@xml/guard_service" />
         </service>
 
+        <service
+            android:name=".guard.NotifGuardService"
+            android:exported="false"
+            android:label="@string/notif_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

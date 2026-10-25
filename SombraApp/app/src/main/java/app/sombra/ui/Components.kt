@@ -104,6 +104,7 @@ fun AppTile(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    badgeCount: Int = 0,
 ) {
     Column(
         modifier
@@ -116,6 +117,13 @@ fun AppTile(
         Box {
             AppIcon(pkg, 56.dp)
             if (mode != null) ModeBadge(mode, Modifier.align(Alignment.BottomEnd).padding(end = 0.dp), 20.dp)
+            if (badgeCount > 0) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).clip(CircleShape).background(Pal.Danger)
+                        .border(2.dp, Pal.Surface, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(if (badgeCount > 9) "9+" else "$badgeCount", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            }
         }
         Spacer(Modifier.height(8.dp))
         Text(

@@ -3,4 +3,5 @@
     <string name="home_name">Sombra Home</string>
     <string name="guard_label">Sombra · Bloqueio de apps</string>
     <string name="guard_description">Detecta quando um app protegido é aberto e mostra um falso erro até que a senha seja digitada. Nenhum conteúdo da tela é lido nem coletado.</string>
+    <string name="notif_label">Sombra · Ocultar notificações</string>
 </resources>

@@ -82,6 +82,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sombra.core.Freezer
+import app.sombra.core.Session
 import app.sombra.core.ShizukuState
 import app.sombra.data.AppInfo
 import app.sombra.data.AppRepo
@@ -91,7 +92,7 @@ import app.sombra.data.Store
 import kotlinx.coroutines.launch
 
 /** Estado do ambiente que muda fora do app (permissões/serviços); reavaliado a cada onResume. */
-data class Env(val guardOn: Boolean, val shizuku: ShizukuState, val homeDefault: Boolean)
+data class Env(val guardOn: Boolean, val shizuku: ShizukuState, val homeDefault: Boolean, val notifOn: Boolean)
 
 @Composable
 fun rememberEnv(): Env {
@@ -115,6 +116,7 @@ private fun readEnv(ctx: Context): Env {
         guardOn = enabled.contains(ctx.packageName) && enabled.contains("GuardService"),
         shizuku = Freezer.state(ctx),
         homeDefault = home == ctx.packageName,
+        notifOn = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName),
     )
 }
 
@@ -164,6 +166,7 @@ fun VaultScreen(actions: VaultActions, startTab: Int = 0) {
 @Composable
 private fun HiddenTab(actions: VaultActions, onAdd: () -> Unit, onEdit: (AppInfo) -> Unit) {
     val hidden by Store.hidden.collectAsState()
+    val suppressed by Session.suppressed.collectAsState()
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 20.dp),
@@ -236,6 +239,7 @@ private fun HiddenTab(actions: VaultActions, onAdd: () -> Unit, onEdit: (AppInfo
                     onClick = { actions.open(a) },
                     onLongClick = { onEdit(AppInfo(a.pkg, a.label)) },
                     modifier = Modifier.testTag("hidden_tile"),
+                    badgeCount = suppressed[a.pkg] ?: 0,
                 )
             }
         }
@@ -323,6 +327,7 @@ private fun AddTab(onPick: (AppInfo) -> Unit) {
 private fun ModeSheet(app: AppInfo, env: Env, actions: VaultActions, onDismiss: () -> Unit, onOpenSettings: () -> Unit) {
     val current = Store.modeOf(app.pkg)
     var selected by remember { mutableStateOf(current ?: HideMode.LOCK) }
+    var mute by remember { mutableStateOf(Store.hidden.value.firstOrNull { it.pkg == app.pkg }?.muteNotifications ?: true) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -364,6 +369,8 @@ private fun ModeSheet(app: AppInfo, env: Env, actions: VaultActions, onDismiss: 
                 "Não aparece no lançador Sombra Home. Outros lançadores continuam mostrando o app.",
                 if (env.homeDefault) null else "A Sombra Home não é o lançador padrão",
             )
+            Spacer(Modifier.height(6.dp))
+            NotifRow(mute, env.notifOn, selected == HideMode.FREEZE, { mute = it }, onOpenSystem = { actions.openAppNotificationSettings(app.pkg) }, onGrant = actions::openNotificationAccessSettings)
             error?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = Pal.Danger, fontSize = 13.sp)
@@ -375,7 +382,7 @@ private fun ModeSheet(app: AppInfo, env: Env, actions: VaultActions, onDismiss: 
             ) {
                 busy = true; error = null
                 scope.launch {
-                    val r = actions.apply(app, selected)
+                    val r = actions.apply(app, selected, mute)
                     busy = false
                     if (r == null) onDismiss() else error = r
                 }
@@ -394,6 +401,47 @@ private fun ModeSheet(app: AppInfo, env: Env, actions: VaultActions, onDismiss: 
                     contentAlignment = Alignment.Center,
                 ) { Text("Remover do cofre", color = Pal.Danger, fontWeight = FontWeight.Medium) }
             }
+        }
+    }
+}
+
+@Composable
+private fun NotifRow(
+    mute: Boolean, listenerOn: Boolean, frozen: Boolean,
+    onChange: (Boolean) -> Unit, onOpenSystem: () -> Unit, onGrant: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(18.dp))
+            .background(Pal.SurfaceHi.copy(alpha = 0.5f)).padding(14.dp)
+    ) {
+        Row(Modifier.clickable(enabled = !frozen) { onChange(!mute) }.testTag("notif_row"), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Ocultar notificações", color = Pal.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (frozen) "Já ocultas: app congelado não envia notificações."
+                    else "Apaga os avisos deste app assim que chegam, sem ler o texto. Um selo no cofre mostra quantos foram.",
+                    color = Pal.Muted, fontSize = 12.5.sp, lineHeight = 17.sp,
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Switch(
+                checked = mute || frozen, onCheckedChange = onChange, enabled = !frozen,
+                colors = SwitchDefaults.colors(checkedTrackColor = Pal.Accent, checkedThumbColor = Pal.Bg, uncheckedTrackColor = Pal.SurfaceHi, uncheckedBorderColor = Pal.Outline),
+            )
+        }
+        if (!frozen) {
+            if (mute && !listenerOn) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(Pal.Accent).clickable(onClick = onGrant)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) { Text("Permitir acesso a notificações", color = Pal.Bg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Desligar de vez nas configurações do sistema ›", color = Pal.Accent, fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenSystem),
+            )
         }
     }
 }
@@ -465,6 +513,12 @@ private fun SettingsTab(actions: VaultActions, env: Env) {
             HideMode.HOME, "Sombra Home",
             if (env.homeDefault) "É o lançador padrão" else "Não é o lançador padrão",
             env.homeDefault, "Definir", actions::openHomeSettings,
+        )
+
+        MethodCard(
+            HideMode.LOCK, "Ocultar notificações",
+            if (env.notifOn) "Acesso concedido" else "Falta permitir o acesso",
+            env.notifOn, if (env.notifOn) "Gerenciar" else "Permitir", actions::openNotificationAccessSettings,
         )
 
         Section("Segurança")

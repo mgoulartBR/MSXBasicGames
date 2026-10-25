@@ -27,7 +27,9 @@ interface VaultActions {
     fun close()
     fun open(app: HiddenApp)
     /** mode == null remove o app do cofre. Retorna mensagem de erro, ou null se deu certo. */
-    suspend fun apply(app: AppInfo, mode: HideMode?): String?
+    suspend fun apply(app: AppInfo, mode: HideMode?, muteNotifications: Boolean = true): String?
+    fun openNotificationAccessSettings()
+    fun openAppNotificationSettings(pkg: String)
     fun openAccessibilitySettings()
     fun requestShizuku()
     fun openShizuku()
@@ -62,6 +64,7 @@ class VaultActivity : ComponentActivity(), VaultActions {
     override fun close() { Session.lockAll() }
 
     override fun open(app: HiddenApp) {
+        Session.clearSuppressed(app.pkg)
         lifecycleScope.launch {
             if (app.mode == HideMode.FREEZE) {
                 val ok = withContext(Dispatchers.IO) { Freezer.setFrozen(this@VaultActivity, app.pkg, false) }
@@ -72,7 +75,7 @@ class VaultActivity : ComponentActivity(), VaultActions {
         }
     }
 
-    override suspend fun apply(app: AppInfo, mode: HideMode?): String? = withContext(Dispatchers.IO) {
+    override suspend fun apply(app: AppInfo, mode: HideMode?, muteNotifications: Boolean): String? = withContext(Dispatchers.IO) {
         val previous = Store.modeOf(app.pkg)
         if (previous == HideMode.FREEZE && mode != HideMode.FREEZE) {
             if (!Freezer.setFrozen(this@VaultActivity, app.pkg, false)) return@withContext "Não foi possível descongelar o app. Verifique o Shizuku."
@@ -82,13 +85,17 @@ class VaultActivity : ComponentActivity(), VaultActions {
             HideMode.FREEZE -> {
                 if (Freezer.state(this@VaultActivity) != ShizukuState.READY) return@withContext "Shizuku não está pronto. Veja Ajustes › Métodos de proteção."
                 if (!Freezer.setFrozen(this@VaultActivity, app.pkg, true)) return@withContext "Falha ao congelar o app."
-                Store.put(HiddenApp(app.pkg, app.label, mode))
+                Store.put(HiddenApp(app.pkg, app.label, mode, muteNotifications))
             }
-            else -> Store.put(HiddenApp(app.pkg, app.label, mode))
+            else -> Store.put(HiddenApp(app.pkg, app.label, mode, muteNotifications))
         }
         null
     }
 
+    override fun openNotificationAccessSettings() = startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    override fun openAppNotificationSettings(pkg: String) = startActivity(
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+    )
     override fun openAccessibilitySettings() = startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
     override fun requestShizuku() = Freezer.requestPermission()
     override fun openShizuku() {
