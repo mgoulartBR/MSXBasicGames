@@ -33,7 +33,7 @@ class ScreenshotTest {
     @Before fun setUp() {
         Store.init(ctx)
         Store.setPin("1234")
-        Store.setBlockScreenshots(false)
+        Store.saveBlockScreenshots(false)
         dev.executeShellCommand("mkdir -p /sdcard/Download/sombra")
         dev.pressHome()
         // semeia o cofre com apps que existirem no emulador

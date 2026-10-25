@@ -65,7 +65,7 @@ object Store {
     fun setAutoLock(v: Int) { autoLockSec = v; sp.edit().putInt("auto_lock", v).apply() }
     fun setGrace(v: Int) { graceSec = v; sp.edit().putInt("grace", v).apply() }
     fun setRefreeze(v: Boolean) { refreezeOnScreenOff = v; sp.edit().putBoolean("refreeze", v).apply() }
-    fun setBlockScreenshots(v: Boolean) { blockScreenshots = v; sp.edit().putBoolean("block_shots", v).apply() }
+    fun saveBlockScreenshots(v: Boolean) { blockScreenshots = v; sp.edit().putBoolean("block_shots", v).apply() }
 
     // ---- senha ----
     fun hasPin(): Boolean = sp.contains("pin_hash")

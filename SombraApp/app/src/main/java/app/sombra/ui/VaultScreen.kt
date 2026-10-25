@@ -471,7 +471,7 @@ private fun SettingsTab(actions: VaultActions, env: Env) {
         ChoiceRow("Fechar o cofre após", listOf(15, 30, 60, 300), Store.autoLockSec, Store::setAutoLock)
         ChoiceRow("Pedir senha de novo (falso erro) após", listOf(30, 60, 300, 900), Store.graceSec, Store::setGrace)
         SwitchRow("Congelar de novo ao apagar a tela", "Apps descongelados pelo cofre voltam a ficar invisíveis", Store.refreezeOnScreenOff, Store::setRefreeze)
-        SwitchRow("Bloquear capturas de tela no cofre", "Também esconde o cofre na tela de apps recentes", Store.blockScreenshots, Store::setBlockScreenshots)
+        SwitchRow("Bloquear capturas de tela no cofre", "Também esconde o cofre na tela de apps recentes", Store.blockScreenshots, Store::saveBlockScreenshots)
         ActionRow("Alterar senha") { changePin = true }
 
         Section("Dicas para Xiaomi / Poco (HyperOS)")
