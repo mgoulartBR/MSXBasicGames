@@ -58,7 +58,7 @@ class ScreenshotTest {
     }
 
     private fun tap(res: String) {
-        val o = dev.wait(Until.findObject(By.res(pkg, res)), 8000)
+        val o = dev.wait(Until.findObject(By.res(res)), 8000)
         assertNotNull("não achei $res", o)
         o.click()
     }
@@ -81,25 +81,25 @@ class ScreenshotTest {
         listOf("key_1", "key_0", "key_0", "key_0", "key_+", "key_2", "key_3", "key_4").forEach { tap(it) }
         shot("03_calculadora")
         tap("key_=")
-        dev.wait(Until.hasObject(By.res(pkg, "tab_add")), 8000)
+        dev.wait(Until.hasObject(By.res("tab_add")), 8000)
         shot("04_cofre")
 
         tap("tab_add")
         shot("05_adicionar")
-        dev.wait(Until.findObject(By.res(pkg, "app_row")), 8000).click()
-        dev.wait(Until.hasObject(By.res(pkg, "btn_apply")), 8000)
+        dev.wait(Until.findObject(By.res("app_row")), 8000).click()
+        dev.wait(Until.hasObject(By.res("btn_apply")), 8000)
         shot("06_escolher_metodo")
         dev.pressBack()
 
-        dev.wait(Until.findObject(By.res(pkg, "tab_settings")), 8000).click()
+        dev.wait(Until.findObject(By.res("tab_settings")), 8000).click()
         shot("07_ajustes")
 
         // 3. falso erro
         ctx.startActivity(LockActivity.intent(ctx, "com.android.chrome"))
-        dev.wait(Until.hasObject(By.res(pkg, "fake_close")), 8000)
+        dev.wait(Until.hasObject(By.res("fake_close")), 8000)
         shot("08_falso_erro")
-        dev.wait(Until.findObject(By.res(pkg, "fake_close")), 8000).longClick()
-        dev.wait(Until.hasObject(By.res(pkg, "pin_1")), 8000)
+        dev.wait(Until.findObject(By.res("fake_close")), 8000).longClick()
+        dev.wait(Until.hasObject(By.res("pin_1")), 8000)
         listOf("1", "2", "3").forEach { tap("pin_$it") }
         shot("09_falso_erro_senha")
 

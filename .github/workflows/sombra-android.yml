@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: ignore
 
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.publish }}
     needs: [build, screenshots]
     runs-on: ubuntu-latest
     steps:
