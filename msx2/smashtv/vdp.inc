@@ -30,8 +30,14 @@ vdp_init:
         pop hl
         jr .next
 
-; A = backdrop colour 0..15
+; A = backdrop colour 0..15, only while the profiler is on (F1)
 set_border:
+        ld b,a
+        ld a,(profile_on)
+        or a
+        ret z
+        ld a,b
+border_raw:
         di
         out (VDP_CTRL),a
         ld a,0x87

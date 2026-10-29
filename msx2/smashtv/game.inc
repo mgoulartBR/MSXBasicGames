@@ -29,6 +29,7 @@ dir_tab:
 ; Move: cursor keys or joystick 1.  Aim: W/A/S/D or joystick 2.  Fire: space or joy 1 button A
 ; (with the fire button alone the player shoots in the last direction faced).
 read_input:
+        call check_profile_key
         xor a
         call GTSTCK
         or a
@@ -83,6 +84,29 @@ read_input:
         ld a,1
         ld (input_fire),a
         ret
+
+; F1 toggles the profiler (backdrop colour per phase); turning it off restores a black border
+check_profile_key:
+        ld a,6                  ; row 6: F3 F2 F1 CODE CAPS GRAPH CTRL SHIFT
+        call SNSMAT
+        cpl
+        and 0x20                ; F1
+        ld b,a
+        ld a,(key_prev)
+        ld c,a
+        ld a,b
+        ld (key_prev),a
+        or a
+        ret z
+        ld a,c
+        or a
+        ret nz                  ; still held: no repeat
+        ld a,(profile_on)
+        xor 1
+        ld (profile_on),a
+        ret nz
+        xor a
+        jp border_raw
 
 ; ---- player -------------------------------------------------------------------
 update_player:

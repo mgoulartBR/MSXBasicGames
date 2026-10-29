@@ -61,6 +61,8 @@ p_cool          equ RAM+13      ; shot cooldown
 p_face          equ RAM+14      ; last direction, used when only the fire button is held
 spawn_timer     equ RAM+15
 hud_lives_old   equ RAM+16
+profile_on      equ RAM+17      ; 1 = backdrop colour shows where the tick time goes (F1 toggles)
+key_prev        equ RAM+18      ; F1 state at the previous tick (edge detection)
 cmd_buf         equ RAM+0x20    ; VDP command block: SX SY DX DY NX NY (words), CLR ARG CMD
 cmd_sx          equ cmd_buf+0
 cmd_sy          equ cmd_buf+2

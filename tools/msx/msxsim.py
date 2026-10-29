@@ -17,7 +17,7 @@ FRAME_T = 59736            # T-states per frame at 60 Hz (3.579545 MHz)
 BIOS = {'CHGMOD': 0x005F, 'WRTVDP': 0x0047, 'GTSTCK': 0x00D5, 'GTTRIG': 0x00D8,
         'SNSMAT': 0x0141, 'CHPUT': 0x00A2}
 # (matrix row, bit) of the keys the game uses
-KEYS = {'W': (5, 4), 'S': (5, 0), 'A': (2, 6), 'D': (3, 1), 'SPACE': (8, 0),
+KEYS = {'W': (5, 4), 'S': (5, 0), 'A': (2, 6), 'D': (3, 1), 'SPACE': (8, 0), 'F1': (6, 5),
         'LEFT': (8, 4), 'UP': (8, 5), 'DOWN': (8, 6), 'RIGHT': (8, 7)}
 # approximate command cost in T-states per byte (HMMV/HMMM) or pixel (LMMM/LMMV)
 CMD_COST = {0xC: 2, 0xD: 3, 0x9: 8, 0x8: 8}

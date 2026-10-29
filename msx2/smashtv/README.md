@@ -19,7 +19,7 @@ openmsx -machine Panasonic_FS-A1WSX -cart msx2/smashtv/smashtv.rom
 | atirar na última direção | barra de espaço ou botão A do joystick 1 |
 
 Matar grunts dá 10 pontos. Encostar num grunt custa uma vida (2 s de invulnerabilidade, sprite piscando);
-sem vidas o jogo reinicia. A **cor da borda** mostra onde vai o tempo de cada tick: verde = lógica,
+sem vidas o jogo reinicia. Apertando **F1**, a cor da borda mostra onde vai o tempo de cada tick (desligado por padrão): verde = lógica,
 vermelho escuro = desenho, preta = espera. Se o vermelho dominar, o desenho estourou o tick.
 
 ## Build e testes

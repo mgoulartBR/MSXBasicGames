@@ -213,8 +213,17 @@ check(any(inv == 40 or inv == 39 for l, inv in lives_seen if l in (2, 1)), 'a hi
 check(3 in [l for l, _ in lives_seen[1:]], 'game over restarts with 3 lives')
 check(screen_diff(s) < 400, 'screen is clean after the restart (enemies erased)')
 
-print('timing (rough: command speed is an estimate)')
+print('profiler is off by default and F1 toggles it')
 s = mk(); s.run_frames(10)
+check(not s.border_log or all(c == 0 for _, c in s.border_log), 'border stays black by default')
+s.keys = {'F1'}; s.run_frames(6); s.keys = set(); s.run_frames(6)
+check(s.peek(A('profile_on')) == 1, 'F1 turns the profiler on')
+check(any(c in (2, 6) for _, c in s.border_log), 'border colours change while it is on')
+s.keys = {'F1'}; s.run_frames(6); s.keys = set(); s.run_frames(6)
+check(s.peek(A('profile_on')) == 0 and s.vdp.r[7] == 0, 'F1 again turns it off and the border goes back to black')
+
+print('timing (rough: command speed is an estimate)')
+s = mk(); s.run_frames(10); s.m.memory[A('profile_on')] = 1
 random.seed(5)
 for t in range(300):
     bot(0); s.run_frames(3)
