@@ -58,13 +58,19 @@ load_palette:
         ei
         ret
 
-; HL = VRAM address (A16 = 0), sets up a write
+; HL = VRAM address bits 15..0, A = bit 16 (set_vram_wr: bit 16 = 0); sets up a write. Clobbers A, B.
 set_vram_wr:
+        xor a
+set_vram_wr17:
         di
+        add a,a
+        add a,a                 ; bit 16 -> bit 2 of R#14
+        ld b,a
         ld a,h
         rlca
         rlca
         and 3
+        or b
         out (VDP_CTRL),a        ; R#14 = address bits 16..14
         ld a,0x8E
         out (VDP_CTRL),a
@@ -134,7 +140,7 @@ upload_gfx:
         ld hl,spr_col
         ld bc,512
         call vram_out
-        ; sheet records: dw vram_addr, db length, bytes...; dw 0 ends
+        ; sheet records: dw vram_addr(15..0), db addr bit 16, db length, bytes...; dw 0 ends
         ld hl,sheet_data
 .rec:   ld e,(hl)
         inc hl
@@ -143,12 +149,14 @@ upload_gfx:
         ld a,d
         or e
         ret z
-        ld b,(hl)
+        ld a,(hl)               ; address bit 16
+        inc hl
+        ld b,(hl)               ; length
         inc hl
         push hl
-        ex de,hl
+        ex de,hl                ; HL = address, DE = source
         push bc
-        call set_vram_wr
+        call set_vram_wr17
         pop bc
         pop hl
         ld c,VDP_DATA
@@ -220,7 +228,7 @@ draw_arena:
         pop hl
         jr .next
 
-; copies the finished arena (page 0) to the clean page (page 2)
+; copies the finished arena (page 0) to the clean page (page 2) and to the second buffer (page 1)
 copy_clean:
         ld hl,0
         ld (cmd_sx),hl
@@ -228,16 +236,23 @@ copy_clean:
         ld (cmd_dx),hl
         ld hl,CLEAN_Y
         ld (cmd_dy),hl
+        call copy_page
+        ld hl,256
+        ld (cmd_dy),hl
         jr copy_page
 
-; copies the clean page back over page 0 (erases every blitted object)
+; copies the clean page over both display buffers (erases every blitted object)
 restore_all:
         ld hl,0
         ld (cmd_sx),hl
         ld (cmd_dx),hl
-        ld (cmd_dy),hl
         ld hl,CLEAN_Y
         ld (cmd_sy),hl
+        ld hl,0
+        ld (cmd_dy),hl
+        call copy_page
+        ld hl,256
+        ld (cmd_dy),hl
 copy_page:
         ld hl,256
         ld (cmd_nx),hl

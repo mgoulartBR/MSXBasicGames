@@ -1,7 +1,7 @@
 ; ---------------------------------------------------------------------------
 ; Smash T.V. (MSX2) - technical skeleton
 ; 16 KB ROM at $4000.  Screen 5, hardware sprites for the player and bullets,
-; VDP-command blits for the enemies, 20 Hz game tick (VBlank / 3) like the SMS original.
+; VDP-command blits for the enemies (double buffered), 20 Hz game tick (VBlank / 3) like the SMS original.
 ; Build: tools/msx/build.sh -> msx2/smashtv/build/smashtv.rom
 ; ---------------------------------------------------------------------------
         include "defs.inc"
@@ -48,8 +48,7 @@ main_loop:
         ld a,6
         call set_border
         call render
-        xor a
-        call set_border
+        call flip               ; waits for the VBlank, shows the finished page
         jp main_loop
 
 not_msx2:

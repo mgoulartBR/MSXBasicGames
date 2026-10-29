@@ -34,7 +34,8 @@ tools/msx/build.sh          # gera gfx.inc, monta a ROM e roda os testes no simu
 - `tools/msx/msxsim.py`: simulador mínimo de MSX2 (Z80, BIOS simulada, V9938: registradores, VRAM,
   paleta, Screen 5, HMMV/HMMM/LMMM/LMMV, sprites modo 2, IRQ de VBlank).
 - `tools/msx/test_smashtv.py`: testes de comportamento. O mais importante compara, a cada tick, a tela
-  com "página limpa + inimigos nas posições desenhadas" e confere o HUD pixel a pixel.
+  com "página limpa + inimigos nas posições desenhadas" e confere o HUD pixel a pixel. Outro teste garante que a página exibida
+  nunca muda enquanto está na tela (sem *tearing*) e que sprites e página trocam juntos, logo após o início do VBlank.
 
 **O simulador é a minha leitura da documentação do V9938, não um emulador exato.** Passar nos testes
 mostra que a lógica e o uso do VDP são coerentes, mas não substitui o openMSX. O tempo dos comandos do VDP
@@ -42,12 +43,18 @@ mostra que a lógica e o uso do VDP são coerentes, mas não substitui o openMSX
 
 ## Arquitetura
 
-- **Screen 5** (256×212, 16 cores). Página 0 = tela; página 1 (`$8000`) = folha de gráficos (fonte e
-  quadros dos inimigos); página 2 (linha 512) = cópia limpa da arena, usada para apagar objetos.
+- **Screen 5** (256×212, 16 cores), **duplo buffer**: páginas 0 e 1 são os dois buffers de exibição;
+  página 2 (linha 512) = cópia limpa da arena, usada para apagar objetos; página 3 (linha 768) = folha de
+  gráficos (fonte e quadros dos inimigos). As tabelas de sprites ficam nas linhas livres da página 0 e não mudam.
 - **Sprites de hardware (modo 2, 16×16)**: jogador (plano 0) e 16 balas (planos 1–16). Atenção ao limite de
   8 sprites por linha: uma rajada longa na horizontal perde balas.
-- **Inimigos por blit**: `HMMM` restaura a área antiga a partir da página limpa e `LMMM`+TIMP desenha o
-  quadro novo (cor 0 transparente). Primeiro apaga todos, depois desenha todos, para não apagar um vizinho.
+- **Inimigos por blit**, sempre na página escondida: `HMMM` restaura a área antiga a partir da página limpa
+  e `LMMM`+TIMP desenha o quadro novo (cor 0 transparente). Primeiro apaga todos, depois desenha todos, para
+  não apagar um vizinho. Cada buffer guarda as últimas posições desenhadas (`E_OX/E_OY` e `E_OXB/E_OYB`);
+  inimigos mortos são apagados nos dois buffers (tipos 2 e 3) antes de liberar o slot. O HUD é redesenhado
+  nos dois buffers (`score_dirty` conta 2).
+- **Troca de página sem tearing** (`flip`): termina o desenho, espera o VBlank, escreve `R#2` e envia a
+  tabela de sprites no mesmo VBlank, para fundo e sprites mudarem juntos.
 - **Laço a VBlank/3** (≈20 Hz NTSC), como o original, usando o `JIFFY` da BIOS.
 - **Dados como no original**: pools de 16 slots em *struct of arrays* com passo `$10` (`IX+0` tipo,
   `IX+0x20` X, ...), direções em bits (1 cima, 2 baixo, 4 esquerda, 8 direita), pontuação BCD de 3 bytes,
@@ -56,13 +63,12 @@ mostra que a lógica e o uso do VDP são coerentes, mas não substitui o openMSX
 
 ## Desempenho (simulado, 16 inimigos na tela)
 
-Com 0, 8 e 16 inimigos o desenho custa cerca de 10 mil, 31 mil e 54 mil T-states por tick, para um
-orçamento de 179 mil (3 VBlanks). Cresce de forma linear (2 comandos de VDP por inimigo). Isso depende da
+Com 0, 8 e 16 inimigos o desenho custa cerca de 8 mil, 28 mil e 51 mil T-states por tick, para um
+orçamento de 179 mil (3 VBlanks), com uma troca de página por tick. Cresce de forma linear (2 comandos de VDP por inimigo). Isso depende da
 velocidade real dos comandos, que precisa ser medida no openMSX.
 
 ## Próximos passos
 
-1. Conferir no openMSX (cores, sprites, limite de 8 por linha, velocidade dos comandos).
-2. Trocar para **dois buffers** (alternar `R#2` entre páginas) para evitar o *tearing* do desenho direto.
-3. Máquina de script das salas (ondas) e os outros tipos de inimigo, a partir de `tools/sms/NOTES.md`.
-4. Gráficos reais e driver de som (PSG/SCC).
+1. Conferir no openMSX/WebMSX (cores, sprites, limite de 8 por linha, velocidade dos comandos).
+2. Máquina de script das salas (ondas) e os outros tipos de inimigo, a partir de `tools/sms/NOTES.md`.
+3. Gráficos reais e driver de som (PSG/SCC).

@@ -106,6 +106,7 @@ class VDP:
     def write_reg(self, reg, v):
         if reg > 46: return
         if reg == 7: self.sim.border_log.append((self.sim.cur(), v & 15))
+        if reg == 2: self.sim.r2_log.append((self.sim.cur(), v))
         self.r[reg] = v
         if reg == 14: self.addr = (self.addr & 0x3FFF) | ((v & 7) << 14)
         if reg == 16: self.pal_phase = 0
@@ -228,6 +229,7 @@ class Sim:
         self.now = 0
         self.frame = 0
         self.border_log = []
+        self.r2_log = []
         self.console = ''
         self.input = {}             # {'cursor': 0..8, 'joy1': 0..8, 'joy2': 0..8, 'trig': set()}
         self.keys = set()

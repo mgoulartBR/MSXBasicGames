@@ -267,6 +267,7 @@ spawn_enemy:
 .free:  ld (ix+E_TYPE),1
         ld (ix+E_HP),1
         ld (ix+E_OX),0
+        ld (ix+E_OXB),0
         ld (ix+E_FRAME),0
         call rng
         and 3
@@ -354,7 +355,7 @@ add_score:                      ; +10 points, 3 byte BCD like the original
         adc a,0
         daa
         ld (hl),a
-        ld a,1
+        ld a,2                  ; the HUD must be redrawn in both buffers
         ld (score_dirty),a
         pop hl
         pop af
@@ -435,7 +436,7 @@ collide_player:
         ld a,(lives)
         dec a
         ld (lives),a
-        ld a,1
+        ld a,2
         ld (score_dirty),a
         ld a,(lives)
         or a
@@ -448,12 +449,23 @@ collide_player:
         ret
 
 ; ---- rendering ------------------------------------------------------------------
+; Double buffering: everything is drawn into the hidden page (back_y = its first line), then
+; flip waits for the VBlank, shows it and uploads the sprites in the same blanking period.
 render:
+        call setup_back
         call build_sprites
-        call upload_sprites
         call erase_enemies
         call draw_enemies
         jp draw_hud
+
+setup_back:
+        ld hl,256               ; front page 0 -> draw into page 1
+        ld a,(front_page)
+        or a
+        jr z,.s
+        ld hl,0                 ; front page 1 -> draw into page 0
+.s:     ld (back_y),hl
+        ret
 
 ; plane 0 = player, planes 1..16 = bullet slots, the rest hidden
 build_sprites:
@@ -509,30 +521,46 @@ build_sprites:
         djnz .hid
         ret
 
-; restore the 20x20 area around every enemy's last drawn position from the clean page
+; IY = the enemy pool as seen by the hidden page: its last-drawn positions are E_OX/E_OY (page 0)
+; or E_OXB/E_OYB (page 1), i.e. the same fields shifted by BUF_SHIFT
+back_view:
+        ld iy,EN_BASE
+        ld a,(front_page)
+        or a
+        ret nz                  ; front 1 -> hidden page 0: no shift
+        ld iy,EN_BASE+BUF_SHIFT
+        ret
+
+; restores the 20x20 area around every enemy's last position in the hidden page from the clean
+; page; dying enemies (types 2, 3) are erased once per buffer and then freed
 erase_enemies:
+        call back_view
         ld ix,EN_BASE
         ld b,16
 .l:     ld a,(ix+E_TYPE)
         or a
         jr z,.n
-        ld a,(ix+E_OX)
+        ld a,(iy+E_OX)
         or a
-        jr z,.n
+        jr z,.dead
         and 0xFE                ; HMMM works on whole bytes (2 pixels)
         sub 2
         ld l,a
         ld h,0
         ld (cmd_sx),hl
         ld (cmd_dx),hl
-        ld a,(ix+E_OY)
+        ld a,(iy+E_OY)
         sub 2
         ld l,a
         ld h,0
-        ld (cmd_dy),hl
+        push hl
         ld de,CLEAN_Y
         add hl,de
         ld (cmd_sy),hl
+        pop hl
+        ld de,(back_y)
+        add hl,de
+        ld (cmd_dy),hl
         ld hl,20
         ld (cmd_nx),hl
         ld (cmd_ny),hl
@@ -543,31 +571,39 @@ erase_enemies:
         push bc
         call vdp_cmd
         pop bc
+        ld (iy+E_OX),0          ; nothing of this enemy is left in the hidden page
+.dead:  ld a,(ix+E_TYPE)
+        cp 2
+        jr nz,.t3
+        ld (ix+E_TYPE),3        ; still has to be erased from the other page
+        jr .n
+.t3:    cp 3
+        jr nz,.n
+        ld (ix+E_TYPE),0        ; erased from both pages: the slot is free
 .n:     inc ix
+        inc iy
         djnz .l
         ret
 
-; transparent copy (LMMM + TIMP) of the enemy frame from the sheet; frees dying enemies
+; transparent copy (LMMM + TIMP) of the enemy frame from the sheet into the hidden page
 draw_enemies:
+        call back_view
         ld ix,EN_BASE
         ld b,16
 .l:     ld a,(ix+E_TYPE)
         cp 1
-        jr z,.draw
-        cp 2
         jr nz,.n
-        ld (ix+E_TYPE),0
-        ld (ix+E_OX),0
-        jr .n
-.draw:  ld a,(ix+E_X)
-        ld (ix+E_OX),a
+        ld a,(ix+E_X)
+        ld (iy+E_OX),a
         ld l,a
         ld h,0
         ld (cmd_dx),hl
         ld a,(ix+E_Y)
-        ld (ix+E_OY),a
+        ld (iy+E_OY),a
         ld l,a
         ld h,0
+        ld de,(back_y)
+        add hl,de
         ld (cmd_dy),hl
         ld a,(ix+E_FRAME)
         and 1
@@ -591,15 +627,16 @@ draw_enemies:
         call vdp_cmd
         pop bc
 .n:     inc ix
+        inc iy
         djnz .l
         ret
 
-; score (6 digits) and lives, only redrawn when something changed
+; score (6 digits) and lives; score_dirty counts the renders still owed (one per buffer)
 draw_hud:
         ld a,(score_dirty)
         or a
         ret z
-        xor a
+        dec a
         ld (score_dirty),a
         ld e,8
         ld a,(score+2)
@@ -623,14 +660,16 @@ draw_hud:
         and 0x0F
         jp put_digit
 
-; A = digit, E = x; clears the 8x8 cell, draws the glyph, E += 8
+; A = digit, E = x; clears the 8x8 cell, draws the glyph, E += 8 (into the hidden page)
 put_digit:
         push bc
         push de
         push af
         ld d,0
         ld (cmd_dx),de
-        ld hl,4
+        ld hl,(back_y)
+        ld de,4
+        add hl,de
         ld (cmd_dy),hl
         ld hl,8
         ld (cmd_nx),hl
@@ -663,6 +702,33 @@ put_digit:
         ld e,a
         ret
 
+; A = display page (0/1): R#2 = $1F | page << 5
+set_display_page:
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        or 0x1F
+        di
+        out (VDP_CTRL),a
+        ld a,0x82
+        out (VDP_CTRL),a
+        ei
+        ret
+
+; waits until the hidden page is finished, then for the next VBlank, and swaps pages and sprites
+flip:
+        xor a
+        call set_border         ; idle colour for the profiler
+        call vdp_wait
+        halt                    ; the BIOS handler runs, we wake up at the start of the VBlank
+        ld a,(front_page)
+        xor 1
+        ld (front_page),a
+        call set_display_page
+        jp upload_sprites
+
 ; ---- state ----------------------------------------------------------------------
 game_init:
         ld hl,RAM
@@ -676,7 +742,7 @@ game_init:
         ld (p_y),a
         ld a,3
         ld (lives),a
-        ld a,1
+        ld a,2
         ld (score_dirty),a
         ld a,r
         ld (rng_acc),a
@@ -685,6 +751,7 @@ game_init:
         ret
 
 game_over:
-        call restore_all        ; wipe enemies that were blitted onto page 0
-        call game_init
-        ret
+        call restore_all        ; wipe the enemies that were blitted onto both pages
+        call game_init          ; front_page = 0 again
+        xor a
+        jp set_display_page

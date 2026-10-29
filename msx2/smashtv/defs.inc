@@ -22,8 +22,10 @@ VDP_INDIR       equ 0x9B
 SPR_COL_VRAM    equ 0x7400      ; sprite colour table (16 bytes/plane)
 SPR_ATT_VRAM    equ 0x7600      ; sprite attribute table (4 bytes/plane)
 SPR_PAT_VRAM    equ 0x7800      ; sprite patterns (32 bytes per 16x16)
-SHEET_Y         equ 256         ; page 1: font + enemy frames (line 256 of the 1024-line space)
-CLEAN_Y         equ 512         ; page 2: clean copy of the arena, used to erase blitted objects
+; Pages (256 lines each): 0 and 1 are the two display buffers (the sprite tables live in the
+; unused lines of page 0 and do not move), 2 holds a clean copy of the arena, 3 the graphics sheet.
+CLEAN_Y         equ 512         ; page 2: clean arena, used to erase blitted objects
+SHEET_Y         equ 768         ; page 3: font + enemy frames
 SPR_HIDDEN      equ 217         ; sprite Y that is never visible (not 216: that terminates the list)
 
 ; ---- game constants (pixels) ----
@@ -63,6 +65,8 @@ spawn_timer     equ RAM+15
 hud_lives_old   equ RAM+16
 profile_on      equ RAM+17      ; 1 = backdrop colour shows where the tick time goes (F1 toggles)
 key_prev        equ RAM+18      ; F1 state at the previous tick (edge detection)
+front_page      equ RAM+19      ; page being displayed (0/1); the other one is drawn into
+back_y          equ RAM+20      ; word: first line of the page being drawn (0 or 256)
 cmd_buf         equ RAM+0x20    ; VDP command block: SX SY DX DY NX NY (words), CLR ARG CMD
 cmd_sx          equ cmd_buf+0
 cmd_sy          equ cmd_buf+2
@@ -82,13 +86,17 @@ B_TYPE          equ 0x00        ; 0 = free
 B_X             equ 0x10
 B_Y             equ 0x20
 B_DIR           equ 0x30
-EN_BASE         equ RAM+0x180
-E_TYPE          equ 0x00        ; 0 free, 1 alive, 2 dying (erase, then free)
+EN_BASE         equ RAM+0x1C0
+E_TYPE          equ 0x00        ; 0 free, 1 alive, 2 dying (erase here), 3 dying (erase in the other page), then free
 E_HP            equ 0x10
 E_X             equ 0x20
 E_Y             equ 0x30
 E_DIR           equ 0x40
-E_OX            equ 0x50        ; position last drawn (0 = not drawn yet)
+E_OX            equ 0x50        ; position last drawn in page 0 (0 = not drawn yet)
 E_OY            equ 0x60
 E_FRAME         equ 0x70
-RAM_END         equ RAM+0x200
+BUF_SHIFT       equ -0x70       ; the same fields for page 1 live at E_OX+BUF_SHIFT, E_OY+BUF_SHIFT
+                                ; (negative offsets: IX+d only reaches +127)
+E_OXB           equ E_OX+BUF_SHIFT
+E_OYB           equ E_OY+BUF_SHIFT
+RAM_END         equ RAM+0x250

@@ -138,8 +138,8 @@ def main(path):
         if plane == 0: spr_col += player_cols
         elif 1 <= plane <= 16: spr_col += [7] * 16
         else: spr_col += [0] * 16
-    # sheet: page-1 lines. font at (0,0) 10 glyphs of 8x8, grunt frames at (0,8) and (16,8)
-    SHEET = 0x8000
+    # sheet: page-1 lines. font at (0,0) 10 glyphs of 8x8, grunt frames at (0,8) and (16,8); records: dw addr16, db addr bit16, db length
+    SHEET = 0x18000          # page 3 (line 768 of the 1024-line space)
     lines = []
     for y in range(8):
         data = []
@@ -158,8 +158,8 @@ def main(path):
     out.append(db("spr_col", spr_col)); out.append("")
     out.append("sheet_data:")
     for addr, data in lines:
-        out.append(f"        dw 0x{addr:04X}")
-        out.append(f"        db {len(data)}")
+        out.append(f"        dw 0x{addr & 0xFFFF:04X}")
+        out.append(f"        db {addr >> 16}, {len(data)}")
         for i in range(0, len(data), 16):
             out.append("        db " + ", ".join(f"0x{b:02X}" for b in data[i:i + 16]))
     out.append("        dw 0")

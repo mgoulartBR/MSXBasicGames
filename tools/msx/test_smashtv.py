@@ -48,18 +48,25 @@ def score(s): return bcd(s.peek(A('score'))) + 100 * bcd(s.peek(A('score') + 1))
 
 # glyphs and sprites as stored in the sheet (page 1)
 def sheet_px(s, x, y):
-    return s.vdp.px(x, 256 + y)
+    return s.vdp.px(x, 768 + y)
+
+
+def front(s):
+    return s.peek(A('front_page'))
 
 
 def expected_screen(s):
-    """clean page + enemies at the positions they were last drawn at"""
+    """clean page + the enemies recorded as drawn in the page being displayed"""
     v = s.vdp
     img = {}
+    fp = front(s)
+    ox_off, oy_off = (0x50, 0x60) if fp == 0 else (-0x20, -0x10)
     for y in range(24, 184):
         for x in range(16, 240): img[(x, y)] = v.px(x, 512 + y)
     for i in range(16):
-        if s.peek(EN + i) == 1 and s.peek(EN + 0x50 + i):
-            ox, oy, fr = s.peek(EN + 0x50 + i), s.peek(EN + 0x60 + i), s.peek(EN + 0x70 + i) & 1
+        ox = s.peek(EN + ox_off + i)
+        if s.peek(EN + i) == 1 and ox:
+            oy, fr = s.peek(EN + oy_off + i), s.peek(EN + 0x70 + i) & 1
             for j in range(16):
                 for k in range(16):
                     c = sheet_px(s, fr * 16 + k, 8 + j)
@@ -70,7 +77,8 @@ def expected_screen(s):
 def screen_diff(s):
     img = expected_screen(s)
     v = s.vdp
-    return sum(1 for (x, y), c in img.items() if v.px(x, y) != c)
+    fy = 256 * front(s)
+    return sum(1 for (x, y), c in img.items() if v.px(x, fy + y) != c)
 
 
 def hud_ok(s):
@@ -87,7 +95,7 @@ def hud_ok(s):
             for k in range(8):
                 g = sheet_px(s, d * 8 + k, j)
                 want = g if g else 14
-                if v.px(x0 + k, 4 + j) != want: bad += 1
+                if v.px(x0 + k, 256 * front(s) + 4 + j) != want: bad += 1
     return bad
 
 
@@ -111,6 +119,7 @@ v = s.vdp
 check(v.r[1] == 0x62, f'R#1 = {v.r[1]:02X} (display + VBlank IRQ + 16x16 sprites)')
 check(v.pal[4] == (7, 7, 7) and v.pal[8] == (1, 2, 7), 'palette loaded')
 check(v.px(100, 100) == 2 and v.px(10, 100) == 3 and v.px(200, 2) == 14, 'arena: floor / wall / HUD bar colours')
+check(v.px(100, 356) == 2 and v.px(100, 612) == 2, 'second buffer (page 1) and clean copy (page 2) hold the arena too')
 check(s.peek(0xFC9E) in range(18, 22) and s.irq_count == s.peek(0xFC9E), f'one interrupt per frame (JIFFY={s.peek(0xFC9E)}, irqs={s.irq_count})')
 check(not v.violations, f'no VDP misuse: {v.violations[:3]}')
 check(hud_ok(s) == 0, 'HUD shows 000000 and 3 lives')
@@ -198,6 +207,31 @@ check(worst_diff == 0, f'screen == clean page + enemies at drawn positions in {d
 check(hud_checked > 0 and hud_bad == 0, f'HUD digits always match score/lives ({hud_checked} checks, {hud_bad} px off)')
 check(not s.vdp.violations, f'no VDP misuse: {sorted(set(s.vdp.violations))[:3]}')
 check((s.irq_count - s.peek(0xFC9E)) % 256 <= 1 and abs(s.irq_count - s.frame) <= 2, f'one interrupt per frame, no VBlank storm (irqs={s.irq_count}, frames={s.frame})')
+
+print('double buffering: the displayed page never changes while it is shown')
+s = mk(); s.run_frames(10)
+samples = []
+def sample(frame):
+    page = (s.vdp.r[2] >> 5) & 3
+    top = page * 0x8000
+    samples.append((frame, page, hash(bytes(s.vdp.vram[top:top + 212 * 128])), hash(bytes(s.vdp.vram[0x7600:0x7680]))))
+random.seed(11)
+def bot_hook(frame):
+    bot(0); sample(frame)
+n0 = len(s.r2_log)
+for t in range(300):
+    bot(0)
+    s.run_frames(3, sample)
+torn = [(a, b) for a, b in zip(samples, samples[1:]) if a[1] == b[1] and a[2] != b[2]]
+flips = [(a, b) for a, b in zip(samples, samples[1:]) if a[1] != b[1]]
+spr_early = [(a, b) for a, b in zip(samples, samples[1:]) if a[3] != b[3] and a[1] == b[1]]
+check(len(torn) == 0, f'no tearing: displayed page unchanged between flips ({len(samples)} frames sampled, {len(torn)} violations)')
+check(250 <= len(flips) <= 310, f'one page flip per tick ({len(flips)} flips in 300 ticks)')
+check(len(spr_early) == 0, f'sprite attributes only change together with a page flip ({len(spr_early)} violations)')
+r2 = s.r2_log[n0:]
+late = [t % FRAME_T for t, _ in r2 if t % FRAME_T > 6000]
+check(len(r2) >= 250 and not late, f'R#2 is written right after the VBlank starts (worst {max(t % FRAME_T for t, _ in r2)} T into the frame)')
+check(set(v & 0x60 for _, v in r2) == {0x00, 0x20}, 'only pages 0 and 1 are ever displayed')
 
 print('player damage, invulnerability and restart')
 s = mk(); s.run_frames(10)
