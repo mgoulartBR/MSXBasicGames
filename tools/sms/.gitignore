@@ -3,3 +3,4 @@ out/
 *.sg
 *.vram
 *.cram
+__pycache__/

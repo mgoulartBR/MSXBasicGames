@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Recursive, bank-aware Z80 disassembler for Sega Master System ROMs (Sega mapper).
 
-Usage: disasm.py ROM.sms OUTDIR [trace.json ...]
+Usage: disasm.py ROM.sms OUTDIR [--sym=FILE] [trace.json ...]
 
 Memory model: $0000-$3FFF bank 0, $4000-$7FFF bank 1, $8000-$BFFF slot 2 (switched
 by writes to $FFFF). The slot-2 bank is tracked through `LD A,n / LD ($FFFF),A`
 and `LD A,n / CALL <bank-switch helper>` sequences. Code that is never reached is
 dumped as `.db` so nothing is lost; check coverage.txt for what to hand-annotate.
 """
-import sys, os
+import sys, os, re
 from z80dis import z80
 from z80dis.z80 import OP, OPER_TYPE
 
@@ -27,13 +27,25 @@ def vaddr(p):
     return o if b == 0 else (0x4000 + o if b == 1 else 0x8000 + o)
 
 
+def load_syms(path):
+    """`ADDR name  ; comment` per line. Slot-2 addresses ($8000-$BFFF) mean bank 2."""
+    syms = {}
+    for line in open(path):
+        line = line.split(';')[0].strip()
+        if not line: continue
+        a, n = line.split()[:2]
+        syms[int(a, 16)] = n
+    return syms
+
+
 def label(p):
     b = p // BANK
     return f"B{b:02X}_{vaddr(p):04X}"
 
 
 class Dis:
-    def __init__(self, rom):
+    def __init__(self, rom, syms=None):
+        self.syms = syms or {}
         self.rom = rom
         self.insn = {}        # phys -> decoded
         self.labels = set()
@@ -114,6 +126,19 @@ class Dis:
                 pc = nxt
         return self
 
+    def name(self, text, bank):
+        """Replace 16-bit address operands by symbol names (slot 2 only when bank 2)."""
+        def sub(m):
+            v = int(m.group(0), 16)
+            if v < 0x100 or v not in self.syms: return m.group(0)
+            return self.syms[v]
+        return re.sub(r'0x[0-9a-fA-F]{3,4}\b', sub, text)
+
+    def lab(self, p):
+        v = vaddr(p)
+        if v in self.syms and (v < 0x8000 or p // BANK == 2): return self.syms[v]
+        return label(p)
+
     def write(self, outdir):
         os.makedirs(outdir, exist_ok=True)
         rom = self.rom
@@ -125,10 +150,10 @@ class Dis:
             p, end = bank * BANK, (bank + 1) * BANK
             while p < end:
                 if p in self.labels or p % BANK == 0:
-                    lines.append(f"{label(p)}:")
+                    lines.append(f"{self.lab(p)}:")
                 if p in self.insn:
                     i = self.insn[p]
-                    lines.append(f"    {z80.disasm(i):<28}; {vaddr(p):04X}")
+                    lines.append(f"    {self.name(z80.disasm(i), bank):<34}; {vaddr(p):04X}")
                     p += i.len
                 else:
                     q = p
@@ -153,8 +178,13 @@ if __name__ == '__main__':
     import json
     rom = open(sys.argv[1], 'rb').read()
     entries = [0x0000, 0x0038, 0x0066]
-    for tf in sys.argv[3:]:     # optional trace files from trace.py: [[bank, pc], ...]
+    syms = {}
+    args = []
+    for a in sys.argv[3:]:
+        if a.startswith('--sym='): syms = load_syms(a[6:])
+        else: args.append(a)
+    for tf in args:     # optional trace files from trace.py: [[bank, pc], ...]
         entries += [tuple(e) for e in json.load(open(tf))]
-    d = Dis(rom).run(entries)
+    d = Dis(rom, syms).run(entries)
     d.write(sys.argv[2])
     print(open(os.path.join(sys.argv[2], 'coverage.txt')).read()[:1500])

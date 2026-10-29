@@ -18,6 +18,13 @@ python3 tools/sms/trace.py "$ROM" out/t1.json 12000 1 [snapshot_a_cada_N_frames]
 #    é escolhido por dados em tempo de execução, então só análise estática não basta)
 python3 tools/sms/disasm.py "$ROM" out/asm out/t*.json     # -> out/asm/bankNN.asm, coverage.txt
 
+# 2b. Mesmo disassembly, já com nomes (veja smashtv.sym e NOTES.md)
+python3 tools/sms/disasm.py "$ROM" out/asm --sym=tools/sms/smashtv.sym out/t*.json
+
+# 2c. Perfil de gameplay (hits de PC e variação de RAM) e xref estático de RAM
+python3 tools/sms/profile.py "$ROM" out/prof.json 4000 7 2200
+python3 tools/sms/ramxref.py "$ROM" out/xref.txt out/t*.json
+
 # 3. Gráficos: sheets de tiles (paleta BG e sprite) e screenshot a partir do dump de VRAM
 python3 tools/sms/render.py out/t1 out/png
 ```
@@ -28,5 +35,6 @@ python3 tools/sms/render.py out/t1 out/png
 - Todo chaveamento do slot 2 passa por `$170C` (`LD ($FFFF),A / RET`); o valor vem de
   campos de objeto (`IX+0x12`), por isso o trace dinâmico é necessário.
 - Reset em `$0000` -> `$15D5`. A RAM inicial (`$C000`, `$11B4` bytes) é copiada de `$0400`.
+- Estrutura do jogo, pools de entidades, jogadores e rotinas: veja `NOTES.md`.
 - Código está nos bancos 0, 1 e 2. Os bancos 3-F são dados (gráficos, música, níveis).
 - ISR em `$160B` (VBlank). NMI em `$0066` só faz pausa.
