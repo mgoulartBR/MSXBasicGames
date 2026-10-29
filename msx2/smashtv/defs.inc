@@ -34,10 +34,12 @@ ARENA_X1        equ 240
 ARENA_Y0        equ 24
 ARENA_Y1        equ 184
 TICK_VBLANKS    equ 3           ; game logic at VBlank/3 (20 Hz NTSC), like the SMS original
-MAX_ENEMIES     equ 8
 PLAYER_SPEED    equ 3
 BULLET_SPEED    equ 8
-ENEMY_SPEED     equ 2
+DOOR_X          equ 112         ; exit gap in the top wall, 32 px wide, lines 16..23
+KIND_GRUNT      equ 0
+KIND_RUNNER     equ 1
+KIND_TANK       equ 2
 STACK_TOP       equ 0xF300
 
 ; direction bits (same as the original game's +0x60 field)
@@ -61,12 +63,14 @@ p_y             equ RAM+11
 p_inv           equ RAM+12      ; invulnerability ticks
 p_cool          equ RAM+13      ; shot cooldown
 p_face          equ RAM+14      ; last direction, used when only the fire button is held
-spawn_timer     equ RAM+15
 hud_lives_old   equ RAM+16
 profile_on      equ RAM+17      ; 1 = backdrop colour shows where the tick time goes (F1 toggles)
 key_prev        equ RAM+18      ; F1 state at the previous tick (edge detection)
 front_page      equ RAM+19      ; page being displayed (0/1); the other one is drawn into
-back_y          equ RAM+20      ; word: first line of the page being drawn (0 or 256)
+back_y          equ RAM+20      ; word: first line of the page being drawn (0 or 256) - 2 bytes
+restore_pending equ RAM+22      ; pages still to be wiped from the clean copy (game over)
+door_color      equ RAM+23      ; colour of the exit gap in the top wall
+door_dirty      equ RAM+24      ; pages still to be redrawn with door_color
 cmd_buf         equ RAM+0x20    ; VDP command block: SX SY DX DY NX NY (words), CLR ARG CMD
 cmd_sx          equ cmd_buf+0
 cmd_sy          equ cmd_buf+2
@@ -99,4 +103,17 @@ BUF_SHIFT       equ -0x70       ; the same fields for page 1 live at E_OX+BUF_SH
                                 ; (negative offsets: IX+d only reaches +127)
 E_OXB           equ E_OX+BUF_SHIFT
 E_OYB           equ E_OY+BUF_SHIFT
+E_KIND          equ -0x30       ; 0 grunt, 1 runner, 2 tank
 RAM_END         equ RAM+0x250
+
+; room script machine state (see script.inc)
+scr_pc          equ RAM+0xC0    ; word: next opcode
+scr_wait        equ RAM+0xC2    ; ticks left to wait
+scr_done        equ RAM+0xC3    ; 1 = script finished (or failed)
+scr_depth       equ RAM+0xC4    ; call stack depth (return addresses)
+lp_depth        equ RAM+0xC5    ; loop stack depth
+room_idx        equ RAM+0xC6    ; 0-based index into room_table
+room_bcd        equ RAM+0xC7    ; number shown in the HUD
+exit_open       equ RAM+0xC8
+scr_stack       equ RAM+0xD0    ; 4 return addresses
+lp_stack        equ RAM+0xD8    ; 4 entries of 4 bytes: body pointer (word), count, unused

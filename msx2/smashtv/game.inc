@@ -235,6 +235,11 @@ update_bullets:
         ret
 
 ; ---- enemies --------------------------------------------------------------------
+; per-kind tables: hit points, speed (px per tick) and score (BCD)
+kind_hp:    db 1, 1, 3
+kind_speed: db 2, 3, 1
+kind_points: db 0x10, 0x20, 0x50
+
 rand_x: call rng
         cp 209
         jr c,.ok
@@ -249,26 +254,35 @@ rand_y: call rng
 .ok:    add a,ARENA_Y0
         ret
 
-spawn_enemy:
-        ld a,(spawn_timer)
+; IX = free slot (Z) or NZ when the pool is full
+find_enemy_slot:
+        ld ix,EN_BASE
+        ld b,16
+.f:     ld a,(ix+E_TYPE)
         or a
-        jr z,.try
-        dec a
-        ld (spawn_timer),a
-        ret
-.try:   ld ix,EN_BASE
-        ld b,MAX_ENEMIES
-.find:  ld a,(ix+E_TYPE)
-        or a
-        jr z,.free
+        ret z
         inc ix
-        djnz .find
+        djnz .f
+        or 1
         ret
-.free:  ld (ix+E_TYPE),1
-        ld (ix+E_HP),1
+
+; IX = slot, C = kind: makes the slot a live enemy (position is set by the caller)
+init_enemy:
+        ld (ix+E_TYPE),1
+        ld (ix+E_KIND),c
         ld (ix+E_OX),0
         ld (ix+E_OXB),0
         ld (ix+E_FRAME),0
+        ld hl,kind_hp
+        ld e,c
+        ld d,0
+        add hl,de
+        ld a,(hl)
+        ld (ix+E_HP),a
+        ret
+
+; IX = slot: random position on one of the four edges of the arena
+random_edge_pos:
         call rng
         and 3
         jr z,.top
@@ -279,41 +293,45 @@ spawn_enemy:
         ld (ix+E_X),ARENA_X1-16
         call rand_y
         ld (ix+E_Y),a
-        jr .set
+        ret
 .top:   ld (ix+E_Y),ARENA_Y0
         call rand_x
         ld (ix+E_X),a
-        jr .set
+        ret
 .bottom:
         ld (ix+E_Y),ARENA_Y1-16
         call rand_x
         ld (ix+E_X),a
-        jr .set
+        ret
 .left:  ld (ix+E_X),ARENA_X0
         call rand_y
         ld (ix+E_Y),a
-.set:   ld a,15
-        ld (spawn_timer),a
         ret
 
-; grunts walk toward the player, 2 px per tick, direction bits kept in E_DIR
+; enemies walk toward the player at their kind's speed, direction bits kept in E_DIR
 update_enemies:
         ld ix,EN_BASE
         ld b,16
 .loop:  ld a,(ix+E_TYPE)
         cp 1
         jr nz,.next
+        ld a,(ix+E_KIND)
+        ld e,a
         ld d,0
+        ld hl,kind_speed
+        add hl,de
+        ld e,(hl)               ; E = speed
+        ld d,0                  ; D = direction bits being built
         ld a,(p_x)
         ld c,a
         ld a,(ix+E_X)
         cp c
         jr z,.v
         jr c,.right
-        sub ENEMY_SPEED
+        sub e
         set 2,d
         jr .xs
-.right: add a,ENEMY_SPEED
+.right: add a,e
         set 3,d
 .xs:    ld (ix+E_X),a
 .v:     ld a,(p_y)
@@ -322,10 +340,10 @@ update_enemies:
         cp c
         jr z,.dir
         jr c,.down
-        sub ENEMY_SPEED
+        sub e
         set 0,d
         jr .ys
-.down:  add a,ENEMY_SPEED
+.down:  add a,e
         set 1,d
 .ys:    ld (ix+E_Y),a
 .dir:   ld (ix+E_DIR),d
@@ -337,12 +355,10 @@ update_enemies:
         ret
 
 ; ---- collisions -----------------------------------------------------------------
-add_score:                      ; +10 points, 3 byte BCD like the original
-        push af
+add_score:                      ; A = points (BCD, < 100); 3 byte BCD score like the original
         push hl
         ld hl,score
-        ld a,(hl)
-        add a,0x10
+        add a,(hl)
         daa
         ld (hl),a
         inc hl
@@ -358,7 +374,6 @@ add_score:                      ; +10 points, 3 byte BCD like the original
         ld a,2                  ; the HUD must be redrawn in both buffers
         ld (score_dirty),a
         pop hl
-        pop af
         ret
 
 ; bullet (8x8) against enemy (16x16)
@@ -400,6 +415,12 @@ collide_bullets:
         dec (ix+E_HP)
         jr nz,.done
         ld (ix+E_TYPE),2        ; dying: erased and freed by the renderer
+        ld a,(ix+E_KIND)
+        ld e,a
+        ld d,0
+        ld hl,kind_points
+        add hl,de
+        ld a,(hl)
         call add_score
 .done:  pop bc
         jr .bnext
@@ -454,9 +475,28 @@ collide_player:
 render:
         call setup_back
         call build_sprites
+        call restore_back
         call erase_enemies
+        call draw_door
         call draw_enemies
         jp draw_hud
+
+; after a game over every enemy image has to go: the clean page is copied over the hidden page
+; (twice in a row, so both pages get it)
+restore_back:
+        ld a,(restore_pending)
+        or a
+        ret z
+        dec a
+        ld (restore_pending),a
+        ld hl,0
+        ld (cmd_sx),hl
+        ld (cmd_dx),hl
+        ld hl,CLEAN_Y
+        ld (cmd_sy),hl
+        ld hl,(back_y)
+        ld (cmd_dy),hl
+        jp copy_page
 
 setup_back:
         ld hl,256               ; front page 0 -> draw into page 1
@@ -605,12 +645,16 @@ draw_enemies:
         ld de,(back_y)
         add hl,de
         ld (cmd_dy),hl
+        ld a,(ix+E_KIND)
+        add a,a
+        ld c,a
         ld a,(ix+E_FRAME)
         and 1
+        or c                    ; (kind * 2 + frame) * 16 = x of the frame in the sheet
         add a,a
         add a,a
         add a,a
-        add a,a                 ; frame * 16
+        add a,a
         ld l,a
         ld h,0
         ld (cmd_sx),hl
@@ -644,6 +688,9 @@ draw_hud:
         ld a,(score+1)
         call .two
         ld a,(score+0)
+        call .two
+        ld e,120
+        ld a,(room_bcd)
         call .two
         ld e,232
         ld a,(lives)
@@ -748,10 +795,16 @@ game_init:
         ld (rng_acc),a
         ld a,(JIFFY)
         ld (last_jiffy),a
-        ret
+        ld a,1
+        ld (room_bcd),a
+        jp room_start           ; room 0
 
 game_over:
-        call restore_all        ; wipe the enemies that were blitted onto both pages
-        call game_init          ; front_page = 0 again
-        xor a
-        jp set_display_page
+        ld a,(front_page)       ; keep showing the same page; the renderer wipes both
+        push af
+        call game_init
+        pop af
+        ld (front_page),a
+        ld a,2
+        ld (restore_pending),a
+        ret

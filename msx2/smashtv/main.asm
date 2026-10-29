@@ -44,7 +44,8 @@ main_loop:
         call update_enemies
         call collide_bullets
         call collide_player
-        call spawn_enemy
+        call script_step
+        call check_exit
         ld a,6
         call set_border
         call render
@@ -65,6 +66,8 @@ msg_msx2:
 
         include "vdp.inc"
         include "game.inc"
+        include "script.inc"
+        include "rooms.inc"
         include "gfx.inc"
 
         ds 0x8000-$, 0xFF       ; pad to 16 KB (an error here means the ROM outgrew its page)

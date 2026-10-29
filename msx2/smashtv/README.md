@@ -18,8 +18,10 @@ openmsx -machine Panasonic_FS-A1WSX -cart msx2/smashtv/smashtv.rom
 | mirar/atirar (twin-stick) | W A S D ou joystick 2 (atira sempre que há direção de mira) |
 | atirar na última direção | barra de espaço ou botão A do joystick 1 |
 
-Matar grunts dá 10 pontos. Encostar num grunt custa uma vida (2 s de invulnerabilidade, sprite piscando);
-sem vidas o jogo reinicia. Apertando **F1**, a cor da borda mostra onde vai o tempo de cada tick (desligado por padrão): verde = lógica,
+São 4 salas, cada uma com seu script de ondas (`rooms.inc`): grunts (verdes), runners (vermelhos, rápidos) e
+tanks (roxos, 3 HP). Limpe a sala para a porta amarela abrir na parede de cima e entre nela para ir à próxima;
+depois da quarta, volta à primeira. O número da sala aparece no meio do HUD. Encostar num inimigo custa uma
+vida (2 s de invulnerabilidade, sprite piscando); sem vidas o jogo reinicia. Apertando **F1**, a cor da borda mostra onde vai o tempo de cada tick (desligado por padrão): verde = lógica,
 vermelho escuro = desenho, preta = espera. Se o vermelho dominar, o desenho estourou o tick.
 
 ## Build e testes
@@ -55,6 +57,8 @@ mostra que a lógica e o uso do VDP são coerentes, mas não substitui o openMSX
   nos dois buffers (`score_dirty` conta 2).
 - **Troca de página sem tearing** (`flip`): termina o desenho, espera o VBlank, escreve `R#2` e envia a
   tabela de sprites no mesmo VBlank, para fundo e sprites mudarem juntos.
+- **Máquina de script das salas** (`script.inc`, `rooms.inc`, documentada em [`SCRIPT.md`](SCRIPT.md)): ondas,
+  laços, sub-scripts, escolha aleatória, espera até limpar, porta e progressão de salas.
 - **Laço a VBlank/3** (≈20 Hz NTSC), como o original, usando o `JIFFY` da BIOS.
 - **Dados como no original**: pools de 16 slots em *struct of arrays* com passo `$10` (`IX+0` tipo,
   `IX+0x20` X, ...), direções em bits (1 cima, 2 baixo, 4 esquerda, 8 direita), pontuação BCD de 3 bytes,
@@ -70,5 +74,5 @@ velocidade real dos comandos, que precisa ser medida no openMSX.
 ## Próximos passos
 
 1. Conferir no openMSX/WebMSX (cores, sprites, limite de 8 por linha, velocidade dos comandos).
-2. Máquina de script das salas (ondas) e os outros tipos de inimigo, a partir de `tools/sms/NOTES.md`.
+2. Mais tipos de inimigo e de arma, itens, e salas no estilo do original (a partir de `tools/sms/NOTES.md`).
 3. Gráficos reais e driver de som (PSG/SCC).

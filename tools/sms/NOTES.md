@@ -167,7 +167,36 @@ slot 2 passa por `$170C` (`LD ($FFFF),A / RET`), com o banco vindo de dados dos 
 
 ## 9. Pendências
 
+(ver também a seção 10)
+
+
 - Handlers dos tipos de inimigo 3..0x12 e identificação dos nomes (grunts, orbs, tanques, etc.).
 - Máquina de script da sala (`$57F0`, tabela `$581A`): documentar cada opcode e o formato das ondas.
 - Lista de efeitos (`$C2B9`, 20 entradas), colisão `$4D4D` e função de morte `$69EE`.
 - Formato dos dados de música e do driver de som.
+
+## 10. Máquina de script das salas (`script_step $57F0`)
+
+Confirmado lendo os handlers e traçando a primeira arena (`$3E29`). **Descritor de sala** (ponteiro em `C1EB`):
+`+0/1`, `+2/3`, `+4/5` = três palavras (saídas; ≠ 0 faz `$4CF1` desenhar a seta), `+8/9` = ponteiro do script,
+`+0x0B…` = nome da sala em texto. `C1EB` vem de `D033` (sala inicial). [C]
+
+- **Execução**: `C208` = PC do script, `C20A` = contador de espera (decrementa a cada chamada, e o script
+  só avança quando chega a 0). **Um opcode por chamada**, buscado em `$581A + 2·op` (80+ entradas, os
+  endereços de `$4E3C…` e `$67A0…` também guardam stubs de opcodes). [C]
+- **Chamada/retorno**: `29` lê 1 byte *n*, empilha o endereço seguinte (pilha em `C21F`, 2 bytes por entrada)
+  e salta para a palavra em `$4E3C + n`; `2A` desempilha. As salas têm tabelas de sub-scripts de ondas. [C]
+- **Laço**: `4E` lê 3 bytes (`C28F`, `C290` = contagem, `C291` = tipo alvo) e depois faz um `29` com o 4º byte;
+  `4C` salva o ponteiro (`C20D`) e inicia o contador `C20C = C290 − 1`; `4D` volta ao ponteiro enquanto
+  `C20C ≠ 0`. [C]
+- **Spawn**: `0C` cria um grunt (tipo 1) numa posição aleatória livre (valida com `$4D4D`); falhou, repete
+  o opcode (`JP $5BF3`). [C] `60` é um gerador aleatório de objetos pequenos (tipos 8–11). [H]
+- **Esperas**: `4F` bloqueia enquanto existir inimigo do tipo `C291` (`$FF` = não espera); `27`/`28` mudam a
+  porta (`C256` = 0/1), esperam 8 ticks e tocam o efeito `$35`/`$36`; `0A` imprime o nome da sala, limpa
+  `C1F0` bit 0 e espera `$20`; `0B` liga `C1F0` bit 0 (combate ativo). [C]
+- **Estado de vídeo**: `0F`/`10` empilham/desempilham o cursor de tiles da VRAM (`$1725`/`$1739`), para cada
+  sala carregar seus gráficos e liberar depois. Os opcodes `14`, `5A`, `5D`, `01`… carregam descritores de
+  asset (`IX = $C9CE…` etc.). [C]
+
+O script da arena 1 tem 4 sub-ondas selecionadas por `29` e termina com `4F`; a lista completa de opcodes e
+das outras salas segue pendente.

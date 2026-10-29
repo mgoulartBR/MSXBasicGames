@@ -241,18 +241,6 @@ copy_clean:
         ld (cmd_dy),hl
         jr copy_page
 
-; copies the clean page over both display buffers (erases every blitted object)
-restore_all:
-        ld hl,0
-        ld (cmd_sx),hl
-        ld (cmd_dx),hl
-        ld hl,CLEAN_Y
-        ld (cmd_sy),hl
-        ld hl,0
-        ld (cmd_dy),hl
-        call copy_page
-        ld hl,256
-        ld (cmd_dy),hl
 copy_page:
         ld hl,256
         ld (cmd_nx),hl
