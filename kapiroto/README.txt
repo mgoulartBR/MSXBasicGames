@@ -28,7 +28,8 @@ Left / Right arrows or A / D: walk.
 Space: jump (the only jump key).
 Joystick port 1: left/right to walk, button A or B to jump.
 P or ESC: pause. R: restart the room. M: sound on/off.
-Enter or jump: start / continue. After room 20 the game loops back to room 1.
+Enter or Space: start. Rooms advance by themselves when you touch the door.
+After room 20 the ending picture is shown, then the game returns to the title.
 
 HAZARDS
 - Holes in the floor.
@@ -42,8 +43,15 @@ HAZARDS
 - A block that slides along the floor and shoves you (into a hole or a wall).
 - A platform that moves every time you jump.
 
+SCREENS
+Title and ending are SCREEN 2 pictures (assets/title_src.webp, assets/end_src.webp)
+converted to the MSX1 palette, 2 colors per 8x1 run, RLE-packed in screens.h.
+After the title comes a short controls screen ("BigFive Studios" in the footer).
+
 FILES
 kapiroto.c         Input, drawing (SCREEN 1 tiles + hardware sprites), text and sound.
+screens.h          Title/ending picture data. Generated: python3 tools/make_screens.py
+tools/make_screens.py  Image -> MSX1 SCREEN 2 converter (needs Pillow and numpy).
 ld_logic.h         Game rules and the 20 rooms (g_Rooms table). No hardware access.
 tools/solver.c     Native room solver: gcc -O2 -o solver tools/solver.c
                    "solver K [room]" searches a solution for each room, where K is

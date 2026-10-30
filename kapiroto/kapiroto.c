@@ -13,6 +13,7 @@
 #include "psg.h"
 #include "font/font_mgl_sample6.h"
 #include "ld_logic.h"
+#include "screens.h"
 
 // Tiles: 0 empty, 1 floor, 2 cracked floor, 3 floor spike
 const u8 g_Tiles[40] = {
@@ -60,8 +61,17 @@ const u8 g_SpriteData[192] = {
 #define SP_END      10
 #define SPR_HIDE    200
 
+// Game states
+#define ST_INFO     0   // controls screen (room 1 behind)
+#define ST_PLAY     1
+#define ST_DEAD     2
+#define ST_CLEAR    3
+#define ST_PAUSE    4
+#define ST_TITLE    5   // SCREEN 2 title picture
+#define ST_END      6   // SCREEN 2 ending picture
+
 volatile u8 g_Tick = 0;
-u8 g_Level=0, g_Deaths=0, g_State=0, g_Timer=0;
+u8 g_Level=0, g_Deaths=0, g_State=ST_TITLE, g_Timer=0;
 u8 g_PauseWas=0, g_ResetWas=0, g_MuteWas=0, g_StartWas=0;
 u8 g_Sound=1, g_SoundTimer=0, g_PlatDrawn=255;
 
@@ -108,8 +118,6 @@ void DrawHeader(void) {
     Print_SetPosition(18,1);
     Print_DrawText("DEATHS ");
     Print_DrawInt(g_Deaths);
-    Print_SetPosition(1,23);
-    Print_DrawText("R:RESTART P:PAUSE M:SOUND");
 }
 void DrawRoom(void) {
     VDP_EnableDisplay(FALSE);
@@ -144,17 +152,67 @@ void DrawSprites(void) {
 }
 void Die(void) {
     if(g_Deaths<255) g_Deaths++;
-    g_State=2; g_Timer=34;
+    g_State=ST_DEAD; g_Timer=34;
     Sound(900);
-    Print_SetPosition(11,5);
-    Print_DrawText("TRY AGAIN!");
-    Print_SetPosition(10,7);
-    Print_DrawText("DEATHS: "); Print_DrawInt(g_Deaths);
+    DrawHeader();
 }
 void StartRoom(void) {
     ClearMessage();
+    VDP_FillVRAM_16K(0,g_ScreenLayoutLow+23*32,32);
     DrawHeader();
-    g_State=1;
+    g_State=ST_PLAY;
+}
+// RLE: 0x00-0x7F literal run of n+1 bytes, 0x80-0xFE repeat next byte (n-0x7D) times, 0xFF end
+void UnpackVRAM(const u8* src, u16 dst) {
+    u8 c;
+    while((c=*src++)!=0xFF) {
+        if(c<0x80) { c++; VDP_WriteVRAM_16K(src,dst,c); src+=c; dst+=c; }
+        else { c-=0x7D; VDP_FillVRAM_16K(*src++,dst,c); dst+=c; }
+    }
+}
+void ShowImage(const u8* pat, const u8* col, u8 backdrop) {
+    u16 i;
+    VDP_EnableDisplay(FALSE);
+    VDP_SetMode(VDP_MODE_SCREEN2);
+    VDP_SetColor(backdrop);
+    VDP_FillVRAM_16K(0,0,0x4000);
+    UnpackVRAM(pat,g_ScreenPatternLow);
+    UnpackVRAM(col,g_ScreenColorLow);
+    for(i=0;i<768;i++) VDP_Poke_16K((u8)i,g_ScreenLayoutLow+i);
+    VDP_DisableSpritesFrom(0);
+    VDP_EnableDisplay(TRUE);
+}
+void ShowTitle(void) {
+    ShowImage(g_Title_Pat,g_Title_Col,COLOR_WHITE);
+    g_State=ST_TITLE;
+}
+void ShowEnd(void) {
+    ShowImage(g_End_Pat,g_End_Col,COLOR_DARK_BLUE);
+    g_State=ST_END;
+}
+void InitGameVideo(void) {
+    VDP_EnableDisplay(FALSE);
+    VDP_SetMode(VDP_MODE_SCREEN1);
+    VDP_SetColor(COLOR_WHITE);
+    VDP_FillVRAM_16K(0,0,0x4000);
+    VDP_WriteVRAM_16K(g_Tiles,g_ScreenPatternLow,40);
+    Print_SetTextFont(g_Font_MGL_Sample6,32);
+    Print_SetColor(COLOR_BLACK,COLOR_WHITE);
+    VDP_FillVRAM_16K(0x1F,g_ScreenColorLow,32);
+    VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
+    VDP_LoadSpritePattern(g_SpriteData,0,24);
+    VDP_DisableSpritesFrom(SP_END);
+}
+void ShowInfo(void) {
+    InitGameVideo();
+    g_Level=0; g_Deaths=0;
+    ResetRoom();
+    Print_SetPosition(10,5);  Print_DrawText("ARROWS: MOVE");
+    Print_SetPosition(10,7);  Print_DrawText("SPACE: JUMP");
+    Print_SetPosition(10,9);  Print_DrawText("R: RESTART");
+    Print_SetPosition(7,11);  Print_DrawText("P: PAUSE  M: SOUND");
+    Print_SetPosition(8,23);  Print_DrawText("BigFive Studios");
+    g_State=ST_INFO;
 }
 void Update(void) {
     u8 row8,dir,left,right,jump,pauseNow,resetNow,muteNow,startNow,res;
@@ -172,26 +230,30 @@ void Update(void) {
         if(!g_Sound) PSG_SetVolume(0,0);
     }
     g_MuteWas=muteNow;
-    if(pauseNow && !g_PauseWas && (g_State==1 || g_State==4)) {
-        if(g_State==1) {
-            g_State=4;
-            Print_SetPosition(5,5); Print_DrawText("PAUSED - P TO RESUME");
-        } else { ClearMessage(); DrawHeader(); g_State=1; }
+    if(pauseNow && !g_PauseWas && (g_State==ST_PLAY || g_State==ST_PAUSE)) {
+        if(g_State==ST_PLAY) {
+            g_State=ST_PAUSE;
+            Print_SetPosition(13,5); Print_DrawText("PAUSED");
+        } else { ClearMessage(); g_State=ST_PLAY; }
     }
     g_PauseWas=pauseNow;
-    if(resetNow && !g_ResetWas && g_State!=0) { ResetRoom(); g_State=1; }
+    if(resetNow && !g_ResetWas && g_State>=ST_PLAY && g_State<=ST_PAUSE) { ResetRoom(); g_State=ST_PLAY; }
     g_ResetWas=resetNow;
-    if(g_State==0) {
+    if(g_State==ST_TITLE) {
+        if(startNow && !g_StartWas) ShowInfo();
+    } else if(g_State==ST_INFO) {
         if(startNow && !g_StartWas) StartRoom();
-    } else if(g_State==2) {
-        if(--g_Timer==0) { ResetRoom(); g_State=1; }
-    } else if(g_State==3) {
-        if(startNow && !g_StartWas) {
+    } else if(g_State==ST_END) {
+        if(startNow && !g_StartWas) ShowTitle();
+    } else if(g_State==ST_DEAD) {
+        if(--g_Timer==0) { ResetRoom(); g_State=ST_PLAY; }
+    } else if(g_State==ST_CLEAR) {
+        if(--g_Timer==0) {
             g_Level++;
-            if(g_Level==NUM_ROOMS) { g_Level=0; g_Deaths=0; }
-            ResetRoom(); g_State=1;
+            if(g_Level==NUM_ROOMS) ShowEnd();
+            else { ResetRoom(); g_State=ST_PLAY; }
         }
-    } else if(g_State==1) {
+    } else if(g_State==ST_PLAY) {
         res=PlayStep(left,right,jump);
         if(g.Dirty & DIRTY_FLOOR) DrawFloor();
         if(g.Dirty & DIRTY_PLAT) DrawPlat();
@@ -201,14 +263,7 @@ void Update(void) {
         if(g.Ev & EV_SPIKE) Sound(450);
         if(g.Ev & EV_DOOR) Sound(330);
         if(res==PS_DIE) Die();
-        else if(res==PS_WIN) {
-            g_State=3; Sound(120);
-            Print_SetPosition(9,5); Print_DrawText("ROOM CLEARED!");
-            Print_SetPosition(7,7); Print_DrawText("ENTER: NEXT ROOM");
-            if(g_Level==NUM_ROOMS-1) {
-                Print_SetPosition(3,9); Print_DrawText("ALL 20 ROOMS DONE. YOU WIN!");
-            }
-        }
+        else if(res==PS_WIN) { g_State=ST_CLEAR; g_Timer=40; Sound(120); }
     }
     g_StartWas=startNow;
     if(g_SoundTimer) {
@@ -217,31 +272,15 @@ void Update(void) {
     }
 }
 void main(void) {
-    VDP_SetMode(VDP_MODE_SCREEN1);
-    VDP_SetColor(COLOR_WHITE);
-    VDP_EnableDisplay(FALSE);
-    VDP_FillVRAM_16K(0,0,0x4000);
-    VDP_WriteVRAM_16K(g_Tiles,g_ScreenPatternLow,40);
-    Print_SetTextFont(g_Font_MGL_Sample6,32);
-    Print_SetColor(COLOR_BLACK,COLOR_WHITE);
-    VDP_FillVRAM_16K(0x1F,g_ScreenColorLow,32);
-    VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
-    VDP_LoadSpritePattern(g_SpriteData,0,24);
-    VDP_DisableSpritesFrom(SP_END);
     *(volatile u8*)0xF3DB = 0; // CLIKSW: keyclick off
     PSG_SetMixer(PSG_TONE_A_ON | 0x40); // bit 6: keep PSG port A as input (joystick)
     PSG_SetVolume(0,0);
-    ResetRoom();
-    Print_SetPosition(8,5); Print_DrawText("KAPIROTO / MSX1");
-    Print_SetPosition(6,7); Print_DrawText("LOOKS EASY. TRUST ME.");
-    Print_SetPosition(6,10); Print_DrawText("ENTER OR SPACE: PLAY");
-    Print_SetPosition(6,12); Print_DrawText("ARROWS / A D + SPACE");
-    Print_SetPosition(6,14); Print_DrawText("20 ROOMS. GOOD LUCK.");
+    ShowTitle();
     BIOS_SetHookCallback(H_TIMI,TickHook);
     VDP_EnableVBlank(TRUE);
     while(1) {
         WaitFrame();
         Update();
-        DrawSprites();
+        if(g_State<ST_TITLE) DrawSprites();
     }
 }

@@ -82,7 +82,7 @@
 // VDP screen modes (additionnal limitations come from the selected MSX_VERSION)
 #define VDP_USE_MODE_T1 FALSE
 #define VDP_USE_MODE_G1 TRUE
-#define VDP_USE_MODE_G2 FALSE
+#define VDP_USE_MODE_G2 TRUE
 #define VDP_USE_MODE_MC FALSE
 #define VDP_USE_MODE_T2 FALSE
 #define VDP_USE_MODE_G3 FALSE
