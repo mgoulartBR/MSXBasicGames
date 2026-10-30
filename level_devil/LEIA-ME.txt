@@ -1,0 +1,41 @@
+LEVEL DEVIL - MSX1 EDITION
+Fan port independente. Jogo original: Unept.
+
+STATUS
+Previa jogável no navegador e fonte de referência para MSXGL.
+A ROM NÃO está incluída. Compile e teste antes de distribuir ou usar em hardware.
+
+COMO GERAR A ROM
+1. Baixe https://github.com/aoineko-fr/MSXgl
+   Configuração de referência: 6fd8858dce9a5a674529b78ec13d64262810eb34
+2. Copie esta pasta level_devil para MSXgl/projects/.
+3. Abra um terminal em MSXgl/projects/level_devil.
+   Windows: build.bat
+   Linux/macOS: sh build.sh
+4. O MSXGL informa o caminho de level_devil.rom na pasta de deploy.
+   Alvo: ROM_32K, MSX1, sem mapper. O tamanho final depende do SDK.
+5. Teste em openMSX/WebMSX com uma máquina MSX1.
+
+DEPENDÊNCIAS
+Windows/Linux: toolchain incluída no repositório MSXGL.
+macOS: Node.js e SDCC compatíveis; ajuste Compiler/Assembler/Linker/MakeLib.
+O script usa Node do PATH ou tools/build/Node/node do MSXGL.
+Consulte https://aoineko.org/msxgl/index.php?title=Build_tool
+
+CONTROLES
+Setas ou A/D: andar. Espaço, W ou seta para cima: pular.
+Joystick porta 1: direções; A ou B: pular.
+P ou ESC: pausar. R: reiniciar a sala. M: som.
+Enter ou pulo: começar/avançar. Após a sala 12, volta à primeira.
+
+ESCOPO
+12 salas, chão que desaba, espinhos, bloco que cai e porta que se move.
+SCREEN 1 (TMS9918), sprites de hardware, teclado/joystick e PSG.
+Não é uma reprodução integral do jogo comercial.
+Progresso da ROM mantido apenas durante a sessão.
+
+CRÉDITOS
+Level Devil: Unept, https://unept.com/
+MSXGL: Guillaume Aoineko Blanchard, https://github.com/aoineko-fr/MSXgl
+Arte e implementação deste fan port: 8bit/lab.
+Código e assets deste kit: CC BY-SA 4.0. Veja LICENSE.txt.

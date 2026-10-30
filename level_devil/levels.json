@@ -1,0 +1,314 @@
+[
+  {
+    "name": "Parece fácil",
+    "hint": "Um buraco no caminho. Nada que um pulo não resolva.",
+    "gap": [
+      104,
+      24
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Confie no chão",
+    "hint": "As rachaduras avisam: esse chão vai sumir. Continue em frente.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      96,
+      32
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Pontas surpresas",
+    "hint": "Espinhos aparecem quando você chega perto. Espere e salte.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      120,
+      16
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Olhe para cima",
+    "hint": "Deixe o bloco cair. Depois, pule por cima dele.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      136,
+      16
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Cadê a porta?",
+    "hint": "A saída muda de lugar. Não pare de andar quando ela se mover.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 1
+  },
+  {
+    "name": "Tudo ao mesmo tempo",
+    "hint": "Primeiro o buraco, depois os espinhos. Um pulo de cada vez.",
+    "gap": [
+      80,
+      24
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      152,
+      16
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Um salto de fé",
+    "hint": "A plataforma é sólida. Use-a se quiser uma rota mais segura.",
+    "gap": [
+      96,
+      32
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      152,
+      120
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Sem apoio",
+    "hint": "O chão racha e o caminho acaba. A plataforma pode ajudar.",
+    "gap": [
+      152,
+      24
+    ],
+    "crack": [
+      80,
+      24
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      112,
+      120
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Céu em queda",
+    "hint": "Espere o bloco. Os espinhos vêm logo depois.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      168,
+      16
+    ],
+    "block": [
+      96,
+      16
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Quase lá",
+    "hint": "Não comemore antes de atravessar o chão rachado e alcançar a porta.",
+    "gap": [
+      0,
+      0
+    ],
+    "crack": [
+      88,
+      32
+    ],
+    "spike": [
+      0,
+      0
+    ],
+    "block": [
+      0,
+      0
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 1
+  },
+  {
+    "name": "Nem olhe para baixo",
+    "hint": "Buraco, bloco e espinhos. Observe a ordem e encontre seu ritmo.",
+    "gap": [
+      72,
+      24
+    ],
+    "crack": [
+      0,
+      0
+    ],
+    "spike": [
+      184,
+      16
+    ],
+    "block": [
+      136,
+      16
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 220,
+    "move": 0
+  },
+  {
+    "name": "Só mais uma",
+    "hint": "Você já aprendeu todas as maldades. Agora junte tudo em uma corrida.",
+    "gap": [
+      72,
+      24
+    ],
+    "crack": [
+      120,
+      24
+    ],
+    "spike": [
+      176,
+      16
+    ],
+    "block": [
+      208,
+      16
+    ],
+    "platform": [
+      0,
+      0
+    ],
+    "door": 224,
+    "move": 1
+  }
+]
