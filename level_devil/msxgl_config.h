@@ -225,12 +225,12 @@
 // - PRINT_WIDTH_6
 // - PRINT_WIDTH_8
 // - PRINT_WIDTH_X (variable)
-#define PRINT_WIDTH PRINT_WIDTH_6
+#define PRINT_WIDTH PRINT_WIDTH_1
 // Character height
 // - PRINT_HEIGHT_1 (text mode)
 // - PRINT_HEIGHT_8
 // - PRINT_HEIGHT_X (variable)
-#define PRINT_HEIGHT PRINT_HEIGHT_8
+#define PRINT_HEIGHT PRINT_HEIGHT_1
 
 //-----------------------------------------------------------------------------
 // SPRITE FX MODULE
