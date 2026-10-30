@@ -13,7 +13,18 @@
 #include "psg.h"
 #include "font/font_mgl_sample6.h"
 #include "ld_logic.h"
+#include "build_config.h"
 #include "screens.h"
+
+// Level order: the full game plays rooms 1-20; the demo plays a hand-picked selection of 5
+#ifdef KAPIROTO_DEMO
+#define NUM_LEVELS  5
+const u8 g_Order[NUM_LEVELS] = { 0, 1, 5, 7, 8 };
+#define ROOM_OF(l)  g_Order[l]
+#else
+#define NUM_LEVELS  NUM_ROOMS
+#define ROOM_OF(l)  (l)
+#endif
 
 // Tiles: 0 empty, 1 floor, 2 cracked floor, 3 floor spike
 const u8 g_Tiles[40] = {
@@ -114,7 +125,8 @@ void DrawHeader(void) {
     Print_SetPosition(1,1);
     Print_DrawText("ROOM ");
     Print_DrawInt(g_Level+1);
-    Print_DrawText("/20");
+    Print_DrawText("/");
+    Print_DrawInt(NUM_LEVELS);
     Print_SetPosition(18,1);
     Print_DrawText("DEATHS ");
     Print_DrawInt(g_Deaths);
@@ -129,7 +141,7 @@ void DrawRoom(void) {
     VDP_EnableDisplay(TRUE);
 }
 void ResetRoom(void) {
-    ResetRoomState(g_Level);
+    ResetRoomState(ROOM_OF(g_Level));
     DrawRoom();
 }
 void DrawSprites(void) {
@@ -183,12 +195,12 @@ void ShowImage(const u8* pat, const u8* col, u8 backdrop) {
     VDP_EnableDisplay(TRUE);
 }
 void ShowTitle(void) {
+#ifdef KAPIROTO_DEMO
+    ShowImage(g_TitleDemo_Pat,g_TitleDemo_Col,COLOR_WHITE);
+#else
     ShowImage(g_Title_Pat,g_Title_Col,COLOR_WHITE);
+#endif
     g_State=ST_TITLE;
-}
-void ShowEnd(void) {
-    ShowImage(g_End_Pat,g_End_Col,COLOR_DARK_BLUE);
-    g_State=ST_END;
 }
 void InitGameVideo(void) {
     VDP_EnableDisplay(FALSE);
@@ -213,6 +225,22 @@ void ShowInfo(void) {
     Print_SetPosition(7,11);  Print_DrawText("P: PAUSE  M: SOUND");
     Print_SetPosition(8,23);  Print_DrawText("BigFive Studios");
     g_State=ST_INFO;
+}
+void ShowEnd(void) {
+#ifdef KAPIROTO_DEMO
+    InitGameVideo();
+    Print_SetPosition(9,5);   Print_DrawText("DEMO COMPLETE!");
+    Print_SetPosition(10,7);  Print_DrawText("DEATHS: "); Print_DrawInt(g_Deaths);
+    Print_SetPosition(5,11);  Print_DrawText("THE FULL GAME HAS 20 ROOMS");
+    Print_SetPosition(5,13);  Print_DrawText("AND MANY MORE WAYS TO DIE");
+    Print_SetPosition(5,17);  Print_DrawText("bigfivestudios.itch.io");
+    Print_SetPosition(9,18);  Print_DrawText("/kapiroto-msx");
+    Print_SetPosition(8,23);  Print_DrawText("BigFive Studios");
+    VDP_EnableDisplay(TRUE);
+#else
+    ShowImage(g_End_Pat,g_End_Col,COLOR_DARK_BLUE);
+#endif
+    g_State=ST_END;
 }
 void Update(void) {
     u8 row8,dir,left,right,jump,pauseNow,resetNow,muteNow,startNow,res;
@@ -250,7 +278,7 @@ void Update(void) {
     } else if(g_State==ST_CLEAR) {
         if(--g_Timer==0) {
             g_Level++;
-            if(g_Level==NUM_ROOMS) ShowEnd();
+            if(g_Level==NUM_LEVELS) ShowEnd();
             else { ResetRoom(); g_State=ST_PLAY; }
         }
     } else if(g_State==ST_PLAY) {

@@ -48,8 +48,17 @@ Title and ending are SCREEN 2 pictures (assets/title_src.webp, assets/end_src.we
 converted to the MSX1 palette, 2 colors per 8x1 run, RLE-packed in screens.h.
 After the title comes a short controls screen ("BigFive Studios" in the footer).
 
+DEMO
+kapiroto_demo.rom is a 5-room demo: rooms 1, 2, 6, 8 and 9 of the full game (gap and fleeing door,
+crumbling floor, saws, jumping platform, sliding block with a falling spike), a "DEMO" title screen and
+an end-of-demo screen pointing to the full game.
+Build it with tools/make_demo.sh from a kapiroto folder inside MSXgl/projects (it creates
+MSXgl/projects/kapiroto_demo with KAPIROTO_DEMO defined in build_config.h).
+The demo room list is g_Order in kapiroto.c.
+
 FILES
 kapiroto.c         Input, drawing (SCREEN 1 tiles + hardware sprites), text and sound.
+build_config.h     Empty for the full game; the demo build defines KAPIROTO_DEMO here.
 screens.h          Title/ending picture data. Generated: python3 tools/make_screens.py
 tools/make_screens.py  Image -> MSX1 SCREEN 2 converter (needs Pillow and numpy).
 ld_logic.h         Game rules and the 20 rooms (g_Rooms table). No hardware access.

@@ -62,3 +62,8 @@ Code and assets: CC BY-SA 4.0.
 - **Cover:** `devlog_cover_1280x720.png` (16:9)
 - **Tags:** msx, retro, platformer, launch, devlog
 - **Language:** English
+
+## Demo
+- File: `kapiroto_demo.rom` (5 rooms). Upload it to the same project as a second file, label: "Kapiroto DEMO - 5 rooms, MSX1 ROM".
+- If the full game is paid, keep the demo free: set the demo file's price in the Uploads section ("Pay what you want / free") or publish it as a separate free project.
+- Mention in the description: "A free 5-room demo is available: kapiroto_demo.rom".
