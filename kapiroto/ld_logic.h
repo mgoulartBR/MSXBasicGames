@@ -1,6 +1,6 @@
 /*
- * LEVEL DEVIL - MSX1 Edition: game logic (no hardware access).
- * Shared by the MSX build (level_devil.c) and the native room solver (tools/solver.c).
+ * KAPIROTO - MSX1: game logic (no hardware access).
+ * Shared by the MSX build (kapiroto.c) and the native room solver (tools/solver.c).
  * Expects u8/i8/u16/i16 to be defined by the includer.
  * Copyright (c) 2026 8bit/lab. SPDX-License-Identifier: CC-BY-SA-4.0
  */
@@ -155,6 +155,8 @@ u8 PlayStep(u8 left, u8 right, u8 jump) {
         if(g.PX >= g.PlatX + 32 && nx < g.PlatX + 32) nx = g.PlatX + 32;
     }
     if(g_R->push.spd && feet > BLOCK_Y + 1 && Overlap(nx, 0, PW, 1, g.PushX, 0, 16, 1)) nx = g.PX;
+    for(i = 0; i < 3; i++)
+        if(g.DropState[i] == 2 && feet > BLOCK_Y + 1 && Overlap(nx, 0, PW, 1, g_R->drop[i].x + 2, 0, 12, 1)) nx = g.PX;
     g.PX = nx;
 
     // ---- floor traps
@@ -246,6 +248,11 @@ u8 PlayStep(u8 left, u8 right, u8 jump) {
         if(g_R->push.spd && g.PX + 10 > g.PushX && g.PX < g.PushX + 16 && oldY + 192 <= BLOCK_Y * 16 && newY + 192 >= BLOCK_Y * 16) {
             landed = 1; landY = BLOCK_Y * 16;
         }
+        for(i = 0; i < 3; i++) {
+            if(g.DropState[i] == 2 && g.PX + 10 > g_R->drop[i].x + 2 && g.PX < g_R->drop[i].x + 14 && oldY + 192 <= BLOCK_Y * 16 && newY + 192 >= BLOCK_Y * 16) {
+                landed = 1; landY = BLOCK_Y * 16;
+            }
+        }
         if(landed) { newY = landY - 192; g.VY = 0; g.Grounded = 1; }
     } else if(g_R->platY && g.PX + 10 > g.PlatX && g.PX < g.PlatX + 32 && oldY >= (i16)(g_R->platY + 8) * 16 && newY < (i16)(g_R->platY + 8) * 16) {
         newY = (i16)(g_R->platY + 8) * 16; g.VY = 0;
@@ -260,7 +267,7 @@ u8 PlayStep(u8 left, u8 right, u8 jump) {
     if(g.BlockState && g.PX + 9 > g_R->blockX + 1 && g.PX + 1 < (u16)g_R->blockX + 15 && g.PY + 192 > (g.BlockPY >> 4) * 16 + 16 && g.PY < ((g.BlockPY >> 4) + 15) * 16) { g.Ev |= EV_DIE; return PS_DIE; }
     for(i = 0; i < 3; i++) {
         if(i < 2 && g_R->saw[i].spd && Overlap(g.PX + 1, py + 1, PW - 2, PH - 2, SawX(i) + 3, SawY(i) + 3, 10, 10)) { g.Ev |= EV_DIE; return PS_DIE; }
-        if(g_R->drop[i].x && g.DropState[i] && Overlap(g.PX + 1, py + 1, PW - 2, PH - 2, g_R->drop[i].x + 4, (g.DropY[i] >> 4) + 2, 8, 13)) { g.Ev |= EV_DIE; return PS_DIE; }
+        if(g_R->drop[i].x && g.DropState[i] == 1 && Overlap(g.PX + 1, py + 1, PW - 2, PH - 2, g_R->drop[i].x + 4, (g.DropY[i] >> 4) + 2, 8, 13)) { g.Ev |= EV_DIE; return PS_DIE; }
     }
     // ---- exit
     if(g.PX + 10 > g.DoorX + 3 && g.PX < g.DoorX + 13 && g.PY + 192 > 132 * 16 && g.PY < 152 * 16) { g.Ev |= EV_WIN; return PS_WIN; }

@@ -1,4 +1,4 @@
-/* Native room solver for Level Devil: BFS over every reachable game state.
+/* Native room solver for Kapiroto: BFS over every reachable game state.
  * Usage: solver <K> [room 1..20]   (K = frames each key press is held; K=1 is exact)
  * Build: gcc -O2 -o solver tools/solver.c
  */

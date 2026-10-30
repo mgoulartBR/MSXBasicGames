@@ -1,6 +1,6 @@
 /*
- * LEVEL DEVIL - MSX1 Edition
- * Fan-made independent adaptation. Original game by Unept.
+ * KAPIROTO - MSX1
+ * Inspired by Level Devil by Unept.
  * Copyright (c) 2026 8bit/lab. SPDX-License-Identifier: CC-BY-SA-4.0
  * Build: MSXgl, Machine=1, Target=ROM_32K.
  * Reference source: validate with the pinned SDK and test on MSX1.
@@ -102,14 +102,14 @@ void ClearMessage(void) {
 }
 void DrawHeader(void) {
     Print_SetPosition(1,1);
-    Print_DrawText("SALA ");
+    Print_DrawText("ROOM ");
     Print_DrawInt(g_Level+1);
     Print_DrawText("/20");
     Print_SetPosition(18,1);
-    Print_DrawText("MORTES ");
+    Print_DrawText("DEATHS ");
     Print_DrawInt(g_Deaths);
     Print_SetPosition(1,23);
-    Print_DrawText("R:REINICIAR P:PAUSA M:SOM");
+    Print_DrawText("R:RESTART P:PAUSE M:SOUND");
 }
 void DrawRoom(void) {
     VDP_EnableDisplay(FALSE);
@@ -146,10 +146,10 @@ void Die(void) {
     if(g_Deaths<255) g_Deaths++;
     g_State=2; g_Timer=34;
     Sound(900);
-    Print_SetPosition(6,5);
-    Print_DrawText("MAIS UMA TENTATIVA!");
-    Print_SetPosition(8,7);
-    Print_DrawText("MORTES: "); Print_DrawInt(g_Deaths);
+    Print_SetPosition(11,5);
+    Print_DrawText("TRY AGAIN!");
+    Print_SetPosition(10,7);
+    Print_DrawText("DEATHS: "); Print_DrawInt(g_Deaths);
 }
 void StartRoom(void) {
     ClearMessage();
@@ -160,9 +160,9 @@ void Update(void) {
     u8 row8,dir,left,right,jump,pauseNow,resetNow,muteNow,startNow,res;
     row8=Keyboard_Read(8);
     dir=Joystick_GetDirection(JOY_PORT_1);
-    left=IS_KEY_PRESSED(row8,KEY_LEFT)||IS_KEY_PRESSED(row8,KEY_A)||dir==JOY_INPUT_DIR_LEFT;
-    right=IS_KEY_PRESSED(row8,KEY_RIGHT)||IS_KEY_PRESSED(row8,KEY_D)||dir==JOY_INPUT_DIR_RIGHT;
-    jump=IS_KEY_PRESSED(row8,KEY_SPACE)||IS_KEY_PRESSED(row8,KEY_UP)||IS_KEY_PRESSED(row8,KEY_W)||dir==JOY_INPUT_DIR_UP||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_A)||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_B);
+    left=IS_KEY_PRESSED(row8,KEY_LEFT)||Keyboard_IsKeyPressed(KEY_A)||dir==JOY_INPUT_DIR_LEFT;
+    right=IS_KEY_PRESSED(row8,KEY_RIGHT)||Keyboard_IsKeyPressed(KEY_D)||dir==JOY_INPUT_DIR_RIGHT;
+    jump=IS_KEY_PRESSED(row8,KEY_SPACE)||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_A)||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_B);
     pauseNow=Keyboard_IsKeyPressed(KEY_P)||Keyboard_IsKeyPressed(KEY_ESC);
     resetNow=Keyboard_IsKeyPressed(KEY_R);
     muteNow=Keyboard_IsKeyPressed(KEY_M);
@@ -175,7 +175,7 @@ void Update(void) {
     if(pauseNow && !g_PauseWas && (g_State==1 || g_State==4)) {
         if(g_State==1) {
             g_State=4;
-            Print_SetPosition(5,5); Print_DrawText("PAUSA - P PARA VOLTAR");
+            Print_SetPosition(5,5); Print_DrawText("PAUSED - P TO RESUME");
         } else { ClearMessage(); DrawHeader(); g_State=1; }
     }
     g_PauseWas=pauseNow;
@@ -203,10 +203,10 @@ void Update(void) {
         if(res==PS_DIE) Die();
         else if(res==PS_WIN) {
             g_State=3; Sound(120);
-            Print_SetPosition(7,5); Print_DrawText("SALA CONCLUIDA!");
-            Print_SetPosition(5,7); Print_DrawText("ENTER: PROXIMA SALA");
+            Print_SetPosition(9,5); Print_DrawText("ROOM CLEARED!");
+            Print_SetPosition(7,7); Print_DrawText("ENTER: NEXT ROOM");
             if(g_Level==NUM_ROOMS-1) {
-                Print_SetPosition(4,9); Print_DrawText("20 SALAS. VOCE VENCEU!");
+                Print_SetPosition(3,9); Print_DrawText("ALL 20 ROOMS DONE. YOU WIN!");
             }
         }
     }
@@ -228,15 +228,15 @@ void main(void) {
     VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
     VDP_LoadSpritePattern(g_SpriteData,0,24);
     VDP_DisableSpritesFrom(SP_END);
-    *(volatile u8*)0xF3DB = 0; // CLIKSW: desliga o keyclick
-    PSG_SetMixer(PSG_TONE_A_ON | 0x40); // bit 6: manter a porta A do PSG como entrada (joystick)
+    *(volatile u8*)0xF3DB = 0; // CLIKSW: keyclick off
+    PSG_SetMixer(PSG_TONE_A_ON | 0x40); // bit 6: keep PSG port A as input (joystick)
     PSG_SetVolume(0,0);
     ResetRoom();
-    Print_SetPosition(6,5); Print_DrawText("LEVEL DEVIL / MSX1");
-    Print_SetPosition(5,7); Print_DrawText("PARECE FACIL. CONFIA.");
-    Print_SetPosition(4,10); Print_DrawText("ENTER OU ESPACO: JOGAR");
-    Print_SetPosition(4,12); Print_DrawText("SETAS / A D + ESPACO");
-    Print_SetPosition(4,14); Print_DrawText("20 SALAS. BOA SORTE.");
+    Print_SetPosition(8,5); Print_DrawText("KAPIROTO / MSX1");
+    Print_SetPosition(6,7); Print_DrawText("LOOKS EASY. TRUST ME.");
+    Print_SetPosition(6,10); Print_DrawText("ENTER OR SPACE: PLAY");
+    Print_SetPosition(6,12); Print_DrawText("ARROWS / A D + SPACE");
+    Print_SetPosition(6,14); Print_DrawText("20 ROOMS. GOOD LUCK.");
     BIOS_SetHookCallback(H_TIMI,TickHook);
     VDP_EnableVBlank(TRUE);
     while(1) {
