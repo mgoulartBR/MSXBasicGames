@@ -55,3 +55,10 @@ Code and assets: CC BY-SA 4.0.
 - Cover: `cover_630x500.png`
 - Screenshots (1024x768): `screenshot_1_title.png`, `screenshot_2_room7.png`, `screenshot_3_room13.png`, `screenshot_4_room20.png`
 - Suggested captions: "Title screen" / "Room 7: spikes fall from the ceiling" / "Room 13: the platform moves every time you jump" / "Room 20: everything at once"
+
+## Launch devlog
+- **Post type:** Major Update or Launch
+- **Title:** Kapiroto is out: 20 rooms of MSX1 trolling
+- **Cover:** `devlog_cover_1280x720.png` (16:9)
+- **Tags:** msx, retro, platformer, launch, devlog
+- **Language:** English
