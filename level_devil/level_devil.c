@@ -4,30 +4,17 @@
  * Copyright (c) 2026 8bit/lab. SPDX-License-Identifier: CC-BY-SA-4.0
  * Build: MSXgl, Machine=1, Target=ROM_32K.
  * Reference source: validate with the pinned SDK and test on MSX1.
+ *
+ * The game rules live in ld_logic.h (shared with tools/solver.c); this file only
+ * handles input, drawing (SCREEN 1 tiles + hardware sprites), text and sound.
  */
 #include "msxgl.h"
 #include "input.h"
 #include "psg.h"
 #include "font/font_mgl_sample6.h"
+#include "ld_logic.h"
 
-struct Room {
-    u8 gapX, gapW, crackX, crackW, spikeX, spikeW;
-    u8 blockX, blockW, platX, platY, doorX, doorMove;
-};
-const struct Room g_Rooms[12] = {
-    {96,40,0,0,0,0,0,0,0,0,220,0},
-    {0,0,88,40,0,0,0,0,0,0,220,0},
-    {0,0,0,0,112,32,0,0,0,0,220,0},
-    {0,0,0,0,0,0,120,16,0,0,220,0},
-    {100,32,0,0,0,0,0,0,0,0,220,1},
-    {64,40,0,0,160,24,0,0,0,0,220,0},
-    {0,0,0,0,176,24,0,0,120,128,220,0},
-    {150,40,72,32,0,0,0,0,112,120,220,0},
-    {0,0,0,0,150,32,100,16,0,0,220,0},
-    {0,0,80,40,0,0,0,0,0,0,220,1},
-    {64,32,0,0,176,24,130,16,0,0,220,0},
-    {60,40,116,28,168,24,208,16,0,0,224,1}
-};
+// Tiles: 0 empty, 1 floor, 2 cracked floor, 3 floor spike
 const u8 g_Tiles[40] = {
     0,0,0,0,0,0,0,0,
     255,255,239,255,255,255,127,255,
@@ -35,7 +22,8 @@ const u8 g_Tiles[40] = {
     16,16,56,56,124,124,254,254,
     255,195,165,153,153,165,195,255
 };
-const u8 g_SpriteData[128] = {
+// Sprite patterns (16x16, 4 each): 0 player, 4 door top, 8 door bottom, 12 block, 16 saw, 20 ceiling spike
+const u8 g_SpriteData[192] = {
     0,32,48,63,63,39,39,63,
     63,63,63,56,0,0,0,0,
     0,16,48,240,240,48,48,240,
@@ -51,24 +39,36 @@ const u8 g_SpriteData[128] = {
     255,255,224,208,200,196,194,193,
     193,194,196,200,208,224,255,255,
     255,255,7,11,19,35,67,131,
-    131,67,35,19,11,7,255,255
+    131,67,35,19,11,7,255,255,
+    1,1,55,63,31,63,60,252,
+    252,60,63,31,63,55,1,1,
+    128,128,236,252,248,252,60,63,
+    63,60,252,248,252,236,128,128,
+    63,63,63,63,31,31,31,15,
+    15,7,7,3,3,3,1,1,
+    252,252,252,248,248,240,240,240,
+    224,224,192,192,128,128,128,128
 };
+
+// Sprite planes
+#define SP_PLAYER   0
+#define SP_DOOR     1   // 1,2
+#define SP_BLOCK    3
+#define SP_PUSH     4
+#define SP_SAW      5   // 5,6
+#define SP_DROP     7   // 7,8,9
+#define SP_END      10
+#define SPR_HIDE    200
+
 volatile u8 g_Tick = 0;
-const struct Room* g_R;
 u8 g_Level=0, g_Deaths=0, g_State=0, g_Timer=0;
-u8 g_PX=22, g_Grounded=1, g_Coyote=0, g_JumpBuffer=0;
-i16 g_PY=2240, g_VY=0;
-u8 g_Crack=0, g_Spike=0, g_BlockState=0, g_BlockVy=0;
-u16 g_BlockPY=512;
-u8 g_DoorX=220, g_DoorMoved=0, g_Frame=0;
-u8 g_PauseWas=0, g_ResetWas=0, g_MuteWas=0, g_JumpWas=0;
-u8 g_Sound=1, g_SoundTimer=0;
+u8 g_PauseWas=0, g_ResetWas=0, g_MuteWas=0, g_StartWas=0;
+u8 g_Sound=1, g_SoundTimer=0, g_PlatDrawn=255;
 
 void TickHook(void) { g_Tick=1; }
 void WaitFrame(void) {
     while(!g_Tick) Halt();
     g_Tick=0;
-    g_Frame++;
 }
 void Sound(u16 period) {
     if(!g_Sound) return;
@@ -79,57 +79,68 @@ void Sound(u16 period) {
 void Tile(u8 x, u8 y, u8 t) {
     VDP_Poke_16K(t, g_ScreenLayoutLow+(u16)y*32+x);
 }
-u8 InRange(u8 x, u8 start, u8 width) {
-    return width && x>=start && x<(u16)start+width;
-}
-u8 Solid(u8 x) {
-    if(InRange(x,g_R->gapX,g_R->gapW)) return FALSE;
-    if(g_Crack>=10 && InRange(x,g_R->crackX,g_R->crackW)) return FALSE;
-    return TRUE;
-}
 void DrawFloor(void) {
     u8 x,y,t;
     for(x=0;x<32;x++) {
         t=Solid(x*8+4) ? 1 : 0;
         for(y=19;y<23;y++) Tile(x,y,t);
-        if(g_R->crackW && g_Crack<10 && Solid(x*8+4)) Tile(x,19,2);
-        t=(g_Spike>=6 && InRange(x*8+4,g_R->spikeX,g_R->spikeW)) ? 3 : 0;
+        if(g_R->crackW && g.Crack<10 && Solid(x*8+4)) Tile(x,19,2);
+        t=(g.Spike>=6 && InRange(x*8+4,g_R->spikeX,g_R->spikeW)) ? 3 : 0;
         Tile(x,18,t);
     }
 }
-void ClearMessage(void) {
-    VDP_FillVRAM_16K(0,g_ScreenLayoutLow+4*32,9*32);
+void DrawPlat(void) {
+    u8 i,row;
+    if(!g_R->platY) return;
+    row=g_R->platY>>3;
+    if(g_PlatDrawn!=255) for(i=0;i<4;i++) Tile((g_PlatDrawn>>3)+i,row,0);
+    for(i=0;i<4;i++) Tile((g.PlatX>>3)+i,row,1);
+    g_PlatDrawn=g.PlatX;
 }
-void DrawRoom(void) {
-    u8 i;
-    VDP_EnableDisplay(FALSE);
-    VDP_FillVRAM_16K(0,g_ScreenLayoutLow,768);
-    DrawFloor();
-    if(g_R->platY) {
-        for(i=0;i<4;i++) Tile((g_R->platX>>3)+i,g_R->platY>>3,1);
-    }
+void ClearMessage(void) {
+    VDP_FillVRAM_16K(0,g_ScreenLayoutLow+4*32,12*32);
+}
+void DrawHeader(void) {
     Print_SetPosition(1,1);
-    Print_DrawText("LEVEL DEVIL     SALA ");
+    Print_DrawText("SALA ");
     Print_DrawInt(g_Level+1);
+    Print_DrawText("/20");
+    Print_SetPosition(18,1);
+    Print_DrawText("MORTES ");
+    Print_DrawInt(g_Deaths);
     Print_SetPosition(1,23);
     Print_DrawText("R:REINICIAR P:PAUSA M:SOM");
+}
+void DrawRoom(void) {
+    VDP_EnableDisplay(FALSE);
+    VDP_FillVRAM_16K(0,g_ScreenLayoutLow,768);
+    g_PlatDrawn=255;
+    DrawFloor();
+    DrawPlat();
+    DrawHeader();
     VDP_EnableDisplay(TRUE);
 }
 void ResetRoom(void) {
-    g_R=&g_Rooms[g_Level];
-    g_PX=22; g_PY=140*16; g_VY=0;
-    g_Grounded=1; g_Coyote=6; g_JumpBuffer=0;
-    g_Crack=0; g_Spike=0; g_BlockState=0; g_BlockVy=0;
-    g_BlockPY=32*16; g_DoorX=g_R->doorX; g_DoorMoved=0;
+    ResetRoomState(g_Level);
     DrawRoom();
 }
 void DrawSprites(void) {
-    VDP_SetSpriteSM1(0,g_PX,(u8)(g_PY>>4)-1,0,COLOR_BLACK);
-    VDP_SetSpriteSM1(1,g_DoorX,127,4,COLOR_DARK_GREEN);
-    VDP_SetSpriteSM1(2,g_DoorX,143,8,COLOR_DARK_GREEN);
-    if(g_BlockState) {
-        VDP_SetSpriteSM1(3,g_R->blockX,(u8)(g_BlockPY>>4)-1,12,COLOR_BLACK);
-    } else VDP_DisableSpritesFrom(3);
+    u8 i;
+    VDP_SetSpriteSM1(SP_PLAYER,g.PX,(u8)(g.PY>>4)-1,0,COLOR_BLACK);
+    VDP_SetSpriteSM1(SP_DOOR,g.DoorX,127,4,COLOR_DARK_GREEN);
+    VDP_SetSpriteSM1(SP_DOOR+1,g.DoorX,143,8,COLOR_DARK_GREEN);
+    if(g.BlockState) VDP_SetSpriteSM1(SP_BLOCK,g_R->blockX,(u8)(g.BlockPY>>4)-1,12,COLOR_BLACK);
+    else VDP_SetSpriteSM1(SP_BLOCK,0,SPR_HIDE,12,COLOR_BLACK);
+    if(g_R->push.spd) VDP_SetSpriteSM1(SP_PUSH,(u8)g.PushX,BLOCK_Y-1,12,COLOR_BLACK);
+    else VDP_SetSpriteSM1(SP_PUSH,0,SPR_HIDE,12,COLOR_BLACK);
+    for(i=0;i<2;i++) {
+        if(g_R->saw[i].spd) VDP_SetSpriteSM1(SP_SAW+i,SawX(i),SawY(i)-1,16,COLOR_MEDIUM_RED);
+        else VDP_SetSpriteSM1(SP_SAW+i,0,SPR_HIDE,16,COLOR_MEDIUM_RED);
+    }
+    for(i=0;i<3;i++) {
+        if(g_R->drop[i].x) VDP_SetSpriteSM1(SP_DROP+i,g_R->drop[i].x,(u8)(g.DropY[i]>>4)-1,20,COLOR_DARK_RED);
+        else VDP_SetSpriteSM1(SP_DROP+i,0,SPR_HIDE,20,COLOR_DARK_RED);
+    }
 }
 void Die(void) {
     if(g_Deaths<255) g_Deaths++;
@@ -142,22 +153,20 @@ void Die(void) {
 }
 void StartRoom(void) {
     ClearMessage();
+    DrawHeader();
     g_State=1;
 }
 void Update(void) {
-    u8 row8,dir,left,right,jump,pauseNow,resetNow,muteNow;
-    u8 nx,landed;
-    i16 oldY,newY,landY;
+    u8 row8,dir,left,right,jump,pauseNow,resetNow,muteNow,startNow,res;
     row8=Keyboard_Read(8);
     dir=Joystick_GetDirection(JOY_PORT_1);
     left=IS_KEY_PRESSED(row8,KEY_LEFT)||IS_KEY_PRESSED(row8,KEY_A)||dir==JOY_INPUT_DIR_LEFT;
     right=IS_KEY_PRESSED(row8,KEY_RIGHT)||IS_KEY_PRESSED(row8,KEY_D)||dir==JOY_INPUT_DIR_RIGHT;
     jump=IS_KEY_PRESSED(row8,KEY_SPACE)||IS_KEY_PRESSED(row8,KEY_UP)||IS_KEY_PRESSED(row8,KEY_W)||dir==JOY_INPUT_DIR_UP||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_A)||Joystick_IsButtonPressed(JOY_PORT_1,JOY_INPUT_TRIGGER_B);
-    if(jump && !g_JumpWas) g_JumpBuffer=6;
-    g_JumpWas=jump;
     pauseNow=Keyboard_IsKeyPressed(KEY_P)||Keyboard_IsKeyPressed(KEY_ESC);
     resetNow=Keyboard_IsKeyPressed(KEY_R);
     muteNow=Keyboard_IsKeyPressed(KEY_M);
+    startNow=jump||Keyboard_IsKeyPressed(KEY_RETURN);
     if(muteNow && !g_MuteWas) {
         g_Sound=!g_Sound;
         if(!g_Sound) PSG_SetVolume(0,0);
@@ -167,80 +176,41 @@ void Update(void) {
         if(g_State==1) {
             g_State=4;
             Print_SetPosition(5,5); Print_DrawText("PAUSA - P PARA VOLTAR");
-        } else { ClearMessage(); g_State=1; }
+        } else { ClearMessage(); DrawHeader(); g_State=1; }
     }
     g_PauseWas=pauseNow;
     if(resetNow && !g_ResetWas && g_State!=0) { ResetRoom(); g_State=1; }
     g_ResetWas=resetNow;
     if(g_State==0) {
-        if(g_JumpBuffer || Keyboard_IsKeyPressed(KEY_RETURN)) StartRoom();
+        if(startNow && !g_StartWas) StartRoom();
     } else if(g_State==2) {
         if(--g_Timer==0) { ResetRoom(); g_State=1; }
     } else if(g_State==3) {
-        if(g_JumpBuffer || Keyboard_IsKeyPressed(KEY_RETURN)) {
+        if(startNow && !g_StartWas) {
             g_Level++;
-            if(g_Level==12) { g_Level=0; g_Deaths=0; }
+            if(g_Level==NUM_ROOMS) { g_Level=0; g_Deaths=0; }
             ResetRoom(); g_State=1;
         }
     } else if(g_State==1) {
-        if(g_Coyote) g_Coyote--;
-        if(g_Grounded) g_Coyote=6;
-        if(g_JumpBuffer && g_Coyote) {
-            g_VY=-76; g_Grounded=0; g_Coyote=0; g_JumpBuffer=0; Sound(240);
-        }
-        if(g_JumpBuffer) g_JumpBuffer--;
-        nx=g_PX;
-        if(left && nx>2) nx-=2;
-        if(right && nx<244) nx+=2;
-        if(g_R->platY && g_PY+192>(i16)g_R->platY*16 && g_PY<(i16)(g_R->platY+8)*16) {
-            if(g_PX+10<=g_R->platX && nx+10>g_R->platX) nx=g_R->platX-10;
-            if(g_PX>=g_R->platX+32 && nx<g_R->platX+32) nx=g_R->platX+32;
-        }
-        g_PX=nx;
-        if(g_R->crackW && (u16)g_PX+10>g_R->crackX && g_PX<(u16)g_R->crackX+g_R->crackW && g_Crack<250) {
-            g_Crack++;
-            if(g_Crack==10) { DrawFloor(); Sound(650); }
-        }
-        if(g_R->spikeW && (u16)g_PX+30>g_R->spikeX && g_PX<(u16)g_R->spikeX+g_R->spikeW+10 && g_Spike<250) {
-            g_Spike++;
-            if(g_Spike==6) { DrawFloor(); Sound(450); }
-        }
-        if(g_R->blockW && (u16)g_PX+32>g_R->blockX) g_BlockState=1;
-        if(g_BlockState && g_BlockPY<136*16) {
-            g_BlockVy+=3;
-            g_BlockPY+=g_BlockVy;
-            if(g_BlockPY>=136*16) { g_BlockPY=136*16; g_BlockVy=0; }
-        }
-        if(g_R->doorMove && !g_DoorMoved && (u16)g_PX+44>g_R->doorX) {
-            g_DoorX-=28; g_DoorMoved=1; Sound(330);
-        }
-        g_VY+=4;
-        if(g_VY>96) g_VY=96;
-        oldY=g_PY; newY=oldY+g_VY;
-        g_Grounded=0; landed=0; landY=152*16;
-        if(g_VY>=0) {
-            if(oldY+192<=152*16 && newY+192>=152*16 && (Solid(g_PX+2)||Solid(g_PX+8))) landed=1;
-            if(g_R->platY && g_PX+10>g_R->platX && g_PX<g_R->platX+32 && oldY+192<=(i16)g_R->platY*16 && newY+192>=(i16)g_R->platY*16) {
-                landed=1; landY=(i16)g_R->platY*16;
-            }
-            if(landed) { newY=landY-192; g_VY=0; g_Grounded=1; }
-        } else if(g_R->platY && g_PX+10>g_R->platX && g_PX<g_R->platX+32 && oldY>=(i16)(g_R->platY+8)*16 && newY<(i16)(g_R->platY+8)*16) {
-            newY=(i16)(g_R->platY+8)*16; g_VY=0;
-        }
-        if(newY<22*16) { newY=22*16; g_VY=0; }
-        g_PY=newY;
-        if(g_PY>192*16) Die();
-        if(g_Spike>=6 && g_PX+8>g_R->spikeX+2 && g_PX+2<(u16)g_R->spikeX+g_R->spikeW-2 && g_PY+192>144*16 && g_PY<152*16) Die();
-        if(g_BlockState && g_PX+9>g_R->blockX+1 && g_PX+1<(u16)g_R->blockX+15 && g_PY+192>(g_BlockPY>>4)*16+16 && g_PY<((g_BlockPY>>4)+15)*16) Die();
-        if(g_State==1 && g_PX+10>g_DoorX+3 && g_PX<g_DoorX+13 && g_PY+192>132*16 && g_PY<152*16) {
+        res=PlayStep(left,right,jump);
+        if(g.Dirty & DIRTY_FLOOR) DrawFloor();
+        if(g.Dirty & DIRTY_PLAT) DrawPlat();
+        g.Dirty=0;
+        if(g.Ev & EV_JUMP) Sound(240);
+        if(g.Ev & EV_CRACK) Sound(650);
+        if(g.Ev & EV_SPIKE) Sound(450);
+        if(g.Ev & EV_DOOR) Sound(330);
+        if(res==PS_DIE) Die();
+        else if(res==PS_WIN) {
             g_State=3; Sound(120);
             Print_SetPosition(7,5); Print_DrawText("SALA CONCLUIDA!");
             Print_SetPosition(5,7); Print_DrawText("ENTER: PROXIMA SALA");
-            if(g_Level==11) {
-                Print_SetPosition(5,9); Print_DrawText("12 SALAS. VOCE VENCEU!");
+            if(g_Level==NUM_ROOMS-1) {
+                Print_SetPosition(4,9); Print_DrawText("20 SALAS. VOCE VENCEU!");
             }
         }
     }
+    g_StartWas=startNow;
     if(g_SoundTimer) {
         g_SoundTimer--;
         PSG_SetVolume(0,g_Sound ? (g_SoundTimer>7 ? 10 : g_SoundTimer/2) : 0);
@@ -256,16 +226,17 @@ void main(void) {
     Print_SetColor(COLOR_BLACK,COLOR_WHITE);
     VDP_FillVRAM_16K(0x1F,g_ScreenColorLow,32);
     VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
-    VDP_LoadSpritePattern(g_SpriteData,0,16);
-    VDP_DisableSpritesFrom(4);
+    VDP_LoadSpritePattern(g_SpriteData,0,24);
+    VDP_DisableSpritesFrom(SP_END);
     *(volatile u8*)0xF3DB = 0; // CLIKSW: desliga o keyclick
-    PSG_SetMixer(PSG_TONE_A_ON);
+    PSG_SetMixer(PSG_TONE_A_ON | 0x40); // bit 6: manter a porta A do PSG como entrada (joystick)
     PSG_SetVolume(0,0);
     ResetRoom();
     Print_SetPosition(6,5); Print_DrawText("LEVEL DEVIL / MSX1");
     Print_SetPosition(5,7); Print_DrawText("PARECE FACIL. CONFIA.");
     Print_SetPosition(4,10); Print_DrawText("ENTER OU ESPACO: JOGAR");
     Print_SetPosition(4,12); Print_DrawText("SETAS / A D + ESPACO");
+    Print_SetPosition(4,14); Print_DrawText("20 SALAS. BOA SORTE.");
     BIOS_SetHookCallback(H_TIMI,TickHook);
     VDP_EnableVBlank(TRUE);
     while(1) {
