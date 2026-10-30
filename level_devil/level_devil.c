@@ -15,18 +15,18 @@ struct Room {
     u8 blockX, blockW, platX, platY, doorX, doorMove;
 };
 const struct Room g_Rooms[12] = {
-    {104,24,0,0,0,0,0,0,0,0,220,0},
-    {0,0,96,32,0,0,0,0,0,0,220,0},
-    {0,0,0,0,120,16,0,0,0,0,220,0},
-    {0,0,0,0,0,0,136,16,0,0,220,0},
-    {0,0,0,0,0,0,0,0,0,0,220,1},
-    {80,24,0,0,152,16,0,0,0,0,220,0},
-    {96,32,0,0,0,0,0,0,152,120,220,0},
-    {152,24,80,24,0,0,0,0,112,120,220,0},
-    {0,0,0,0,168,16,96,16,0,0,220,0},
-    {0,0,88,32,0,0,0,0,0,0,220,1},
-    {72,24,0,0,184,16,136,16,0,0,220,0},
-    {72,24,120,24,176,16,208,16,0,0,224,1}
+    {96,40,0,0,0,0,0,0,0,0,220,0},
+    {0,0,88,40,0,0,0,0,0,0,220,0},
+    {0,0,0,0,112,32,0,0,0,0,220,0},
+    {0,0,0,0,0,0,120,16,0,0,220,0},
+    {100,32,0,0,0,0,0,0,0,0,220,1},
+    {64,40,0,0,160,24,0,0,0,0,220,0},
+    {0,0,0,0,176,24,0,0,120,128,220,0},
+    {150,40,72,32,0,0,0,0,112,120,220,0},
+    {0,0,0,0,150,32,100,16,0,0,220,0},
+    {0,0,80,40,0,0,0,0,0,0,220,1},
+    {64,32,0,0,176,24,130,16,0,0,220,0},
+    {60,40,116,28,168,24,208,16,0,0,224,1}
 };
 const u8 g_Tiles[40] = {
     0,0,0,0,0,0,0,0,
@@ -84,7 +84,7 @@ u8 InRange(u8 x, u8 start, u8 width) {
 }
 u8 Solid(u8 x) {
     if(InRange(x,g_R->gapX,g_R->gapW)) return FALSE;
-    if(g_Crack>=20 && InRange(x,g_R->crackX,g_R->crackW)) return FALSE;
+    if(g_Crack>=10 && InRange(x,g_R->crackX,g_R->crackW)) return FALSE;
     return TRUE;
 }
 void DrawFloor(void) {
@@ -92,8 +92,8 @@ void DrawFloor(void) {
     for(x=0;x<32;x++) {
         t=Solid(x*8+4) ? 1 : 0;
         for(y=19;y<23;y++) Tile(x,y,t);
-        if(g_R->crackW && g_Crack<20 && Solid(x*8+4)) Tile(x,19,2);
-        t=(g_Spike>=14 && InRange(x*8+4,g_R->spikeX,g_R->spikeW)) ? 3 : 0;
+        if(g_R->crackW && g_Crack<10 && Solid(x*8+4)) Tile(x,19,2);
+        t=(g_Spike>=6 && InRange(x*8+4,g_R->spikeX,g_R->spikeW)) ? 3 : 0;
         Tile(x,18,t);
     }
 }
@@ -199,13 +199,13 @@ void Update(void) {
         g_PX=nx;
         if(g_R->crackW && (u16)g_PX+10>g_R->crackX && g_PX<(u16)g_R->crackX+g_R->crackW && g_Crack<250) {
             g_Crack++;
-            if(g_Crack==20) { DrawFloor(); Sound(650); }
+            if(g_Crack==10) { DrawFloor(); Sound(650); }
         }
         if(g_R->spikeW && (u16)g_PX+30>g_R->spikeX && g_PX<(u16)g_R->spikeX+g_R->spikeW+10 && g_Spike<250) {
             g_Spike++;
-            if(g_Spike==14) { DrawFloor(); Sound(450); }
+            if(g_Spike==6) { DrawFloor(); Sound(450); }
         }
-        if(g_R->blockW && (u16)g_PX+42>g_R->blockX) g_BlockState=1;
+        if(g_R->blockW && (u16)g_PX+32>g_R->blockX) g_BlockState=1;
         if(g_BlockState && g_BlockPY<136*16) {
             g_BlockVy+=3;
             g_BlockPY+=g_BlockVy;
@@ -230,7 +230,7 @@ void Update(void) {
         if(newY<22*16) { newY=22*16; g_VY=0; }
         g_PY=newY;
         if(g_PY>192*16) Die();
-        if(g_Spike>=14 && g_PX+8>g_R->spikeX+2 && g_PX+2<(u16)g_R->spikeX+g_R->spikeW-2 && g_PY+192>144*16 && g_PY<152*16) Die();
+        if(g_Spike>=6 && g_PX+8>g_R->spikeX+2 && g_PX+2<(u16)g_R->spikeX+g_R->spikeW-2 && g_PY+192>144*16 && g_PY<152*16) Die();
         if(g_BlockState && g_PX+9>g_R->blockX+1 && g_PX+1<(u16)g_R->blockX+15 && g_PY+192>(g_BlockPY>>4)*16+16 && g_PY<((g_BlockPY>>4)+15)*16) Die();
         if(g_State==1 && g_PX+10>g_DoorX+3 && g_PX<g_DoorX+13 && g_PY+192>132*16 && g_PY<152*16) {
             g_State=3; Sound(120);
@@ -258,6 +258,7 @@ void main(void) {
     VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16);
     VDP_LoadSpritePattern(g_SpriteData,0,16);
     VDP_DisableSpritesFrom(4);
+    *(volatile u8*)0xF3DB = 0; // CLIKSW: desliga o keyclick
     PSG_SetMixer(PSG_TONE_A_ON);
     PSG_SetVolume(0,0);
     ResetRoom();
