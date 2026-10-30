@@ -68,6 +68,14 @@ profile_on      equ RAM+17      ; 1 = backdrop colour shows where the tick time 
 key_prev        equ RAM+18      ; F1 state at the previous tick (edge detection)
 front_page      equ RAM+19      ; page being displayed (0/1); the other one is drawn into
 back_y          equ RAM+20      ; word: first line of the page being drawn (0 or 256) - 2 bytes
+p_weapon        equ RAM+25      ; 0 pistol, 1 spread, 2 rapid, 3 piercing
+p_wunits        equ RAM+26      ; seconds of weapon left, BCD
+p_wsub          equ RAM+27      ; ticks until the next second
+w_dmg           equ RAM+28      ; damage of the shot being fired
+w_pierce        equ RAM+29      ; 1 = the shot goes through the enemies it kills
+flash_timer     equ RAM+30      ; bomb flash: flips left
+item_col_dirty  equ RAM+31      ; item colour shadow must be rebuilt
+item_col_upload equ RAM+0x30    ; ... and sent to the VDP at the next flip
 restore_pending equ RAM+22      ; pages still to be wiped from the clean copy (game over)
 door_color      equ RAM+23      ; colour of the exit gap in the top wall
 door_dirty      equ RAM+24      ; pages still to be redrawn with door_color
@@ -90,6 +98,7 @@ B_TYPE          equ 0x00        ; 0 = free
 B_X             equ 0x10
 B_Y             equ 0x20
 B_DIR           equ 0x30
+B_DMG           equ 0x40        ; damage; B_TYPE 1 = normal shot, 2 = piercing shot
 EN_BASE         equ RAM+0x1C0
 E_TYPE          equ 0x00        ; 0 free, 1 alive, 2 dying (erase here), 3 dying (erase in the other page), then free
 E_HP            equ 0x10
@@ -104,7 +113,22 @@ BUF_SHIFT       equ -0x70       ; the same fields for page 1 live at E_OX+BUF_SH
 E_OXB           equ E_OX+BUF_SHIFT
 E_OYB           equ E_OY+BUF_SHIFT
 E_KIND          equ -0x30       ; 0 grunt, 1 runner, 2 tank
-RAM_END         equ RAM+0x250
+
+; items on the floor: 6 slots (sprite planes 17..22), struct of arrays
+ITEM_SPREAD     equ 1           ; item types 1..3 are weapons: the type is the weapon number
+ITEM_RAPID      equ 2
+ITEM_PIERCE     equ 3
+ITEM_LIFE       equ 4
+ITEM_SHIELD     equ 5
+ITEM_BOMB       equ 6
+ITEM_PRIZE      equ 7
+IT_BASE         equ RAM+0x250
+I_TYPE          equ 0x00
+I_X             equ 0x10
+I_Y             equ 0x20
+I_LIFE          equ 0x30        ; ticks left on the floor
+item_cols_ram   equ RAM+0x2A0   ; 6 planes * 16 colour bytes, sent to the sprite colour table
+RAM_END         equ RAM+0x300
 
 ; room script machine state (see script.inc)
 scr_pc          equ RAM+0xC0    ; word: next opcode

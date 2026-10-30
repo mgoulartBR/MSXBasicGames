@@ -29,6 +29,7 @@ Um opcode que falha (pilha estourada ou vazia, opcode desconhecido) **encerra o 
 | 09 | `JUMP` | addr16 | |
 | 0A | `CALLR` | n, addr16 × n | chama um dos n sub-scripts, escolhido ao acaso |
 | 0B | `EXIT_OPEN` | | abre a porta na parede de cima; encostar nela inicia a próxima sala |
+| 0C | `DROP` | item, x, y | põe um item no chão (12 s); com os 6 lugares ocupados, ignora |
 
 Tipos de inimigo: `KIND_GRUNT` (1 HP, velocidade 2, 10 pontos), `KIND_RUNNER` (1 HP, velocidade 3, 20 pontos) e
 `KIND_TANK` (3 HP, velocidade 1, 50 pontos). As tabelas estão em `game.inc` (`kind_hp`, `kind_speed`,

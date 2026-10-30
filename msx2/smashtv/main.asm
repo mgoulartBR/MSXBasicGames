@@ -44,6 +44,7 @@ main_loop:
         call update_enemies
         call collide_bullets
         call collide_player
+        call update_items
         call script_step
         call check_exit
         ld a,6
@@ -66,6 +67,7 @@ msg_msx2:
 
         include "vdp.inc"
         include "game.inc"
+        include "items.inc"
         include "script.inc"
         include "rooms.inc"
         include "gfx.inc"

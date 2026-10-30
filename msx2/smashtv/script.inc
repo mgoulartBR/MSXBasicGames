@@ -18,6 +18,7 @@
 ;   09 JUMP addr16
 ;   0A CALLR n,addr16*n     CALL one of n sub-scripts, picked at random
 ;   0B EXIT_OPEN            opens the door in the top wall; touching it starts the next room
+;   0C DROP item,x,y        puts a floor item in the room (types in items.inc)
 ;
 ; A failing opcode (stack overflow/underflow, unknown opcode) ends the script instead of
 ; running wild, and at most OPS_PER_TICK opcodes run per tick, so a bad script cannot hang the game.
@@ -34,7 +35,8 @@ OP_RET          equ 8
 OP_JUMP         equ 9
 OP_CALLR        equ 10
 OP_EXIT_OPEN    equ 11
-OP_COUNT        equ 12
+OP_DROP         equ 12
+OP_COUNT        equ 13
 OPS_PER_TICK    equ 32
 
 script_step:
@@ -78,7 +80,7 @@ script_op:
 
 op_table:
         dw op_end, op_wait, op_spawn, op_spawnat, op_waitclear, op_loop
-        dw op_endloop, op_call, op_ret, op_jump, op_callr, op_exit_open
+        dw op_endloop, op_call, op_ret, op_jump, op_callr, op_exit_open, op_drop
 
 ; handlers get DE = address of the operands and return A (0 = continue, 1 = block)
 op_fail:
@@ -291,6 +293,24 @@ op_callr:
         pop de                  ; DE = return address
         jr do_call
 
+op_drop:
+        ld a,(de)
+        inc de
+        ld c,a                  ; item type
+        ld a,(de)
+        inc de
+        ld h,a                  ; x
+        ld a,(de)
+        inc de
+        ld l,a                  ; y
+        push de
+        ld d,h
+        ld e,l
+        ld b,255                ; stays 12 seconds
+        call item_spawn
+        pop de
+        jp advance
+
 op_exit_open:
         ld a,1
         ld (exit_open),a
@@ -355,9 +375,16 @@ room_start:
         djnz .e
         ld hl,BUL_BASE
         ld de,BUL_BASE+1
+        ld bc,0x4F
+        ld (hl),0
+        ldir
+        ld hl,IT_BASE           ; floor items stay behind too
+        ld de,IT_BASE+1
         ld bc,0x3F
         ld (hl),0
         ldir
+        ld a,1
+        ld (item_col_dirty),a
         xor a
         ld (exit_open),a
         ld (scr_done),a
@@ -395,14 +422,14 @@ room_next:
         ld (room_idx),a
         ld a,1
         ld (room_bcd),a
-        jr room_start
+        jp room_start
 .nowrap:
         ld (room_idx),a
         ld a,(room_bcd)
         add a,1
         daa
         ld (room_bcd),a
-        jr room_start
+        jp room_start
 
 ; the exit is the gap in the top wall: the player (16 px wide) has to be inside it
 check_exit:

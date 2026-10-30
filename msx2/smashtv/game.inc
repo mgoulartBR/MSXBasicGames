@@ -121,6 +121,7 @@ update_player:
         dec a
         ld (p_cool),a
 .nocool:
+        call weapon_tick
         ld a,(input_move)
         or a
         jr z,.moved
@@ -170,10 +171,7 @@ update_player:
 .shoot: ld a,(p_cool)
         or a
         ret nz
-        call spawn_bullet       ; B = direction bits
-        ld a,1
-        ld (p_cool),a
-        ret
+        jp fire_weapon          ; B = direction bits
 
 ; ---- bullets ------------------------------------------------------------------
 spawn_bullet:
@@ -186,7 +184,11 @@ spawn_bullet:
         dec c
         jr nz,.find
         ret
-.free:  ld (ix+B_TYPE),1
+.free:  ld a,(w_pierce)
+        inc a                   ; 1 normal, 2 piercing
+        ld (ix+B_TYPE),a
+        ld a,(w_dmg)
+        ld (ix+B_DMG),a
         ld (ix+B_DIR),b
         ld a,(p_x)
         add a,4
@@ -411,18 +413,19 @@ collide_bullets:
         ld a,(ix+E_Y)
         cp d
         jr nc,.enext
-        ld (iy+B_TYPE),0        ; hit: the bullet is consumed
-        dec (ix+E_HP)
-        jr nz,.done
-        ld (ix+E_TYPE),2        ; dying: erased and freed by the renderer
-        ld a,(ix+E_KIND)
-        ld e,a
-        ld d,0
-        ld hl,kind_points
-        add hl,de
-        ld a,(hl)
-        call add_score
-.done:  pop bc
+        ld a,(ix+E_HP)          ; hit
+        sub (iy+B_DMG)
+        jr z,.kill
+        jr nc,.hurt
+.kill:  ld (ix+E_HP),0
+        call kill_enemy
+        ld a,(iy+B_TYPE)
+        cp 2
+        jr z,.enext             ; a piercing shot goes on through what it killed
+        jr .used
+.hurt:  ld (ix+E_HP),a
+.used:  ld (iy+B_TYPE),0        ; the bullet is consumed
+        pop bc
         jr .bnext
 .enext: inc ix
         dec c
@@ -475,6 +478,7 @@ collide_player:
 render:
         call setup_back
         call build_sprites
+        call build_item_cols
         call restore_back
         call erase_enemies
         call draw_door
@@ -549,7 +553,41 @@ build_sprites:
         inc hl
         inc ix
         djnz .bl
-        ld b,15
+        ld iy,IT_BASE
+        ld b,6
+.it:    ld a,(iy+I_TYPE)
+        or a
+        jr z,.noi
+        ld a,(iy+I_LIFE)
+        cp 30
+        jr nc,.vis
+        and 1                   ; blink in the last 30 ticks
+        jr nz,.noi
+.vis:   ld a,(iy+I_Y)
+        dec a
+        ld (hl),a
+        inc hl
+        ld a,(iy+I_X)
+        ld (hl),a
+        inc hl
+        ld a,(iy+I_TYPE)
+        dec a
+        add a,a
+        add a,a
+        add a,8                 ; pattern number = 8 + 4 * (type - 1)
+        ld (hl),a
+        jr .ni
+.noi:   ld (hl),SPR_HIDDEN
+        inc hl
+        ld (hl),0
+        inc hl
+        ld (hl),0
+.ni:    inc hl
+        ld (hl),0
+        inc hl
+        inc iy
+        djnz .it
+        ld b,9
 .hid:   ld (hl),SPR_HIDDEN
         inc hl
         ld (hl),0
@@ -692,6 +730,13 @@ draw_hud:
         ld e,120
         ld a,(room_bcd)
         call .two
+        ld e,152
+        ld a,(p_weapon)
+        inc a
+        call put_digit          ; weapon number (1 = pistol) ...
+        ld e,168
+        ld a,(p_wunits)
+        call .two               ; ... and its seconds left
         ld e,232
         ld a,(lives)
         and 0x0F
@@ -774,7 +819,9 @@ flip:
         xor 1
         ld (front_page),a
         call set_display_page
-        jp upload_sprites
+        call upload_sprites
+        call upload_item_cols
+        jp update_flash
 
 ; ---- state ----------------------------------------------------------------------
 game_init:

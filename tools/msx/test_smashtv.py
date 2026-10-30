@@ -89,8 +89,9 @@ def hud_ok(s):
         byte = s.peek(A('score') + b)
         digits += [byte >> 4, byte & 15]
     rb = s.peek(A('room_bcd'))
-    digits += [rb >> 4, rb & 15, s.peek(A('lives')) & 15]
-    xs = [8 + 8 * i for i in range(6)] + [120, 128, 232]
+    wu = s.peek(A('p_wunits'))
+    digits += [rb >> 4, rb & 15, s.peek(A('p_weapon')) + 1, wu >> 4, wu & 15, s.peek(A('lives')) & 15]
+    xs = [8 + 8 * i for i in range(6)] + [120, 128, 152, 168, 176, 232]
     bad = 0
     for d, x0 in zip(digits, xs):
         for j in range(8):
@@ -99,6 +100,16 @@ def hud_ok(s):
                 want = g if g else 14
                 if v.px(x0 + k, 256 * front(s) + 4 + j) != want: bad += 1
     return bad
+
+
+def quiet(s, hook=None):
+    """advance to just after the next page flip: the one moment where the screen and the game state agree
+    (between the logic of a tick and the flip that shows it, the state is ahead of the screen)"""
+    start = front(s)
+    for _ in range(12):
+        s.run_frames(1, hook)
+        if front(s) != start:
+            return
 
 
 def tick_frames(s, n_ticks):
@@ -124,7 +135,7 @@ check(v.px(100, 100) == 2 and v.px(10, 100) == 3 and v.px(200, 2) == 14, 'arena:
 check(v.px(100, 356) == 2 and v.px(100, 612) == 2, 'second buffer (page 1) and clean copy (page 2) hold the arena too')
 check(s.peek(0xFC9E) in range(18, 22) and s.irq_count == s.peek(0xFC9E), f'one interrupt per frame (JIFFY={s.peek(0xFC9E)}, irqs={s.irq_count})')
 check(not v.violations, f'no VDP misuse: {v.violations[:3]}')
-check(hud_ok(s) == 0, 'HUD shows 000000, room 01 and 3 lives')
+check(hud_ok(s) == 0, 'HUD shows 000000, room 01, weapon 1 (00 s) and 3 lives')
 shot(s, '1_boot')
 
 print('movement and clamping')
@@ -190,17 +201,23 @@ def bot(frame):
             if abs(dx) > abs(dy) * 2: s.keys.add('D' if dx > 0 else 'A')
             elif abs(dy) > abs(dx) * 2: s.keys.add('S' if dy > 0 else 'W')
             else: s.keys |= {('D' if dx > 0 else 'A'), ('S' if dy > 0 else 'W')}
-    # keep away from the walls, drift towards the centre
+    # keep away from the walls, drift towards the centre - or go and take a floor item
     s.input['cursor'] = 3 if px < 100 else 7 if px > 140 else 0
+    floor = [(s.peek(A('IT_BASE') + 0x10 + i), s.peek(A('IT_BASE') + 0x20 + i)) for i in range(6) if s.peek(A('IT_BASE') + i)]
+    if floor:
+        ix_, iy_ = min(floor, key=lambda t: abs(t[0] - px) + abs(t[1] - py))
+        dx, dy = ix_ - px, iy_ - py
+        h = 3 if dx > 4 else 7 if dx < -4 else 0
+        v = 5 if dy > 4 else 1 if dy < -4 else 0
+        s.input['cursor'] = {(3, 0): 3, (7, 0): 7, (0, 5): 5, (0, 1): 1, (3, 1): 2, (3, 5): 4, (7, 5): 6, (7, 1): 8}.get((h, v), 0)
 for t in range(900):
     bot(0)
-    s.run_frames(3)
+    quiet(s)
     max_enemies = max(max_enemies, len(enemies(s)))
     sc = score(s)
     if sc > last_score: kills += (sc - last_score) // 10
     last_score = sc
-    if s.peek(A('lives')) == 3 and sc < last_score: pass
-    if t % 10 == 5:      # between ticks: all commands have completed
+    if t % 10 == 5:      # right after a flip: all commands have completed
         d = screen_diff(s); diffs_checked += 1; worst_diff = max(worst_diff, d)
         if s.peek(A('score_dirty')) == 0:
             hud_checked += 1; hud_bad += hud_ok(s)
@@ -219,7 +236,7 @@ samples = []
 def sample(frame):
     page = (s.vdp.r[2] >> 5) & 3
     top = page * 0x8000
-    samples.append((frame, page, hash(bytes(s.vdp.vram[top:top + 212 * 128])), hash(bytes(s.vdp.vram[0x7600:0x7680]))))
+    samples.append((frame, page, hash(bytes(s.vdp.vram[top:top + 212 * 128])), hash(bytes(s.vdp.vram[0x7400:0x7680]))))
 random.seed(11)
 def bot_hook(frame):
     bot(0); sample(frame)
@@ -247,8 +264,7 @@ SCR = 0xD100
 
 def safe_hook(s):
     def hook(frame):
-        s.m.memory[A('p_inv')] = 251
-        s.m.memory[A('lives')] = 3
+        s.m.memory[A('p_inv')] = 251      # invulnerable, so lives never change behind the HUD's back
     return hook
 
 
@@ -395,12 +411,12 @@ tick_n = 0
 hook = safe_hook(s)
 for t in range(9000):
     bot(0)
-    s.run_frames(3, hook)
+    quiet(s, hook)
     for _, k, _, _ in alive(s): spawned_kinds.add(k)
     r = s.peek(A('room_bcd'))
     if r != rooms_seen[-1]:
         rooms_seen.append(r)
-        run_ticks(s, 2)
+        quiet(s, hook); quiet(s, hook)
         checks_done += 1
         fy = 256 * front(s)
         door_bad += s.vdp.px(120, fy + 20) != 3                    # the door is closed again
@@ -413,6 +429,208 @@ check(spawned_kinds == {0, 1, 2}, f'all three enemy kinds appeared in the real s
 check(checks_done >= 5 and door_bad == 0, f'the door is closed at the start of every room ({checks_done} rooms)')
 check(clean_bad == 0, 'previous enemies are erased and the player restarts at the bottom')
 check(hud_room_bad == 0, 'the HUD shows the room number')
+
+
+# ---------------------------------------------------------------------------
+print('weapons')
+BUL = A('BUL_BASE')
+
+
+def put_enemy(s, slot, kind, x, y, hp=None):
+    m = s.m.memory
+    hp = [1, 1, 3][kind] if hp is None else hp
+    m[EN + slot] = 1; m[EN - 0x30 + slot] = kind; m[EN + 0x10 + slot] = hp
+    m[EN + 0x20 + slot] = x; m[EN + 0x30 + slot] = y
+    m[EN + 0x50 + slot] = 0; m[EN - 0x20 + slot] = 0; m[EN + 0x70 + slot] = 0
+
+
+def put_bullet(s, slot, x, y, d, btype=1, dmg=1):
+    m = s.m.memory
+    m[BUL + slot] = btype; m[BUL + 0x10 + slot] = x; m[BUL + 0x20 + slot] = y
+    m[BUL + 0x30 + slot] = d; m[BUL + 0x40 + slot] = dmg
+
+
+def sleepy(s):
+    """script asleep, player invulnerable"""
+    s.m.memory[A('scr_wait')] = 255
+
+
+def tick_calm(s, n, god=True):
+    """script asleep; god = the player cannot be hurt"""
+    h = safe_hook(s)
+    def hook(f):
+        if god: h(f)
+        s.m.memory[A('scr_wait')] = 255
+    done = 0; last = s.peek(A('last_jiffy'))
+    while done < n:
+        s.run_frames(1, hook)
+        cur = s.peek(A('last_jiffy'))
+        if cur != last: done += 1; last = cur
+
+
+def set_weapon(s, w, units=0x99):
+    s.m.memory[A('p_weapon')] = w; s.m.memory[A('p_wunits')] = units; s.m.memory[A('p_wsub')] = 20
+
+
+shots = {}
+for w in range(4):
+    s = fresh()
+    load_script(s, [OPC['END']])
+    set_weapon(s, w)
+    s.m.memory[A('p_x')] = 100; s.m.memory[A('p_y')] = 100
+    s.keys = {'D'}
+    tick_calm(s, 6)
+    shots[w] = bullets(s)
+exp = {0: (2, 3), 1: (5, 7), 2: (5, 7), 3: (2, 3)}
+for w, name in enumerate(['pistol', 'spread', 'rapid', 'piercing']):
+    n = len(shots[w])
+    check(exp[w][0] <= n <= exp[w][1], f'{name}: {n} shots in 6 ticks (expected {exp[w][0]}..{exp[w][1]})')
+check(set(d for _, _, _, d in shots[1]) == {8, 9, 10}, f'spread aimed right fires right + up-right + down-right ({sorted(set(d for _, _, _, d in shots[1]))})')
+check(all(s_.__class__ for s_ in shots[3]) and all(s.peek(BUL + i) in (0, 2) for i in range(16)), 'piercing shots are type 2')
+
+# spread around other directions, and a non-direction aim fires straight only
+for aim, want in (({'W', 'D'}, {9, 1, 8}), ({'S', 'A'}, {6, 2, 4}), ({'W', 'S'}, {3})):
+    s = fresh(); load_script(s, [OPC['END']]); set_weapon(s, 1)
+    s.m.memory[A('p_x')] = 100; s.m.memory[A('p_y')] = 100
+    s.keys = aim; tick_calm(s, 2)
+    got = set(d for _, _, _, d in bullets(s))
+    check(got == want, f'spread aim {sorted(aim)}: directions {sorted(got)}')
+
+# damage and piercing
+s = fresh(); load_script(s, [OPC['END']])
+s.m.memory[A('p_x')] = 220; s.m.memory[A('p_y')] = 100
+put_enemy(s, 0, 0, 100, 100); put_enemy(s, 1, 0, 130, 100)
+put_bullet(s, 0, 70, 104, 8, btype=1)           # ordinary shot
+tick_calm(s, 14)
+check(s.peek(EN + 0) != 1 and s.peek(EN + 1) == 1, 'an ordinary shot kills the first grunt and is used up; the second one survives')
+s = fresh(); load_script(s, [OPC['END']])
+s.m.memory[A('p_x')] = 220; s.m.memory[A('p_y')] = 100
+put_enemy(s, 0, 0, 100, 100); put_enemy(s, 1, 0, 130, 100)
+put_bullet(s, 0, 70, 104, 8, btype=2, dmg=2)    # piercing shot
+tick_calm(s, 14)
+check(s.peek(EN + 0) != 1 and s.peek(EN + 1) != 1 and s.peek(BUL + 0) == 2, 'a piercing shot kills both grunts and keeps flying')
+for btype, dmg, hp0, want_hp, want_dead in ((1, 1, 3, 2, False), (2, 2, 3, 1, False), (2, 2, 2, 0, True), (1, 1, 1, 0, True)):
+    s = fresh(); load_script(s, [OPC['END']])
+    s.m.memory[A('p_x')] = 20; s.m.memory[A('p_y')] = 170
+    put_enemy(s, 0, 2, 100, 100, hp0)
+    put_bullet(s, 0, 100, 104, 8, btype=btype, dmg=dmg)
+    tick_calm(s, 1)
+    hp = s.peek(EN + 0x10)
+    dead = s.peek(EN) != 1
+    check(dead == want_dead and (dead or hp == want_hp), f'tank hp {hp0} hit by damage {dmg}: {"dead" if dead else "hp " + str(hp)}')
+
+# weapon timer
+s = fresh(); load_script(s, [OPC['END']])
+set_weapon(s, 2, 0x02)
+s.m.memory[A('p_wsub')] = 3
+tick_calm(s, 3)
+check(s.peek(A('p_wunits')) == 0x01 and s.peek(A('p_wsub')) == 20 and s.peek(A('p_weapon')) == 2, 'the weapon timer counts seconds down in BCD (20 ticks each)')
+tick_calm(s, 21)
+check(s.peek(A('p_weapon')) == 0 and s.peek(A('p_wunits')) == 0, 'when the time is up the pistol is back')
+s.run_frames(9)
+check(hud_ok(s) == 0, 'the HUD follows the weapon and its time')
+
+# ---------------------------------------------------------------------------
+print('items')
+
+
+def drop_and_take(item, setup=None, ticks=3):
+    s = fresh()
+    load_script(s, [OPC['DROP'], item, 120, 100, OPC['END']])
+    s.m.memory[A('p_x')] = 120; s.m.memory[A('p_y')] = 100
+    if setup: setup(s)
+    tick_calm(s, ticks, god=False)       # no enemies in the room, so nothing can hurt the player
+    return s
+
+
+s = drop_and_take(ITEM := SYM['ITEM_SPREAD'])
+check(s.peek(A('p_weapon')) == 1 and s.peek(A('p_wunits')) in (0x15, 0x14) and s.peek(A('IT_BASE')) == 0, 'weapon item: spread for 15 s, and the item is gone')
+s = drop_and_take(SYM['ITEM_PIERCE'])
+check(s.peek(A('p_weapon')) == 3, 'weapon item: piercing')
+s = drop_and_take(SYM['ITEM_LIFE'], lambda s: s.m.memory.__setitem__(A('lives'), 2))
+s2 = s
+check(s.peek(A('lives')) == 3, 'life item: +1 life')
+s = drop_and_take(SYM['ITEM_LIFE'], lambda s: s.m.memory.__setitem__(A('lives'), 9))
+check(s.peek(A('lives')) == 9, 'life item: capped at 9')
+s = drop_and_take(SYM['ITEM_SHIELD'], ticks=2)
+check(s.peek(A('p_inv')) >= 90, f'shield item: about 5 s of invulnerability (p_inv = {s.peek(A("p_inv"))})')
+s = drop_and_take(SYM['ITEM_PRIZE'])
+check(score(s) == 100, f'prize item: +100 points (score {score(s)})')
+
+# bomb: every enemy dies, scores, drops nothing, the floor flashes
+def bomb_setup(s):
+    put_enemy(s, 0, 0, 40, 40); put_enemy(s, 1, 1, 200, 40); put_enemy(s, 2, 2, 40, 150); put_enemy(s, 3, 2, 200, 150)
+s = fresh()
+load_script(s, [OPC['DROP'], SYM['ITEM_BOMB'], 120, 100, OPC['END']])
+s.m.memory[A('p_x')] = 120; s.m.memory[A('p_y')] = 100
+tick_calm(s, 1)
+bomb_setup(s)
+flash_seen = []
+h = safe_hook(s)
+def hook(f):
+    h(f); s.m.memory[A('scr_wait')] = 255
+    flash_seen.append(s.vdp.pal[2])
+last = s.peek(A('last_jiffy')); done = 0
+while done < 6:
+    s.run_frames(1, hook)
+    if s.peek(A('last_jiffy')) != last: done += 1; last = s.peek(A('last_jiffy'))
+check(not alive(s) and score(s) == 10 + 20 + 50 + 50, f'bomb kills every enemy and scores them (score {score(s)})')
+check(all(s.peek(A('IT_BASE') + i) == 0 for i in range(6)), 'the bomb\'s kills drop no items')
+check((7, 7, 7) in flash_seen and s.vdp.pal[2] == (1, 1, 3), 'the floor flashes white and goes back to its colour')
+
+# items expire, blinking at the end
+s = fresh(); load_script(s, [OPC['DROP'], SYM['ITEM_RAPID'], 40, 40, OPC['END']])
+s.m.memory[A('p_x')] = 200; s.m.memory[A('p_y')] = 160
+tick_calm(s, 2)
+s.m.memory[A('IT_BASE') + 0x30] = 20          # 20 ticks left
+hidden = []
+for t in range(22):
+    tick_calm(s, 1)
+    hidden.append(s.vdp.vram[0x7600 + 17 * 4] == 217)
+check(s.peek(A('IT_BASE')) == 0 and not s.peek(A('item_col_dirty')), 'an item nobody picks up disappears')
+check(any(hidden) and not all(hidden) and not hidden[0], 'the item blinks before it goes')
+
+# sprite attributes and colours reach the VDP
+s = fresh()
+load_script(s, [OPC['DROP'], SYM['ITEM_SPREAD'], 150, 60, OPC['DROP'], SYM['ITEM_BOMB'], 60, 60, OPC['END']])
+s.m.memory[A('p_x')] = 200; s.m.memory[A('p_y')] = 160
+tick_calm(s, 3)
+v = s.vdp.vram
+check(list(v[0x7600 + 17 * 4:0x7600 + 17 * 4 + 3]) == [59, 150, 8] and list(v[0x7600 + 18 * 4:0x7600 + 18 * 4 + 3]) == [59, 60, 28], 'item planes 17/18: position and pattern numbers')
+check(list(v[0x7400 + 17 * 16:0x7400 + 18 * 16]) == [9] * 16 and list(v[0x7400 + 18 * 16:0x7400 + 19 * 16]) == [7] * 3 + [15] * 13, 'item colour table: cyan weapon, grey bomb with a yellow fuse')
+check(all(v[0x7600 + p * 4] == 217 for p in range(19, 32)), 'unused planes stay hidden')
+
+# drops from kills
+def kill_trials(kind, n):
+    s = fresh(); load_script(s, [OPC['END']])
+    s.m.memory[A('p_x')] = 20; s.m.memory[A('p_y')] = 170
+    drops = []
+    for t in range(n):
+        for i in range(6): s.m.memory[A('IT_BASE') + i] = 0
+        for i in range(16): s.m.memory[EN + i] = 0; s.m.memory[BUL + i] = 0
+        put_enemy(s, 0, kind, 100, 100, 1)
+        put_bullet(s, 0, 100, 100, 0)
+        tick_calm(s, 1)
+        got = [s.peek(A('IT_BASE') + i) for i in range(6) if s.peek(A('IT_BASE') + i)]
+        drops += got
+    return drops
+tank = kill_trials(2, 120)
+check(len(tank) >= 110, f'tanks nearly always drop something ({len(tank)} drops in 120 kills)')
+check(set(tank) == set(range(1, 8)), f'every item type can drop ({sorted(set(tank))})')
+grunt = kill_trials(0, 300)
+check(15 <= len(grunt) <= 70, f'grunts drop now and then ({len(grunt)} drops in 300 kills, about 12 % expected)')
+
+print('weapons and items in a real run (bot, extra lives)')
+s = mk(); s.run_frames(10); random.seed(8)
+seen_w = set(); picked = 0; hook = safe_hook(s); hud_bad2 = 0; hudn = 0; tear2 = 0
+last_w = 0
+for t in range(2500):
+    bot(0); quiet(s, hook)
+    w = s.peek(A('p_weapon'))
+    seen_w.add(w)
+    if s.peek(A('score_dirty')) == 0 and t % 7 == 0: hudn += 1; hud_bad2 += hud_ok(s)
+check({0, 1} <= seen_w, f'the bot picks up weapons while playing (weapons seen {sorted(seen_w)})')
+check(hudn > 0 and hud_bad2 == 0, f'the HUD stays right with weapons and rooms ({hudn} checks)')
 
 print('player damage, invulnerability and restart')
 s = mk(); s.run_frames(10)

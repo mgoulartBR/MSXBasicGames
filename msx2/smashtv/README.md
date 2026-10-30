@@ -24,6 +24,22 @@ depois da quarta, volta à primeira. O número da sala aparece no meio do HUD. E
 vida (2 s de invulnerabilidade, sprite piscando); sem vidas o jogo reinicia. Apertando **F1**, a cor da borda mostra onde vai o tempo de cada tick (desligado por padrão): verde = lógica,
 vermelho escuro = desenho, preta = espera. Se o vermelho dominar, o desenho estourou o tick.
 
+## Armas e itens (`items.inc`)
+
+Quatro armas, que duram 15 s (o HUD mostra o número da arma e os segundos) e depois voltam para a pistola:
+
+| arma | efeito |
+|---|---|
+| 1 pistola | um tiro a cada 2 ticks |
+| 2 spread | três tiros em leque (a direção da mira e as duas vizinhas), a cada 3 ticks |
+| 3 rápida | um tiro por tick |
+| 4 perfurante | dano 2, atravessa os inimigos que mata, a cada 3 ticks |
+
+Itens no chão (sprites de hardware, 6 ao mesmo tempo, pisca antes de sumir): as três armas, **vida extra** (máximo 9),
+**escudo** (5 s de invulnerabilidade), **bomba** (mata todos os inimigos da tela, com flash branco no chão) e
+**prêmio** (+100 pontos). Os inimigos soltam itens ao morrer (grunt ~12 %, runner ~18 %, tank quase sempre) e o
+script das salas pode colocá-los com `DROP`. Cada inimigo vale 10, 20 e 50 pontos.
+
 ## Build e testes
 
 ```bash
@@ -57,6 +73,8 @@ mostra que a lógica e o uso do VDP são coerentes, mas não substitui o openMSX
   nos dois buffers (`score_dirty` conta 2).
 - **Troca de página sem tearing** (`flip`): termina o desenho, espera o VBlank, escreve `R#2` e envia a
   tabela de sprites no mesmo VBlank, para fundo e sprites mudarem juntos.
+- **Armas e itens**: os tiros têm tipo (normal/perfurante) e dano próprio; os itens usam os planos de sprite 17–22,
+  com a tabela de cores reconstruída só quando um item aparece ou some e enviada no mesmo VBlank da troca de página.
 - **Máquina de script das salas** (`script.inc`, `rooms.inc`, documentada em [`SCRIPT.md`](SCRIPT.md)): ondas,
   laços, sub-scripts, escolha aleatória, espera até limpar, porta e progressão de salas.
 - **Laço a VBlank/3** (≈20 Hz NTSC), como o original, usando o `JIFFY` da BIOS.
@@ -74,5 +92,5 @@ velocidade real dos comandos, que precisa ser medida no openMSX.
 ## Próximos passos
 
 1. Conferir no openMSX/WebMSX (cores, sprites, limite de 8 por linha, velocidade dos comandos).
-2. Mais tipos de inimigo e de arma, itens, e salas no estilo do original (a partir de `tools/sms/NOTES.md`).
+2. Mais tipos de inimigo, e salas no estilo do original (a partir de `tools/sms/NOTES.md`).
 3. Gráficos reais e driver de som (PSG/SCC).

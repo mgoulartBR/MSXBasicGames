@@ -133,7 +133,7 @@ upload_gfx:
         ld hl,SPR_PAT_VRAM
         call set_vram_wr
         ld hl,spr_pat
-        ld bc,64
+        ld bc,spr_pat_end-spr_pat
         call vram_out
         ld hl,SPR_COL_VRAM
         call set_vram_wr
