@@ -13,4 +13,3 @@ Tudo o mais (comandos de VDP, VRAM, raster, mouse, lógica) é executado de verd
 - Não é teste no cartucho V9968 real. O teste positivo no hardware continua pendente.
 - O jogo usa a fórmula de scroll R#26/R#27 do V9968; no V9958 emulado o scroll fino horizontal pode aparecer até 7 px deslocado.
 - Velocidade: reflete Z80 de 3,58 MHz e o VDP V9958 do openMSX, não o FPGA do V9968.
-- Incluídas também `KAW9990.ROM` (GFX9000) e `KAW68PV.ROM` (preview V9958).

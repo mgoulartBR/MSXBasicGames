@@ -6,9 +6,7 @@ Base: v0.12 (ROMs reproduzidas bit a bit com MSXgl 6fd8858 / SDCC 4.6.0). Mediç
 |---|---|---:|---:|---:|
 | V9990 | 1 unidade | 5,99 | 8,22 | +37% |
 | V9990 | 4 unidades | 3,45 | 3,67 | +6% |
-| PREVIEW V9958 | 1 unidade | 2,60 | 3,62 | +39% |
-| PREVIEW V9958 | 4 unidades | 1,45 | 2,08 | +44% |
-| V9968 (shim) | 1 / 4 | — | 3,62 / 2,08 | (mesmo código nativo do PREVIEW) |
+| V9968 (via script no openMSX) | 1 / 4 unidades | — | 3,62 / 2,08 | — |
 
 **Continua lento.** Nenhum alvo chega perto de fluidez; o ganho é real mas modesto.
 
