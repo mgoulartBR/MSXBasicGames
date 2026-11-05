@@ -1,0 +1,21 @@
+ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+PASS collected_for_realm
+PASS defender_damages_structure
+PASS repair_order_assigned
+info: Screen saved to ../screenshots/V9990/repair011-damaged.png
+PASS repair_uses_wood
+PASS repair_animates
+info: Screen saved to ../screenshots/V9990/repair011-working.png
+PASS attack_group_preserves_repair
+PASS repair_completes
+info: Screen saved to ../screenshots/V9990/repair011-complete.png
+PASS tower_ready
+PASS tower_auto_acquires
+info: Screen saved to ../screenshots/V9990/tower011-firing.png
+PASS tower_defeats_defender
+PASS no_hud_clears
+info: Screen saved to ../screenshots/V9990/defense011-finished.png
+DEFENSE tower_shots=8 repair_spent=18 healed=72
+RESULT failures=0

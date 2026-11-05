@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "output": "PASS 5171 fog/tower/research/repair checks",
+  "source_sha256": {
+    "src/main.c": "6b47aac759b6c7061b2b6802967ab881f76abab0532bfd1bf661317c23053c6c",
+    "src/banks/art_s11_b3.c": "7380ad82b2de8ed31c640efa8fac904113a2456ae2e75edfcc61dccadae569e0",
+    "src/banks/art_s12_b3.c": "2fd4644539b154059f1719ad7b53376004837081f02a1a7c5601ef3d7ff19464",
+    "src/banks/art_s13_b3.c": "7734cf1b33ef2c433e400ce9fc74a0e0f20000cb474cc2b8abd256a1a1ba5a66",
+    "src/banks/art_s25_b3.c": "be96a5fce2e846ffefccf5488179b85be1d1a9a74931ab3717aa6b1cb2bd79c9",
+    "src/banks/art_s26_b3.c": "230bfd8b2c8cade139894ab8466002a2c6fc44947a0b613096a5f9f402f7d2e4"
+  }
+}

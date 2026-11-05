@@ -1,0 +1,16 @@
+ROM_SHA256 6f8ee0d666b42ea6b9b5f2f4571997fe1481d0c661b990cf5967da414760eab7
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+METRIC idle seconds=2.000000838095346 frames=0 ticks=60
+CADENCE idle 
+CALLS idle 
+METRIC one seconds=3.040115154300338 frames=11 ticks=90
+CADENCE one 51.71665728465489 51.95029116829094 52.20061264769684 52.4008716191583 52.66788209115963 52.884828937756055 53.10177354943156 53.285344366392934 53.51897797066387 53.76930056753023 53.96955730407077
+CALLS one video_sprites 12 fog_stamp 52 fog_update 10 fog_merge 10
+PASS one_unit_arrives
+PASS four_selected
+METRIC four seconds=3.8401654400210035 frames=8 ticks=106
+CADENCE four 55.004223441806154 55.271234193172596 55.40474026726861 55.83863032871496 56.622974707679326 57.357252946952755 58.008091251821114 58.47535929845832
+CALLS four video_sprites 8 fog_stamp 49 fog_update 5 fog_merge 5
+PASS four_distinct_goals
+RESULT failures=0

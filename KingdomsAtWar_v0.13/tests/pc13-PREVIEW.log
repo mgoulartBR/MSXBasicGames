@@ -1,0 +1,19 @@
+ROM_SHA256 de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+PCS  5646 519F
+PCS   120 9179
+PCS    93 9186
+PCS    61 4D7A
+PCS    49 4D76
+PCS    45 4AFF
+PCS    42 918F
+PCS    41 4D82
+PCS    40 4B05
+PCS    36 918D
+PCS    34 4D80
+PCS    31 4DDB
+PCS    29 5187
+PCS    28 918A
+PCS    27 9E92
+RESULT failures=0

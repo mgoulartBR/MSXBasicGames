@@ -1,0 +1,29 @@
+ROM_SHA256 e132ce1e44c00b84016ef71ffdc5e6b910f720f9f52949d04a5fabf43b738494
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+METRIC idle seconds=2.0000005587302283 frames=0 ticks=60
+CADENCE idle 
+CALLS idle 
+INCL one video_sprites      1613.0 ms  calls=13  avg=124.08 ms
+INCL one draw_actor          393.4 ms  calls=22  avg=17.88 ms
+INCL one video_present       153.2 ms  calls=12  avg=12.77 ms
+INCL one damage_mask          97.1 ms  calls=13  avg=7.47 ms
+INCL one structure_bars       43.7 ms  calls=12  avg=3.64 ms
+INCL one fog_cover            39.3 ms  calls=12  avg=3.28 ms
+METRIC one seconds=3.173490764887717 frames=12 ticks=90
+CADENCE one 51.800108673029676 51.98367948999105 52.217312814896864 52.417572065723434 52.63451667739894 52.85146324463025 53.06840897376622 53.33541944576755 53.58574148390368 53.80268860986522 54.00294590513599 54.25326878136747
+CALLS one video_sprites 13 fog_stamp 52 fog_update 10 fog_merge 10
+PASS one_unit_arrives
+PASS four_selected
+INCL four video_sprites      2121.9 ms  calls=7  avg=303.13 ms
+INCL four fog_apply           588.0 ms  calls=5  avg=117.61 ms
+INCL four draw_actor          382.5 ms  calls=21  avg=18.21 ms
+INCL four fog_cover           350.6 ms  calls=64  avg=5.48 ms
+INCL four damage_mask         162.0 ms  calls=7  avg=23.15 ms
+INCL four video_present        99.8 ms  calls=7  avg=14.25 ms
+INCL four structure_bars       26.4 ms  calls=7  avg=3.77 ms
+METRIC four seconds=3.773524847431723 frames=7 ticks=106
+CADENCE four 55.25455749264222 55.50488008950858 55.888706525550035 56.639674595514236 57.45739276919273 58.12492034602163 58.60887570906358
+CALLS four video_sprites 7 fog_stamp 49 fog_update 5 fog_merge 5
+PASS four_distinct_goals
+RESULT failures=0

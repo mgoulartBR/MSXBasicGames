@@ -1,0 +1,20 @@
+ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+PASS harvested_start
+PASS forge_locked_without_quartel
+PASS worker_reserved
+PASS worker_cancel_refund
+PASS fifth_is_worker
+PASS new_worker_delivers_to_sawmill
+PASS recruited_worker_hidden_in_mine
+info: Screen saved to ../screenshots/V9990/new_worker_in_mine.png
+PASS miner_can_exit_on_order
+PASS recruited_worker_builds
+PASS pause_preserves_progress
+PASS resume_preserves_cost
+PASS fresh_cancel_site
+PASS cancel_site_refund
+PASS no_hud_erases
+info: Screen saved to ../screenshots/V9990/worker07.png
+RESULT failures=0

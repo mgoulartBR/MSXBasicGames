@@ -1,0 +1,12 @@
+ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+info: Screen saved to ../screenshots/V9990/camera07-V9990-corner.png
+PASS camera_corner
+info: Screen saved to ../screenshots/V9990/camera07-V9990-middle.png
+PASS camera_middle
+PASS camera_return
+PASS fine_scroll_step
+PASS zero_hud_clears
+info: Screen saved to ../screenshots/V9990/camera07-return.png
+RESULT failures=0

@@ -1,0 +1,9 @@
+ROM_SHA256 f286e8db6e39186a00411d00e99e70aa77ec941d8d013beef294ac9f51d4ed4b
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+warning: Operation not permitted
+PASS rejects_v9958
+PASS renderer_not_started
+PASS keyclick_zero
+info: Screen saved to ../screenshots/V9968_detection_no_device.png
+RESULT failures=0

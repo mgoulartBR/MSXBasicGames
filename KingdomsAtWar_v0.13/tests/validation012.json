@@ -1,0 +1,122 @@
+{
+  "version": "0.12",
+  "passed": true,
+  "rom_sha256": {
+    "KAW9990": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+    "KAW68PV": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+    "KAW9968": "f286e8db6e39186a00411d00e99e70aa77ec941d8d013beef294ac9f51d4ed4b"
+  },
+  "scenario_logs": [
+    {
+      "file": "kernel012-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 1
+    },
+    {
+      "file": "perf012-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 3
+    },
+    {
+      "file": "fog011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 10
+    },
+    {
+      "file": "combat011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 19
+    },
+    {
+      "file": "worker011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 14
+    },
+    {
+      "file": "camera011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 5
+    },
+    {
+      "file": "overlay011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 4
+    },
+    {
+      "file": "perf091-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 1
+    },
+    {
+      "file": "defense011-V9990.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 11
+    },
+    {
+      "file": "box011-V9990-port1.log",
+      "rom_sha256": "2c3068b31957e64c0a493e765a8337480772ba8b09cfc64279b4e403b350f2bb",
+      "checks": 19
+    },
+    {
+      "file": "kernel012-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 1
+    },
+    {
+      "file": "perf012-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 3
+    },
+    {
+      "file": "fog011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 10
+    },
+    {
+      "file": "combat011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 19
+    },
+    {
+      "file": "worker011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 14
+    },
+    {
+      "file": "camera011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 5
+    },
+    {
+      "file": "overlay011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 4
+    },
+    {
+      "file": "perf091-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 1
+    },
+    {
+      "file": "kingdom011-PREVIEW.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 16
+    },
+    {
+      "file": "box011-PREVIEW-port1.log",
+      "rom_sha256": "de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868",
+      "checks": 19
+    },
+    {
+      "file": "native_missing-V9968.log",
+      "rom_sha256": "f286e8db6e39186a00411d00e99e70aa77ec941d8d013beef294ac9f51d4ed4b",
+      "checks": 3
+    }
+  ],
+  "limitations": [
+    "Positive V9968 hardware validation pending; PREVIEW uses a V9958",
+    "Measurements use openMSX Z80 at standard clock; not a physical-hardware benchmark",
+    "WebMSX itself not rerun; actual emulated mouse protocol tested through SDL",
+    "No claim of 30/60 FPS; see scenario-specific cadence in performance012.json"
+  ]
+}

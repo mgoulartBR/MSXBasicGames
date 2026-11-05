@@ -1,0 +1,4 @@
+v0.4.3 PREVIEW V9958 — baseline preservada
+ROM_SHA256 409a874babad3c34c1606066b908bd77d889eee58d19357106abef87ad8d0821
+BENCH horizontal pixels=120 camera_updates=57 ticks=33 loops=62 terrain_copies=0
+BENCH vertical pixels=120 camera_updates=31 ticks=32 loops=32 terrain_copies=192

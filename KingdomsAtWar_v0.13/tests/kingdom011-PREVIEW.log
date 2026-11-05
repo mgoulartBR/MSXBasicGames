@@ -1,0 +1,28 @@
+ROM_SHA256 bb7a65f8c3defbac7314e7f4b9c34d63ed093b168b2ba8493b0092edfee6fe1e
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+PASS collected_for_realm
+PASS defender_damages_structure
+PASS repair_order_assigned
+info: Screen saved to ../screenshots/PREVIEW/repair011-damaged.png
+PASS repair_uses_wood
+PASS repair_animates
+info: Screen saved to ../screenshots/PREVIEW/repair011-working.png
+PASS attack_group_preserves_repair
+PASS repair_completes
+info: Screen saved to ../screenshots/PREVIEW/repair011-complete.png
+PASS all_classes_recruited
+FORGE wood=69 gold=92 repaired=19
+PASS research_applied
+info: Screen saved to ../screenshots/PREVIEW/research011-knight.png
+PASS tower_ready
+PASS tower_auto_acquires
+info: Screen saved to ../screenshots/PREVIEW/tower011-firing.png
+PASS tower_defeats_defender
+PASS upgraded_ram_damage
+PASS castle_destroyed
+PASS all_buildings_and_units
+PASS no_hud_clears
+info: Screen saved to ../screenshots/PREVIEW/kingdom011-finished.png
+KINGDOM tower_shots=6 repair_spent=19 healed=76 hits=36
+RESULT failures=0

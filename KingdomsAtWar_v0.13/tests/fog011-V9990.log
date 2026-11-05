@@ -1,0 +1,17 @@
+ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
+ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
+error: Could not open sequencer: No such file or directory
+PASS home_visible
+PASS enemy_unexplored
+PASS camera_does_not_reveal
+info: Screen saved to ../screenshots/V9990/fog011-V9990-unknown.png
+PASS hidden_enemy_not_selected
+PASS hidden_enemy_not_targeted
+PASS scout_reveals
+info: Screen saved to ../screenshots/V9990/fog011-V9990-visible.png
+PASS exploration_remembered
+info: Screen saved to ../screenshots/V9990/fog011-V9990-remembered.png
+PASS stationary_no_fog_rebuild
+PASS unseen_placement_denied
+PASS hud_preserved
+RESULT failures=0
