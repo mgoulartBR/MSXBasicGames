@@ -260,7 +260,7 @@ void video_init(void) {
  gpu_write_tile(0,FONT_Y+16,ring_pixels);
  for(i=0;i<128;++i)tile_buffer[i]=(i&8)?0x01:0x10;
 #ifdef KAW_V9990
- gpu_write_tile(256,1248,tile_buffer);
+ {u8 k;for(k=0;k<16;++k)gpu_write_tile(256+k*16,1248,tile_buffer);for(i=0;i<128;++i)tile_buffer[i]=0x11;for(k=0;k<16;++k)gpu_write_tile(k*16,1264,tile_buffer);}
 #else
  gpu_write_tile(64,656,tile_buffer);for(i=0;i<128;++i)tile_buffer[i]=0x11;gpu_write_tile(80,656,tile_buffer);
 #endif

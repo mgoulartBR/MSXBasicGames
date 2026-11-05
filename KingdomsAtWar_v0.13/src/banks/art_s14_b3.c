@@ -8,12 +8,16 @@ void fog_cover(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy) __banked {
    if(ww>right-xx)ww=right-xx;
    if(state<2) {
 #ifdef KAW_V9990
-    sx=state?256:16;sy=1248;
+    /* Equal-state neighbours share one copy from a 256-pixel-wide strip. */
+    i16 x0=xx;u16 run=ww;xx+=ww;
+    while(xx<right && run<240 && fog_at(xx>>4,yy>>4)==state) {u8 w2=right-xx>16?16:right-xx;run+=w2;xx+=w2;}
+    sx=state?256:0;sy=state?1248:1264;
+    clip_copy(x0,yy,sx+(x0&15),sy+(yy&15),run,hh,p,cx,cy);
+    continue;
 #else
     sx=state?64:80;sy=656;
-#endif
-    /* clip_copy is transparent, so the unknown source uses opaque color 1. */
     clip_copy(xx,yy,sx+(xx&15),sy+(yy&15),ww,hh,p,cx,cy);
+#endif
    }
    xx+=ww;
   }yy+=hh;

@@ -3,8 +3,29 @@
 #define FONT_Y 1216
 #define CACHE_COUNT 1
 u8 shown;u16 hud_stamp[2];
-static void gpu_wait(void) {poll_input();while(V9_IsCmdRunning())if(video_enabled && *((volatile u8*)0xFC9E)!=(u8)raw_tick)poll_input();}
-static void gpu_copy(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h,u8 trans) {gpu_wait();V9_SetCommandLogicalOp(trans?0x1C:0x0C);V9_CommandLMMM(sx,sy,dx,dy,w,h,0);}
+static u8 v9_busy(void) __naked {__asm
+ in a,(#0x65)
+ and #1
+ ret
+ __endasm;}
+/* Command block R#32..R#45 (SX,SY,DX,DY,NX,NY,ARG,LOP) sent with auto-increment. */
+volatile struct {u16 r[6];u8 arg,lop;} v9c;
+static void v9_lmmm(void) __naked {__asm
+ di
+ ld a,#32
+ out (#0x64),a
+ ld hl,#_v9c
+ ld bc,#0x0E63
+ otir
+ ld a,#52
+ out (#0x64),a
+ ld a,#0x40
+ out (#0x63),a
+ ei
+ ret
+ __endasm;}
+static void gpu_wait(void) {if(*((volatile u8*)0xFC9E)!=(u8)raw_tick)poll_input();while(v9_busy())if(video_enabled && *((volatile u8*)0xFC9E)!=(u8)raw_tick)poll_input();}
+static void gpu_copy(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h,u8 trans) {gpu_wait();v9c.r[0]=sx;v9c.r[1]=sy;v9c.r[2]=dx;v9c.r[3]=dy;v9c.r[4]=w;v9c.r[5]=h;v9c.arg=0;v9c.lop=trans?0x1C:0x0C;v9_lmmm();}
 /* Solid 16x16 swatches share the verified bitmap copy path. */
 static void gpu_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
  u16 xx,yy;u8 ww,hh;
