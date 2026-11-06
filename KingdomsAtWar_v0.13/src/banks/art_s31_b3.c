@@ -77,15 +77,30 @@ nav_store094$:
  ret
  __endasm;
 }
+/* The parent map is kept pristine between jobs. A job leaves dirt only on the cells it enqueued
+ * (queue[0..qtail)) and on the unit cells it blocked, so those alone are restored; terrain changes
+ * (nav_base_dirty) force the full rebuild. */
+static u8 nav_clean;static u16 nav_marks[2*RN];static u8 nav_mark_n;
+static u8 nav_base(u16 c) {u8 t=terrain[c];return (t==0 || t==3)?255:253;}
+static void nav_reset(void) {
+ u16 i;
+ if(nav_base_dirty) {nav_prepare();nav_base_dirty=0;nav_clean=1;return;}
+ if(nav_clean)return;
+ for(i=0;i<qtail;++i){u16 c=queue[i];parent[c]=nav_base(c);}
+ for(i=0;i<nav_mark_n;++i){u16 c=nav_marks[i];parent[c]=nav_base(c);}
+ qtail=qhead=0;nav_mark_n=0;nav_clean=1;
+}
 void nav_begin(u8 id) __banked {
  u16 i,start;u8 j;
  Unit* u=&units[id];
  job_unit=id;requested[id]=0;nav_work_mode=0;
- nav_prepare();
+ nav_reset();
+ nav_mark_n=0;
  for(j=0;j<RN;++j)if(j!=id && combat_alive(j)) {
-  parent[((u16)units[j].y<<5)+units[j].x]=253;
-  if(units[j].progress)parent[((u16)units[j].ny<<5)+units[j].nx]=253;
+  u16 c=((u16)units[j].y<<5)+units[j].x;parent[c]=253;nav_marks[nav_mark_n++]=c;
+  if(units[j].progress){c=((u16)units[j].ny<<5)+units[j].nx;parent[c]=253;nav_marks[nav_mark_n++]=c;}
  }
+ nav_clean=0;
  start=((u16)u->y<<5)+u->x;job_goal=((u16)u->ty<<5)+u->tx;
  parent[start]=254;queue[0]=start;qhead=0;qtail=1;
  for(i=0;i<128;++i)nav_targets[i]=0;
@@ -201,6 +216,7 @@ u8 work_adjacent(u8 id,u8 x,u8 y) __banked {
 void resource_empty(u8 x,u8 y) __banked {
  u8 n=object_size(x,y),dx,dy;
  if(tile(x,y)==4)return; /* Empty cave remains for workers to leave safely. */
+ nav_base_dirty=1;
  for(dy=0;dy<n;++dy)for(dx=0;dx<n;++dx)terrain[((u16)(y+dy)<<5)+x+dx]=0;
  /* The oak crown extends one row above its root; mines occupy two rows. */
  for(dy=y?y-1:0;dy<=y+1 && dy<32;++dy)for(dx=x;dx<=x+1 && dx<32;++dx) {

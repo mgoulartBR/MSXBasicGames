@@ -34,7 +34,7 @@ proc combat09 {} {
  ck hold_keeps_position {[b stance 2]==1 && [unit 2 x]==$hold_x && [unit 2 y]==$hold_y && [b building_hp 1]==$keep}
  choose 0;world_point 9 23;tap 5 32
  ck worker_move_not_attack {[b combat_target]==255 && [unit 0 tx]==9 && [unit 0 ty]==23}
- await {[b unit_hp 0]==0} 140
+ await {[b unit_hp 0]==0 && [w combat_kills]>=2} 140
  ck allied_death {[w combat_kills]==2 && ([b selection_mask]&1)==0}
  choose_building 0;tap 4 128
  await {[b unit_hp 0]>0} 30

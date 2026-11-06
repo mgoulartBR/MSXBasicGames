@@ -19,7 +19,7 @@ u8 build_unlocked(u8 kind) __banked {
 void building_refresh(u8 id) __banked {
  Building* b=&buildings[id];u8 x,y,n=building_size(b->type);fog_refresh=1;fog_build_dirty=1;
  for(y=b->y;y<b->y+n;++y)for(x=b->x;x<b->x+n;++x) {
-  terrain[((u16)y<<5)+x]=b->state?10+id:0;
+  nav_base_dirty=1;terrain[((u16)y<<5)+x]=b->state?10+id:0;
   art_map[((u16)y<<5)+x]=art_index(x,y);video_tile(x,y);
  }
 }

@@ -65,7 +65,7 @@ u16 group_orders, replans;
 u8 nav_targets[128],nav_work_mode,mine_turn;
 u16 economy_retries,alternate_approaches;
 /* parent: 255 unseen, 254 root, 253 blocked, 0..3 incoming direction. */
-u8 parent[1024];
+u8 parent[1024];u8 nav_base_dirty;
 u16 queue[1024],qhead,qtail,job_goal;
 u8 job_unit;
 u16 cam_x,cam_y;

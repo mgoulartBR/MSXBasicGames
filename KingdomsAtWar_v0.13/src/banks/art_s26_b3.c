@@ -73,6 +73,7 @@ void combat_init(void) __banked {
  for(i=0;i<RN;++i) {shot_time[i]=0;unit_hp[i]=i<unit_count?unit_max_hp[unit_kind[i]]:0;combat_target[i]=NONE;attack_cooldown[i]=attack_flash[i]=hurt_flash[i]=0;}
  for(i=0;i<N;++i)stance[i]=0;
  for(i=0;i<BMAX;++i) {building_owner[i]=0;building_hp[i]=i?0:240;}
+ nav_base_dirty=1;
  for(y=20;y<32;++y)for(x=0;x<12;++x) {u16 c=((u16)y<<5)+x;terrain[c]=0;stock[c]=0;}
  building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
  for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;

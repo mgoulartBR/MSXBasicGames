@@ -39,7 +39,7 @@ proc dump_incl {phase} {
 '''
 t=t.replace('proc perf_end {phase} {','proc perf_end {phase} {\n dump_incl $phase',1)
 hook='''
- set variant $::env(KAW_VARIANT);set nm [expr {$variant eq "V9990"?"KAW9990":"KAW68PV"}]
+ set variant $::env(KAW_VARIANT);set nm [dict get {V9990 KAW9990 PREVIEW KAW68PV V9968 KAW9968} $variant]
  set f [open ../build/$variant/$nm.map];set mtext [read $f];close $f
  foreach fn {%s} {
   set address -1
