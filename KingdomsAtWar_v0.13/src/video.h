@@ -26,6 +26,8 @@ void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy) {
 #ifdef KAW_V9990
  gpu_copy(sx,sy,left-cx,(u16)p*256+top-cy,right-left,bottom-top,1);
 #else
+ {u8 l8=(u8)left,t8=(u8)top;u16 W=right-left,H=bottom-top;
+  if((u16)l8+W<=256 && (u16)t8+H<=256){gpu_copy(sx,sy,l8,(u16)p*256+t8,W,H,1);return;}}
  /* Split at physical wrap boundaries; the source image is not circular. */
  while(top<bottom) {i16 x=left;u16 hh=256-(top&255);if(hh>bottom-top)hh=bottom-top;
   while(x<right) {u16 ww=256-(x&255);if(ww>right-x)ww=right-x;gpu_copy(sx+x-left,sy+top-source_top,(u8)x,(u16)p*256+(u8)top,ww,hh,1);x+=ww;}
@@ -40,8 +42,9 @@ static void paint_world(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy,u8 overlay) {
  if(left<(i16)cx)left=cx;if(top<(i16)cy)top=cy;if(right>(i16)cx+256)right=cx+256;if(bottom>(i16)cy+160)bottom=cy+160;
 #endif
  if(left<0)left=0;if(top<0)top=0;if(right>512)right=512;if(bottom>512)bottom=512;
- for(yy=top;yy<bottom;) {u8 hh=16-(yy&15);if(hh>bottom-yy)hh=bottom-yy;
-  for(xx=left;xx<right;) {u8 ww=16-(xx&15),t=fog_art(xx>>4,yy>>4),phy=tile_source[t];u16 dx,dy;
+ for(yy=top;yy<bottom;) {u8 hh=16-(yy&15),cy8=(u16)yy>>4,cell=(u16)left>>4;
+  if(hh>bottom-yy)hh=bottom-yy;
+  for(xx=left;xx<right;++cell) {u8 ww=16-(xx&15),t=fog_art(cell,cy8),phy=tile_source[t];u16 dx,dy;
    if(ww>right-xx)ww=right-xx;
 #ifdef KAW_V9990
    if(overlay) {dx=xx-cx;dy=(u16)p*256+yy-cy;}else {dx=xx;dy=512+yy;}
@@ -49,7 +52,7 @@ static void paint_world(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy,u8 overlay) {
    dx=(u8)xx;dy=(u16)p*256+(u8)yy;
 #endif
    if(!overlay && t>=64)gpu_fill(dx,dy,ww,hh,3);
-   gpu_copy((phy&15)*16+(xx&15),STATIC_Y+(phy>>4)*16+(yy&15),dx,dy,ww,hh,t>=64);xx+=ww;++terrain_copies;
+   gpu_copy(((phy&15)<<4)+(xx&15),STATIC_Y+((phy>>4)<<4)+(yy&15),dx,dy,ww,hh,t>=64);xx+=ww;++terrain_copies;
   }yy+=hh;
  }
 #ifndef KAW_V9990
@@ -128,9 +131,26 @@ static void draw_actor(u8 i,u8 p) {
 #ifdef KAW_V9990
  {u8 top=b[1];if(crop>top)top=crop;if(top<b[1]+b[3])clip_copy(actor_x[i]+b[0],actor_y[i]+top,(key%10)*48+b[0],1280+(u16)(key/10)*48+top,b[2],b[1]+b[3]-top,p,cam_x,cam_y);}
 #else
- for(q=0;q<(n==2?4:9);++q) {u16 sx,sy;u8 tx=(n==2?small_tx:large_tx)[q],ty=(n==2?small_ty:large_ty)[q],left=tx,top=ty,right=tx+16,bottom=ty+16;
-  if(left<b[0])left=b[0];if(top<b[1])top=b[1];if(top<crop)top=crop;if(right>b[0]+b[2])right=b[0]+b[2];if(bottom>b[1]+b[3])bottom=b[1]+b[3];
-  if(left>=right||top>=bottom)continue;cache_xy(unit_cache[i],q,&sx,&sy);clip_copy(actor_x[i]+left,actor_y[i]+top,sx+left-tx,sy+top-ty,right-left,bottom-top,p,cam_x,cam_y);
+ /* One copy per pose row when its pieces are neighbours in the pose cache (they usually are). */
+ {u8 row,slot=unit_cache[i],nn=n<<4;
+  for(row=0;row<n;++row) {
+   u8 ty=row<<4,top=ty<b[1]?b[1]:ty,bottom=ty+16,left=b[0],right=b[0]+b[2],q0,q1,t0;u16 sx,sy;
+   if(bottom>b[1]+b[3])bottom=b[1]+b[3];
+   if(top<crop)top=crop;
+   if(right>nn)right=nn;
+   if(top>=bottom || left>=right)continue;
+   q0=row*n+(left>>4);q1=row*n+((right-1)>>4);t0=(slot<7?slot:slot-7)*9+q0;
+   cache_xy(slot,q0,&sx,&sy);
+   if((t0&15)+(q1-q0)<16) {
+    clip_copy(actor_x[i]+left,actor_y[i]+top,sx+left-((left>>4)<<4),sy+top-ty,right-left,bottom-top,p,cam_x,cam_y);
+   } else {
+    for(q=q0;q<=q1;++q) {
+     u8 tx=(q-row*n)<<4,l=left>tx?left:tx,r=right<tx+16?right:tx+16;
+     cache_xy(slot,q,&sx,&sy);
+     clip_copy(actor_x[i]+l,actor_y[i]+top,sx+l-tx,sy+top-ty,r-l,bottom-top,p,cam_x,cam_y);
+    }
+   }
+  }
  }
 #endif
  /* Indexed health bar and a brief contact flash, inside damage bounds. */
@@ -162,7 +182,7 @@ void video_sprites(void) {
   if(!actor_visible[i] || !a->h || a->x+a->w<=(i16)cam_x || a->x>=(i16)cam_x+256 || a->y+a->h<=(i16)cam_y || a->y>=(i16)cam_y+160) {actor_visible[i]=0;a->w=0;}
   if(actor_visible[i]) {order[count++]=i;
 #ifndef KAW_V9990
-   unit_cache[i]=cache_frame(actor_key[i]);
+   {u8 s=unit_cache[i];if(s<CACHE_COUNT && cache_key[s]==actor_key[i]){cache_stamp[s]=cache_tick;++frame_hits;}else unit_cache[i]=cache_frame(actor_key[i]);}
 #endif
   }
  }

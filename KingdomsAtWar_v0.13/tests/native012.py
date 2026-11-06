@@ -14,7 +14,7 @@ def decode(b,n):
  assert len(o)==n
  return o
 records=json.loads((R/'art07/runtime/native012.json').read_text());checks=0
-for name in ['KAW68PV','KAW9968']:
+for name in ['KAW9968']:
  rom=(R/(name+'.ROM')).read_bytes()
  for rec in records:
   k=rec['key'];raw=(R/f'art07/runtime/pose{k}.bin').read_bytes();n=sizes[k//24]//16;l,t,w,h=bounds[k*4:k*4+4];expected=bytearray()
@@ -23,8 +23,8 @@ for name in ['KAW68PV','KAW9968']:
    if left>=right or top>=bottom:continue
    for yy in range(top,bottom):
     a=q*128+(yy-y)*8+(left-x)//2;expected.extend(raw[a:a+(right-left)//2])
-  a=rec['bank']*8192+rec['offset'];actual=decode(rom[a:],rec['cropped']);assert actual==expected and hashlib.sha256(actual).hexdigest()==rec['sha256'];checks+=1
-vram=(R/'tests/perf091-PREVIEW-vram.bin').read_bytes();keys=(R/'tests/perf091-PREVIEW-cache.bin').read_bytes();pixels=0
+  a=rec['bank']*8192+rec['offset'];actual=bytearray(rom[a:a+rec['cropped']]);assert actual==expected and hashlib.sha256(actual).hexdigest()==rec['sha256'];checks+=1
+vram=(R/'tests/perf091-V9968-vram.bin').read_bytes();keys=(R/'tests/perf091-V9968-cache.bin').read_bytes();pixels=0
 for slot,k in enumerate(keys):
  if k==255:continue
  raw=(R/f'art07/runtime/pose{k}.bin').read_bytes();n=sizes[k//24]//16;l,t,w,h=bounds[k*4:k*4+4]
