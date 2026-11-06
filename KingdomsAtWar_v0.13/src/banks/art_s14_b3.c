@@ -48,6 +48,50 @@ u8 fog_page_pending(u8 p) __banked {
  fog_pending[p]=window_flagged(fog_changed[p],cam_x>>4,(cam_x+255)>>4,cam_y>>4,(cam_y+159)>>4);
  return fog_pending[p];
 }
+#ifdef KAW_V9990
+/* V9990: restoring from the resident world is a single cheap blitter copy, so every changed cell of the
+ * window is covered by ONE bounding rectangle (redrawing the extra unchanged pixels is harmless, and
+ * the actors touching it are redrawn). This replaces the per-run scans and per-run copies. */
+static u8 fb_l,fb_t,fb_r,fb_b;
+static u8 fog_bbox(u8 p) {
+ u8 left=cam_x>>4,right=(cam_x+255)>>4,top=cam_y>>4,bottom=(cam_y+159)>>4;
+ u8 lq=left>>3,rq=right>>3,y,q,b,m,ymin=255,ymax=0,c0=0,c1=0,c2=0,c3=0;
+ for(y=top;y<=bottom;++y) {
+  const u8* row=fog_changed[p]+((u16)y<<2);u8 any=0;
+  for(q=lq;q<=rq;++q) {
+   m=255;if(q==lq)m&=col_from[left&7];if(q==rq)m&=col_to[right&7];
+   b=row[q]&m;
+   if(b) {any=1;if(q==0)c0|=b;else if(q==1)c1|=b;else if(q==2)c2|=b;else c3|=b;}
+  }
+  if(any) {if(ymin==255)ymin=y;ymax=y;}
+ }
+ if(ymin==255)return 0;
+ {u8 col[4];col[0]=c0;col[1]=c1;col[2]=c2;col[3]=c3;
+  for(q=lq;!col[q];++q);
+  for(b=0;!(col[q]&fog_bit_table[b]);++b);
+  fb_l=(q<<3)+b;
+  for(q=rq;!col[q];--q);
+  for(b=7;!(col[q]&fog_bit_table[b]);--b);
+  fb_r=(q<<3)+b;}
+ fb_t=ymin;fb_b=ymax;return 1;
+}
+u16 fog_damage(u8 p,u16 mask) __banked {
+ if(fog_bbox(p)) {
+  i16 l=(i16)fb_l<<4,r=((i16)fb_r+1)<<4,t=(i16)fb_t<<4,bt=((i16)fb_b+1)<<4;u8 k;
+  for(k=0;k<dm_n;++k)if(!(mask&dm_bit[k]) && dm_l[k]<r && dm_r[k]>l && dm_t[k]<bt && dm_b[k]>t)mask|=dm_bit[k];
+ }
+ return mask;
+}
+void fog_apply(u8 p) __banked {
+ u8 y,left=cam_x>>4,right=(cam_x+255)>>4,top=cam_y>>4,bottom=(cam_y+159)>>4;
+ fog_pending[p]=0;
+ if(fog_bbox(p))restore_field((u16)fb_l<<4,(u16)fb_t<<4,(u16)(fb_r-fb_l+1)<<4,(u16)(fb_b-fb_t+1)<<4,p,cam_x,cam_y);
+ for(y=top;y<=bottom;++y) {
+  u8* row=fog_changed[p]+((u16)y<<2);u8 q;
+  for(q=left>>3;q<=right>>3;++q) {u8 m=255;if(q==(left>>3))m&=col_from[left&7];if(q==(right>>3))m&=col_to[right&7];row[q]&=~m;}
+ }
+}
+#else
 /* Scan byte masks, skipping empty spans and combining adjacent dirty cells.
  * Unchanged cells and damage outside this camera remain untouched. */
 static u16 fog_hit(u16 mask,u8 c0,u8 c1,u8 y) {
@@ -85,3 +129,4 @@ void fog_apply(u8 p) __banked {
   {u8 q;for(q=left>>3;q<=right>>3;++q) {u8 m=255;if(q==(left>>3))m<<=left&7;if(q==(right>>3))m&=255>>(7-(right&7));row[q]&=~m;}}
  }
 }
+#endif

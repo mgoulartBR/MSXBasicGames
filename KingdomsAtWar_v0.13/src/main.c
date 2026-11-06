@@ -407,7 +407,11 @@ void main(void) {
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
   if(fog_refresh)fog_update();video_stream();camera_update(dt);
+#ifdef KAW_V9990
+  if(sprites_dirty && !flip_pending) {video_sprites();sprites_dirty=0;}
+#else
   if(sprites_dirty) {video_sprites();sprites_dirty=0;}
+#endif
   hud();
  }
 }

@@ -49,5 +49,49 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 void video_hud_begin(void) {}
 void video_hud_end(void) {}
 void video_hud_flush(void) {gpu_wait();}
-void video_cursor(void) {V9_SetCursorAttribute(0,mouse_x,mouse_y,3);}
-void video_present(u8 p) {if(hud_stamp[p]!=hud_swaps){gpu_copy(256,hud_live?64:0,0,(u16)p*256+160,256,52,0);hud_stamp[p]=hud_swaps;}gpu_wait();if(video_enabled) {while(V9_IsVBlank()){}while(!V9_IsVBlank()){};}shown=p;V9_SetScrolling(0,(u16)p*256);}
+void video_cursor(void) {__asm di __endasm;V9_SetCursorAttribute(0,mouse_x,mouse_y,3);__asm ei __endasm;}
+/* v0.13: the page flip is done by the V9990 vertical-blank interrupt (via the BIOS H.KEYI hook), so the
+ * main loop never idles waiting for the retrace; simulation and drawing continue meanwhile. */
+volatile u8 flip_pending,flip_page,v9_irq_on;u8 r18_hi;
+static u8 v9_in_flags(void) __naked {__asm
+ in a,(#0x66)
+ ret
+ __endasm;}
+static void v9_clear_vi(void) __naked {__asm
+ ld a,#1
+ out (#0x66),a
+ ret
+ __endasm;}
+/* R#17 = 0, R#18 = (upper bits) | page: vertical scroll = page*256. A = page. */
+static void v9_flip_regs(u8 page) __naked {page;__asm
+ ld c,a
+ ld a,#17
+ out (#0x64),a
+ xor a
+ out (#0x63),a
+ ld a,(_r18_hi)
+ or a,c
+ out (#0x63),a
+ ret
+ __endasm;}
+static void irq_v9990(void) {
+ if(v9_in_flags()&1) {
+  v9_clear_vi();
+  if(flip_pending) {v9_flip_regs(flip_page);shown=flip_page;flip_pending=0;}
+ }
+}
+void video_irq_install(void) {
+ __asm di __endasm;
+ r18_hi=V9_GetRegister(18)&0xE0;
+ BIOS_SetHookDirectCallback(H_KEYI,irq_v9990);
+ v9_irq_on=1;flip_pending=0;
+ V9_SetInterrupt(V9_INT_VBLANK);
+ __asm ei __endasm;
+}
+void video_present(u8 p) {
+ if(hud_stamp[p]!=hud_swaps){gpu_copy(256,hud_live?64:0,0,(u16)p*256+160,256,52,0);hud_stamp[p]=hud_swaps;}
+ gpu_wait();
+ if(v9_irq_on) {flip_page=p;flip_pending=1;return;}
+ if(video_enabled) {while(V9_IsVBlank()){}while(!V9_IsVBlank()){};}
+ shown=p;V9_SetScrolling(0,(u16)p*256);
+}

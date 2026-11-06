@@ -361,7 +361,7 @@ void video_init(void) {
 }
 void video_enable(void) {
 #ifdef KAW_V9990
- hud_stamp[0]=hud_stamp[1]=65535;video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);
+ hud_stamp[0]=hud_stamp[1]=65535;video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);video_irq_install();
 #else
  gpu_wait();__asm di __endasm;BIOS_SetHookDirectCallback(H_KEYI,irq_video);video_ready=1;field_registers();raw_reg(1,0x62);__asm ei __endasm;
 #endif
