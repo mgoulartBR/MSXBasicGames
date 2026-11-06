@@ -201,6 +201,7 @@ u16 damage_mask(u8 p,u16 mask,u8 flags) __banked;
 #include "render_types.h"
 extern Rect rect_now[RN],rect_old[2][RN];
 extern const u16 render_bit[RN];
+extern i16 dm_l[RN],dm_t[RN],dm_r[RN],dm_b[RN];extern u16 dm_bit[RN];extern u8 dm_n;
 extern i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];extern u8 strip_n;
 extern u8 box_old[2],changed_x[2][32],changed_y[2][32],changed_count[2],ghost_old[2],ghost_size[2];
 extern u16 box_l[2],box_t[2],box_r[2],box_b[2],ghost_x[2],ghost_y[2];
@@ -251,6 +252,8 @@ u8 fog_page_pending(u8 p) __banked;
 void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);
 void video_world_cell(u8 x,u8 y);
+void video_world_tile(u8 x,u8 y);
+void video_world_dither(u8 x,u8 y,u8 n);
 extern const u8 fog_bit_table[8];
 extern u8 fog_trail[128],fog_pending[2];extern u8* fog_dest;extern u16 fog_epoch,fog_checked_epoch[2],fog_checked_x[2],fog_checked_y[2];
 

@@ -68,6 +68,8 @@ void video_world_cell(u8 x,u8 y) {
  paint_world(dx,(u16)y*16,16,16,0,0,0,0);
  if(st==1)gpu_copy(256,1248,dx,dy,16,16,1);
 }
+void video_world_tile(u8 x,u8 y) {paint_world((u16)x*16,(u16)y*16,16,16,0,0,0,0);}
+void video_world_dither(u8 x,u8 y,u8 n) {gpu_copy(256,1248,(u16)x*16,512+(u16)y*16,(u16)n*16,16,1);}
 #endif
 void world_fill(i16 x,i16 y,u8 w,u8 h,u8 p,u8 c) {
  i16 right=x+w,bottom=y+h;if(x<(i16)cam_x)x=cam_x;if(y<(i16)cam_y)y=cam_y;if(right>(i16)cam_x+256)right=cam_x+256;if(bottom>(i16)cam_y+160)bottom=cam_y+160;
@@ -189,7 +191,9 @@ void video_sprites(void) {
   }
  }
  camera=!field_valid[p] || field_x[p]!=cam_x || field_y[p]!=cam_y;
- for(i=0;i<RN;++i)if(!field_valid[p] || unit_hp[i]!=old_hp[p][i] || hurt_flash[i]!=old_hit[p][i] || actor_key[i]!=old_key[p][i] || rect_now[i].x!=rect_old[p][i].x || rect_now[i].y!=rect_old[p][i].y || rect_now[i].w!=rect_old[p][i].w || rect_now[i].h!=rect_old[p][i].h || ((actor_sel[p]^selection_mask)&render_bit[i]))mask|=render_bit[i];
+ {const Rect* rn=rect_now;const Rect* ro=rect_old[p];const u8 *ohp=old_hp[p],*ohit=old_hit[p],*okey=old_key[p];const u16* bit=render_bit;u8 vf=field_valid[p];u16 selx=actor_sel[p]^selection_mask;
+  for(i=0;i<RN;++i,++rn,++ro,++bit)
+   if(!vf || unit_hp[i]!=ohp[i] || hurt_flash[i]!=ohit[i] || actor_key[i]!=okey[i] || ((const u16*)rn)[0]!=((const u16*)ro)[0] || ((const u16*)rn)[1]!=((const u16*)ro)[1] || ((const u16*)rn)[2]!=((const u16*)ro)[2] || (selx&*bit))mask|=*bit;}
  fog_page_dirty=fog_page_pending(p);
  ghost_changed=ghost!=ghost_old[p] || (ghost && (ghost_x[p]!=place_x*16 || ghost_y[p]!=place_y*16 || ghost_size[p]!=building_size(build_kind)*16 || ghost_color_old[p]!=place_valid));
  box_changed=box!=box_old[p] || (box && (drag_l!=box_l[p] || drag_t!=box_t[p] || drag_r!=box_r[p] || drag_b!=box_b[p]));
@@ -245,7 +249,7 @@ void video_sprites(void) {
     && (!camera || shift)
 #endif
  ) {
-  for(i=0;i<PS;++i)if(arrow_old[p]&((u16)1<<i))restore_field(arrow_old_x[p][i]-2,arrow_old_y[p][i]-2,5,5,p,field_x[p],field_y[p]);
+  if(arrow_old[p])for(i=0;i<PS;++i)if(arrow_old[p]&((u16)1<<i))restore_field(arrow_old_x[p][i]-2,arrow_old_y[p][i]-2,5,5,p,field_x[p],field_y[p]);
   if(box_old[p] && (box_changed || camera))erase_border(p,box_l[p],box_t[p],box_r[p],box_b[p]);
   for(i=0;i<RN;++i)if(restore&render_bit[i]) {Rect* a=rect_old[p]+i;if(a->w)restore_field(a->x,a->y,a->w,a->h,p,field_x[p],field_y[p]);}
   if(ghost_old[p] && (ghost_changed || camera))erase_border(p,ghost_x[p],ghost_y[p],ghost_x[p]+ghost_size[p]-1,ghost_y[p]+ghost_size[p]-1);

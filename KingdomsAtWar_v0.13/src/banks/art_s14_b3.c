@@ -50,22 +50,23 @@ u8 fog_page_pending(u8 p) __banked {
 }
 /* Scan byte masks, skipping empty spans and combining adjacent dirty cells.
  * Unchanged cells and damage outside this camera remain untouched. */
+static u16 fog_hit(u16 mask,u8 c0,u8 c1,u8 y) {
+ i16 l=(i16)c0<<4,r=(i16)c1<<4,t=(i16)y<<4,b=t+16;u8 k;
+ for(k=0;k<dm_n;++k)if(!(mask&dm_bit[k]) && dm_l[k]<r && dm_r[k]>l && dm_t[k]<b && dm_b[k]>t)mask|=dm_bit[k];
+ return mask;
+}
 u16 fog_damage(u8 p,u16 mask) __banked {
  u8 y,left=cam_x>>4,right=(cam_x+255)>>4,top=cam_y>>4,bottom=(cam_y+159)>>4;
+ /* Visible actors were collected by damage_mask (dm_*); a flagged run only needs those. */
  for(y=top;y<=bottom;++y) {
   u8* row=fog_changed[p]+((u16)y<<2);u8 x=left,v=row[x>>3]>>(x&7),start=NONE;
   while(x<=right) {
    if(!(x&7))v=row[x>>3];
    if(v&1) {if(start==NONE)start=x;}
-   else if(start!=NONE) {i16 l=(u16)start<<4,r=(u16)x<<4,t=(u16)y<<4;u8 j;
-    for(j=0;j<RN;++j)if(!(mask&render_bit[j])) {Rect* a=rect_now+j;if(a->w && a->h && a->x<r && a->x+a->w>l && a->y<t+16 && a->y+a->h>t)mask|=render_bit[j];}
-    start=NONE;}
+   else if(start!=NONE) {mask=fog_hit(mask,start,x,y);start=NONE;}
    if(!v)x=(x|7)+1;else {++x;v>>=1;}
   }
-  if(start!=NONE) {x=right+1;i16 l=(u16)start<<4,r=(u16)x<<4,t=(u16)y<<4;u8 j;
-    for(j=0;j<RN;++j)if(!(mask&render_bit[j])) {Rect* a=rect_now+j;if(a->w && a->h && a->x<r && a->x+a->w>l && a->y<t+16 && a->y+a->h>t)mask|=render_bit[j];}
-    }
-  
+  if(start!=NONE)mask=fog_hit(mask,start,right+1,y);
  }
  return mask;
 }

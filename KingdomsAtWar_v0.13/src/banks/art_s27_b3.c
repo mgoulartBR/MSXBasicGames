@@ -112,12 +112,13 @@ static u8 box_overlap(const Rect* a,u16 l,u16 t,u16 r,u16 b) {
 
 /* Dirty actors expand the redraw set; only initial actors are erased. */
 /* Active rectangles are cached once as edges; the O(n^2) closure then touches only visible actors. */
-static i16 dm_l[RN],dm_t[RN],dm_r[RN],dm_b[RN];static u16 dm_bit[RN];
+i16 dm_l[RN],dm_t[RN],dm_r[RN],dm_b[RN];u16 dm_bit[RN];u8 dm_n;
 #define DM_HIT(L,T,R,B,k) ((R)>dm_l[k] && dm_r[k]>(L) && (B)>dm_t[k] && dm_b[k]>(T))
 u16 damage_mask(u8 p,u16 mask,u8 flags) __banked {
  u8 i,j,k,n=0;u16 before,restore=mask;
- mask=arrow_damage(p,mask);if(flags&16)mask=fog_damage(p,mask);
  {const Rect* a=rect_now;for(j=0;j<RN;++j,++a)if(a->w){dm_l[n]=a->x;dm_r[n]=a->x+a->w;dm_t[n]=a->y;dm_b[n]=a->y+a->h;dm_bit[n]=render_bit[j];++n;}}
+ dm_n=n;
+ mask=arrow_damage(p,mask);if((flags&16) && n)mask=fog_damage(p,mask);
  for(i=0;i<strip_n;++i)for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(strip_l[i],strip_t[i],strip_r[i],strip_b[i],k))mask|=dm_bit[k];
  for(i=0;i<changed_count[p];++i) {
   i16 l=(i16)changed_x[p][i]*16,t=(i16)changed_y[p][i]*16,r=l+16,b=t+16;

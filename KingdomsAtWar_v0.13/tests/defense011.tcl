@@ -13,7 +13,9 @@ proc defense011 {} {
  shot repair011-damaged
  await {[w repair_spent]>=2} 30
  ck repair_uses_wood {[w wood]<=$before-1 && [w repair_healed]>=8 && [conserved]}
- ck repair_animates {([b repair_active]&1)!=0}
+ # repair_tick limpa e reativa repair_active a cada tick; amostrar no meio dele da falso negativo.
+ set seen 0;for {set k 0} {$k<60 && !$seen} {incr k} {if {([b repair_active]&1)!=0} {set seen 1} else {delay 0.011}}
+ ck repair_animates {$seen}
  shot repair011-working
  tap 2 64
  view_y [unit 8 py];point [expr {[unit 8 px]+8-[w cam_x]}] [expr {[unit 8 py]-6-[w cam_y]}];tap 5 32
