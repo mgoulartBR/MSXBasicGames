@@ -1,11 +1,7 @@
 u8 building_size(u8 type);
 u8 art_index(u8 x,u8 y) __banked;
 u8 art_tile(u8 x,u8 y);
-#ifdef KAW_V9990
-u8 unit_art_frame(u8 i);
-#else
 u8 unit_art_frame(u8 i) __banked;
-#endif
 u8 unit_position(u8 i);
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);

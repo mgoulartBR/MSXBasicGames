@@ -45,3 +45,14 @@ Medido com `tests/scroll13.tcl` (seta direita por 2,5 s, unidades paradas) e `te
 Mudanças: V9990 rola movendo os pixels da própria página (uma cópia) e pintando só as faixas expostas; o Fog do V9990 fica gravado no mundo residente (restaurar a tela é uma cópia, sem `fog_cover`); `fog_cover`/`fog_page_pending` reescritos por bytes; BFS sem laço de vizinhos e sem deslocamento variável; varredura ociosa de combate com rejeição por distância.
 Testes: suíte completa V9990 (156 PASS) + 36 verificações de pixels do Fog; combat011, worker011, fog011, camera011 em V9990 e V9968 sem falhas.
 O scroll do V9968 (caminho nativo, sem mundo residente) ainda é o pior caso medido.
+
+## Atualização: scroll incremental (V9990 e V9968)
+Antes o scroll forçava restaurar e redesenhar todos os atores a cada passo de câmera. Agora só entram os atores alterados e os que tocam as faixas expostas (o buffer circular do V9968 e a página deslocada do V9990 mantêm válidos os pixels dos demais).
+
+| Alvo | scroll (quadros/s) antes → agora |
+|---|---:|
+| V9990 | 11,6 → 13,2 (v0.12: ~4) |
+| V9968 (via script) | 3,2 → 5,2 (v0.12: ~2,8) |
+
+Validação: `tests/refresh13.tcl` + `tests/refresh13_check.py` comparam o campo de jogo após scroll incremental com uma repintura total forçada: idênticos em V9990 e V9968. Suíte completa V9990 (156 PASS) e fog011, camera011, overlay011, combat011, worker011 em V9968 sem falhas.
+`unit_art_frame` do V9990 passou a ser bancada (liberou código fixo; fim do código fixo V9990 = 9CE3).

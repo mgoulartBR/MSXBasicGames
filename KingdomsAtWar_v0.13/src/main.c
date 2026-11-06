@@ -197,23 +197,6 @@ u8 fog_trail[128],fog_pending[2];u8* fog_dest=fog_next;u16 fog_epoch,fog_checked
 u8 repair_target[N],repair_timer[N],repair_active,repair_pending,tower_cooldown[BMAX];
 u16 tower_shots,repair_spent,repair_healed,fog_updates;
 
-#ifdef KAW_V9990
-u8 unit_art_frame(u8 i) {
- Unit* u=&units[i];u8 d=unit_facing[i],f;
- if(WORKER(i) && mine_phase[i])d=mine_phase[i]==3?0:2;
- else if(u->progress) {if(u->nx>u->x)d=1;else if(u->nx<u->x)d=3;else if(u->ny>u->y)d=0;else d=2;}
- if(WORKER(i) && (worker_task[i]==HARVEST || ((builder_working|repair_active)&(1<<i)))) {
-  u8 nx=((builder_working|repair_active)&(1<<i))?buildings[repair_active&(1<<i)?repair_target[i]:unit_build[i]].x:node_x[i],ny=((builder_working|repair_active)&(1<<i))?buildings[repair_active&(1<<i)?repair_target[i]:unit_build[i]].y:node_y[i];
-  if(nx>u->x)d=1;else if(nx<u->x)d=3;else if(ny>u->y)d=0;else d=2;
- }
- unit_facing[i]=d;
- f=d*4+((u->progress || u->state==MOVING)?unit_walk_phase[i]:1);
- if(WORKER(i) && mine_phase[i])f=d*4+((mine_step[i]>>1)&3);
- else if(WORKER(i) && (worker_task[i]==HARVEST || ((builder_working|repair_active)&(1<<i))))f=((sim_ticks&8)?16:20)+d;
- if(attack_flash[i])f=d*4+(attack_flash[i]>4?3:1);
- unit_frame[i]=f;return f;
-}
-#endif
 /* Render entry/exit at the cave mouth; logical doorway stays reserved. */
 u8 unit_position(u8 i) {
  if(!combat_alive(i) || (units[i].owner && fog_at(units[i].x,units[i].y)!=2))return 0;

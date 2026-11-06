@@ -9,6 +9,7 @@ const u8 small_tx[]={0,16,0,16},small_ty[]={0,0,16,16};
 const u8 large_tx[]={0,16,32,0,16,32,0,16,32},large_ty[]={0,0,0,16,16,16,32,32,32};
 #endif
 u8 tile_buffer[128],boot_poses;
+i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];u8 strip_n;
 u8 box_old[2];u16 box_l[2],box_t[2],box_r[2],box_b[2];
 u8 cache_key[CACHE_COUNT],cache_stamp[CACHE_COUNT],cache_tick,unit_cache[RN];
 u16 frame_uploads,frame_hits,rendered_frames;
@@ -148,7 +149,7 @@ static void draw_actor(u8 i,u8 p) {
  }
 }
 void video_sprites(void) {
- u8 p=shown^1,i,j,k,camera,order[RN],count=0,tiles_changed=changed_count[shown^1];u16 mask=0,before,restore;u8 fog_page_dirty=0;u8 ghost=placement_mode && mouse_y<160,ghost_changed=0,box=drag_down&&drag_moved,box_changed,shift=0;
+ u8 p=shown^1,i,j,k,camera,order[RN],count=0,tiles_changed=changed_count[shown^1];u16 mask=0,before,restore;u8 fog_page_dirty=0;u8 ghost=placement_mode && mouse_y<160,ghost_changed=0,box=drag_down&&drag_moved,box_changed,shift=0,inc=0;
  ++cache_tick;
  for(i=0;i<RN;++i) {
   if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
@@ -173,7 +174,26 @@ void video_sprites(void) {
  /* Restoring and redrawing have different damage sets. An unchanged
   * overlapping actor needs another draw, never another background erase. */
  restore=mask;
- if(camera)mask=restore=1023;
+ /* Incremental scroll: pixels of actors already on the page stay valid (the page is a circular buffer on
+  * native, or was just shifted on V9990). Only the exposed strips are new, so only actors touching them
+  * (plus the usual changed ones) are redrawn. */
+ strip_n=0;
+ if(camera && field_valid[p]) {
+  i16 dx=(i16)cam_x-(i16)field_x[p],dy=(i16)cam_y-(i16)field_y[p];
+#ifdef KAW_V9990
+  if(dx>=-96 && dx<=96 && dy>=-64 && dy<=64)
+#else
+  if(dx>-256 && dx<256 && dy>-160 && dy<160)
+#endif
+  {
+   inc=1;
+   if(dx>0){strip_l[0]=field_x[p]+256;strip_r[0]=cam_x+256;strip_t[0]=cam_y;strip_b[0]=cam_y+160;strip_n=1;}
+   else if(dx<0){strip_l[0]=cam_x;strip_r[0]=field_x[p];strip_t[0]=cam_y;strip_b[0]=cam_y+160;strip_n=1;}
+   if(dy>0){strip_l[strip_n]=cam_x;strip_r[strip_n]=cam_x+256;strip_t[strip_n]=field_y[p]+160;strip_b[strip_n]=cam_y+160;++strip_n;}
+   else if(dy<0){strip_l[strip_n]=cam_x;strip_r[strip_n]=cam_x+256;strip_t[strip_n]=cam_y;strip_b[strip_n]=field_y[p];++strip_n;}
+  }
+ }
+ if(camera && !inc)mask=restore=1023;
  else {
   mask=damage_mask(p,mask,(box?1:0)|(box_changed?2:0)|(ghost?4:0)|(ghost_changed?8:0)|(fog_page_dirty?16:0));
  }
@@ -187,9 +207,9 @@ void video_sprites(void) {
 #ifdef KAW_V9990
  /* Scroll by moving the page's own pixels (one blitter copy) and painting only the exposed strips;
   * actors are then restored/redrawn at their new screen positions like in an ordinary frame. */
- if(camera && field_valid[p]) {
+ if(inc) {
   i16 dx=(i16)cam_x-(i16)field_x[p],dy=(i16)cam_y-(i16)field_y[p];
-  if(dx>=-96 && dx<=96 && dy>=-64 && dy<=64) {
+  {
    u16 ow=256-(dx<0?-dx:dx),oh=160-(dy<0?-dy:dy),base=(u16)p*256;
    gpu_move((dx>0?dx:0)+(dx<0?ow-1:0),base+(dy>0?dy:0)+(dy<0?oh-1:0),(dx<0?-dx:0)+(dx<0?ow-1:0),base+(dy<0?-dy:0)+(dy<0?oh-1:0),ow,oh,(dx<0?4:0)|(dy<0?8:0));
    field_x[p]=cam_x;field_y[p]=cam_y;shift=1;

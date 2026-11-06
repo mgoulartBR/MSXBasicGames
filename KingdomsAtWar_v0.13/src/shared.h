@@ -96,11 +96,7 @@ extern u16 combat_hits,combat_kills,combat_buildings;
 u8 building_size(u8 type);
 u8 art_index(u8 x,u8 y) __banked;
 u8 art_tile(u8 x,u8 y);
-#ifdef KAW_V9990
-u8 unit_art_frame(u8 i);
-#else
 u8 unit_art_frame(u8 i) __banked;
-#endif
 u8 unit_position(u8 i);
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);
@@ -203,6 +199,7 @@ u16 damage_mask(u8 p,u16 mask,u8 flags) __banked;
 #include "render_types.h"
 extern Rect rect_now[RN],rect_old[2][RN];
 extern const u16 render_bit[RN];
+extern i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];extern u8 strip_n;
 extern u8 box_old[2],changed_x[2][32],changed_y[2][32],changed_count[2],ghost_old[2],ghost_size[2];
 extern u16 box_l[2],box_t[2],box_r[2],box_b[2],ghost_x[2],ghost_y[2];
 u8 intersect(const Rect* a,const Rect* b);

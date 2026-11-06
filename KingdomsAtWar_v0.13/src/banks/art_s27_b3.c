@@ -88,7 +88,6 @@ u8 object_size(u8 x,u8 y) __banked {
 }
 
 /* Keep native fixed ROM below the ASCII8 switched window. */
-#ifndef KAW_V9990
 u8 unit_art_frame(u8 i) __banked {
  Unit* u=&units[i];u8 d=unit_facing[i],f;
  if(WORKER(i) && mine_phase[i])d=mine_phase[i]==3?0:2;
@@ -104,7 +103,7 @@ u8 unit_art_frame(u8 i) __banked {
  if(attack_flash[i])f=d*4+(attack_flash[i]>4?3:1);
  unit_frame[i]=f;return f;
 }
-#endif
+
 
 static u8 box_overlap(const Rect* a,u16 l,u16 t,u16 r,u16 b) {
  return a->w && a->x<=(i16)r && a->x+a->w>(i16)l && a->y<=(i16)b && a->y+a->h>(i16)t &&
@@ -119,6 +118,7 @@ u16 damage_mask(u8 p,u16 mask,u8 flags) __banked {
  u8 i,j,k,n=0;u16 before,restore=mask;
  mask=arrow_damage(p,mask);if(flags&16)mask=fog_damage(p,mask);
  {const Rect* a=rect_now;for(j=0;j<RN;++j,++a)if(a->w){dm_l[n]=a->x;dm_r[n]=a->x+a->w;dm_t[n]=a->y;dm_b[n]=a->y+a->h;dm_bit[n]=render_bit[j];++n;}}
+ for(i=0;i<strip_n;++i)for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(strip_l[i],strip_t[i],strip_r[i],strip_b[i],k))mask|=dm_bit[k];
  for(i=0;i<changed_count[p];++i) {
   i16 l=(i16)changed_x[p][i]*16,t=(i16)changed_y[p][i]*16,r=l+16,b=t+16;
   for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(l,t,r,b,k))mask|=dm_bit[k];
