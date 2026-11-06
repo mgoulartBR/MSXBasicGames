@@ -92,3 +92,13 @@ Validação: `tests/refresh13.tcl` + `tests/refresh13_check.py` comparam o campo
 - V9990: 1 unidade 9,6 quadros/s; 4 unidades 6,9; scroll 14 (v0.12: 6,0 / 3,45 / ~4).
 - Validação: suíte V9990 completa (156 PASS), kernel012, 36 pixels do Fog, scroll incremental idêntico à repintura total, box011.
 - Ferramenta nova `tests/lineprof.py`: perfil inclusivo por linha de C dentro de uma função.
+
+## Medição com Z80 acelerado (openMSX, `z80_freq`)
+| Alvo | Clock | 1 unidade | 4 unidades | scroll |
+|---|---|---:|---:|---:|
+| V9990 | 3,58 MHz | 9,6 | 6,9 | 14 |
+| V9990 | 7,16 MHz | 22,9 | 14,4 | 21,6 |
+| V9990 | 10,7 MHz | 25 | 21,4 | 26,8 |
+| V9968 (via script) | 3,58 MHz | 5,2 | 2,9 | 6 |
+| V9968 (via script) | 10,7 MHz | 20 | 10 | 15,6 |
+Em Z80 acelerado o jogo se aproxima de 25–27 quadros/s no V9990; a 3,58 MHz o custo de CPU domina. O VDP emulado não é acelerado nessas medidas.

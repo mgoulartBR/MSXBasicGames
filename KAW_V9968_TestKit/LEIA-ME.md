@@ -13,3 +13,8 @@ Tudo o mais (comandos de VDP, VRAM, raster, mouse, lógica) é executado de verd
 - Não é teste no cartucho V9968 real. O teste positivo no hardware continua pendente.
 - O jogo usa a fórmula de scroll R#26/R#27 do V9968; no V9958 emulado o scroll fino horizontal pode aparecer até 7 px deslocado.
 - Velocidade: reflete Z80 de 3,58 MHz e o VDP V9958 do openMSX, não o FPGA do V9968.
+
+## V9990 (GFX9000) e modo turbo
+- `play-v9990.bat` / `.sh`: V9990 em Z80 de 3,58 MHz (MSX2 comum).
+- `play-v9990-turbo.bat` / `.sh` e `play-v9968-emu-turbo.bat` / `.sh`: Z80 a 10,7 MHz (turbo, como MSXBook). O VDP não acelera.
+- Medido no openMSX (quadros/s com 1 / 4 unidades / scroll): V9990 3,58 MHz 9,6 / 6,9 / 14; 7,2 MHz 23 / 14 / 22; 10,7 MHz 25 / 21 / 27. V9968 via script: 3,58 MHz 5 / 3 / 6; 10,7 MHz 20 / 10 / 16.

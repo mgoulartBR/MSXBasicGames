@@ -14,3 +14,5 @@ set kaw_bp [debug set_bp $kaw_ret {[reg C]==0x99 || [reg C]==0x89} {reg A 6;incr
 set kaw_hits 0
 plug joyporta mouse
 puts "V9968 shim ativo (ret de vp_in em [format 0x%04X $kaw_ret])"
+
+if {[info exists ::env(KAW_TURBO)]} {set z80_freq_locked false;set z80_freq 10738635}
