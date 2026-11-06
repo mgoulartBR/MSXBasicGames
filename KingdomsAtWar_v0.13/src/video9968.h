@@ -41,6 +41,53 @@ kaw012_upload:
  __endasm;
 }
 static void vwrite(u32 a,const u8* s,u8 n) {if(!n)return;upload_source=s;upload_size=n;__asm di __endasm;address(a);__asm ei __endasm;upload_stream();}
+/* v0.13: pose piece upload straight from the mapped ROM window: rows of w bytes, one VRAM address per row,
+ * 32 T per data byte (SCREEN5 access spacing). Z80: no staging buffer, no 32-bit address math. */
+static const u8* up_src;static u16 up_y;static u8 up_xb,up_rows,up_w;
+static void upload_piece(void) __naked {
+ __asm
+ ld hl,(_up_src)
+ ld de,(_up_y)
+up_next:
+ ld a,(_vport)
+ ld c,a
+ di
+ ld a,e
+ rlca
+ ld a,d
+ rla
+ out (c),a
+ ld a,#0x8E
+ out (c),a
+ ld a,e
+ rrca
+ and #0x80
+ ld b,a
+ ld a,(_up_xb)
+ or b
+ out (c),a
+ ld a,e
+ srl a
+ and #63
+ or #64
+ out (c),a
+ ei
+ dec c
+ ld a,(_up_w)
+ ld b,a
+up_byte:
+ outi
+ nop
+ jr nz,up_byte
+ inc de
+ ld a,(_up_rows)
+ dec a
+ ld (_up_rows),a
+ jr nz,up_next
+ ld (_up_src),hl
+ ret
+ __endasm;
+}
 /* One pixel row of 4 bpp data at (byte column xb, line y) without 32-bit arithmetic. */
 static void vwrite_row(u16 y,u8 xb,const u8* s,u8 n) {
  u8 yl=(u8)y,yh=(u8)(y>>8);
@@ -131,7 +178,8 @@ void video_hud_begin(void) {u8 p=hud_draw;if(hud_pointer_saved[p]) {gpu_copy(32+
 void video_hud_end(void) {u8 p=hud_draw;if(mouse_y<160)return;hud_pointer_x[p]=mouse_x;hud_pointer_y[p]=mouse_y;gpu_copy(mouse_x,hud_y(mouse_y),32+p*8,656,8,8,0);gpu_copy(16,656,mouse_x,hud_y(mouse_y),8,8,1);hud_pointer_saved[p]=1;}
 void video_hud_flush(void) {gpu_wait();}
 void video_cursor(void) {
- u8 a[8];a[0]=(mouse_y<160?mouse_y+display_y-1:215);a[1]=mouse_x;a[2]=a[3]=0;if(a[0]==216){a[0]=215;a[2]=4;}a[4]=216;a[5]=a[6]=a[7]=0;vwrite(0x15200,a,8);
+ u8 a[8];a[0]=(mouse_y<160?mouse_y+display_y-1:215);a[1]=mouse_x;a[2]=a[3]=0;if(a[0]==216){a[0]=215;a[2]=4;}a[4]=216;a[5]=a[6]=a[7]=0;
+ upload_source=a;upload_size=8;__asm di __endasm;raw_reg(14,5);vp_out(vport,0x00);vp_out(vport,0x52);__asm ei __endasm;upload_stream();
 }
 void video_present(u8 p) {
  /* Hide unused circular-buffer rows during the short BIOS raster latency. */

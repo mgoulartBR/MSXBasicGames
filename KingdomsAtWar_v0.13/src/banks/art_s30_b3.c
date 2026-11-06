@@ -7,20 +7,20 @@ void input(void) __banked {
  poll_input();keys=raw_down|raw_latched;last_keys&=~raw_latched;raw_latched=0;
  x+=raw_dx;y+=raw_dy;raw_dx=raw_dy=0;
  cam_keys=0;
- if(Keyboard_IsKeyPressed(KEY_J)) x-=3;
- if(Keyboard_IsKeyPressed(KEY_L)) x+=3;
- if(Keyboard_IsKeyPressed(KEY_I)) y-=3;
- if(Keyboard_IsKeyPressed(KEY_K)) y+=3;
- if(Keyboard_IsKeyPressed(KEY_I) || Keyboard_IsKeyPressed(KEY_J) || Keyboard_IsKeyPressed(KEY_K) || Keyboard_IsKeyPressed(KEY_L))mouse_active=0;
+ if(KP(KEY_J)) x-=3;
+ if(KP(KEY_L)) x+=3;
+ if(KP(KEY_I)) y-=3;
+ if(KP(KEY_K)) y+=3;
+ if(KP(KEY_I) || KP(KEY_J) || KP(KEY_K) || KP(KEY_L))mouse_active=0;
  if(x<0)x=0; if(x>248)x=248; if(y<0)y=0; if(y>204)y=204;
 #ifndef KAW_V9990
  if(mouse_x!=(u8)x || mouse_y!=(u8)y) {sprites_dirty|=1;if(mouse_y>=160 || y>=160)hud_dirty=3;}
 #endif
  mouse_x=x; mouse_y=y;
- if(Keyboard_IsKeyPressed(KEY_LEFT)) cam_keys|=1;
- if(Keyboard_IsKeyPressed(KEY_RIGHT)) cam_keys|=2;
- if(Keyboard_IsKeyPressed(KEY_UP)) cam_keys|=4;
- if(Keyboard_IsKeyPressed(KEY_DOWN)) cam_keys|=8;
+ if(KP(KEY_LEFT)) cam_keys|=1;
+ if(KP(KEY_RIGHT)) cam_keys|=2;
+ if(KP(KEY_UP)) cam_keys|=4;
+ if(KP(KEY_DOWN)) cam_keys|=8;
  edge_keys=0;
  if(mouse_present && mouse_active && mouse_y<160) {
   if(mouse_x<3)edge_keys|=1;if(mouse_x>245)edge_keys|=2;

@@ -114,14 +114,16 @@ static u8 cache_frame(u8 key) {
   if(!protected && (best==255 || (u8)(cache_tick-cache_stamp[i])>age)) {best=i;age=cache_tick-cache_stamp[i];}
  }
  if(best==255)best=0;
- asset_begin(poses+key);
+ asset_begin(poses+key);gpu_wait();
+ __asm di __endasm;SET_BANK_SEGMENT(3,asset_bank);__asm ei __endasm;
  for(q=0;q<n*n;++q) {
   u8 tx=(n==2?small_tx:large_tx)[q],ty=(n==2?small_ty:large_ty)[q],l=b[0]>tx?b[0]:tx,t=b[1]>ty?b[1]:ty;
-  u8 rr=b[0]+b[2]<tx+16?b[0]+b[2]:tx+16,bb=b[1]+b[3]<ty+16?b[1]+b[3]:ty+16,j,w;
+  u8 rr=b[0]+b[2]<tx+16?b[0]+b[2]:tx+16,bb=b[1]+b[3]<ty+16?b[1]+b[3]:ty+16,w;
   l&=254;rr=(rr+1)&254;if(l>=rr || t>=bb)continue;w=(rr-l)>>1;
-  raw_read(tile_buffer,w*(bb-t));cache_xy(best,q,&x,&y);x+=l-tx;y+=t-ty;
-  gpu_wait();for(j=0;j<bb-t;++j)vwrite_row(y+j,(u8)(x>>1),tile_buffer+(u16)j*w,w);
+  cache_xy(best,q,&x,&y);x+=l-tx;y+=t-ty;
+  up_src=packed_src;up_y=y;up_xb=(u8)(x>>1);up_rows=bb-t;up_w=w;upload_piece();packed_src=up_src;
  }
+ __asm di __endasm;SET_BANK_SEGMENT(3,3);__asm ei __endasm;poll_input();
  cache_key[best]=key;cache_stamp[best]=cache_tick;++frame_uploads;return best;
 }
 #endif

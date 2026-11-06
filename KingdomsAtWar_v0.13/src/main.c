@@ -104,12 +104,16 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 u8 graphics_slot,bios_slot,asset_bank;
 #include "asset_codec.h"
 /* Sample edges while the VDP is busy so short clicks survive a slow frame. */
+/* One matrix scan per video frame; every key test below is a constant-mask lookup. */
+u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
+#define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
 void poll_input(void) {
  u8 keys=0,commands=0;u16 tick;
  if(!video_enabled)return;
  tick=video_clock();if(tick==raw_tick)return;raw_tick=tick;
+ {u8 r;for(r=0;r<9;++r)kbrow[r]=Keyboard_Read(r);}
  {
-  u8 rescan=Keyboard_IsKeyPressed(KEY_M);
+  u8 rescan=KP(KEY_M);
   if(rescan && !mouse_rescan_down) {
    mouse_present=mouse_active=0;mouse_probe_tick=tick-30;mouse_probe_port=0;
    raw_dx=raw_dy=0;raw_latched&=~6;last_keys&=~6;
@@ -136,21 +140,21 @@ void poll_input(void) {
    if(raw_dx||raw_dy||(keys&6))mouse_active=1;
   }
  }
- if(Keyboard_IsKeyPressed(KEY_SPACE))keys|=1;
- if(Keyboard_IsKeyPressed(KEY_Z))keys|=2;
- if(Keyboard_IsKeyPressed(KEY_X))keys|=4;
- if(Keyboard_IsKeyPressed(KEY_A))keys|=8;
- if(Keyboard_IsKeyPressed(KEY_ESC))keys|=16;
- if(Keyboard_IsKeyPressed(KEY_Q))keys|=32;
- if(Keyboard_IsKeyPressed(KEY_R))keys|=64;
- if(Keyboard_IsKeyPressed(KEY_C))keys|=128;
- if(Keyboard_IsKeyPressed(KEY_S))commands|=1;if(Keyboard_IsKeyPressed(KEY_H))commands|=2;
+ if(KP(KEY_SPACE))keys|=1;
+ if(KP(KEY_Z))keys|=2;
+ if(KP(KEY_X))keys|=4;
+ if(KP(KEY_A))keys|=8;
+ if(KP(KEY_ESC))keys|=16;
+ if(KP(KEY_Q))keys|=32;
+ if(KP(KEY_R))keys|=64;
+ if(KP(KEY_C))keys|=128;
+ if(KP(KEY_S))commands|=1;if(KP(KEY_H))commands|=2;
  raw_command_latched|=commands&~raw_command_down;raw_command_down=commands;
  if((keys^raw_down)&2) {
   u8 edge=(keys&2)?0:1;
   if(edge || !(raw_latched&2)) {
    DragEdge* e=left_edges+edge;
-   e->x=mouse_x;e->y=mouse_y;e->dx=raw_dx;e->dy=raw_dy;e->cx=cam_x;e->cy=cam_y;e->add=Keyboard_IsKeyPressed(KEY_SHIFT);
+   e->x=mouse_x;e->y=mouse_y;e->dx=raw_dx;e->dy=raw_dy;e->cx=cam_x;e->cy=cam_y;e->add=KP(KEY_SHIFT);
    if(edge)left_seen|=2;else left_seen=1;
   }
  }

@@ -55,7 +55,9 @@ extern u16 group_orders, replans;
 extern u8 nav_targets[128],nav_work_mode,mine_turn;
 extern u16 economy_retries,alternate_approaches;
 
-extern u8 parent[1024];extern u8 nav_base_dirty;
+extern u8 parent[1024];extern u8 kbrow[9];
+extern u8 nav_base_dirty;
+#define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
 extern u16 queue[1024],qhead,qtail,job_goal;
 extern u8 job_unit;
 extern u16 cam_x,cam_y;
