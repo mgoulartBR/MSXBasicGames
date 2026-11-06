@@ -26,6 +26,7 @@ static void v9_lmmm(void) __naked {__asm
  __endasm;}
 static void gpu_wait(void) {if(*((volatile u8*)0xFC9E)!=(u8)raw_tick)poll_input();while(v9_busy())if(video_enabled && *((volatile u8*)0xFC9E)!=(u8)raw_tick)poll_input();}
 static void gpu_copy(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h,u8 trans) {gpu_wait();v9c.r[0]=sx;v9c.r[1]=sy;v9c.r[2]=dx;v9c.r[3]=dy;v9c.r[4]=w;v9c.r[5]=h;v9c.arg=0;v9c.lop=trans?0x1C:0x0C;v9_lmmm();}
+static void gpu_move(u16 sx,u16 sy,u16 dx,u16 dy,u16 w,u16 h,u8 arg) {gpu_wait();v9c.r[0]=sx;v9c.r[1]=sy;v9c.r[2]=dx;v9c.r[3]=dy;v9c.r[4]=w;v9c.r[5]=h;v9c.arg=arg;v9c.lop=0x0C;v9_lmmm();v9c.arg=0;}
 /* Solid 16x16 swatches share the verified bitmap copy path. */
 static void gpu_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
  u16 xx,yy;u8 ww,hh;

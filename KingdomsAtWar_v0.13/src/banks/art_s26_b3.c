@@ -109,7 +109,7 @@ void combat_tick(void) __banked {
   }
   /* Hold/idle allies and stationary defenders retaliate only at melee range. */
   if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || stance[i])) {
-   for(j=0;j<RN;++j)if(unit_hp[j] && units[j].owner!=units[i].owner && !units[j].progress && !(j<N && mine_phase[j]==2) && (i>=N || fog_target(j)) && combat_position(i,units[i].x,units[i].y,j)) {combat_target[i]=t=j;break;}
+   for(j=0;j<RN;++j)if(unit_hp[j] && (units[j].x>units[i].x?units[j].x-units[i].x:units[i].x-units[j].x)<=unit_range[unit_kind[i]] && (units[j].y>units[i].y?units[j].y-units[i].y:units[i].y-units[j].y)<=unit_range[unit_kind[i]] && units[j].owner!=units[i].owner && !units[j].progress && !(j<N && mine_phase[j]==2) && (i>=N || fog_target(j)) && combat_position(i,units[i].x,units[i].y,j)) {combat_target[i]=t=j;break;}
    if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
   }
   if(t==NONE || !target_box(t,&x,&y,&n) || units[i].progress)continue;

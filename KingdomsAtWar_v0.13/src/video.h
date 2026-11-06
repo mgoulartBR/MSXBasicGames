@@ -55,6 +55,16 @@ static void paint_world(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy,u8 overlay) {
  if(!overlay)fog_cover(x,y,w,h,p,cx,cy);
 #endif
 }
+#ifdef KAW_V9990
+/* V9990: the resident world already carries the fog look (unknown = solid, remembered = dither),
+ * so restoring the screen is one copy and scrolling never re-evaluates the fog. */
+void video_world_cell(u8 x,u8 y) {
+ u8 st=fog_at(x,y);u16 dx=(u16)x*16,dy=512+(u16)y*16;
+ if(!st){gpu_copy(16,1248,dx,dy,16,16,0);return;}
+ paint_world(dx,(u16)y*16,16,16,0,0,0,0);
+ if(st==1)gpu_copy(256,1248,dx,dy,16,16,1);
+}
+#endif
 void world_fill(i16 x,i16 y,u8 w,u8 h,u8 p,u8 c) {
  i16 right=x+w,bottom=y+h;if(x<(i16)cam_x)x=cam_x;if(y<(i16)cam_y)y=cam_y;if(right>(i16)cam_x+256)right=cam_x+256;if(bottom>(i16)cam_y+160)bottom=cam_y+160;
  while(y<bottom) {i16 xx=x;u16 hh=256-(y&255);if(hh>bottom-y)hh=bottom-y;
@@ -73,7 +83,7 @@ void restore_field(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy) {
 #ifdef KAW_V9990
  i16 right=x+w,bottom=y+h;
  if(x<(i16)cx)x=cx;if(y<(i16)cy)y=cy;if(right>(i16)cx+256)right=cx+256;if(bottom>(i16)cy+160)bottom=cy+160;
- if(right>x && bottom>y){gpu_copy(x,512+y,x-cx,(u16)p*256+y-cy,right-x,bottom-y,0);fog_cover(x,y,right-x,bottom-y,p,cx,cy);}
+ if(right>x && bottom>y)gpu_copy(x,512+y,x-cx,(u16)p*256+y-cy,right-x,bottom-y,0);
 #else
  paint_world(x,y,w,h,p,cx,cy,0);
 #endif
@@ -138,7 +148,7 @@ static void draw_actor(u8 i,u8 p) {
  }
 }
 void video_sprites(void) {
- u8 p=shown^1,i,j,k,camera,order[RN],count=0,tiles_changed=changed_count[shown^1];u16 mask=0,before,restore;u8 fog_page_dirty=0;u8 ghost=placement_mode && mouse_y<160,ghost_changed=0,box=drag_down&&drag_moved,box_changed;
+ u8 p=shown^1,i,j,k,camera,order[RN],count=0,tiles_changed=changed_count[shown^1];u16 mask=0,before,restore;u8 fog_page_dirty=0;u8 ghost=placement_mode && mouse_y<160,ghost_changed=0,box=drag_down&&drag_moved,box_changed,shift=0;
  ++cache_tick;
  for(i=0;i<RN;++i) {
   if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
@@ -174,9 +184,23 @@ void video_sprites(void) {
   return;
 #endif
  }
+#ifdef KAW_V9990
+ /* Scroll by moving the page's own pixels (one blitter copy) and painting only the exposed strips;
+  * actors are then restored/redrawn at their new screen positions like in an ordinary frame. */
+ if(camera && field_valid[p]) {
+  i16 dx=(i16)cam_x-(i16)field_x[p],dy=(i16)cam_y-(i16)field_y[p];
+  if(dx>=-96 && dx<=96 && dy>=-64 && dy<=64) {
+   u16 ow=256-(dx<0?-dx:dx),oh=160-(dy<0?-dy:dy),base=(u16)p*256;
+   gpu_move((dx>0?dx:0)+(dx<0?ow-1:0),base+(dy>0?dy:0)+(dy<0?oh-1:0),(dx<0?-dx:0)+(dx<0?ow-1:0),base+(dy<0?-dy:0)+(dy<0?oh-1:0),ow,oh,(dx<0?4:0)|(dy<0?8:0));
+   field_x[p]=cam_x;field_y[p]=cam_y;shift=1;
+   if(dx>0)restore_field(cam_x+256-dx,cam_y,dx,160,p,cam_x,cam_y);else if(dx<0)restore_field(cam_x,cam_y,-dx,160,p,cam_x,cam_y);
+   if(dy>0)restore_field(cam_x,cam_y+160-dy,256,dy,p,cam_x,cam_y);else if(dy<0)restore_field(cam_x,cam_y,256,-dy,p,cam_x,cam_y);
+  }
+ }
+#endif
  if(field_valid[p]
 #ifdef KAW_V9990
-    && !camera
+    && (!camera || shift)
 #endif
  ) {
   for(i=0;i<PS;++i)if(arrow_old[p]&((u16)1<<i))restore_field(arrow_old_x[p][i]-2,arrow_old_y[p][i]-2,5,5,p,field_x[p],field_y[p]);
@@ -185,7 +209,7 @@ void video_sprites(void) {
   if(ghost_old[p] && (ghost_changed || camera))erase_border(p,ghost_x[p],ghost_y[p],ghost_x[p]+ghost_size[p]-1,ghost_y[p]+ghost_size[p]-1);
  }
 #ifdef KAW_V9990
- if(camera){gpu_copy(cam_x,512+cam_y,0,(u16)p*256,256,160,0);fog_cover(cam_x,cam_y,256,160,p,cam_x,cam_y);}
+ if(camera && !shift)gpu_copy(cam_x,512+cam_y,0,(u16)p*256,256,160,0);
 #else
  if(!field_valid[p] || cam_x>field_x[p]+255 || field_x[p]>cam_x+255 || cam_y>field_y[p]+159 || field_y[p]>cam_y+159)paint_world(cam_x,cam_y,256,160,p,cam_x,cam_y,0);
  else if(camera) {
@@ -284,7 +308,7 @@ void video_init(void) {
 #else
  /* All 104 poses coexist, independent of sprite pattern windows or limits. */
  boot_poses=0;for(i=0;i<168;++i)if(poses[i].bank) {u8 n=kind_sizes[i/24]>>4;asset_begin(poses+i);for(q=0;q<n*n;++q) {asset_read(tile_buffer,128);gpu_write_tile((i%10)*48+(q%n)*16,1280+(u16)(i/10)*48+(q/n)*16,tile_buffer);}++boot_poses;gpu_fill(32,136,(u16)boot_poses*192/120,4,10);}
- for(y=0;y<32;++y)for(x=0;x<32;++x)paint_world(x*16,y*16,16,16,0,0,0,0);
+ for(y=0;y<32;++y)for(x=0;x<32;++x)video_world_cell(x,y);
  for(i=0;i<128;++i)tile_buffer[i]=0;for(i=0;i<16;++i)tile_buffer[i*4]=cursor[i];V9_SetCursorPattern(0,tile_buffer);V9_SetCursorPalette(3);V9_SetCursorEnable(TRUE);V9_SetCursorDisplay(1,FALSE);
 #endif
  gpu_wait();

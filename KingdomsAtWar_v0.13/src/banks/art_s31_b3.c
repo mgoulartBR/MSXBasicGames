@@ -158,17 +158,15 @@ void navigation(void) __banked {
   if(job_unit==NONE) return;
  }
  while(budget-- && qhead<qtail) {
-  u16 cell=queue[qhead++],next;
-  u8 x=cell&31,y=cell>>5,d;
+  u16 cell=queue[qhead++];
+  u8 x=cell&31;
   ++nav_expansions;
-  if(nav_work_mode?((nav_targets[cell>>3]&(1<<(cell&7))) && nav_goal_free(job_unit,cell)):(cell==job_goal)) {nav_finish(cell);return;}
-  for(d=0;d<4;++d) {
-   if(d==0) { if(x==31) continue; next=cell+1; }
-   else if(d==1) { if(y==31) continue; next=cell+32; }
-   else if(d==2) { if(!x) continue; next=cell-1; }
-   else { if(!y) continue; next=cell-32; }
-   if(parent[next]==255) { parent[next]=d; queue[qtail++]=next; }
-  }
+  if(nav_work_mode?((nav_targets[cell>>3]&fog_bit_table[cell&7]) && nav_goal_free(job_unit,cell)):(cell==job_goal)) {nav_finish(cell);return;}
+  /* Neighbour order is preserved: east, south, west, north. */
+  if(x!=31 && parent[cell+1]==255) {parent[cell+1]=0;queue[qtail++]=cell+1;}
+  if(cell<992 && parent[cell+32]==255) {parent[cell+32]=1;queue[qtail++]=cell+32;}
+  if(x && parent[cell-1]==255) {parent[cell-1]=2;queue[qtail++]=cell-1;}
+  if(cell>=32 && parent[cell-32]==255) {parent[cell-32]=3;queue[qtail++]=cell-32;}
  }
  if(qhead==qtail && job_unit!=NONE) {
   if(nav_work_mode==1 && tile(node_x[job_unit],node_y[job_unit])==4) {mine_turn=job_unit+1;if(mine_turn==unit_count)mine_turn=0;}

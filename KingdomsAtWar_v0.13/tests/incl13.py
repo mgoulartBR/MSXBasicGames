@@ -10,7 +10,7 @@ mp=(R/'build'/v/(nm+'.map')).read_text();ms=(R/'build'/v/'main.sym').read_text()
 off=int(re.search(r'([0-9A-F]{8})\s+_video_wait\s+main',mp)[1],16)-int(re.search(r'_video_wait\s+([0-9A-F]{8})',ms)[1],16)
 extra={}
 for n,a in re.findall(r'^\s*0 _(\w+)\s+([0-9A-F]{8})\s',ms,re.M):extra[n]=int(a,16)+off
-t=(R/'tests/perf012.tcl').read_text()
+t=(R/'tests'/os.environ.get('BASE','perf012.tcl')).read_text()
 pre='''
 array set ::extra {%s}
 '''%' '.join('%s %d'%(k,x) for k,x in extra.items())+'''
@@ -51,7 +51,8 @@ hook='''
   }
  }
 '''%(' '.join(funcs))
-t=t.replace(' perf_start;delay 2;perf_end idle',hook+' perf_start;delay 2;perf_end idle',1)
+if ' perf_start;delay 2;perf_end idle' in t:t=t.replace(' perf_start;delay 2;perf_end idle',hook+' perf_start;delay 2;perf_end idle',1)
+else:t=t.replace(' delay 45;choose 2;world_point 0 0\n',' delay 45;choose 2;world_point 0 0\n'+hook,1)
 (R/'tests/incl13_run.tcl').write_text(pre+t)
 env=dict(os.environ,KAW_TEST_SCRIPT='incl13_run.tcl')
 r=subprocess.run([sys.executable,str(R/'tests/run_tests.py'),v],env=env,capture_output=True,text=True)

@@ -33,3 +33,15 @@ Próximos alvos medidos: BFS (`nav_prepare` 31 ms/rota, `navigation`), fog_apply
 ## Perfil atual (V9990, 4 unidades, amostragem de PC)
 simulação ≈ 34% (simulate, navigation, nav_prepare, combat_tick), fog_update ≈ 10% (fog_merge 47% disso), composição/Fog/desenho ≈ 40%, entrada ≈ 7%.
 30 quadros/s exigiria reescrever em Z80 os caminhos quentes (BFS, composição, Fog); micro-otimizações em C não chegam lá.
+
+## Atualização: scroll, Fog e rotas
+Medido com `tests/scroll13.tcl` (seta direita por 2,5 s, unidades paradas) e `tests/perf012.tcl`, openMSX, Z80 3,58 MHz.
+
+| Alvo | scroll (quadros/s) | 1 unidade | 4 unidades |
+|---|---:|---:|---:|
+| V9990 v0.12→v0.13 | ~4 → 11,6 | 6,0 → 7,7 | 3,45 → 4,8 |
+| V9968 via script | ~2,8 → 3,2 | — → 3,6 | — → 2,0 |
+
+Mudanças: V9990 rola movendo os pixels da própria página (uma cópia) e pintando só as faixas expostas; o Fog do V9990 fica gravado no mundo residente (restaurar a tela é uma cópia, sem `fog_cover`); `fog_cover`/`fog_page_pending` reescritos por bytes; BFS sem laço de vizinhos e sem deslocamento variável; varredura ociosa de combate com rejeição por distância.
+Testes: suíte completa V9990 (156 PASS) + 36 verificações de pixels do Fog; combat011, worker011, fog011, camera011 em V9990 e V9968 sem falhas.
+O scroll do V9968 (caminho nativo, sem mundo residente) ainda é o pior caso medido.

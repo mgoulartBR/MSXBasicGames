@@ -138,6 +138,10 @@ void fog_update(void) __banked {
    if(fog_memory[c]!=art_map[c]) {fog_memory[c]=art_map[c];if(video_enabled)video_known_tile(c&31,c>>5);}
   }
  }
+ #ifdef KAW_V9990
+ /* Bake every changed cell's fog look into the resident world. */
+ if(changed && video_enabled)for(i=0;i<128;++i) {u8 d=fog_delta[i];if(d)for(j=0;j<8;++j)if(d&(1<<j)) {c=((u16)i<<3)+j;video_world_cell(c&31,c>>5);}}
+ #endif
  if(changed) {
   ++fog_epoch;sprites_dirty=3;
   if(enemy_selected!=NONE && !fog_target(enemy_selected)){enemy_selected=NONE;hud_dirty=3;}

@@ -28,7 +28,7 @@ if gate:
  bank=ad>>16;pc=ad&65535
  cond='[debug read memory 0xC006]==%d'%bank if bank else '1'
  gate_tcl='debug set_bp %d {$::perf_running && %s} {gate_enter}\n'%(pc,cond)
-t=(R/'tests/perf012.tcl').read_text()
+t=(R/'tests'/os.environ.get('BASE','perf012.tcl')).read_text()
 prefix='''source ranges_%s.tcl
 set ::gate_open %d
 proc gate_enter {} {set ::gate_open 1;set sp [reg SP];set ra [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}];set ::gate_bp [debug set_bp $ra "\\[reg SP\\]==[expr {$sp+2}]" {set ::gate_open 0;catch {debug remove_bp $::gate_bp}}]}

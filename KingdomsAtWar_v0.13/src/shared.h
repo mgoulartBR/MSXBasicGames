@@ -251,6 +251,8 @@ u8 fog_page_pending(u8 p) __banked;
 
 void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);
+void video_world_cell(u8 x,u8 y);
+extern const u8 fog_bit_table[8];
 extern u8 fog_trail[128],fog_pending[2];extern u8* fog_dest;extern u16 fog_epoch,fog_checked_epoch[2],fog_checked_x[2],fog_checked_y[2];
 
 extern u8 fog_static[128],fog_build_dirty,repair_pending;
