@@ -185,5 +185,5 @@ void video_present(u8 p) {
  /* Hide unused circular-buffer rows during the short BIOS raster latency. */
  {u8 y=(cam_y+160)&255,n=8;while(n) {u8 h=256-(u16)y;if(!h || h>n)h=n;gpu_fill(0,(u16)p*256+y,256,h,1);n-=h;y+=h;}}
  gpu_wait();if(!video_enabled) {shown=p;display_x=cam_x;display_y=cam_y;return;}
- __asm di __endasm;next_page=p;next_x=cam_x;next_y=cam_y;present_pending=1;__asm ei __endasm;while(present_pending)Halt();video_cursor();
+ __asm di __endasm;next_page=p;next_x=cam_x;next_y=cam_y;present_pending=1;__asm ei __endasm;
 }

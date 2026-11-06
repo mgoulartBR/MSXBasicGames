@@ -145,3 +145,17 @@ u16 damage_mask(u8 p,u16 mask,u8 flags) __banked {
   }while(before!=mask);
  return mask;
 }
+
+/* Render entry/exit at the cave mouth; logical doorway stays reserved. */
+u8 unit_position(u8 i) __banked {
+ if(!combat_alive(i) || (units[i].owner && fog_at(units[i].x,units[i].y)!=2))return 0;
+ unit_draw_x=(i16)units[i].px+8-cam_x-(kind_sizes[unit_kind[i]]>>1);unit_draw_y=(i16)units[i].py+16-cam_y-kind_sizes[unit_kind[i]];
+ if(attack_flash[i]>4) {if(unit_facing[i]==0)unit_draw_y+=2;else if(unit_facing[i]==2)unit_draw_y-=2;else unit_draw_x+=unit_facing[i]==1?2:-2;}
+ if(WORKER(i) && mine_phase[i]) {
+  if(mine_phase[i]==2)return 0;
+  unit_draw_x+=units[i].x==10?-(i16)mine_step[i]:mine_step[i];
+  unit_draw_y-=(u16)mine_step[i]*2;
+ }
+ return 1;
+}
+

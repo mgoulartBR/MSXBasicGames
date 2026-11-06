@@ -1,4 +1,5 @@
 #include "../shared.h"
+static u16 cursor_tick;
 void input(void) __banked {
  i16 x=mouse_x,y=mouse_y;
  u8 keys,commands;
@@ -7,10 +8,13 @@ void input(void) __banked {
  poll_input();keys=raw_down|raw_latched;last_keys&=~raw_latched;raw_latched=0;
  x+=raw_dx;y+=raw_dy;raw_dx=raw_dy=0;
  cam_keys=0;
+ /* Keyboard cursor: one 3-pixel step per video frame, not per loop pass (the loop is free-running now). */
+ {u16 ct=video_clock();if(ct!=cursor_tick) {cursor_tick=ct;
  if(KP(KEY_J)) x-=3;
  if(KP(KEY_L)) x+=3;
  if(KP(KEY_I)) y-=3;
  if(KP(KEY_K)) y+=3;
+ }}
  if(KP(KEY_I) || KP(KEY_J) || KP(KEY_K) || KP(KEY_L))mouse_active=0;
  if(x<0)x=0; if(x>248)x=248; if(y<0)y=0; if(y>204)y=204;
 #ifndef KAW_V9990

@@ -159,7 +159,12 @@ static void draw_actor(u8 i,u8 p) {
 #endif
  /* Indexed health bar and a brief contact flash, inside damage bounds. */
  if(units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) {i16 x=actor_x[i]+sz/2-8,y=actor_y[i]+b[1]-4;u8 width=(u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]];
+#ifdef KAW_BAR_STRIPS
+  /* Whole bar in one copy from a [fill|background] strip: shift the source by (16-width). */
+  clip_copy(x,y,256+16-width,1264+(hurt_flash[i]>4?4:units[i].owner?0:2),16,2,p,cam_x,cam_y);
+#else
   world_fill(x,y,16,2,p,12);if(width)world_fill(x,y,width,2,p,hurt_flash[i]>4?15:units[i].owner?9:5);
+#endif
   if(hurt_flash[i]>4){world_fill(x+6,y+12,5,1,p,15);world_fill(x+8,y+10,1,5,p,15);}
  }
  /* Restore only opaque building pixels in front of this unit. */
@@ -330,7 +335,12 @@ void video_init(void) {
  gpu_write_tile(0,FONT_Y+16,ring_pixels);
  for(i=0;i<128;++i)tile_buffer[i]=(i&8)?0x01:0x10;
 #ifdef KAW_V9990
- {u8 k;for(k=0;k<16;++k)gpu_write_tile(256+k*16,1248,tile_buffer);for(i=0;i<128;++i)tile_buffer[i]=0x11;for(k=0;k<16;++k)gpu_write_tile(k*16,1264,tile_buffer);}
+ {u8 k;for(k=0;k<16;++k)gpu_write_tile(256+k*16,1248,tile_buffer);for(i=0;i<128;++i)tile_buffer[i]=0x11;for(k=0;k<16;++k)gpu_write_tile(k*16,1264,tile_buffer);
+  /* Health-bar strips (2 rows each): [fill|background]; 16-wide bars at x=256, 24-wide building bars at x=288. */
+  {u8 c,r,b;static const u8 col16[3]={9,5,15},col24[2]={9,5};
+   for(c=0;c<3;++c)for(r=0;r<2;++r){for(b=0;b<8;++b){tile_buffer[b]=col16[c]*17;tile_buffer[8+b]=12*17;}V9_WriteVRAM((u32)(1264+c*2+r)*256+128,tile_buffer,16);}
+   for(c=0;c<2;++c)for(r=0;r<2;++r){for(b=0;b<12;++b){tile_buffer[b]=col24[c]*17;tile_buffer[12+b]=12*17;}V9_WriteVRAM((u32)(1270+c*2+r)*256+144,tile_buffer,24);}
+  }}
 #else
  gpu_write_tile(64,656,tile_buffer);for(i=0;i<128;++i)tile_buffer[i]=0x11;gpu_write_tile(80,656,tile_buffer);
 #endif

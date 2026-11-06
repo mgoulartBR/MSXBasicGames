@@ -201,19 +201,6 @@ u8 fog_trail[128],fog_pending[2];u8* fog_dest=fog_next;u16 fog_epoch,fog_checked
 u8 repair_target[N],repair_timer[N],repair_active,repair_pending,tower_cooldown[BMAX];
 u16 tower_shots,repair_spent,repair_healed,fog_updates;
 
-/* Render entry/exit at the cave mouth; logical doorway stays reserved. */
-u8 unit_position(u8 i) {
- if(!combat_alive(i) || (units[i].owner && fog_at(units[i].x,units[i].y)!=2))return 0;
- unit_draw_x=(i16)units[i].px+8-cam_x-(kind_sizes[unit_kind[i]]>>1);unit_draw_y=(i16)units[i].py+16-cam_y-kind_sizes[unit_kind[i]];
- if(attack_flash[i]>4) {if(unit_facing[i]==0)unit_draw_y+=2;else if(unit_facing[i]==2)unit_draw_y-=2;else unit_draw_x+=unit_facing[i]==1?2:-2;}
- if(WORKER(i) && mine_phase[i]) {
-  if(mine_phase[i]==2)return 0;
-  unit_draw_x+=units[i].x==10?-(i16)mine_step[i]:mine_step[i];
-  unit_draw_y-=(u16)mine_step[i]*2;
- }
- return 1;
-}
-
 u16 shot_x[PS],shot_y[PS],shot_active,combat_shots,arrow_old[2],arrow_old_x[2][PS],arrow_old_y[2][PS];
 i8 shot_dx[PS],shot_dy[PS];
 u8 shot_time[PS],shot_target[PS],shot_damage[PS],shot_owner[PS];
@@ -402,15 +389,23 @@ void main(void) {
  video_sprites();hud_init();video_enable();last_time=video_clock();
  for(;;) {
   u16 now,dt;
-  video_wait();++loops;input();now=video_clock();dt=now-last_time;last_time=now;
+#ifdef KAW_V9990
+  /* With the retrace interrupt doing the page flip, only idle (nothing to draw or flip) waits. */
+  video_hud_swap();
+  if(!flip_pending && !sprites_dirty)video_wait();
+#else
+  /* The raster interrupt flips pages; only idle (nothing to draw or flip) waits for the frame. */
+  if(!present_pending && !sprites_dirty)video_wait();
+#endif
+  ++loops;input();now=video_clock();dt=now-last_time;last_time=now;
   if(dt>60)dt=60;
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
   if(fog_refresh)fog_update();video_stream();camera_update(dt);
 #ifdef KAW_V9990
-  if(sprites_dirty && !flip_pending) {video_sprites();sprites_dirty=0;}
+  if(sprites_dirty) {while(flip_pending){}video_sprites();sprites_dirty=0;}
 #else
-  if(sprites_dirty) {video_sprites();sprites_dirty=0;}
+  if(sprites_dirty) {while(present_pending)Halt();video_sprites();sprites_dirty=0;}
 #endif
   hud();
  }

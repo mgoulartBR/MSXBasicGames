@@ -1,5 +1,7 @@
 # Real ROM execution: keyboard inputs and read-only RAM/VDP assertions.
 set throttle off
+# openMSX PERSISTE z80_freq entre execucoes: sempre fixa o clock explicitamente (3,58 MHz salvo KAW_Z80FREQ).
+if {[info exists ::env(KAW_Z80FREQ)]} {set z80_freq_locked false;set z80_freq $::env(KAW_Z80FREQ)} else {set z80_freq_locked false;set z80_freq 3579545;set z80_freq_locked true}
 set maxframeskip 0
 if {![info exists ::env(KAW_NO_MOUSE)]} {if {[info exists ::env(KAW_MOUSE_PORT)] && $::env(KAW_MOUSE_PORT)==2} {plug joyportb mouse} else {plug joyporta mouse}}
 source symbols-$::env(KAW_VARIANT).tcl

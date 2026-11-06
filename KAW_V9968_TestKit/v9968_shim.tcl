@@ -15,4 +15,4 @@ set kaw_hits 0
 plug joyporta mouse
 puts "V9968 shim ativo (ret de vp_in em [format 0x%04X $kaw_ret])"
 
-if {[info exists ::env(KAW_TURBO)]} {set z80_freq_locked false;set z80_freq 10738635}
+if {[info exists ::env(KAW_TURBO)]} {set z80_freq_locked false;set z80_freq 10738635} else {set z80_freq_locked false;set z80_freq 3579545;set z80_freq_locked true}

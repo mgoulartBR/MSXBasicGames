@@ -15,6 +15,8 @@ proc perf091 {} {
  set elapsed [expr {[machine_info time]-$t}]
  puts stderr "PERF seconds=$elapsed frames=[expr {([w rendered_frames]-$f)&65535}] loops=[expr {([w loops]-$l)&65535}] ticks=[expr {([w sim_ticks]-$ticks)&65535}] samples=$samples"
  ck one_unit_arrives {[unit 2 x]==0 && [unit 2 y]==0}
+ # deixa o desenho assentar: com o laco livre o instante da arrival pode cair no meio de um upload de pose.
+ await {[b sprites_dirty]==0} 10;delay 1;await {[b sprites_dirty]==0} 10
  shot perf091
  set variant $::env(KAW_VARIANT)
  set device [expr {$variant eq "V9990"?"Sunrise GFX9000 VRAM":"VRAM"}]

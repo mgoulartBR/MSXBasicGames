@@ -102,3 +102,12 @@ Validação: `tests/refresh13.tcl` + `tests/refresh13_check.py` comparam o campo
 | V9968 (via script) | 3,58 MHz | 5,2 | 2,9 | 6 |
 | V9968 (via script) | 10,7 MHz | 20 | 10 | 15,6 |
 Em Z80 acelerado o jogo se aproxima de 25–27 quadros/s no V9990; a 3,58 MHz o custo de CPU domina. O VDP emulado não é acelerado nessas medidas.
+
+## Correção de medição e estado a 3,58 MHz (Z80 padrão)
+Descoberta: `set z80_freq` **persiste** nas configurações do openMSX. Depois dos testes em clock acelerado, vários resultados intermediários (e falhas de pose por escrita rápida demais na VRAM) vinham do Z80 a 10,7 MHz. Os testes agora fixam o clock sempre (`tests/helpers.tcl`); os kits usam arquivo de configuração próprio.
+Medido de novo a 3,58 MHz com o laço principal sem espera ociosa (a inversão de página fica por conta da interrupção):
+| Alvo | 1 unidade | 4 unidades | scroll |
+|---|---:|---:|---:|
+| V9990 | 9,6 | 6,9 | 14,4 |
+| V9968 (via script) | 6,9 | 3,2 | 6,4 |
+O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968 com 1 unidade. Cursor de teclado agora anda por quadro de vídeo (não por volta do laço). Testes: suíte V9990 (156), V9968 (worker/combat/fog/camera/overlay/kingdom/native012) sem falhas a 3,58 MHz.

@@ -37,7 +37,8 @@ static void gpu_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 }
 static void gpu_write_tile(u16 x,u16 y,const u8* tilebuf) {u8 j;for(j=0;j<16;++j)V9_WriteVRAM((u32)(y+j)*256+(x>>1),tilebuf+j*8,8);}
 u16 video_clock(void) {u16 t;__asm di __endasm;t=*((volatile u16*)0xFC9E);__asm ei __endasm;return t;}
-void video_wait(void) {if(hud_pending) {hud_live=hud_ready;hud_pending=0;++hud_swaps;sprites_dirty|=1;}if(video_clock()!=last_time)return;while(V9_IsVBlank()){}while(!V9_IsVBlank()){};}
+void video_hud_swap(void) {if(hud_pending) {hud_live=hud_ready;hud_pending=0;++hud_swaps;sprites_dirty|=1;}}
+void video_wait(void) {video_hud_swap();if(video_clock()!=last_time)return;while(V9_IsVBlank()){}while(!V9_IsVBlank()){};}
 static u16 hud_y(u16 y) {return (hud_draw?64:0)+y-160;}
 void video_char(u8 x,u16 y,u8 c) {c-=32;gpu_copy((c&31)*8,FONT_Y+(c>>5)*8,256+x,hud_y(y),8,8,0);}
 void video_text(u8 x,u16 y,const c8* s) {while(*s && x<249){video_char(x,y,*s++);x+=8;}}
