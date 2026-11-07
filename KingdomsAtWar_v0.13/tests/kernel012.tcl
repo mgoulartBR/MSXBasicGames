@@ -10,6 +10,9 @@ proc prepare_kernel {} {
   for {set i 0} {$i<$count} {incr i} {lappend a [expr {$kernel_case==0?0:[rnd012]}]}
   set input($n) $a;debug write_block memory $S($n) [binary format c* $a]
  }
+ # Invariante real do jogo: tudo que esta visivel ja foi visto (seen contem visible).
+ set sl {};for {set i 0} {$i<128} {incr i} {lappend sl [expr {[lindex $input(fog_seen) $i]|[lindex $input(fog_visible) $i]}]}
+ set input(fog_seen) $sl;debug write_block memory $S(fog_seen) [binary format c* $sl]
  set expected_result 0
  foreach n {fog_seen fog_visible fog_trail fog_need fog_delta fog_changed} {set expected($n) {}}
  set c0 {};set c1 {}

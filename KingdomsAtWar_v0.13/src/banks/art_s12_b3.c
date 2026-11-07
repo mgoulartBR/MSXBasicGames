@@ -24,8 +24,8 @@ void fog_init(void) __banked {
  for(i=0;i<128;++i)fog_changed[0][i]=fog_changed[1][i]=0;
 }
 static u8 fog_merge_acc,fog_work_idx[128],fog_work_n;
-/* Single pass with a fast skip: a byte whose next/visible/trail are all zero changes nothing
- * (need/delta are cleared up front), which is the common case on a mostly unexplored map. */
+/* Single pass with a fast skip: a byte with next==visible and no trail changes nothing (need/delta are
+ * cleared up front; seen already contains every visible bit), the common case. */
 u8 fog_merge(void) __banked __naked {
 #ifdef __SDCC
  __asm
@@ -50,12 +50,17 @@ u8 fog_merge(void) __banked __naked {
  ld iy,#_fog_seen
  ld c,#0
 fm_loop:
- ld a,(hl)
- or 0(ix)
- ld b,a
  ld a,(de)
- or b
+ xor a,(hl)
  jr nz,fm_work
+ ld a,0(ix)
+ or a,a
+ jr z,fm_step
+ ld a,0(iy)
+ cpl
+ and a,0(ix)
+ jr nz,fm_work
+ ld 0(ix),a
 fm_step:
  inc hl
  inc de
@@ -157,7 +162,7 @@ void fog_update(void) __banked {
  }
  __builtin_memcpy(fog_next,fog_static,128);fog_dest=fog_next;
  for(i=0;i<unit_count;++i)if(fog_sources[i]!=65535)sight(units[i].x,units[i].y,unit_kind[i]==4?6:5);
- poll_input();changed=fog_merge();poll_input();
+ changed=fog_merge();
  {u8 k;
  for(k=0;k<fog_work_n;++k) {
   u8 need;i=fog_work_idx[k];need=fog_need[i];
