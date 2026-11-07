@@ -206,7 +206,10 @@ u16 damage_mask(u8 p,u16 mask,u8 flags) __banked;
 #include "render_types.h"
 extern Rect rect_now[RN],rect_old[2][RN];
 extern const u16 render_bit[RN];
-extern i16 dm_l[RN],dm_t[RN],dm_r[RN],dm_b[RN];extern u16 dm_bit[RN];extern u8 dm_n;
+extern DMEnt dm[RN];extern u8 dm_n;
+#ifdef KAW_V9990
+u8 fog_query(u8 p,i16* l,i16* t,i16* r,i16* b) __banked;
+#endif
 extern i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];extern u8 strip_n;
 extern u8 box_old[2],changed_x[2][32],changed_y[2][32],changed_count[2],ghost_old[2],ghost_size[2];
 extern u16 box_l[2],box_t[2],box_r[2],box_b[2],ghost_x[2],ghost_y[2];

@@ -163,6 +163,187 @@ void nav_finish(u16 cell) __banked {
  u->len=len; u->pos=u->progress=u->phase=0;
  unit_walk_dist[job_unit]=unit_walk_phase[job_unit]=0;u->state=len?MOVING:ARRIVED; job_unit=NONE;
 }
+/* BFS expansion in Z80. Neighbour order is east, south, west, north (route compatibility). */
+static u8 nav_budget;static u16 nav_arg;
+static void nav_expand_bc(void) __naked {
+ __asm
+ ld a,c
+ and a,#31
+ ld e,a
+ ; east
+ ld a,e
+ cp a,#31
+ jr z,ne_south
+ push bc
+ ld hl,#_parent
+ add hl,bc
+ inc hl
+ ld a,(hl)
+ cp a,#255
+ jr nz,ne_east_end
+ ld (hl),#0
+ ld h,b
+ ld l,c
+ inc hl
+ call ne_push
+ne_east_end:
+ pop bc
+ne_south:
+ ld a,b
+ cp a,#3
+ jr c,ne_south_ok
+ jr nz,ne_west
+ ld a,c
+ cp a,#0xE0
+ jr nc,ne_west
+ne_south_ok:
+ push bc
+ ld hl,#_parent
+ add hl,bc
+ ld de,#32
+ add hl,de
+ ld a,(hl)
+ cp a,#255
+ jr nz,ne_south_end
+ ld (hl),#1
+ ld h,b
+ ld l,c
+ add hl,de
+ call ne_push
+ne_south_end:
+ pop bc
+ne_west:
+ ld a,c
+ and a,#31
+ jr z,ne_north
+ push bc
+ ld hl,#_parent
+ add hl,bc
+ dec hl
+ ld a,(hl)
+ cp a,#255
+ jr nz,ne_west_end
+ ld (hl),#2
+ ld h,b
+ ld l,c
+ dec hl
+ call ne_push
+ne_west_end:
+ pop bc
+ne_north:
+ ld a,b
+ or a,a
+ jr nz,ne_north_ok
+ ld a,c
+ cp a,#32
+ ret c
+ne_north_ok:
+ ld hl,#_parent
+ add hl,bc
+ ld de,#0xFFE0
+ add hl,de
+ ld a,(hl)
+ cp a,#255
+ ret nz
+ ld (hl),#3
+ ld h,b
+ ld l,c
+ add hl,de
+ ; fallthrough push
+ne_push:
+ ex de,hl
+ ld hl,(_qtail)
+ inc hl
+ ld (_qtail),hl
+ dec hl
+ add hl,hl
+ ld bc,#_queue
+ add hl,bc
+ ld (hl),e
+ inc hl
+ ld (hl),d
+ ret
+ __endasm;
+}
+static void nav_expand_run(void) __naked {
+ __asm
+ ld bc,(_nav_arg)
+ jp _nav_expand_bc
+ __endasm;
+}
+/* Runs expansions until the budget ends, the queue empties (returns 0xFFFF) or a goal/target cell is dequeued
+ * (returned; the caller decides and, if it rejects it, expands it with nav_expand_run). */
+static u16 nav_bfs_run(void) __naked {
+ __asm
+nb_loop:
+ ld a,(_nav_budget)
+ or a,a
+ jr z,nb_none
+ dec a
+ ld (_nav_budget),a
+ ld hl,(_qhead)
+ ld de,(_qtail)
+ or a,a
+ sbc hl,de
+ jr nc,nb_none
+ ld hl,(_qhead)
+ push hl
+ add hl,hl
+ ld de,#_queue
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ pop hl
+ inc hl
+ ld (_qhead),hl
+ ld hl,(_nav_expansions)
+ inc hl
+ ld (_nav_expansions),hl
+ ld a,(_nav_work_mode)
+ or a,a
+ jr z,nb_goal
+ ld h,b
+ ld l,c
+ srl h
+ rr l
+ srl h
+ rr l
+ srl h
+ rr l
+ ld de,#_nav_targets
+ add hl,de
+ ld a,c
+ and a,#7
+ ld e,a
+ ld d,#0
+ push hl
+ ld hl,#_fog_bit_table
+ add hl,de
+ ld e,(hl)
+ pop hl
+ ld a,(hl)
+ and a,e
+ jr z,nb_expand
+ ld d,b
+ ld e,c
+ ret
+nb_goal:
+ ld hl,(_job_goal)
+ or a,a
+ sbc hl,bc
+ jr nz,nb_expand
+ ld d,b
+ ld e,c
+ ret
+nb_expand:
+ call _nav_expand_bc
+ jr nb_loop
+nb_none:
+ ld de,#0xFFFF
+ ret
+ __endasm;
+}
 void navigation(void) __banked {
  u8 budget=mode?24:8,i,j;
  if(job_unit==NONE) {
@@ -172,16 +353,12 @@ void navigation(void) __banked {
   }
   if(job_unit==NONE) return;
  }
- while(budget-- && qhead<qtail) {
-  u16 cell=queue[qhead++];
-  u8 x=cell&31;
-  ++nav_expansions;
-  if(nav_work_mode?((nav_targets[cell>>3]&fog_bit_table[cell&7]) && nav_goal_free(job_unit,cell)):(cell==job_goal)) {nav_finish(cell);return;}
-  /* Neighbour order is preserved: east, south, west, north. */
-  if(x!=31 && parent[cell+1]==255) {parent[cell+1]=0;queue[qtail++]=cell+1;}
-  if(cell<992 && parent[cell+32]==255) {parent[cell+32]=1;queue[qtail++]=cell+32;}
-  if(x && parent[cell-1]==255) {parent[cell-1]=2;queue[qtail++]=cell-1;}
-  if(cell>=32 && parent[cell-32]==255) {parent[cell-32]=3;queue[qtail++]=cell-32;}
+ nav_budget=budget;
+ for(;;) {
+  u16 cell=nav_bfs_run();
+  if(cell==0xFFFF)break;
+  if(!nav_work_mode || nav_goal_free(job_unit,cell)) {nav_finish(cell);return;}
+  nav_arg=cell;nav_expand_run();
  }
  if(qhead==qtail && job_unit!=NONE) {
   if(nav_work_mode==1 && tile(node_x[job_unit],node_y[job_unit])==4) {mine_turn=job_unit+1;if(mine_turn==unit_count)mine_turn=0;}

@@ -75,12 +75,9 @@ static u8 fog_bbox(u8 p) {
   fb_r=(q<<3)+b;}
  fb_t=ymin;fb_b=ymax;return 1;
 }
-u16 fog_damage(u8 p,u16 mask) __banked {
- if(fog_bbox(p)) {
-  i16 l=(i16)fb_l<<4,r=((i16)fb_r+1)<<4,t=(i16)fb_t<<4,bt=((i16)fb_b+1)<<4;u8 k;
-  for(k=0;k<dm_n;++k)if(!(mask&dm_bit[k]) && dm_l[k]<r && dm_r[k]>l && dm_t[k]<bt && dm_b[k]>t)mask|=dm_bit[k];
- }
- return mask;
+u8 fog_query(u8 p,i16* l,i16* t,i16* r,i16* b) __banked {
+ if(!fog_bbox(p))return 0;
+ *l=(i16)fb_l<<4;*r=((i16)fb_r+1)<<4;*t=(i16)fb_t<<4;*b=((i16)fb_b+1)<<4;return 1;
 }
 void fog_apply(u8 p) __banked {
  u8 y,left=cam_x>>4,right=(cam_x+255)>>4,top=cam_y>>4,bottom=(cam_y+159)>>4;
@@ -96,7 +93,7 @@ void fog_apply(u8 p) __banked {
  * Unchanged cells and damage outside this camera remain untouched. */
 static u16 fog_hit(u16 mask,u8 c0,u8 c1,u8 y) {
  i16 l=(i16)c0<<4,r=(i16)c1<<4,t=(i16)y<<4,b=t+16;u8 k;
- for(k=0;k<dm_n;++k)if(!(mask&dm_bit[k]) && dm_l[k]<r && dm_r[k]>l && dm_t[k]<b && dm_b[k]>t)mask|=dm_bit[k];
+ for(k=0;k<dm_n;++k)if(!(mask&dm[k].bit) && dm[k].l<r && dm[k].r>l && dm[k].t<b && dm[k].b>t)mask|=dm[k].bit;
  return mask;
 }
 u16 fog_damage(u8 p,u16 mask) __banked {

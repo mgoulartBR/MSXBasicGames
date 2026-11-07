@@ -112,38 +112,379 @@ static u8 box_overlap(const Rect* a,u16 l,u16 t,u16 r,u16 b) {
 
 /* Dirty actors expand the redraw set; only initial actors are erased. */
 /* Active rectangles are cached once as edges; the O(n^2) closure then touches only visible actors. */
-i16 dm_l[RN],dm_t[RN],dm_r[RN],dm_b[RN];u16 dm_bit[RN];u8 dm_n;
-#define DM_HIT(L,T,R,B,k) ((R)>dm_l[k] && dm_r[k]>(L) && (B)>dm_t[k] && dm_b[k]>(T))
+/* Damage marking in Z80. dm[] = edges of the visible actors; queries (strips, fog box, changed tiles, old
+ * rectangles) OR into the mask the actors they touch, then the closure spreads it over overlapping actors. */
+DMEnt dm[RN];u8 dm_n;
+static i16 dq_l[4],dq_t[4],dq_r[4],dq_b[4];u8 dq_n;
+static const u8* dq_cx;static const u8* dq_cy;static u8 dq_cn;static const Rect* dq_old;static u16 dq_restore;
+static i16 qq_l,qq_t,qq_r,qq_b;static u16 qq_mask,qq_before;static u16 dmb;static u8 dbw,dbh;
+static void dm_build(void) __naked {
+ __asm
+ push ix
+ ld ix,#_dm
+ ld hl,#_rect_now
+ ld de,#1
+ ld (_dmb),de
+ ld b,#10
+ xor a,a
+ ld (_dm_n),a
+db_loop:
+ push bc
+ ld e,(hl)
+ inc hl
+ ld d,(hl)
+ inc hl
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ inc hl
+ ld a,(hl)
+ inc hl
+ ld (_dbw),a
+ ld a,(hl)
+ inc hl
+ ld (_dbh),a
+ ld a,(_dbw)
+ or a,a
+ jr z,db_skip
+ push hl
+ ld 0(ix),e
+ ld 1(ix),d
+ ld 2(ix),c
+ ld 3(ix),b
+ ld a,(_dbw)
+ ld l,a
+ ld h,#0
+ add hl,de
+ ld 4(ix),l
+ ld 5(ix),h
+ ld a,(_dbh)
+ ld l,a
+ ld h,#0
+ add hl,bc
+ ld 6(ix),l
+ ld 7(ix),h
+ ld hl,(_dmb)
+ ld 8(ix),l
+ ld 9(ix),h
+ ld de,#10
+ add ix,de
+ ld a,(_dm_n)
+ inc a
+ ld (_dm_n),a
+ pop hl
+db_skip:
+ push hl
+ ld hl,(_dmb)
+ add hl,hl
+ ld (_dmb),hl
+ pop hl
+ pop bc
+ djnz db_loop
+ pop ix
+ ret
+ __endasm;
+}
+/* mark: qq_* rectangle vs every actor not yet in qq_mask. */
+static void dm_mark(void) __naked {
+ __asm
+ push ix
+ ld ix,#_dm
+ ld a,(_dm_n)
+ or a,a
+ jr z,dmm_end
+ ld b,a
+dmm_k:
+ ld hl,(_qq_mask)
+ ld e,8(ix)
+ ld d,9(ix)
+ ld a,l
+ and a,e
+ jr nz,dmm_next
+ ld a,h
+ and a,d
+ jr nz,dmm_next
+ ld l,0(ix)
+ ld h,1(ix)
+ ld de,(_qq_r)
+ or a,a
+ sbc hl,de
+ bit 7,h
+ jr z,dmm_next
+ ld hl,(_qq_l)
+ ld e,4(ix)
+ ld d,5(ix)
+ or a,a
+ sbc hl,de
+ bit 7,h
+ jr z,dmm_next
+ ld l,2(ix)
+ ld h,3(ix)
+ ld de,(_qq_b)
+ or a,a
+ sbc hl,de
+ bit 7,h
+ jr z,dmm_next
+ ld hl,(_qq_t)
+ ld e,6(ix)
+ ld d,7(ix)
+ or a,a
+ sbc hl,de
+ bit 7,h
+ jr z,dmm_next
+ ld hl,(_qq_mask)
+ ld e,8(ix)
+ ld d,9(ix)
+ ld a,l
+ or a,e
+ ld l,a
+ ld a,h
+ or a,d
+ ld h,a
+ ld (_qq_mask),hl
+dmm_next:
+ ld de,#10
+ add ix,de
+ djnz dmm_k
+dmm_end:
+ pop ix
+ ret
+ __endasm;
+}
+/* All queries: dq[] list, changed tiles (x*16,y*16,16x16), old rectangles of the actors in dq_restore. */
+static void dm_queries(void) __naked {
+ __asm
+ ; ---- dq list
+ ld a,(_dq_n)
+ or a,a
+ jr z,dq_tiles
+ ld b,a
+ ld hl,#_dq_l
+dq_li:
+ push bc
+ push hl
+ ; entries are stored as 4 parallel arrays of 4: l[i], t[i], r[i], b[i]
+ ld de,#0
+ ld a,(_dq_n)
+ sub a,b
+ ld e,a                ; index i = n - b
+ ld hl,#_dq_l
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld (_qq_l),bc
+ ld hl,#_dq_t
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld (_qq_t),bc
+ ld hl,#_dq_r
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld (_qq_r),bc
+ ld hl,#_dq_b
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld (_qq_b),bc
+ call _dm_mark
+ pop hl
+ pop bc
+ djnz dq_li
+dq_tiles:
+ ; ---- changed tiles
+ ld a,(_dq_cn)
+ or a,a
+ jr z,dq_old_
+ ld b,a
+ ld hl,(_dq_cx)
+ ld de,(_dq_cy)
+dq_ti:
+ push bc
+ push hl
+ push de
+ ld a,(hl)             ; x
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld (_qq_l),hl
+ ld bc,#16
+ add hl,bc
+ ld (_qq_r),hl
+ pop de
+ push de
+ ld a,(de)             ; y
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld (_qq_t),hl
+ ld bc,#16
+ add hl,bc
+ ld (_qq_b),hl
+ call _dm_mark
+ pop de
+ pop hl
+ pop bc
+ inc hl
+ inc de
+ djnz dq_ti
+dq_old_:
+ ; ---- old rectangles of restored actors
+ ld hl,(_dq_restore)
+ ld a,h
+ or a,l
+ ret z
+ ld hl,(_dq_old)
+ ld de,#1
+ ld (_dmb),de
+ ld b,#10
+do_loop:
+ push bc
+ push hl
+ ld de,(_dmb)
+ ld hl,(_dq_restore)
+ ld a,l
+ and a,e
+ ld c,a
+ ld a,h
+ and a,d
+ or a,c
+ pop hl
+ jr z,do_next
+ push hl
+ ld e,(hl)
+ inc hl
+ ld d,(hl)
+ inc hl
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ inc hl
+ ld a,(hl)             ; w
+ inc hl
+ or a,a
+ jr z,do_skip
+ ld (_dbw),a
+ ld a,(hl)             ; h
+ ld (_dbh),a
+ ld (_qq_l),de
+ ld (_qq_t),bc
+ ld a,(_dbw)
+ ld l,a
+ ld h,#0
+ add hl,de
+ ld (_qq_r),hl
+ ld a,(_dbh)
+ ld l,a
+ ld h,#0
+ add hl,bc
+ ld (_qq_b),hl
+ call _dm_mark
+do_skip:
+ pop hl
+do_next:
+ ld de,#6
+ add hl,de
+ push hl
+ ld hl,(_dmb)
+ add hl,hl
+ ld (_dmb),hl
+ pop hl
+ pop bc
+ djnz do_loop
+ ret
+ __endasm;
+}
+/* Closure: every marked actor marks the actors it overlaps, until nothing changes. */
+static void dm_closure(void) __naked {
+ __asm
+dc_again:
+ ld hl,(_qq_mask)
+ ld (_qq_before),hl
+ push ix
+ ld ix,#_dm
+ ld a,(_dm_n)
+ or a,a
+ jr z,dc_done
+ ld b,a
+dc_k:
+ push bc
+ ld hl,(_qq_mask)
+ ld e,8(ix)
+ ld d,9(ix)
+ ld a,l
+ and a,e
+ ld c,a
+ ld a,h
+ and a,d
+ or a,c
+ jr z,dc_next
+ ld l,0(ix)
+ ld h,1(ix)
+ ld (_qq_l),hl
+ ld l,2(ix)
+ ld h,3(ix)
+ ld (_qq_t),hl
+ ld l,4(ix)
+ ld h,5(ix)
+ ld (_qq_r),hl
+ ld l,6(ix)
+ ld h,7(ix)
+ ld (_qq_b),hl
+ push ix
+ call _dm_mark
+ pop ix
+dc_next:
+ pop bc
+ ld de,#10
+ add ix,de
+ djnz dc_k
+dc_done:
+ pop ix
+ ld hl,(_qq_mask)
+ ld de,(_qq_before)
+ or a,a
+ sbc hl,de
+ jr nz,dc_again
+ ret
+ __endasm;
+}
 u16 damage_mask(u8 p,u16 mask,u8 flags) __banked {
- u8 i,j,k,n=0;u16 before,restore=mask;
- {const Rect* a=rect_now;for(j=0;j<RN;++j,++a)if(a->w){dm_l[n]=a->x;dm_r[n]=a->x+a->w;dm_t[n]=a->y;dm_b[n]=a->y+a->h;dm_bit[n]=render_bit[j];++n;}}
- dm_n=n;
- mask=arrow_damage(p,mask);if((flags&16) && n)mask=fog_damage(p,mask);
- for(i=0;i<strip_n;++i)for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(strip_l[i],strip_t[i],strip_r[i],strip_b[i],k))mask|=dm_bit[k];
- for(i=0;i<changed_count[p];++i) {
-  i16 l=(i16)changed_x[p][i]*16,t=(i16)changed_y[p][i]*16,r=l+16,b=t+16;
-  for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(l,t,r,b,k))mask|=dm_bit[k];
- }
- if(restore) {const Rect* o=rect_old[p];
-  for(i=0;i<RN;++i,++o)if((restore&render_bit[i]) && o->w) {
-   i16 l=o->x,t=o->y,r=o->x+o->w,b=o->y+o->h;
-   for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(l,t,r,b,k))mask|=dm_bit[k];
-  }
- }
+ u8 i;u16 restore=mask;
+ dm_build();
+ mask=arrow_damage(p,mask);
+ dq_n=0;
+ for(i=0;i<strip_n;++i) {dq_l[dq_n]=strip_l[i];dq_t[dq_n]=strip_t[i];dq_r[dq_n]=strip_r[i];dq_b[dq_n]=strip_b[i];++dq_n;}
+#ifdef KAW_V9990
+ if((flags&16) && dm_n)dq_n+=fog_query(p,dq_l+dq_n,dq_t+dq_n,dq_r+dq_n,dq_b+dq_n);
+#else
+ if((flags&16) && dm_n)mask=fog_damage(p,mask);
+#endif
+ dq_cx=changed_x[p];dq_cy=changed_y[p];dq_cn=changed_count[p];dq_old=rect_old[p];dq_restore=restore;
+ qq_mask=mask;dm_queries();mask=qq_mask;
   if(flags&2)for(i=0;i<RN;++i)if(
    (box_old[p] && box_overlap(rect_now+i,box_l[p],box_t[p],box_r[p],box_b[p])) ||
    ((flags&1) && box_overlap(rect_now+i,drag_l,drag_t,drag_r,drag_b)))mask|=render_bit[i];
   if(flags&8)for(i=0;i<RN;++i)if(
    (ghost_old[p] && box_overlap(rect_now+i,ghost_x[p],ghost_y[p],ghost_x[p]+ghost_size[p]-1,ghost_y[p]+ghost_size[p]-1)) ||
    ((flags&4) && box_overlap(rect_now+i,place_x*16,place_y*16,place_x*16+building_size(build_kind)*16-1,place_y*16+building_size(build_kind)*16-1)))mask|=render_bit[i];
-  /* Rebuild the active list: box/ghost marking may have added inactive-free bits only. */
-  do {before=mask;
-   for(i=0;i<n;++i)if(mask&dm_bit[i]) {
-    i16 l=dm_l[i],t=dm_t[i],r=dm_r[i],b=dm_b[i];
-    for(k=0;k<n;++k)if(!(mask&dm_bit[k]) && DM_HIT(l,t,r,b,k))mask|=dm_bit[k];
-   }
-  }while(before!=mask);
- return mask;
+ qq_mask=mask;dm_closure();
+ return qq_mask;
 }
 
 /* Render entry/exit at the cave mouth; logical doorway stays reserved. */
