@@ -403,6 +403,116 @@ void resource_empty(u8 x,u8 y) __banked {
 /* Phase is 0..2 plus a class speed of 4, 8 or 10. */
 const u8 move_speed[]={0,0,0,1,1,1,2,2,2,3,3,3,4};
 const u8 move_remainder[]={0,1,2,0,1,2,0,1,2,0,1,2,0};
+/* Z80 fast path of the movement step: a unit already inside a cell that stays inside it this tick.
+ * Anything else (cell completed, no progress yet) returns 0 before touching state, and the C code runs. */
+static u8 sf_i,sf_rate;
+static u8 sim_fast(void) __naked {
+ __asm
+ push ix
+ ld a,(_sf_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units
+ add hl,de
+ push hl
+ pop ix
+ ld a,13(ix)
+ or a,a
+ jp z,sf_bail
+ ld b,a
+ ld a,(_sf_rate)
+ add a,14(ix)
+ ld e,a
+ ld d,#0
+ ld hl,#_move_speed
+ add hl,de
+ ld c,(hl)
+ ld a,b
+ add a,c
+ cp a,#16
+ jp nc,sf_bail
+ ld hl,#_move_remainder
+ add hl,de
+ ld a,(hl)
+ ld 14(ix),a
+ ld a,c
+ or a,a
+ jp z,sf_done
+ ld a,8(ix)
+ cp a,4(ix)
+ jp z,sf_y
+ ld l,0(ix)
+ ld h,1(ix)
+ ld e,c
+ ld d,#0
+ jp c,sf_xneg
+ add hl,de
+ jp sf_xst
+sf_xneg:
+ or a,a
+ sbc hl,de
+sf_xst:
+ ld 0(ix),l
+ ld 1(ix),h
+ jp sf_walk
+sf_y:
+ ld l,2(ix)
+ ld h,3(ix)
+ ld e,c
+ ld d,#0
+ ld a,9(ix)
+ cp a,5(ix)
+ jp c,sf_ysub
+ jp z,sf_ysub
+ add hl,de
+ jp sf_yst
+sf_ysub:
+ or a,a
+ sbc hl,de
+sf_yst:
+ ld 2(ix),l
+ ld 3(ix),h
+sf_walk:
+ ld a,(_sf_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_walk_dist
+ add hl,de
+ ld a,(hl)
+ add a,c
+ cp a,#10
+ jp c,sf_wst
+ sub a,#10
+ ld (hl),a
+ ld hl,#_unit_walk_phase
+ add hl,de
+ ld a,(hl)
+ inc a
+ and a,#3
+ ld (hl),a
+ jp sf_prog
+sf_wst:
+ ld (hl),a
+sf_prog:
+ ld a,13(ix)
+ add a,c
+ ld 13(ix),a
+ ld a,#3
+ ld (_sprites_dirty),a
+sf_done:
+ ld a,#1
+ pop ix
+ ret
+sf_bail:
+ xor a,a
+ pop ix
+ ret
+ __endasm;
+}
 void simulate(void) __banked {
  u8 i,animate;Unit* u=units;
  ++sim_ticks;
@@ -428,6 +538,7 @@ void simulate(void) __banked {
    if(mine_phase[i])continue;
   }
   if(retry_wait[i])--retry_wait[i];
+  if(u->progress) {sf_i=i;sf_rate=kind==4?10:kind==5?4:8;if(sim_fast())continue;}
   if(!u->progress && (requested[i] || u->state!=MOVING)) continue;
   u->phase+=kind==4?10:kind==5?4:8; speed=move_speed[u->phase]; u->phase=move_remainder[u->phase]; /* 80 px/s at 30 Hz */
   while(speed) {

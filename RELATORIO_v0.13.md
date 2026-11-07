@@ -146,3 +146,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Limite de frequência do Fog e barras de inimigos só ao selecionar: sem efeito mensurável, revertidos.
 - V9990: detecção de atores alterados (`sp_changed`) e descarte fora da tela (`sp_cull`) em Z80. 4 unidades andando com scroll: 31 quadros em 3,47 s (8,9 fps), contra 28 em 3,44 s (8,1 fps). Suíte completa e comparações de pixels sem falhas.
 - Redesenho sem restauração por ator: não implementado. Apagar o ator antigo exige uma cópia por retângulo de qualquer forma, então não reduz o número de cópias.
+
+## Adendo 3: laço de movimento do simulate em Z80
+
+- `sim_fast` (Z80): passo de movimento dentro de uma célula. Sai antes de alterar qualquer estado quando a célula se completa, e o código C original assume.
+- V9990: 4 unidades 31 quadros em 3,47 s (igual), 1 unidade 43 quadros em 3,0 s (antes 42). Ganho pequeno: o custo restante está nas rotas, no combate, na travessia de células e nas unidades paradas.
+- V9968: 4 unidades 14 quadros em 3,6 s, 1 unidade 23 quadros em 2,97 s.
+- Suítes completas V9990 e V9968 sem falhas.
