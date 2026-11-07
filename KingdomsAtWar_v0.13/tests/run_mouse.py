@@ -7,7 +7,7 @@ variant=sys.argv[1] if len(sys.argv)>1 else 'PREVIEW'
 shared=r/'tests/host'/('mouse_events-'+variant+'-'+str(os.getpid())+'.so')
 subprocess.run(['gcc','-shared','-fPIC','-O2','-pthread',str(r/'tests/host/mouse_events.c'),'-ldl','-o',str(shared)],check=True)
 variant=sys.argv[1] if len(sys.argv)>1 else 'PREVIEW';script=sys.argv[2] if len(sys.argv)>2 else 'mouse_probe.tcl';port=sys.argv[3] if len(sys.argv)>3 else '1'
-rom='KAW9990' if variant=='V9990' else 'KAW68PV'
+rom={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[variant]
 m=(r/'build'/variant/(rom+'.map')).read_text();sym={a[1]:int(a[0],16) for a in re.findall(r'^\s+([0-9A-F]{8})\s+_(\w+)\s+main\s*$',m,re.M)}
 (r/'tests'/('symbols-'+variant+'.tcl')).write_text('\n'.join('set S(%s) %d'%(k,v)for k,v in sym.items())+'\n')
 fifo=r/'tests'/('mouse-'+variant+'-'+port+'-'+str(os.getpid())+'.fifo')

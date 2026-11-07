@@ -34,7 +34,7 @@ proc check_kernel {} {
 }
 proc start_kernel {} {
  delay 45
- set name [expr {$::env(KAW_VARIANT) eq "V9990"?"KAW9990":"KAW68PV"}];set f [open ../build/$::env(KAW_VARIANT)/$name.map];set text [read $f];close $f
+ set name [dict get {V9990 KAW9990 PREVIEW KAW68PV V9968 KAW9968} $::env(KAW_VARIANT)];set f [open ../build/$::env(KAW_VARIANT)/$name.map];set text [read $f];close $f
  if {![regexp {([0-9A-F]{8})\s+_fog_merge\s} $text whole address]} {error "kernel missing"};scan $address %x address;set address [expr {$address&65535}]
  debug write_block memory 61440 [binary format c* [list 62 12 50 0 120 50 6 192 205 [expr {$address&255}] [expr {$address>>8}] 195 11 240]]
  debug set_bp 61451 {} {check_kernel};prepare_kernel

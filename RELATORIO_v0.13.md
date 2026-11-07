@@ -129,3 +129,13 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Tentativa descartada: marcação de dano (`damage_mask`) em Z80 não deu ganho medível (o custo está espalhado em pedaços de ~2 ms); revertida.
 - V9990 a 3,58 MHz: 1 unidade 13,0 quadros/s; 4 unidades 8,1; scroll 15,2. V9968 (via script): 7,4 / 3,6 / 6,4.
 - `refresh13.tcl` agora move uma unidade e rola a câmera antes de comparar scroll incremental com repintura total (idênticos nos dois alvos). Capturas estáticas idênticas; suíte V9990 156 PASS; V9968: fog/worker/combat/camera/overlay/kingdom/native012 sem falhas.
+
+## Adendo: busca de rotas, damage_mask e Mouse_Read
+
+- Busca de rotas (BFS) reescrita em Z80 (`nav_bfs_run`).
+- `damage_mask` reescrito em Z80 (`dm_build`, `dm_mark`, `dm_queries`, `dm_closure`). A caixa do Fog no V9990 entra como consulta (`fog_query`).
+- Resultado V9990 com 4 unidades andando e scroll: 28 quadros em 3,44 s (cerca de 8 fps), igual ao anterior. O `damage_mask` em Z80 não deu ganho mensurável.
+- `Mouse_Read` em meia taxa: ganho de cerca de 1%, quebrou os testes de mouse; revertido.
+- V9968: 4 unidades andando, 13 quadros em 3,6 s.
+- Testes: suíte completa V9990 e V9968 sem falhas. Também corrigi kernel012.tcl e run_mouse.py, que procuravam o mapa do PREVIEW no V9968.
+- Não aplicados, aguardam aprovação: simulação a 15 Hz, Fog menos frequente, barras de vida só ao selecionar ou sofrer dano.
