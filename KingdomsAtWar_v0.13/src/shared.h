@@ -1,3 +1,8 @@
+#ifdef KAW_V9990
+#ifndef KAW_BAR_STRIPS
+#define KAW_BAR_STRIPS
+#endif
+#endif
 #pragma once
 
 #include "msxgl.h"

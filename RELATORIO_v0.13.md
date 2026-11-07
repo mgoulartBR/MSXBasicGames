@@ -111,3 +111,9 @@ Medido de novo a 3,58 MHz com o laço principal sem espera ociosa (a inversão d
 | V9990 | 9,6 | 6,9 | 14,4 |
 | V9968 (via script) | 6,9 | 3,2 | 6,4 |
 O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968 com 1 unidade. Cursor de teclado agora anda por quadro de vídeo (não por volta do laço). Testes: suíte V9990 (156), V9968 (worker/combat/fog/camera/overlay/kingdom/native012) sem falhas a 3,58 MHz.
+
+## Atualização: desenho por ator (V9990)
+- `draw_actor` sem divisões (`key/10`, `key%10` por `(key*205)>>11` e deslocamentos), largura da barra de vida em cache por ator, laço de prédios sem chamadas a `intersect`, barras de vida em uma cópia (tira [preenchimento|fundo]). 6,9 → 4,9 ms por ator.
+- V9990 a 3,58 MHz: 1 unidade 10,3 quadros/s; 4 unidades 7,0; scroll 14,4.
+- Pixels idênticos à versão anterior (capturas estáticas), scroll incremental idêntico, suíte V9990 156 PASS.
+- `combat011`: as esperas por morte agora também esperam `combat_kills` (mesma corrida de leitura entre `unit_hp=0` e o contador em `die()`).

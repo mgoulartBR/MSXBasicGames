@@ -1,4 +1,9 @@
 #ifdef KAW_V9990
+#ifndef KAW_BAR_STRIPS
+#define KAW_BAR_STRIPS
+#endif
+#endif
+#ifdef KAW_V9990
 #include "video9990.h"
 #else
 #include "video9968.h"
@@ -129,11 +134,15 @@ static u8 cache_frame(u8 key) {
  cache_key[best]=key;cache_stamp[best]=cache_tick;++frame_uploads;return best;
 }
 #endif
+static u16 bar_sig[RN];static u8 bar_w[RN];
 static void draw_actor(u8 i,u8 p) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],q,n=sz>>4;const u8* b=pose_bounds+(u16)key*4;u8 crop=WORKER(i) && mine_phase[i]?mine_step[i]*4:0;
  if(i<N && (selection_mask&render_bit[i]))clip_copy(actor_x[i]+sz/2-8,actor_y[i]+sz-16,0,FONT_Y+16,16,16,p,cam_x,cam_y);
 #ifdef KAW_V9990
- {u8 top=b[1];if(crop>top)top=crop;if(top<b[1]+b[3])clip_copy(actor_x[i]+b[0],actor_y[i]+top,(key%10)*48+b[0],1280+(u16)(key/10)*48+top,b[2],b[1]+b[3]-top,p,cam_x,cam_y);}
+ {u8 top=b[1];if(crop>top)top=crop;if(top<b[1]+b[3]) {
+   /* key/10 and key%10 via (key*205)>>11 (exact for 0..255); *48 as shifts. */
+   u8 q10=(u8)((((u16)key<<7)+((u16)key<<6)+((u16)key<<3)+((u16)key<<2)+key)>>11),r10=key-((q10<<3)+(q10<<1));
+   clip_copy(actor_x[i]+b[0],actor_y[i]+top,(((u16)r10<<5)+((u16)r10<<4))+b[0],1280+(((u16)q10<<5)+((u16)q10<<4))+top,b[2],b[1]+b[3]-top,p,cam_x,cam_y);}}
 #else
  /* One copy per pose row when its pieces are neighbours in the pose cache (they usually are). */
  {u8 row,slot=unit_cache[i],nn=n<<4;
@@ -158,7 +167,7 @@ static void draw_actor(u8 i,u8 p) {
  }
 #endif
  /* Indexed health bar and a brief contact flash, inside damage bounds. */
- if(units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) {i16 x=actor_x[i]+sz/2-8,y=actor_y[i]+b[1]-4;u8 width=(u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]];
+ if(units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) {i16 x=actor_x[i]+sz/2-8,y=actor_y[i]+b[1]-4;u8 width;{u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]];}width=bar_w[i];}
 #ifdef KAW_BAR_STRIPS
   /* Whole bar in one copy from a [fill|background] strip: shift the source by (16-width). */
   clip_copy(x,y,256+16-width,1264+(hurt_flash[i]>4?4:units[i].owner?0:2),16,2,p,cam_x,cam_y);
@@ -168,13 +177,19 @@ static void draw_actor(u8 i,u8 p) {
   if(hurt_flash[i]>4){world_fill(x+6,y+12,5,1,p,15);world_fill(x+8,y+10,1,5,p,15);}
  }
  /* Restore only opaque building pixels in front of this unit. */
- for(q=0;q<building_count;++q) {
-  Building* bl=&buildings[q];u8 side=building_size(bl->type)*16;Rect br; i16 x,y,right,bottom;
-  if(!bl->state || (u16)(bl->y*16+side)<(u16)(units[i].py+16))continue;
-  br.x=bl->x*16;br.y=bl->y*16;br.w=br.h=side;if(!intersect(&br,rect_now+i))continue;
-  x=br.x>rect_now[i].x?br.x:rect_now[i].x;y=br.y>rect_now[i].y?br.y:rect_now[i].y;right=br.x+side<rect_now[i].x+rect_now[i].w?br.x+side:rect_now[i].x+rect_now[i].w;bottom=br.y+side<rect_now[i].y+rect_now[i].h?br.y+side:rect_now[i].y+rect_now[i].h;
-  if(x<(i16)cam_x)x=cam_x;if(y<(i16)cam_y)y=cam_y;if(right>(i16)cam_x+256)right=cam_x+256;if(bottom>(i16)cam_y+160)bottom=cam_y+160;
-  if(right>x&&bottom>y)paint_world(x,y,right-x,bottom-y,p,cam_x,cam_y,1);
+ if(building_count) {
+  const Rect* rn=rect_now+i;i16 rl=rn->x,rt=rn->y,rr=rl+rn->w,rb=rt+rn->h;u16 foot=units[i].py+16;
+  for(q=0;q<building_count;++q) {
+   const Building* bl=&buildings[q];u8 side;i16 bx,by,x,y,right,bottom;
+   if(!bl->state)continue;
+   side=build_sizes[bl->type]<<4;by=(i16)bl->y<<4;
+   if((u16)(by+side)<foot)continue;
+   bx=(i16)bl->x<<4;
+   if(!rn->w || bx+side<=rl || bx>=rr || by+side<=rt || by>=rb)continue;
+   x=bx>rl?bx:rl;y=by>rt?by:rt;right=bx+side<rr?bx+side:rr;bottom=by+side<rb?by+side:rb;
+   if(x<(i16)cam_x)x=cam_x;if(y<(i16)cam_y)y=cam_y;if(right>(i16)cam_x+256)right=cam_x+256;if(bottom>(i16)cam_y+160)bottom=cam_y+160;
+   if(right>x&&bottom>y)paint_world(x,y,right-x,bottom-y,p,cam_x,cam_y,1);
+  }
  }
 }
 void video_sprites(void) {

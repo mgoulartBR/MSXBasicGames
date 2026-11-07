@@ -19,7 +19,7 @@ proc combat09 {} {
  await {[b unit_hp 8]<48 && [b unit_hp 2]<48} 140
  ck melee_reached {[unit 2 progress]==0 && abs([unit 2 x]-[unit 8 x])+abs([unit 2 y]-[unit 8 y])==1}
  shot combat09-duel
- await {[b unit_hp 8]==0} 30
+ await {[b unit_hp 8]==0 && [w combat_kills]>=1} 30
  ck defender_dies {[b unit_hp 2]>0 && [w combat_kills]==1}
  move_unit 2 3 23
  ck dead_tile_released {[unit 2 x]==3 && [unit 2 y]==23}
@@ -41,7 +41,7 @@ proc combat09 {} {
  ck dead_slot_recruited {[b unit_count]==4 && [b unit_kind]==0 && [b unit_hp]==32}
  move_unit 3 9 23;tap 3 32
  await {[b unit_hp 9]<48} 140
- await {[b unit_hp 9]==0} 30
+ await {[b unit_hp 9]==0 && [w combat_kills]>=3} 30
  ck hold_retaliates {[b stance 3]==1}
  ck second_defender_dies {[b unit_hp 3]>0 && [w combat_kills]==3}
  choose 0;world_point 3 27;tap 5 32;delay 1
