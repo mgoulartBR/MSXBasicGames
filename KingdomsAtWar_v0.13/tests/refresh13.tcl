@@ -12,11 +12,12 @@ proc page_bytes {} {
 proc scroll_for {row mask secs} {keymatrixdown $row $mask;delay $secs;keymatrixup $row $mask;delay 0.8}
 proc refresh13 {} {
  delay 45;choose 2
+ world_point 9 2;tap 5 32
  scroll_for 8 0x80 1.2   ;# direita
  scroll_for 8 0x40 0.9
  scroll_for 8 0x10 0.5   ;# esquerda
  scroll_for 8 0x20 0.4
- delay 1
+ await {[unit 2 state]==3 && [unit 2 progress]==0} 60;delay 2
  shot refA13;set ca "[w cam_x],[w cam_y]"
  debug write memory $::S(field_valid) 0;debug write memory [expr {$::S(field_valid)+1}] 0
  for {set i 0} {$i<6} {incr i} {debug write memory $::S(sprites_dirty) 3;delay 0.7}

@@ -23,6 +23,133 @@ Rect rect_now[RN],rect_old[2][RN];
 i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],old_hp[2][RN],old_hit[2][RN],actor_sel[2],old_key[2][RN],field_valid[2];
 u16 field_x[2],field_y[2];u8 changed_x[2][32],changed_y[2][32],changed_count[2],ghost_old[2],ghost_size[2],ghost_color_old[2];u16 ghost_x[2],ghost_y[2];
 u8 intersect(const Rect* a,const Rect* b) {return a->w && b->w && a->x+a->w>b->x && b->x+b->w>a->x && a->y+a->h>b->y && b->y+b->h>a->y;}
+#ifdef KAW_V9990
+/* Clip a world rectangle to the 256x160 window and queue one transparent copy: Z80, no stack arguments.
+ * Screen-space clipping: x/y relative to the camera, then dest = (x, page+y). */
+i16 cc_x,cc_y;u16 cc_sx,cc_sy,cc_page,cc_cx,cc_cy,cc_dx,cc_dy;u8 cc_w,cc_h;
+static void v9_clip_run(void) __naked {
+ __asm
+ ld hl,(_cc_x)
+ ld de,(_cc_cx)
+ or a,a
+ sbc hl,de
+ ex de,hl              ; DE = sxl
+ ld a,(_cc_w)
+ ld c,a
+ ld b,#0               ; BC = w
+ bit 7,d
+ jr z,cc_xpos
+ ld hl,#0
+ or a,a
+ sbc hl,de             ; HL = skip
+ push hl
+ or a,a
+ sbc hl,bc
+ pop hl
+ jp nc,cc_ret          ; skip >= w
+ push hl
+ ld de,(_cc_sx)
+ add hl,de
+ ld (_cc_sx),hl
+ pop hl
+ ld a,c
+ sub a,l
+ ld c,a
+ ld de,#0
+cc_xpos:
+ ld a,d
+ or a,a
+ jp nz,cc_ret          ; sxl >= 256
+ ld hl,#256
+ or a,a
+ sbc hl,de             ; HL = 256 - sxl  (>0 here since de<256 -> unless e==0? d==0 so 1..256)
+ push hl
+ or a,a
+ sbc hl,bc             ; (256-sxl) - w
+ pop hl
+ jr nc,cc_xok          ; w <= 256-sxl
+ ld c,l                ; w = 256-sxl (<256 because sxl>0 here)
+cc_xok:
+ ld a,c
+ ld (_cc_w),a         ; clipped width
+ ld (_cc_dx),de
+ ; ---- y axis
+ ld hl,(_cc_y)
+ ld de,(_cc_cy)
+ or a,a
+ sbc hl,de
+ ex de,hl              ; DE = syl
+ ld a,(_cc_h)
+ ld c,a
+ ld b,#0               ; BC = h
+ bit 7,d
+ jr z,cc_ypos
+ ld hl,#0
+ or a,a
+ sbc hl,de             ; HL = skip
+ push hl
+ or a,a
+ sbc hl,bc
+ pop hl
+ jp nc,cc_ret
+ push hl
+ ld de,(_cc_sy)
+ add hl,de
+ ld (_cc_sy),hl
+ pop hl
+ ld a,c
+ sub a,l
+ ld c,a
+ ld de,#0
+cc_ypos:
+ ld a,d
+ or a,a
+ jp nz,cc_ret
+ ld hl,#160
+ or a,a
+ sbc hl,de             ; HL = 160 - syl
+ jp z,cc_ret           ; syl == 160 -> nothing
+ jp c,cc_ret
+ push hl
+ or a,a
+ sbc hl,bc
+ pop hl
+ jr nc,cc_yok
+ ld c,l
+cc_yok:
+ ; dest y = page + syl
+ ld hl,(_cc_page)
+ add hl,de
+ ld (_cc_dy),hl
+ ; ---- fill command block: sx, sy, dx, dy, w, h
+ ld hl,(_cc_sx)
+ ld (_v9c+0),hl
+ ld hl,(_cc_sy)
+ ld (_v9c+2),hl
+ ld hl,(_cc_dx)
+ ld (_v9c+4),hl
+ ld hl,(_cc_dy)
+ ld (_v9c+6),hl
+ ld a,(_cc_w)
+ ld l,a
+ ld h,#0
+ ld (_v9c+8),hl
+ ld l,c
+ ld (_v9c+10),hl
+ xor a,a
+ ld (_v9c+12),a
+ ld a,#0x1C
+ ld (_v9c+13),a
+ call _gpu_wait
+ jp _v9_lmmm
+cc_ret:
+ ret
+ __endasm;
+}
+void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy) {
+ cc_x=wx;cc_y=wy;cc_sx=sx;cc_sy=sy;cc_w=w;cc_h=h;cc_page=(u16)p<<8;cc_cx=cx;cc_cy=cy;v9_clip_run();
+}
+#else
 void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy) {
  i16 left=wx,top=wy,right=wx+w,bottom=wy+h,source_top;
  if(left<(i16)cx)left=cx;if(top<(i16)cy)top=cy;if(right>(i16)cx+256)right=cx+256;if(bottom>(i16)cy+160)bottom=cy+160;
@@ -40,6 +167,7 @@ void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy) {
  }
 #endif
 }
+#endif
 /* Opaque terrain, transparent buildings over grass. */
 static void paint_world(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy,u8 overlay) {
  i16 xx,yy,left=x,top=y,right=x+w,bottom=y+h;
@@ -198,11 +326,20 @@ void video_sprites(void) {
  for(i=0;i<RN;++i) {
   if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
   const u8* b;u8 size=kind_sizes[unit_kind[i]],f=unit_art_frame(i),crop=WORKER(i)&&mine_phase[i]?mine_step[i]*4:0;Rect* a=rect_now+i;
-  actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;b=pose_bounds+(u16)actor_key[i]*4;
-  a->x=actor_x[i]+b[0];a->y=actor_y[i]+b[1];a->w=b[2];a->h=b[3];
-  {i16 left=actor_x[i]+size/2-8;if(a->x>left){a->w+=a->x-left;a->x=left;}if(a->x+a->w<left+16)a->w=left+16-a->x;if(units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE){a->y-=4;a->h+=4;}}
-  if(crop>b[1]) {a->y+=crop-b[1];a->h=crop<b[1]+b[3]?b[1]+b[3]-crop:0;}
-  if(i<N && (selection_mask&render_bit[i])) {i16 left=actor_x[i]+size/2-8,bot=actor_y[i]+size;if(a->x>left) {a->w+=a->x-left;a->x=left;}if(a->x+a->w<left+16)a->w=left+16-a->x;if(a->y+a->h<bot)a->h=bot-a->y;}
+  actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;
+  /* Byte-wide rectangle math: every adjustment is relative to the draw origin (offsets are small). */
+  {const u8* bp=pose_bounds+((u16)actor_key[i]<<2);i16 ax=actor_x[i],ay=actor_y[i];
+   u8 off=(size>>1)-8,o=bp[0],w=bp[2],h=bp[3],b1=bp[1];i8 yo=b1;
+   if(o>off){w+=o-off;o=off;}
+   if((u8)(o+w)<(u8)(off+16))w=off+16-o;
+   if(units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE){yo-=4;h+=4;}
+   if(crop>b1){yo+=crop-b1;h=crop<b1+bp[3]?b1+bp[3]-crop:0;}
+   if(i<N && (selection_mask&render_bit[i])) {
+    if(o>off){w+=o-off;o=off;}
+    if((u8)(o+w)<(u8)(off+16))w=off+16-o;
+    if((i16)yo+h<(i16)size)h=size-yo;
+   }
+   a->x=ax+o;a->y=ay+yo;a->w=w;a->h=h;}
   if(!actor_visible[i] || !a->h || a->x+a->w<=(i16)cam_x || a->x>=(i16)cam_x+256 || a->y+a->h<=(i16)cam_y || a->y>=(i16)cam_y+160) {actor_visible[i]=0;a->w=0;}
   if(actor_visible[i]) {order[count++]=i;
 #ifndef KAW_V9990

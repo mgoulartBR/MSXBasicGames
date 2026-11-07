@@ -122,3 +122,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - `fog_merge` (Z80): salta bytes com `next==visible` e sem trilha; bytes só com trilha já vista só têm a trilha zerada. `fog_stamp`: as linhas de máscara agora são combinadas por rotina Z80 (`stamp_rows`), sem `poll_input` no meio. Dois `poll_input` em volta do merge removidos.
 - `fog_update`: ~45 → 22 ms por chamada (V9990, 4 unidades). 1 unidade 11,3 quadros/s; 4 unidades 7,5; scroll 14,4. V9968 (via script): 8,0 / 3,6 / 6,4.
 - `kernel012.tcl` passou a gerar `seen ⊇ visible` (invariante real do jogo, que o salto rápido usa); 257 casos Z80 passam. Suíte V9990 156 PASS, 36 pixels do Fog, scroll incremental idêntico; V9968 (via script): fog/worker/combat/camera/overlay/kingdom sem falhas.
+
+## Atualização: cola do video_sprites
+- Retângulo de cada ator calculado com aritmética de bytes relativa à origem do desenho (sem somas de 16 bits repetidas): o código fixo encolheu ~0,8 KB e o laço de preparação caiu de ~18 para ~13 ms por quadro.
+- `clip_copy` do V9990 em Z80 (`v9_clip_run`): recorte à janela e envio do comando LMMM sem argumentos na pilha.
+- Tentativa descartada: marcação de dano (`damage_mask`) em Z80 não deu ganho medível (o custo está espalhado em pedaços de ~2 ms); revertida.
+- V9990 a 3,58 MHz: 1 unidade 13,0 quadros/s; 4 unidades 8,1; scroll 15,2. V9968 (via script): 7,4 / 3,6 / 6,4.
+- `refresh13.tcl` agora move uma unidade e rola a câmera antes de comparar scroll incremental com repintura total (idênticos nos dois alvos). Capturas estáticas idênticas; suíte V9990 156 PASS; V9968: fog/worker/combat/camera/overlay/kingdom/native012 sem falhas.

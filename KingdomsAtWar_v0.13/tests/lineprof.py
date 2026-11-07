@@ -17,7 +17,7 @@ else:
  fa=int(re.search(r'_%s\s+([0-9A-F]{8})'%fn,s)[1],16);bank=0
  syms=sorted(int(a,16) for n,a in re.findall(r'^\s*0 (_\w+)\s+([0-9A-F]{8})\s',s,re.M))
 # fim: proximo simbolo de funcao
-fe=min([x for x in syms if x>fa]+[fa+0x800])
+fe=min([x for x in syms if x>fa+int(os.environ.get("MINLEN","0"),0)]+[fa+0x2000])
 cur=None;first={}
 for l in B.read_text().split('\n'):
     mm=re.search(r';\S*?%s:(\d+):'%re.escape(fil),l)
