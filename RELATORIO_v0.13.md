@@ -139,3 +139,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - V9968: 4 unidades andando, 13 quadros em 3,6 s.
 - Testes: suíte completa V9990 e V9968 sem falhas. Também corrigi kernel012.tcl e run_mouse.py, que procuravam o mapa do PREVIEW no V9968.
 - Não aplicados, aguardam aprovação: simulação a 15 Hz, Fog menos frequente, barras de vida só ao selecionar ou sofrer dano.
+
+## Adendo 2: simulação a 15 Hz, Fog, barras e preparo dos atores em Z80
+
+- 15 Hz: testado e descartado. 4 unidades: 8,9 fps contra 8,1; 1 unidade: 12,1 fps contra 13,6.
+- Limite de frequência do Fog e barras de inimigos só ao selecionar: sem efeito mensurável, revertidos.
+- V9990: detecção de atores alterados (`sp_changed`) e descarte fora da tela (`sp_cull`) em Z80. 4 unidades andando com scroll: 31 quadros em 3,47 s (8,9 fps), contra 28 em 3,44 s (8,1 fps). Suíte completa e comparações de pixels sem falhas.
+- Redesenho sem restauração por ator: não implementado. Apagar o ator antigo exige uma cópia por retângulo de qualquer forma, então não reduz o número de cópias.

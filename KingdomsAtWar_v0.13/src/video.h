@@ -320,11 +320,210 @@ static void draw_actor(u8 i,u8 p) {
   }
  }
 }
+#ifdef KAW_V9990
+/* Z80: which actors differ from what the page already shows (health, flash, pose, rectangle, selection). */
+static u8 sc_vf;static const u8 *sc_ohp,*sc_ohit,*sc_okey;static const Rect* sc_ro;static u16 sc_selx,sc_mask,sc_bitw;
+static u16 sc_cull;
+static void sp_cull(void) __naked {
+ __asm
+ ld hl,#0
+ ld (_sc_cull),hl
+ inc l
+ ld (_sc_bitw),hl
+ push ix
+ ld ix,#_units
+ ld c,#0
+cl_loop:
+ ld b,#0
+ ld hl,#_unit_hp
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jp z,cl_cull
+ ld a,c
+ cp a,#8
+ jp nc,cl_alive
+ ld a,(_unit_count)
+ ld e,a
+ ld a,c
+ cp a,e
+ jp nc,cl_cull
+cl_alive:
+ ld e,0(ix)
+ ld d,1(ix)
+ ld hl,#56
+ add hl,de
+ ld de,(_cam_x)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld hl,(_cam_x)
+ ld de,#288
+ add hl,de
+ ld e,0(ix)
+ ld d,1(ix)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld e,2(ix)
+ ld d,3(ix)
+ ld hl,#32
+ add hl,de
+ ld de,(_cam_y)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld hl,(_cam_y)
+ ld de,#208
+ add hl,de
+ ld e,2(ix)
+ ld d,3(ix)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ jp cl_next
+cl_cull:
+ ld hl,(_sc_cull)
+ ld de,(_sc_bitw)
+ ld a,l
+ or a,e
+ ld l,a
+ ld a,h
+ or a,d
+ ld h,a
+ ld (_sc_cull),hl
+cl_next:
+ ld de,#16
+ add ix,de
+ ld hl,(_sc_bitw)
+ add hl,hl
+ ld (_sc_bitw),hl
+ inc c
+ ld a,c
+ cp a,#10
+ jp nz,cl_loop
+ pop ix
+ ret
+ __endasm;
+}
+static void sp_changed(void) __naked {
+ __asm
+ ld hl,#1
+ ld (_sc_bitw),hl
+ ld c,#0
+sc_loop:
+ ld b,#0
+ ld a,(_sc_vf)
+ or a,a
+ jp z,sc_mark
+ ld hl,#_unit_hp
+ add hl,bc
+ ld a,(hl)
+ ld hl,(_sc_ohp)
+ add hl,bc
+ cp a,(hl)
+ jp nz,sc_mark
+ ld hl,#_hurt_flash
+ add hl,bc
+ ld a,(hl)
+ ld hl,(_sc_ohit)
+ add hl,bc
+ cp a,(hl)
+ jp nz,sc_mark
+ ld hl,#_actor_key
+ add hl,bc
+ ld a,(hl)
+ ld hl,(_sc_okey)
+ add hl,bc
+ cp a,(hl)
+ jp nz,sc_mark
+ ld l,c
+ ld h,#0
+ ld d,h
+ ld e,l
+ add hl,hl
+ add hl,de
+ add hl,hl
+ push bc
+ ld b,h
+ ld c,l
+ ld hl,#_rect_now
+ add hl,bc
+ ex de,hl
+ ld hl,(_sc_ro)
+ add hl,bc
+ pop bc
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ inc de
+ inc hl
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ inc de
+ inc hl
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ inc de
+ inc hl
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ inc de
+ inc hl
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ inc de
+ inc hl
+ ld a,(de)
+ cp a,(hl)
+ jp nz,sc_mark
+ ld hl,(_sc_selx)
+ ld de,(_sc_bitw)
+ ld a,l
+ and a,e
+ jp nz,sc_mark
+ ld a,h
+ and a,d
+ jr z,sc_next
+sc_mark:
+ ld hl,(_sc_mask)
+ ld de,(_sc_bitw)
+ ld a,l
+ or a,e
+ ld l,a
+ ld a,h
+ or a,d
+ ld h,a
+ ld (_sc_mask),hl
+sc_next:
+ ld hl,(_sc_bitw)
+ add hl,hl
+ ld (_sc_bitw),hl
+ inc c
+ ld a,c
+ cp a,#10
+ jp nz,sc_loop
+ ret
+ __endasm;
+}
+#endif
 void video_sprites(void) {
  u8 p=shown^1,i,j,k,camera,order[RN],count=0,tiles_changed=changed_count[shown^1];u16 mask=0,before,restore;u8 fog_page_dirty=0;u8 ghost=placement_mode && mouse_y<160,ghost_changed=0,box=drag_down&&drag_moved,box_changed,shift=0,inc=0;
  ++cache_tick;
+#ifdef KAW_V9990
+ sp_cull();
+#endif
  for(i=0;i<RN;++i) {
-  if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
+#ifdef KAW_V9990
+  if(sc_cull&render_bit[i]) {
+#else
+  if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {
+#endif
+actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
   const u8* b;u8 size=kind_sizes[unit_kind[i]],f=unit_art_frame(i),crop=WORKER(i)&&mine_phase[i]?mine_step[i]*4:0;Rect* a=rect_now+i;
   actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;
   /* Byte-wide rectangle math: every adjustment is relative to the draw origin (offsets are small). */
@@ -348,9 +547,13 @@ void video_sprites(void) {
   }
  }
  camera=!field_valid[p] || field_x[p]!=cam_x || field_y[p]!=cam_y;
+#ifdef KAW_V9990
+ sc_vf=field_valid[p];sc_ohp=old_hp[p];sc_ohit=old_hit[p];sc_okey=old_key[p];sc_ro=rect_old[p];sc_selx=actor_sel[p]^selection_mask;sc_mask=mask;sp_changed();mask=sc_mask;
+#else
  {const Rect* rn=rect_now;const Rect* ro=rect_old[p];const u8 *ohp=old_hp[p],*ohit=old_hit[p],*okey=old_key[p];const u16* bit=render_bit;u8 vf=field_valid[p];u16 selx=actor_sel[p]^selection_mask;
   for(i=0;i<RN;++i,++rn,++ro,++bit)
    if(!vf || unit_hp[i]!=ohp[i] || hurt_flash[i]!=ohit[i] || actor_key[i]!=okey[i] || ((const u16*)rn)[0]!=((const u16*)ro)[0] || ((const u16*)rn)[1]!=((const u16*)ro)[1] || ((const u16*)rn)[2]!=((const u16*)ro)[2] || (selx&*bit))mask|=*bit;}
+#endif
  fog_page_dirty=fog_page_pending(p);
  ghost_changed=ghost!=ghost_old[p] || (ghost && (ghost_x[p]!=place_x*16 || ghost_y[p]!=place_y*16 || ghost_size[p]!=building_size(build_kind)*16 || ghost_color_old[p]!=place_valid));
  box_changed=box!=box_old[p] || (box && (drag_l!=box_l[p] || drag_t!=box_t[p] || drag_r!=box_r[p] || drag_b!=box_b[p]));
