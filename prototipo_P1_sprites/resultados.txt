@@ -1,0 +1,12 @@
+RESULT mode=4 frames=156 ms_per_frame=25.641043549045826 cmd_res=0
+RESULT mode=5 frames=1402 ms_per_frame=2.8530678441230086 cmd_res=0
+RESULT mode=6 frames=230 ms_per_frame=17.391328640444772 cmd_res=0
+RESULT mode=7 frames=10112 ms_per_frame=0.3955699241511336 cmd_res=0
+RESULT mode=8 frames=115 ms_per_frame=34.78261355417592 cmd_res=0
+RESULT mode=9 frames=197 ms_per_frame=20.30458554508314 cmd_res=0
+RESULT mode=10 frames=428 ms_per_frame=9.345796350690057 cmd_res=0
+RESULT mode=13 frames=960 ms_per_frame=4.166666666666667 cmd_res=0
+RESULT mode=14 frames=1700 ms_per_frame=2.3529413408030084 cmd_res=0
+RESULT mode=16 frames=1039 ms_per_frame=3.849858050323421 cmd_res=0
+RESULT mode=0 frames=72 ms_per_frame=55.55555943562661 cmd_res=0
+RESULT mode=2 frames=20255 ms_per_frame=0.19748224110842502 cmd_res=0
