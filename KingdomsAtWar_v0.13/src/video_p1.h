@@ -129,7 +129,7 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 static u8 disp_key[RN],pend_key[RN],act_blk[RN],sused;
 #define sattr p1_shared
 static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
-#define MAXR 16
+#define MAXR 20
 /* Screen-space rectangles painted into the layer A bitmap (drag box, building bars and banners): the pending
  * list is compared with the committed one and repainted in the vertical blank, never half drawn. */
 static u8 rw_x[MAXR],rw_y[MAXR],rw_w[MAXR],rw_h[MAXR],rw_c[MAXR],rw_n,rw_lock,rw_dirty;
@@ -398,6 +398,10 @@ void video_sprites(void) {
    if(r>l){rl_add(l-cam_x,t-cam_y,r-l,1,15);rl_add(l-cam_x,b-cam_y,r-l,1,15);}
    rl_add(l-cam_x,t-cam_y,1,b-t+1,15);rl_add(r-cam_x,t-cam_y,1,b-t+1,15);
   }
+ }
+ if(placement_mode && mouse_y<160) {
+  u8 sz=building_size(build_kind)*16,c=place_valid?10:7;i16 gx=(i16)place_x*16-(i16)cam_x,gy=(i16)place_y*16-(i16)cam_y;
+  rl_add(gx,gy,sz,1,c);rl_add(gx,gy+sz-1,sz,1,c);rl_add(gx,gy,1,sz,c);rl_add(gx+sz-1,gy,1,sz,c);
  }
  for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && fog_target(128+k)) {
   i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;

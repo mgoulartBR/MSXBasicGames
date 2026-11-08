@@ -36,8 +36,10 @@ void input(void) __banked {
  if((keys&64) && !(last_keys&64))train_start();
  if((keys&128) && !(last_keys&128))production_cancel();
  if(placement_mode) {
+  u8 ox=place_x,oy=place_y,ov=place_valid;
   place_x=(cam_x+mouse_x)>>4;place_y=(cam_y+mouse_y)>>4;
   place_valid=mouse_y<160 && placement_valid(place_x,place_y);
+  if(ox!=place_x || oy!=place_y || ov!=place_valid)sprites_dirty|=1;
  }
  if((keys&2) && !(last_keys&2)) {
   left_prepare();

@@ -196,3 +196,9 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Boot (até o laço principal): cerca de 36 s emulados (antes cerca de 42 s).
 - Erro encontrado: com o crescimento das variáveis, a margem de pilha caiu para cerca de 235 bytes e os testes passaram a travar (a pilha invadia os dados). A janela do descompressor (256 bytes, usada só no carregamento) e o buffer de atributos de sprite agora compartilham a mesma RAM; margem atual de cerca de 490 bytes.
 - Medido: 4 unidades 52 quadros em 3,44 s (15 fps); 1 unidade 61 quadros em 3,0 s (20 fps). Antes de barras e setas: 50 e 67; com barras e setas: 41 e 53. Testes de lógica e box011 sem falhas.
+
+## Adendo 10: fantasma de construção em P1
+
+- O contorno do edifício (lado 32, 48 ou 64 px; cor 10 se a posição é válida, cor 7 se não) entra na mesma lista de retângulos da caixa de arrastar e das barras de construção, pintado no vertical blank. Só aparece com o modo de colocação ativo e o mouse acima do HUD.
+- A posição do mouse em modo de colocação agora marca o quadro como sujo quando muda (antes só o modo B1 redesenhava por outros caminhos).
+- Verificado: `overlay011` (primeiro, movido e cancelado) e capturas dos três estados; demais testes sem falhas. 4 unidades: 52 quadros; 1 unidade: 61 quadros em 3,0 s.
