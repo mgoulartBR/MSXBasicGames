@@ -27,4 +27,4 @@ Rode `play-v9990-p1.sh` (Linux/macOS) ou `play-v9990-p1.bat` (Windows). Mesma ar
 
 - Cerca de duas vezes mais quadros por segundo que o KAW9990.ROM com unidades andando.
 - O carregamento inicial é mais longo (cerca de 36 s a 3,58 MHz); a barra de progresso aparece no meio da tela.
-- Ainda faltam o clarão de dano e a oclusão por prédios e árvores.
+- Ainda falta o clarão de dano.

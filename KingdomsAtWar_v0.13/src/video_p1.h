@@ -152,8 +152,11 @@ static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108},{48,51,54,57,60,
 #define CELL_PTR 238
 #define CELL_RING 239
 #define CELL_BAR_ALLY 192
-#define CELL_BAR_ENEMY 209
-#define CELL_ARROW 226
+#define CELL_BAR_ENEMY 201
+#define CELL_ARROW 210
+#define CELL_OCC 214
+#define OCC_N 24
+#define OV_Y 1296U
 static void pose_pos(u8 kind,u8 f,u16* x,u16* y) {
  if(kind_sizes[kind]==32) {u8 k=(kind==0?0:kind==1?1:kind==3?2:3)*24+f;*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
  else {u8 k=(kind==2?0:kind==4?1:2)*24+f,q=(u8)(((u16)k*205)>>10);*x=(u16)(k-q*5)*48;*y=POSE48_Y+(u16)q*48;}
@@ -343,12 +346,23 @@ cl_next:
  __endasm;
 }
 #define SPR(X,Y,P,I) do{i16 _x=(X);*o++=(u8)((Y)-1);*o++=(P);*o++=(u8)_x;*o++=((u8)(_x>>8)&3)|(I);}while(0)
+static u8 occ_key[OCC_N],occ_stamp[OCC_N],occ_pend[OCC_N];static i16 ob_l[8],ob_t[8],ob_r[8],ob_b[8],ub_l,ub_t,ub_r,ub_b;
+/* Occlusion: building tiles (opaque pixels only) become sprites in front of a unit that stands behind the
+ * building. Tile art lives in a bitmap bank; a slot is copied into a sprite cell the first time it is needed. */
+static u8 occ_get(u8 idx) {
+ u8 s,best=255,age=0;
+ for(s=0;s<OCC_N;++s)if(occ_key[s]==idx) {occ_stamp[s]=cache_tick;return occ_pend[s]?255:s;}
+ for(s=0;s<OCC_N;++s)if(occ_stamp[s]!=cache_tick) {u8 a=(u8)(cache_tick-occ_stamp[s]);if(best==255 || a>age){best=s;age=a;}}
+ if(best==255)return 255;
+ {u8 c=CELL_OCC+best;p1_copy((u16)(idx&15)<<4,OV_Y+((u16)(idx>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
+ occ_key[best]=idx;occ_pend[best]=1;occ_stamp[best]=cache_tick;return 255;
+}
 static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
 void video_sprites(void) {
- u8 order[RN],count=0,i,j,k,n;u8* o=sattr+4;u16 vis=0;
+ u8 order[RN],count=0,i,j,k,n,nb;u8* o=sattr+4;u16 vis=0;
  ++cache_tick;
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
- if(!v9_busy())for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}
+ if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
  sp_cull();
  for(i=0;i<RN;++i) {
   if(sc_cull&render_bit[i]) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
@@ -370,6 +384,13 @@ void video_sprites(void) {
   if(fog_at(ax>>4,ay>>4)!=2 || ax+2<(i16)cam_x || ax-2>=(i16)cam_x+256 || ay+2<(i16)cam_y || ay-2>=(i16)cam_y+160)continue;
   SPR(ax-8-cam_x,ay-8-cam_y,CELL_ARROW+(shot_dx[k]?(shot_dx[k]>0?0:1):(shot_dy[k]>0?2:3)),0x20);
  }
+
+ nb=0;ub_l=ub_t=32767;ub_r=ub_b=-32767;
+ for(k=0;k<building_count && nb<8;++k)if(buildings[k].state) {
+  i16 bl=(i16)buildings[k].x<<4,bt=(i16)buildings[k].y<<4,sd=(i16)build_sizes[buildings[k].type]<<4;
+  if(bl+sd<=(i16)cam_x || bl>=(i16)cam_x+256 || bt+sd<=(i16)cam_y || bt>=(i16)cam_y+160)continue;
+  ob_l[nb]=bl;ob_t[nb]=bt;ob_r[nb]=bl+sd;ob_b[nb]=bt+sd;if(bl<ub_l)ub_l=bl;if(bt<ub_t)ub_t=bt;if(bl+sd>ub_r)ub_r=bl+sd;if(bt+sd>ub_b)ub_b=bt+sd;++nb;
+ }
  for(j=0;j<count;++j) {
   u8 sz,nn,sx,sy,cell;i16 x,y;
   i=order[j];sz=kind_sizes[unit_kind[i]];nn=sz>>4;
@@ -380,9 +401,26 @@ void video_sprites(void) {
   }
   if(disp_key[i]==NONE)continue;
   x=actor_x[i]-cam_x;y=actor_y[i]-cam_y;cell=CELL_POSE(i,act_blk[i]);
+  if(nb && actor_x[i]+(i16)sz>ub_l && actor_x[i]<ub_r && actor_y[i]+(i16)sz>ub_t && actor_y[i]<ub_b) {
+   const u8* pb=pose_bounds+((u16)actor_key[i]<<2);
+   i16 rl=actor_x[i]+pb[0],rt=actor_y[i]+pb[1],rr=rl+pb[2],rb=rt+pb[3];u16 foot=units[i].py+16;u8 q;
+   for(q=0;q<nb;++q) {
+    u8 cx,cy,cx0,cx1,cy0,cy1;i16 l2,t2,r2,b2;
+    if(rr<=ob_l[q] || rl>=ob_r[q] || rb<=ob_t[q] || rt>=ob_b[q] || (u16)ob_b[q]<foot)continue;
+    l2=ob_l[q]>rl?ob_l[q]:rl;t2=ob_t[q]>rt?ob_t[q]:rt;r2=ob_r[q]<rr?ob_r[q]:rr;b2=ob_b[q]<rb?ob_b[q]:rb;
+    cx0=l2>>4;cx1=(r2-1)>>4;cy0=t2>>4;cy1=(b2-1)>>4;
+    for(cy=cy0;cy<=cy1;++cy)for(cx=cx0;cx<=cx1;++cx) {
+     u8 t,s2;
+     if(fog_at(cx,cy)!=2)continue;
+     t=fog_art(cx,cy);if(t<64)continue;
+     s2=occ_get(tile_source[t]-50);
+     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
+    }
+   }
+  }
   if((units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) && o<sattr+496) {
    u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);
-   if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]]);}
+   if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);}
    SPR(x+(sz>>1)-8,y+pose_bounds[((u16)actor_key[i]<<2)+1]-4,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);
   }
   if((u16)o+((u16)nn*nn<<2)<=(u16)sattr+500) {e_o=(u16)o;e_x=x;e_y=y;e_cell=cell;e_n=nn;emit_block();o=(u8*)e_o;}
@@ -433,6 +471,7 @@ void video_init(void) {
  shown=0;cache_tick=frame_uploads=frame_hits=rendered_frames=0;
  flip_pending=0;v9_irq_on=0;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;bar_sig[i]=65535;}
+ for(i=0;i<OCC_N;++i){occ_key[i]=255;occ_stamp[i]=0;occ_pend[i]=0;}
  p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
  /* clear both name tables and the HUD pattern table head */
@@ -454,9 +493,9 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
   cell_write(CELL_PTR,c);
   cell_write(CELL_RING,ring_pixels);}
   {u8 c2[128],w,k,col,x,q2;
-   for(col=0;col<2;++col)for(w=0;w<=16;++w) {
+   for(col=0;col<2;++col)for(w=0;w<=8;++w) {
     for(j=0;j<128;++j)c2[j]=0;
-    for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w?(col?9:5):12);
+    for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w*2?(col?9:5):12);
     cell_write((col?CELL_BAR_ENEMY:CELL_BAR_ALLY)+w,c2);
    }
    for(q2=0;q2<4;++q2) {
@@ -478,6 +517,10 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
   for(i=0;i<64;++i) {
    u8 t=q*64+i,b;u16 phy=t;
    asset_read(tile_buffer,128);
+   if(phy>=50) {
+    u16 ov=phy-50,bx=(ov&15)<<4,by=OV_Y+((ov>>4)<<4);u8 k;
+    for(k=0;k<16;++k)V9_WriteVRAM((u32)(by+k)*128+(bx>>1),tile_buffer+(k<<3),8);
+   }
    if(phy>=50)for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x30;if(!(v&0x0F))v|=0x03;tile_buffer[b]=v;}
    tile_patterns(P1_PGT_B_BASE,PB_PLAIN+phy*4,tile_buffer);
    for(b=0;b<128;++b){u8 row=b>>3,v=tile_buffer[b];if(row&1)v=(v&0xF0)|0x01;else v=(v&0x0F)|0x10;tile_buffer[b]=v;}

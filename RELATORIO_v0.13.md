@@ -202,3 +202,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - O contorno do edifício (lado 32, 48 ou 64 px; cor 10 se a posição é válida, cor 7 se não) entra na mesma lista de retângulos da caixa de arrastar e das barras de construção, pintado no vertical blank. Só aparece com o modo de colocação ativo e o mouse acima do HUD.
 - A posição do mouse em modo de colocação agora marca o quadro como sujo quando muda (antes só o modo B1 redesenhava por outros caminhos).
 - Verificado: `overlay011` (primeiro, movido e cancelado) e capturas dos três estados; demais testes sem falhas. 4 unidades: 52 quadros; 1 unidade: 61 quadros em 3,0 s.
+
+## Adendo 11: oclusão por prédios em P1
+
+- Mesma regra do modo B1: uma unidade cujos pés estão acima da borda inferior do prédio e cujo retângulo cobre células dele fica atrás das partes opacas do prédio. Árvores nunca ocultaram unidades no B1 e continuam assim.
+- Implementação: a arte dos tiles de prédio (sem fundo de gramado) fica num banco de bitmap na VRAM; os tiles que cobrem a unidade viram sprites de 16x16 à frente dela (24 slots de padrão, copiados pelo blitter na primeira vez que são necessários e reaproveitados por menos usado recentemente). O prédio só oculta em células visíveis (sem Fog).
+- Barras de vida das unidades passaram a ter largura em passos de 2 px (9 padrões por cor em vez de 17) para liberar padrões de sprite.
+- Verificado por captura com camponeses ao lado do castelo; testes de lógica e box011 sem falhas. 4 unidades: 49 quadros em 3,44 s; 1 unidade: 55 quadros em 2,97 s (antes da oclusão: 52 e 61).
