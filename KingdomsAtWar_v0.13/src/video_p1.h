@@ -13,13 +13,14 @@
 #define P1_SGT 0x38000UL
 #define P1_PGT_B_BASE 0x40000UL
 #define P1_SGT_LINE 1792U
-#define POSE_Y0 64U
+#define POSE32_Y 192U
+#define POSE48_Y 576U
 #define CACHE_COUNT 1
 #define PB_PLAIN 8U
 #define PB_DITH 800U
-#define PA_SOLID 1U
-#define PA_FONT 32U
-#define PA_HUDTOP 100U
+#define PA_SOLID 641U
+#define PA_FONT 672U
+#define PA_HUDTOP 660U
 const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512};
 u8 tile_buffer[128],boot_poses;
 i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];u8 strip_n;
@@ -88,6 +89,7 @@ static void tile_patterns(u32 base,u16 n,const u8* t) {
 __sfr __at(0x60) io_vram;
 __sfr __at(0x63) io_reg;
 __sfr __at(0x64) io_sel;
+__sfr __at(0x65) io_stat;
 __sfr __at(0x66) io_int;
 /* Address + data sequences below run with interrupts off: the vertical-blank handler also uses the VRAM address. */
 static void io_vset(u32 a) {io_sel=0;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=(u8)(a>>16);}
@@ -126,10 +128,28 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
  * so a half-copied pose is never on screen. Attributes and scroll are committed in the vertical blank. */
 static u8 disp_key[RN],pend_key[RN],act_blk[RN],sattr[125*4],sused;
 static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
+static u8 bx_want,bx_wl,bx_wt,bx_wr,bx_wb,bx_com,bx_cl,bx_ct,bx_cr,bx_cb;
+/* Drag box: 1 px lines painted with LMMV into the layer A pattern memory, which is a 256 px wide bitmap that
+ * the (constant) names of rows 0..19 show 1:1. Done in the vertical blank so a frame never shows it half drawn. */
+static void io_lmmv(u8 x,u8 y,u8 w,u8 h,u8 c) {
+ while(io_stat&1);
+ io_sel=36;io_reg=x;io_reg=0;io_reg=y;io_reg=0;io_reg=w;io_reg=0;io_reg=h;io_reg=0;
+ io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=c*17;io_reg=c*17;
+ io_sel=52;io_reg=0x20;
+}
+static void box_lines(u8 l,u8 t,u8 r,u8 b,u8 c) {
+ if(r>l){io_lmmv(l,t,r-l,1,c);io_lmmv(l,b,r-l,1,c);}
+ io_lmmv(l,t,1,b-t+1,c);io_lmmv(r,t,1,b-t+1,c);
+}
 #define SPAT 0x3FE00UL
 #define CELL_POSE(i,b) (((i)%5)*3+((((i)/5)*6+(b)*3))*16)
 #define CELL_PTR 224
 #define CELL_RING 225
+static void pose_pos(u8 key,u16* x,u16* y) {
+ u8 kind=key/24,f=key-kind*24;
+ if(kind_sizes[kind]==32) {u8 k=(kind==0?0:kind==1?1:kind==3?2:3)*24+f;*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
+ else {u8 k=(kind==2?0:kind==4?1:2)*24+f;*x=(u16)(k%5)*48;*y=POSE48_Y+(u16)(k/5)*48;}
+}
 static void cell_write(u8 cell,const u8* src16rows) {
  u8 k;for(k=0;k<16;++k)V9_WriteVRAM(P1_SGT+((u32)((cell>>4)<<4)+k)*128+((cell&15)<<3),src16rows+(k<<3),8);
 }
@@ -154,6 +174,11 @@ static void irq_p1(void) {
    io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)(p1_bx>>3));
    if(p1_n>1) {io_vset(SPAT+4);otir_vram(sattr+4,(u16)(p1_n-1)*4);}
    p1_ready=0;
+  }
+  if((bx_want!=bx_com || (bx_want && (bx_wl!=bx_cl || bx_wt!=bx_ct || bx_wr!=bx_cr || bx_wb!=bx_cb))) && !(io_stat&1)) {
+   if(bx_com)box_lines(bx_cl,bx_ct,bx_cr,bx_cb,0);
+   if(bx_want)box_lines(bx_wl,bx_wt,bx_wr,bx_wb,15);
+   bx_com=bx_want;bx_cl=bx_wl;bx_ct=bx_wt;bx_cr=bx_wr;bx_cb=bx_wb;
   }
  }
 }
@@ -183,7 +208,7 @@ void video_sprites(void) {
   i=order[j];sz=kind_sizes[unit_kind[i]];nn=sz>>4;
   if(actor_key[i]!=disp_key[i] && pend_key[i]==NONE) {
    u8 key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);
-   p1_copy((u16)(key%5)*48,POSE_Y0+(u16)(key/5)*48,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
+   {u16 px,py;pose_pos(key,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);}
    pend_key[i]=key;++frame_uploads;
   }
   if(disp_key[i]==NONE)continue;
@@ -192,6 +217,14 @@ void video_sprites(void) {
    if(n<125)spr_attr(sattr+((u16)n++<<2),x+sx*16,y+sy*16,cell+sx+(sy<<4),0x20);
   }
   if(i<N && (selection_mask&render_bit[i]) && n<125)spr_attr(sattr+((u16)n++<<2),x+sz/2-8,y+sz-16,CELL_RING,0x20);
+ }
+
+ {u8 box=drag_down&&drag_moved;u16 l=drag_l,t=drag_t,r=drag_r,b=drag_b;
+  if(box && (r<cam_x || l>=cam_x+256 || b<cam_y || t>=cam_y+160))box=0;
+  if(box) {
+   if(l<cam_x)l=cam_x;if(r>=cam_x+256)r=cam_x+255;if(t<cam_y)t=cam_y;if(b>=cam_y+160)b=cam_y+159;
+   __asm di __endasm;bx_wl=l-cam_x;bx_wr=r-cam_x;bx_wt=t-cam_y;bx_wb=b-cam_y;bx_want=1;__asm ei __endasm;
+  } else {__asm di __endasm;bx_want=0;__asm ei __endasm;}
  }
  for(k=n;k<sused;++k)sattr[(u16)k*4+3]=0x10;
  __asm di __endasm;
@@ -214,10 +247,12 @@ void video_init(void) {
  shown=0;cache_tick=frame_uploads=frame_hits=rendered_frames=0;
  flip_pending=0;v9_irq_on=0;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;}
- p1_ready=0; for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
+ p1_ready=0;bx_want=bx_com=0; for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;
  /* clear both name tables and the HUD pattern table head */
- V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);V9_FillVRAM(0x00000UL,0,4096);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
+ V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);
+ {u16 row[32];u8 cy,cx;for(cy=0;cy<20;++cy) {for(cx=0;cx<32;++cx)row[cx]=(u16)cy*32+cx;V9_WriteVRAM(PNT_A+((u16)cy<<7),(const u8*)row,64);}}
+V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  /* layer A patterns: solid colours 1..16 (pattern 1+c, c>=1 only), HUD top line */
  for(i=0;i<16;++i) {u8 pat[32];for(j=0;j<32;++j)pat[j]=i*17;pat_write(0,PA_SOLID+i,pat);}
  {u8 pat[32];for(j=0;j<32;++j)pat[j]=(j<8)?0xAA:0x11;pat_write(0,PA_HUDTOP,pat);}
@@ -248,7 +283,7 @@ void video_init(void) {
  for(i=0;i<168;++i)if(poses[i].bank) {
   u8 n=kind_sizes[i/24]>>4;asset_begin(poses+i);
   for(q=0;q<n*n;++q) {
-   u16 x=(i%5)*48+(q%n)*16,yy=POSE_Y0+(u16)(i/5)*48+(q/n)*16;u8 k;
+   u16 x,yy,px,py;u8 k;pose_pos(i,&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
    asset_read(tile_buffer,128);
    for(k=0;k<16;++k)V9_WriteVRAM((u32)(yy+k)*128+(x>>1),tile_buffer+k*8,8);
   }

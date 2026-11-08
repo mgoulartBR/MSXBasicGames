@@ -174,3 +174,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Causa das "treliças": os padrões de tile em P1 são numerados `8 + 4*phy` (visível) e `768 + 4*phy` (lembrado, com pontilhado). O laço de carga percorre 192 tiles, então os padrões 190 e 191 caíam em 768 a 775 e apagavam o pontilhado dos tiles 0 e 1 (os mais comuns do gramado). Células lembradas apareciam sem pontilhado, em faixas em escada.
 - Correção: o bloco de padrões pontilhados passou a começar em 800.
 - Verificado: o mapa de nomes na VRAM coincide com o estado do Fog (0 divergências em 1024 células), e a captura da cena `fog011` mostra a área lembrada uniforme, como no modo B1.
+
+## Adendo 7: caixa de arrastar em P1
+
+- A camada A cobre a área do mundo (linhas de nomes 0 a 19) e mostra a memória de padrões como um bitmap 1:1 de 256x160 pixels. As quatro linhas de 1 pixel da caixa são pintadas com LMMV (cor 15) e apagadas com LMMV (cor 0), sem usar sprites e sem entrar no limite de sprites por linha.
+- Os comandos são emitidos na interrupção de vertical blank, depois do ponteiro e dos sprites, só se o blitter estiver livre; senão ficam para o próximo quadro. A caixa nunca aparece pela metade.
+- Banco de poses reorganizado: poses de 32 px em linhas de 32 e de 48 px em linhas de 48 (1104 linhas, antes 1632); padrões do HUD movidos para o índice 640 em diante.
+- Verificado: `box011` (19 verificações) sem falhas; capturas com a caixa durante o arrasto e depois de soltar (sem resíduo). 4 unidades: 50 quadros em 3,44 s; 1 unidade: 67 quadros em 3,0 s.
