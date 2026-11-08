@@ -222,3 +222,4 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - P1: sight recalculada no máximo a cada 20 ticks de vídeo (cerca de 0,33 s), como já aprovado; o Fog revela com até esse atraso.
 - Medido (4 unidades): 47 para 52 quadros em 3,44 s; 1 unidade: 58 quadros em 2,97 s.
 - A alteração do `fog_merge` vale para os três ROMs; V9990 e V9968 estão sendo recompilados e testados antes de publicar.
+- V9990 e V9968 recompilados com o `fog_merge` novo (OPTIMIZED): suítes completas sem falhas nos dois.
