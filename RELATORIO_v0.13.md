@@ -223,3 +223,9 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Medido (4 unidades): 47 para 52 quadros em 3,44 s; 1 unidade: 58 quadros em 2,97 s.
 - A alteração do `fog_merge` vale para os três ROMs; V9990 e V9968 estão sendo recompilados e testados antes de publicar.
 - V9990 e V9968 recompilados com o `fog_merge` novo (OPTIMIZED): suítes completas sem falhas nos dois.
+
+## Adendo 14: simulate
+
+- Z80: `nav_restore` (restaura o mapa de pais da busca de rotas), `cand_scan` (candidatos a alvo vizinhos em `combat_tick`), `sim_flags` (pula economia, produção e torres quando não há trabalho; produção ainda roda uma vez para zerar `builder_working`), `occ_scan` (ocupação de células em `free_at`, só na P1). `near_box` descarta prédios fora de alcance antes do teste banked.
+- Medido: P1 4 unidades 52 para 57 quadros em 3,4 s; 1 unidade 58 para 63 em 3,0 s. V9990: 33 e 45 quadros; V9968: 15 e 25.
+- V9990 e V9968 recompilados (OPTIMIZED): suítes completas sem falhas nos dois; P1: testes de lógica, oclusão, clarão, kernel012 e box011 sem falhas.

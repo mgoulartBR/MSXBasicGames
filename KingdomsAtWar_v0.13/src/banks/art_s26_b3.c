@@ -97,6 +97,93 @@ void combat_stop(u8 hold) __banked {
  u8 i;for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i))) {work_stop(i);combat_target[i]=NONE;stance[i]=hold;attack_flash[i]=0;}
  sprites_dirty=3;hud_dirty=3;
 }
+/* Cheap reject before the banked range test: Manhattan distance from (ux,uy) to the n x n box at (bx,by). */
+static u8 near_box(u8 ux,u8 uy,u8 bx,u8 by,u8 n,u8 range) {
+ u8 dx=ux<bx?bx-ux:ux>=bx+n?ux-(bx+n-1):0,dy=uy<by?by-uy:uy>=by+n?uy-(by+n-1):0;
+ return (u8)(dx+dy)<=range;
+}
+/* Z80: first unit from cs_j on that is a cheap candidate target for the unit at (cs_xi,cs_yi): alive, within
+ * cs_rng on both axes, other owner, standing still, not hidden inside a mine. 255 when none. */
+static u8 cs_xi,cs_yi,cs_own,cs_rng,cs_j;
+static u8 cand_scan(void) __naked {
+ __asm
+ push ix
+ ld a,(_cs_j)
+ ld c,a
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units
+ add hl,de
+ push hl
+ pop ix
+ ld b,#0
+cs_loop:
+ ld a,c
+ cp a,#10
+ jr nc,cs_none
+ ld hl,#_unit_hp
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jr z,cs_next
+ ld a,4(ix)
+ ld hl,#_cs_xi
+ sub a,(hl)
+ jr nc,cs_dx
+ neg
+cs_dx:
+ ld hl,#_cs_rng
+ cp a,(hl)
+ jr c,cs_dxok
+ jr nz,cs_next
+cs_dxok:
+ ld a,5(ix)
+ ld hl,#_cs_yi
+ sub a,(hl)
+ jr nc,cs_dy
+ neg
+cs_dy:
+ ld hl,#_cs_rng
+ cp a,(hl)
+ jr c,cs_dyok
+ jr nz,cs_next
+cs_dyok:
+ ld a,10(ix)
+ ld hl,#_cs_own
+ cp a,(hl)
+ jr z,cs_next
+ ld a,13(ix)
+ or a,a
+ jr nz,cs_next
+ ld a,c
+ cp a,#8
+ jr nc,cs_ok
+ ld hl,#_mine_phase
+ add hl,bc
+ ld a,(hl)
+ cp a,#2
+ jr z,cs_next
+cs_ok:
+ ld a,c
+ pop ix
+ ret
+cs_next:
+ push bc
+ ld bc,#16
+ add ix,bc
+ pop bc
+ inc c
+ jr cs_loop
+cs_none:
+ ld a,#255
+ pop ix
+ ret
+ __endasm;
+}
 void combat_tick(void) __banked {
  u8 i,j,x,y,n,t;combat_active=0;
  for(i=0;i<RN;++i) {
@@ -110,8 +197,13 @@ void combat_tick(void) __banked {
   }
   /* Hold/idle allies and stationary defenders retaliate only at melee range. */
   if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || stance[i])) {
-   for(j=0;j<RN;++j)if(unit_hp[j] && (units[j].x>units[i].x?units[j].x-units[i].x:units[i].x-units[j].x)<=unit_range[unit_kind[i]] && (units[j].y>units[i].y?units[j].y-units[i].y:units[i].y-units[j].y)<=unit_range[unit_kind[i]] && units[j].owner!=units[i].owner && !units[j].progress && !(j<N && mine_phase[j]==2) && (i>=N || fog_target(j)) && combat_position(i,units[i].x,units[i].y,j)) {combat_target[i]=t=j;break;}
-   if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
+   {u8 rng=unit_range[unit_kind[i]];cs_xi=units[i].x;cs_yi=units[i].y;cs_own=units[i].owner;cs_rng=rng;cs_j=0;
+    for(;;) {
+     j=cand_scan();if(j==255)break;
+     if((i>=N || fog_target(j)) && combat_position(i,units[i].x,units[i].y,j)) {combat_target[i]=t=j;break;}
+     cs_j=j+1;
+    }}
+   if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && near_box(units[i].x,units[i].y,buildings[j].x,buildings[j].y,building_size(buildings[j].type),unit_range[unit_kind[i]]) && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
   }
   if(t==NONE || !target_box(t,&x,&y,&n) || units[i].progress)continue;
   if(combat_position(i,units[i].x,units[i].y,t)) {

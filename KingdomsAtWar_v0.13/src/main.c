@@ -307,6 +307,73 @@ u8 passable(u8 x,u8 y)
  t=tile(x,y); return t==0 || t==3;
 }
 u8 combat_alive(u8 i) {return i<RN && unit_hp[i] && (i<unit_count || i>=N);}
+#ifdef KAW_P1
+/* Z80 scan of the unit table: is a living unit standing on, or about to step onto, (fa_x,fa_y)? */
+u8 fa_x,fa_y,fa_who;
+static u8 occ_scan(void) __naked {
+ __asm
+ push ix
+ ld ix,#_units
+ ld b,#0
+ ld c,#0
+ ld a,(_unit_count)
+ ld d,a
+oc_loop:
+ ld a,(_fa_who)
+ cp a,c
+ jr z,oc_next
+ ld hl,#_unit_hp
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jr z,oc_next
+ ld a,c
+ cp a,d
+ jr c,oc_alive
+ cp a,#8
+ jr c,oc_next
+oc_alive:
+ ld a,(_fa_x)
+ cp a,4(ix)
+ jr nz,oc_prog
+ ld a,(_fa_y)
+ cp a,5(ix)
+ jr z,oc_hit
+oc_prog:
+ ld a,13(ix)
+ or a,a
+ jr z,oc_next
+ ld a,(_fa_x)
+ cp a,8(ix)
+ jr nz,oc_next
+ ld a,(_fa_y)
+ cp a,9(ix)
+ jr z,oc_hit
+oc_next:
+ push bc
+ ld bc,#16
+ add ix,bc
+ pop bc
+ inc c
+ ld a,c
+ cp a,#10
+ jr nz,oc_loop
+ xor a,a
+ pop ix
+ ret
+oc_hit:
+ ld a,#1
+ pop ix
+ ret
+ __endasm;
+}
+u8 free_at(u8 x,u8 y,u8 who)
+{
+ if(!passable(x,y)) return 0;
+ fa_x=x;fa_y=y;fa_who=who;
+ return !occ_scan();
+}
+#else
 u8 free_at(u8 x,u8 y,u8 who)
 {
  u8 i;Unit* other=units;
@@ -317,6 +384,7 @@ u8 free_at(u8 x,u8 y,u8 who)
  }
  return 1;
 }
+#endif
 
 
 

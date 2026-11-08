@@ -82,12 +82,47 @@ nav_store094$:
  * (nav_base_dirty) force the full rebuild. */
 static u8 nav_clean;static u16 nav_marks[2*RN];static u8 nav_mark_n;
 static u8 nav_base(u16 c) {u8 t=terrain[c];return (t==0 || t==3)?255:253;}
+/* Z80: restore the pristine parent map for a list of cells (253 blocked, 255 free by terrain). */
+static void nav_restore(const u16* list,u16 n) __naked {list;n;__asm
+ ld a,d
+ or a,e
+ ret z
+ ld c,e
+ ld b,d
+nr_loop:
+ ld e,(hl)
+ inc hl
+ ld d,(hl)
+ inc hl
+ push hl
+ ld hl,#_terrain
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jr z,nr_free
+ cp a,#3
+ jr z,nr_free
+ ld a,#253
+ jr nr_st
+nr_free:
+ ld a,#255
+nr_st:
+ ld hl,#_parent
+ add hl,de
+ ld (hl),a
+ pop hl
+ dec bc
+ ld a,b
+ or a,c
+ jr nz,nr_loop
+ ret
+ __endasm;}
 static void nav_reset(void) {
  u16 i;
  if(nav_base_dirty) {nav_prepare();nav_base_dirty=0;nav_clean=1;return;}
  if(nav_clean)return;
- for(i=0;i<qtail;++i){u16 c=queue[i];parent[c]=nav_base(c);}
- for(i=0;i<nav_mark_n;++i){u16 c=nav_marks[i];parent[c]=nav_base(c);}
+ nav_restore(queue,qtail);
+ nav_restore(nav_marks,nav_mark_n);
  qtail=qhead=0;nav_mark_n=0;nav_clean=1;
 }
 void nav_begin(u8 id) __banked {
@@ -103,7 +138,7 @@ void nav_begin(u8 id) __banked {
  nav_clean=0;
  start=((u16)u->y<<5)+u->x;job_goal=((u16)u->ty<<5)+u->tx;
  parent[start]=254;queue[0]=start;qhead=0;qtail=1;
- for(i=0;i<128;++i)nav_targets[i]=0;
+ __builtin_memset(nav_targets,0,128);
  if(combat_target[id]!=NONE) {
   u8 t=combat_target[id];nav_work_mode=4;
   u8 x,y,n,r=unit_range[unit_kind[id]];i16 xx,yy;
@@ -513,6 +548,64 @@ sf_bail:
  ret
  __endasm;
 }
+/* Z80: which per-tick subsystems have anything to do. bit0 worker with a task, bit1 building under
+ * construction or training, bit2 completed tower. */
+static u8 sim_flags(void) __naked {
+ __asm
+ ld c,#0
+ ld a,(_unit_count)
+ or a,a
+ jr z,sfl_b
+ ld b,a
+ ld hl,#_worker_task
+sfl_w:
+ ld a,(hl)
+ or a,a
+ jr nz,sfl_wy
+ inc hl
+ djnz sfl_w
+ jr sfl_b
+sfl_wy:
+ set 0,c
+sfl_b:
+ ld a,(_building_count)
+ or a,a
+ jr z,sfl_end
+ ld b,a
+ ld hl,#_buildings
+sfl_bl:
+ inc hl
+ ld d,(hl)
+ dec hl
+ ld a,d
+ cp a,#1
+ jr nz,sfl_s2
+ set 1,c
+sfl_s2:
+ cp a,#2
+ jr nz,sfl_tr
+ ld a,(hl)
+ cp a,#6
+ jr nz,sfl_tr
+ set 2,c
+sfl_tr:
+ push hl
+ ld de,#7
+ add hl,de
+ ld a,(hl)
+ pop hl
+ or a,a
+ jr z,sfl_nx
+ set 1,c
+sfl_nx:
+ ld de,#12
+ add hl,de
+ djnz sfl_bl
+sfl_end:
+ ld a,c
+ ret
+ __endasm;
+}
 void simulate(void) __banked {
  u8 i,animate;Unit* u=units;
  ++sim_ticks;
@@ -563,5 +656,5 @@ void simulate(void) __banked {
    }
   }
  }
- if(shot_active)projectile_tick();if(combat_active || !(sim_ticks&7))combat_tick();navigation();economy();production();if(repair_pending || repair_active)repair_tick();tower_tick();
+ if(shot_active)projectile_tick();if(combat_active || !(sim_ticks&7))combat_tick();navigation();{u8 pf=sim_flags();if(pf&1)economy();if((pf&2) || builder_working)production();if(repair_pending || repair_active)repair_tick();if(pf&4)tower_tick();}
 }
