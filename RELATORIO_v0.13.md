@@ -214,3 +214,11 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 
 - Com `hurt_flash > 4` a barra da unidade fica branca (cor 15, fundo 12) e uma cruz branca de 5x5 px aparece abaixo dela, como no modo B1. Nove padrões de barra branca e um de cruz; os slots de oclusão passaram de 24 para 14 para liberar padrões.
 - Verificado por captura (vida e `hurt_flash` forçados em duas unidades); testes de lógica, oclusão e box011 sem falhas. 4 unidades: 45 quadros em 3,44 s; 1 unidade: 56 quadros em 2,97 s.
+
+## Adendo 13: fog_update em P1
+
+- `fog_merge`: em vez de zerar `fog_need` e `fog_delta` (256 bytes) a cada chamada, zera só as entradas da lista de trabalho anterior; laço com DJNZ. Saídas idênticas (`kernel012`: 257 casos, 230272 bytes).
+- P1: o Fog virou uma passada sobre as células com `fog_delta` (um nome de tile por célula), sem execuções.
+- P1: sight recalculada no máximo a cada 20 ticks de vídeo (cerca de 0,33 s), como já aprovado; o Fog revela com até esse atraso.
+- Medido (4 unidades): 47 para 52 quadros em 3,44 s; 1 unidade: 58 quadros em 2,97 s.
+- A alteração do `fog_merge` vale para os três ROMs; V9990 e V9968 estão sendo recompilados e testados antes de publicar.

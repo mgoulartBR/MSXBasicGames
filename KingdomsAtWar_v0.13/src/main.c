@@ -71,7 +71,8 @@ u8 job_unit;
 u16 cam_x,cam_y;
 u8 mouse_x,mouse_y,mode,selected,last_keys,cam_keys;
 u8 hud_mode,hud_selection,hud_state,sprites_dirty;
-u16 sim_ticks,loops,last_time,accumulator;
+u16 sim_ticks,loops,last_time,accumulator,fog_last;
+#define FOG_GAP 20
 u16 terrain_copies,scroll_copies,full_redraws,nav_expansions;
 u16 camera_pixels,camera_phase;
 u16 blit_ticks,edge_ticks;
@@ -386,7 +387,7 @@ void main(void) {
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}
- video_sprites();hud_init();video_enable();last_time=video_clock();
+ video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
  for(;;) {
   u16 now,dt;
 #ifdef KAW_V9990
@@ -401,7 +402,13 @@ void main(void) {
   if(dt>60)dt=60;
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
-  if(fog_refresh)fog_update();video_stream();camera_update(dt);
+#ifdef KAW_P1
+  /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
+  if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_update();}
+#else
+  if(fog_refresh)fog_update();
+#endif
+  video_stream();camera_update(dt);
 #ifdef KAW_V9990
   if(sprites_dirty) {while(flip_pending){}video_sprites();sprites_dirty=0;}
 #else

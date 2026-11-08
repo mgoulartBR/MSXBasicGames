@@ -14,8 +14,9 @@ u8 fog_target(u8 t) __banked {
  for(dy=0;dy<n;++dy)for(dx=0;dx<n;++dx)if(fog_at(x+dx,y+dy)==2)return 1;
  return 0;
 }
+static u8 fog_merge_ready;
 void fog_init(void) __banked {
- u16 i;fog_dest=fog_next;fog_epoch=0;fog_pending[0]=fog_pending[1]=0;fog_checked_epoch[0]=fog_checked_epoch[1]=65535;fog_checked_x[0]=fog_checked_x[1]=fog_checked_y[0]=fog_checked_y[1]=65535;fog_refresh=1;fog_build_dirty=1;fog_updates=0;repair_active=repair_pending=0;tower_shots=repair_spent=repair_healed=0;
+ u16 i;fog_merge_ready=0;fog_dest=fog_next;fog_epoch=0;fog_pending[0]=fog_pending[1]=0;fog_checked_epoch[0]=fog_checked_epoch[1]=65535;fog_checked_x[0]=fog_checked_x[1]=fog_checked_y[0]=fog_checked_y[1]=65535;fog_refresh=1;fog_build_dirty=1;fog_updates=0;repair_active=repair_pending=0;tower_shots=repair_spent=repair_healed=0;
  for(i=0;i<128;++i)fog_trail[i]=fog_seen[i]=fog_visible[i]=fog_changed[0][i]=fog_changed[1][i]=0;
  for(i=0;i<1024;++i)fog_memory[i]=0;
  for(i=0;i<N;++i){fog_sources[i]=65535;repair_target[i]=NONE;repair_timer[i]=0;}
@@ -31,6 +32,27 @@ u8 fog_merge(void) __banked __naked {
  __asm
  push ix
  push iy
+ ld a,(_fog_merge_ready)
+ or a,a
+ jr z,fm_full
+ ld a,(_fog_work_n)
+ or a,a
+ jr z,fm_cleared
+ ld b,a
+ ld ix,#_fog_work_idx
+fm_lz:
+ ld e,0(ix)
+ ld d,#0
+ ld hl,#_fog_need
+ add hl,de
+ ld (hl),#0
+ ld hl,#_fog_delta
+ add hl,de
+ ld (hl),#0
+ inc ix
+ djnz fm_lz
+ jr fm_cleared
+fm_full:
  ld hl,#_fog_need
  ld (hl),#0
  ld de,#_fog_need+1
@@ -41,6 +63,9 @@ u8 fog_merge(void) __banked __naked {
  ld de,#_fog_delta+1
  ld bc,#127
  ldir
+ ld a,#1
+ ld (_fog_merge_ready),a
+fm_cleared:
  xor a
  ld (_fog_merge_acc),a
  ld (_fog_work_n),a
@@ -48,7 +73,7 @@ u8 fog_merge(void) __banked __naked {
  ld de,#_fog_visible
  ld ix,#_fog_trail
  ld iy,#_fog_seen
- ld c,#0
+ ld b,#128
 fm_loop:
  ld a,(de)
  xor a,(hl)
@@ -66,15 +91,16 @@ fm_step:
  inc de
  inc ix
  inc iy
- inc c
- ld a,c
- cp #128
- jr nz,fm_loop
+ djnz fm_loop
  ld a,(_fog_merge_acc)
  pop iy
  pop ix
  ret
 fm_work:
+ push bc
+ ld a,#128
+ sub a,b
+ ld c,a
  push hl
  push de
  ld b,(hl)
@@ -134,6 +160,7 @@ fm_work:
  ld a,l
  ld (de),a
  pop hl
+ pop bc
  jr fm_step
  __endasm;
 #else
@@ -171,7 +198,12 @@ void fog_update(void) __banked {
    if(fog_memory[c]!=art_map[c]) {fog_memory[c]=art_map[c];if(video_enabled)video_known_tile(c&31,c>>5);}
   }
  }
- #ifdef KAW_V9990
+ #ifdef KAW_P1
+ /* P1: a changed cell is just a new name in the tile map (newly visible, remembered or newly seen). */
+ if(changed && video_enabled) {
+  for(k=0;k<fog_work_n;++k) {u8 d;i=fog_work_idx[k];d=fog_delta[i];if(d)for(j=0;j<8;++j)if(d&fog_bit_table[j]){c=((u16)i<<3)+j;video_world_tile(c&31,c>>5);}}
+ }
+ #elif defined(KAW_V9990)
  /* Bake the new fog look into the resident world. Pass 1: tiles of newly visible / newly seen cells.
   * Pass 2: remembered cells get the dither, one copy per horizontal run (visible->remembered cells
   * already hold the right tile underneath). Only bytes listed by fog_merge are visited. */
