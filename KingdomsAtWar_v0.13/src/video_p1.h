@@ -85,13 +85,25 @@ static void tile_patterns(u32 base,u16 n,const u8* t) {
 /* ---- names ---- */
 #define PNT_A 0x7C000UL
 #define PNT_B 0x7E000UL
-static void name_set2(u32 addr,u16 a,u16 b) {V9_SetWriteAddress(addr);V9_Poke16_CurrentAddr(a);V9_Poke16_CurrentAddr(b);}
+__sfr __at(0x60) io_vram;
+__sfr __at(0x63) io_reg;
+__sfr __at(0x64) io_sel;
+__sfr __at(0x66) io_int;
+/* Address + data sequences below run with interrupts off: the vertical-blank handler also uses the VRAM address. */
+static void io_vset(u32 a) {io_sel=0;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=(u8)(a>>16);}
+static void io_rw(u8 r,u8 v) {io_sel=r;io_reg=v;}
+static void names_put(u32 a,u16 n0,u16 n1,u16 n2,u16 n3) {
+ __asm di __endasm;
+ io_vset(a);io_vram=(u8)n0;io_vram=(u8)(n0>>8);io_vram=(u8)n1;io_vram=(u8)(n1>>8);
+ io_vset(a+128);io_vram=(u8)n2;io_vram=(u8)(n2>>8);io_vram=(u8)n3;io_vram=(u8)(n3>>8);
+ __asm ei __endasm;
+}
 static void p1_cell(u8 x,u8 y) {
  u8 st=fog_at(x,y);u16 n;u32 a;
  a=PNT_B+((u16)y<<8)+((u16)x<<2);
- if(!st) {name_set2(a,1,1);name_set2(a+128,1,1);return;}
+ if(!st) {names_put(a,1,1,1,1);return;}
  n=(st==1?PB_DITH:PB_PLAIN)+(u16)tile_source[fog_art(x,y)]*4;
- name_set2(a,n,n+1);name_set2(a+128,n+2,n+3);
+ names_put(a,n,n+1,n+2,n+3);
 }
 void video_world_cell(u8 x,u8 y) {p1_cell(x,y);}
 void video_world_tile(u8 x,u8 y) {p1_cell(x,y);}
@@ -101,7 +113,7 @@ void video_tile(u8 x,u8 y) {
  u16 cell=((u16)y<<5)+x;if(x>=32 || y>=32 || fog_at(x,y)!=2)return;fog_memory[cell]=art_map[cell];video_known_tile(x,y);
 }
 /* ---- HUD (layer A) ---- */
-static void hud_name(u8 col,u8 row,u16 n) {V9_SetWriteAddress(PNT_A+((u16)row<<7)+((u16)col<<1));V9_Poke16_CurrentAddr(n);}
+static void hud_name(u8 col,u8 row,u16 n) {__asm di __endasm;io_vset(PNT_A+((u16)row<<7)+((u16)col<<1));io_vram=(u8)n;io_vram=(u8)(n>>8);__asm ei __endasm;}
 void video_char(u8 x,u16 y,u8 c) {hud_name(x>>3,(u8)(y>>3),PA_FONT+(u8)(c-32));}
 void video_text(u8 x,u16 y,const c8* s) {while(*s && x<249){video_char(x,y,*s++);x+=8;}}
 void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
@@ -110,48 +122,81 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
  for(row=y>>3;row<=(u8)((y+h-1)>>3);++row)for(col=x>>3;col<=(u8)((x+w-1)>>3);++col)hud_name(col,row,n);
 }
 /* ---- sprites ---- */
-static u8 slot_key[RN],sattr[132*4],sused,spr_dirty_tail;
+/* Pose slots are double buffered: a new pose is copied into the idle block and shown only once the copy ended,
+ * so a half-copied pose is never on screen. Attributes and scroll are committed in the vertical blank. */
+static u8 disp_key[RN],pend_key[RN],act_blk[RN],sattr[125*4],sused;
+static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
 #define SPAT 0x3FE00UL
-#define CELL_POSE(i) (((i)%5)*3+(((i)/5)*3)*16)
-#define CELL_PTR 96
-#define CELL_RING 97
+#define CELL_POSE(i,b) (((i)%5)*3+((((i)/5)*6+(b)*3))*16)
+#define CELL_PTR 224
+#define CELL_RING 225
 static void cell_write(u8 cell,const u8* src16rows) {
  u8 k;for(k=0;k<16;++k)V9_WriteVRAM(P1_SGT+((u32)((cell>>4)<<4)+k)*128+((cell&15)<<3),src16rows+(k<<3),8);
 }
 static void spr_attr(u8* o,i16 x,i16 y,u8 pat,u8 info) {o[0]=(u8)(y-1);o[1]=pat;o[2]=(u8)x;o[3]=((u8)((x>>8)&3))|info;}
-void video_cursor(void) {
- u8 a[4];spr_attr(a,mouse_x,mouse_y,CELL_PTR,0);
- __asm di __endasm;V9_WriteVRAM(SPAT,a,4);__asm ei __endasm;
+static void otir_vram(const u8* p,u16 n) __naked {p;n;__asm
+ ld b,e
+ dec de
+ inc d
+ ld c,#0x60
+otv_loop:
+ otir
+ dec d
+ jp nz,otv_loop
+ ret
+ __endasm;}
+/* Vertical blank: the pointer follows the mouse every frame; a finished sprite list and its scroll go together. */
+static void irq_p1(void) {
+ if(io_int&1) {
+  io_int=1;
+  io_vset(SPAT);io_vram=(u8)(mouse_y-1);io_vram=CELL_PTR;io_vram=mouse_x;io_vram=0;
+  if(p1_ready) {
+   io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)(p1_bx>>3));
+   if(p1_n>1) {io_vset(SPAT+4);otir_vram(sattr+4,(u16)(p1_n-1)*4);}
+   p1_ready=0;
+  }
+ }
 }
+void video_irq_install(void) {
+ __asm di __endasm;
+ r22=V9_GetRegister(22)&0xFE;
+ BIOS_SetHookDirectCallback(H_KEYI,irq_p1);
+ V9_SetInterrupt(V9_INT_VBLANK);
+ __asm ei __endasm;
+}
+void video_cursor(void) {}
 void video_sprites(void) {
  u8 order[RN],count=0,i,j,k,n=1;
  ++cache_tick;
- V9_SetScrollingB(cam_x,cam_y);
+ /* copies issued earlier are finished once the engine is idle: switch those blocks in */
+ if(!v9_busy())for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}
  for(i=0;i<RN;++i) {
-  i16 ax,ay;
   if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
   {u8 f=unit_art_frame(i);actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;}
   if(actor_visible[i])order[count++]=i;
  }
  /* front to back: larger py first (lower sprite index = in front) */
  for(i=1;i<count;++i) {k=order[i];j=i;while(j && units[order[j-1]].py<units[k].py) {order[j]=order[j-1];--j;}order[j]=k;}
- spr_attr(sattr,mouse_x,mouse_y,CELL_PTR,0);
+ __asm di __endasm;p1_ready=0;__asm ei __endasm;
  for(j=0;j<count;++j) {
   u8 sz,nn,sx,sy,cell;i16 x,y;
   i=order[j];sz=kind_sizes[unit_kind[i]];nn=sz>>4;
-  x=actor_x[i]-cam_x;y=actor_y[i]-cam_y;cell=CELL_POSE(i);
-  if(slot_key[i]!=actor_key[i]) {
-   u8 key=actor_key[i];
-   p1_copy((u16)(key%5)*48,POSE_Y0+(u16)(key/5)*48,(u16)(cell&15)<<4,P1_SGT_LINE+((u16)(cell>>4)<<4),sz,sz);
-   slot_key[i]=key;++frame_uploads;
+  if(actor_key[i]!=disp_key[i] && pend_key[i]==NONE) {
+   u8 key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);
+   p1_copy((u16)(key%5)*48,POSE_Y0+(u16)(key/5)*48,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
+   pend_key[i]=key;++frame_uploads;
   }
+  if(disp_key[i]==NONE)continue;
+  x=actor_x[i]-cam_x;y=actor_y[i]-cam_y;cell=CELL_POSE(i,act_blk[i]);
   for(sy=0;sy<nn;++sy)for(sx=0;sx<nn;++sx) {
    if(n<125)spr_attr(sattr+((u16)n++<<2),x+sx*16,y+sy*16,cell+sx+(sy<<4),0x20);
   }
   if(i<N && (selection_mask&render_bit[i]) && n<125)spr_attr(sattr+((u16)n++<<2),x+sz/2-8,y+sz-16,CELL_RING,0x20);
  }
  for(k=n;k<sused;++k)sattr[(u16)k*4+3]=0x10;
- {u8 total=n>sused?n:sused;V9_WriteVRAM(SPAT,sattr,(u16)total*4);}
+ __asm di __endasm;
+ p1_n=n>sused?n:sused;p1_bx=cam_x;p1_by=cam_y;p1_ready=1;
+ __asm ei __endasm;
  sused=n;
  ++rendered_frames;
 }
@@ -168,8 +213,8 @@ void video_init(void) {
  hud_stamp[0]=hud_stamp[1]=65535;
  shown=0;cache_tick=frame_uploads=frame_hits=rendered_frames=0;
  flip_pending=0;v9_irq_on=0;
- for(i=0;i<RN;++i)slot_key[i]=NONE;
- for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
+ for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;}
+ p1_ready=0; for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;
  /* clear both name tables and the HUD pattern table head */
  V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);V9_FillVRAM(0x00000UL,0,4096);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
@@ -215,6 +260,6 @@ void video_init(void) {
  hud_draw=0;
 }
 void video_enable(void) {
- hud_stamp[0]=hud_stamp[1]=65535;video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);
- video_enabled=1;video_cursor();
+ hud_stamp[0]=hud_stamp[1]=65535;video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);video_irq_install();
+ video_enabled=1;
 }

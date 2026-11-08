@@ -161,3 +161,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Desempenho (V9990 a 3,58 MHz, 4 unidades andando com scroll): P1 59 quadros em 3,44 s (17,2 fps) contra 31 quadros em 3,47 s (8,9 fps) no modo B1. 1 unidade: 69 quadros em 2,97 s (23,2 fps) contra 43 em 3,0 s (14,3 fps).
 - Testes de lógica sem falhas na P1: perf012, fog011, combat011, worker011, camera011, overlay011, perf091, defense011. kernel012 estourou o tempo limite de 180 s e não foi investigado.
 - Boot (até o laço principal): cerca de 36 s emulados na P1, contra cerca de 25 s no B1.
+
+## Adendo 5: tremor na P1
+
+- Causas tratadas: scroll e atributos de sprite eram gravados em momentos diferentes do quadro; uma pose nova era copiada sobre a que estava na tela; o ponteiro era gravado fora do vertical blank.
+- Agora: scroll e lista de sprites são aplicados juntos na interrupção de vertical blank; cada unidade tem dois blocos de pose e só troca depois que a cópia termina; o ponteiro é atualizado na mesma interrupção; gravações de tiles e HUD rodam com interrupções desligadas.
+- Erro encontrado no caminho: células de sprite na última linha da grade (linhas 252 a 255) colidem com a tabela de atributos; ponteiro e anel foram movidos para a linha 14.
+- Medido: 4 unidades 51 quadros em 3,41 s (15 fps); 1 unidade 68 quadros em 3,0 s (22,7 fps). Testes de lógica sem falhas.
