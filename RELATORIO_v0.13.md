@@ -234,3 +234,9 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 
 - `unit_prep` (banco 27, só P1) substitui as duas chamadas banked por atores: mesma regra de quadro, visibilidade e origem do desenho, com os testes de trabalhador e de máscara de obra avaliados uma vez. O código do modo B1 e do V9968 não mudou (V9990 e V9968 não precisaram ser recompilados).
 - Medido: P1 4 unidades 57 para 63 quadros em 3,4 s (18,5 fps); 1 unidade 63 para 68 em 3,0 s (22,7 fps). Todos os testes de lógica, oclusão, clarão e box011 sem falhas.
+
+## Adendo 16: video_sprites em P1
+
+- Visibilidade dos prédios (`fog_target`) em cache por época do Fog; ordenação por profundidade com os valores de `py` copiados para um vetor local. A tentativa de não esperar o blitter ao copiar poses não mudou nada e foi revertida.
+- Medido: 4 unidades 63 para 67 quadros em 3,44 s (19,5 fps); 1 unidade 68 para 69 em 2,97 s (23,2 fps). Todos os testes de lógica, oclusão, clarão, kernel012 e box011 sem falhas.
+- Observação sobre o perfil: parte do tempo que o perfil por linha atribui a `video_sprites` é da interrupção de vertical blank (cópia de atributos de sprite e retângulos), que roda no meio de qualquer linha.

@@ -359,6 +359,16 @@ static u8 occ_get(u8 idx) {
  {u8 c=CELL_OCC+best;p1_copy((u16)(idx&15)<<4,OV_Y+((u16)(idx>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
  occ_key[best]=idx;occ_pend[best]=1;occ_stamp[best]=cache_tick;return 255;
 }
+static u16 bv_epoch;static u8 bv_state[BMAX],bv_x[BMAX],bv_y[BMAX];
+/* fog_target for a building, cached per fog epoch: the sight only changes when fog_epoch does. */
+static u8 bld_visible(u8 k) {
+ u8 x=buildings[k].x,y=buildings[k].y,n,dx,dy,r=1;
+ if(bv_epoch!=fog_epoch){for(n=0;n<BMAX;++n)bv_state[n]=0;bv_epoch=fog_epoch;}
+ if(bv_state[k] && bv_x[k]==x && bv_y[k]==y)return bv_state[k]==2;
+ n=building_size(buildings[k].type);
+ for(dy=0;dy<n && r==1;++dy)for(dx=0;dx<n;++dx)if(fog_at(x+dx,y+dy)==2){r=2;break;}
+ bv_state[k]=r;bv_x[k]=x;bv_y[k]=y;return r==2;
+}
 static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
 void video_sprites(void) {
  u8 order[RN],count=0,i,j,k,n,nb;u8* o=sattr+4;u16 vis=0;
@@ -375,7 +385,10 @@ void video_sprites(void) {
  for(j=0;j<ord_n;++j){i=ord_prev[j];if(vis&render_bit[i]){order[count++]=i;vis&=~render_bit[i];}}
  for(i=0;i<RN;++i)if(vis&render_bit[i])order[count++]=i;
  /* front to back: larger py first (lower sprite index = in front) */
- for(i=1;i<count;++i) {k=order[i];j=i;while(j && units[order[j-1]].py<units[k].py) {order[j]=order[j-1];--j;}order[j]=k;}
+ {u16 pk[RN];
+  for(j=0;j<count;++j)pk[j]=units[order[j]].py;
+  for(i=1;i<count;++i) {u16 kv=pk[i];u8 ko=order[i];j=i;while(j && pk[j-1]<kv) {pk[j]=pk[j-1];order[j]=order[j-1];--j;}pk[j]=kv;order[j]=ko;}
+ }
  for(j=0;j<count;++j)ord_prev[j]=order[j];
  ord_n=count;
  __asm di __endasm;p1_ready=0;__asm ei __endasm;
@@ -445,7 +458,7 @@ void video_sprites(void) {
   u8 sz=building_size(build_kind)*16,c=place_valid?10:7;i16 gx=(i16)place_x*16-(i16)cam_x,gy=(i16)place_y*16-(i16)cam_y;
   rl_add(gx,gy,sz,1,c);rl_add(gx,gy+sz-1,sz,1,c);rl_add(gx,gy,1,sz,c);rl_add(gx+sz-1,gy,1,sz,c);
  }
- for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && fog_target(128+k)) {
+ for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
   i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;
   if(building_owner[k] || building_hp[k]<max) {
    u8 w=(u8)((u16)building_hp[k]*24/max);
@@ -475,6 +488,7 @@ void video_init(void) {
  shown=0;cache_tick=frame_uploads=frame_hits=rendered_frames=0;
  flip_pending=0;v9_irq_on=0;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;bar_sig[i]=65535;}
+ for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
  for(i=0;i<OCC_N;++i){occ_key[i]=255;occ_stamp[i]=0;occ_pend[i]=0;}
  p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
