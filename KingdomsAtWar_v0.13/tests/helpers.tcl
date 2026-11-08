@@ -6,7 +6,7 @@ set maxframeskip 0
 if {![info exists ::env(KAW_NO_MOUSE)]} {if {[info exists ::env(KAW_MOUSE_PORT)] && $::env(KAW_MOUSE_PORT)==2} {plug joyportb mouse} else {plug joyporta mouse}}
 source symbols-$::env(KAW_VARIANT).tcl
 if {$::env(KAW_VARIANT) eq "V9968"} {source v9968_shim.tcl}
-if {$::env(KAW_VARIANT) eq "V9990"} {set videosource GFX9000}
+if {$::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1"} {set videosource GFX9000}
 set failures 0
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}
 proc w {name} {return [expr {[b $name]+256*[b $name 1]}]}

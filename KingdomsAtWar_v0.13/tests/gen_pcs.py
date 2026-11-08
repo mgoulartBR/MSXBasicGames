@@ -3,7 +3,7 @@
 import re,sys
 from pathlib import Path
 R=Path(__file__).resolve().parents[1];v,fn=sys.argv[1:3]
-nm={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
+nm={'V9990':'KAW9990','V9990P1':'KAW9990P1','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
 m=(R/'build'/v/(nm+'.map')).read_text()
 a=int(re.search(r'([0-9A-F]{8})\s+_%s\s'%fn,m)[1],16);pc=a&0xFFFF;bank=a>>16
 t=(R/'tests/perf012.tcl').read_text()

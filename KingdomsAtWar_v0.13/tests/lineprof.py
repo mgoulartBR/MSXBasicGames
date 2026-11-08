@@ -7,7 +7,7 @@ R=Path(__file__).resolve().parents[1];v,fn,fil=sys.argv[1:4]
 banked=fil.startswith('banks/')
 mod=Path(fil).stem
 B=Path(os.environ.get('BPDIR','/tmp/claude-0/-home-user-MSXBasicGames/4527bde8-f4ff-521f-8bcc-a6ecfa430c6f/scratchpad/bp'))/v/'src/out'/((mod+'.lst') if banked else 'main.lst')
-nm={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
+nm={'V9990':'KAW9990','V9990P1':'KAW9990P1','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
 m=(R/'build'/v/(nm+'.map')).read_text();s=(R/'build'/v/'main.sym').read_text()
 off=int(re.search(r'([0-9A-F]{8})\s+_video_wait\s+main',m)[1],16)-int(re.search(r'_video_wait\s+([0-9A-F]{8})',s)[1],16)
 if banked:

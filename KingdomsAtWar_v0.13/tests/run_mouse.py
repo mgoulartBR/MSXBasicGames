@@ -7,14 +7,14 @@ variant=sys.argv[1] if len(sys.argv)>1 else 'PREVIEW'
 shared=r/'tests/host'/('mouse_events-'+variant+'-'+str(os.getpid())+'.so')
 subprocess.run(['gcc','-shared','-fPIC','-O2','-pthread',str(r/'tests/host/mouse_events.c'),'-ldl','-o',str(shared)],check=True)
 variant=sys.argv[1] if len(sys.argv)>1 else 'PREVIEW';script=sys.argv[2] if len(sys.argv)>2 else 'mouse_probe.tcl';port=sys.argv[3] if len(sys.argv)>3 else '1'
-rom={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[variant]
+rom={'V9990':'KAW9990','V9990P1':'KAW9990P1','PREVIEW':'KAW68PV','V9968':'KAW9968'}[variant]
 m=(r/'build'/variant/(rom+'.map')).read_text();sym={a[1]:int(a[0],16) for a in re.findall(r'^\s+([0-9A-F]{8})\s+_(\w+)\s+main\s*$',m,re.M)}
 (r/'tests'/('symbols-'+variant+'.tcl')).write_text('\n'.join('set S(%s) %d'%(k,v)for k,v in sym.items())+'\n')
 fifo=r/'tests'/('mouse-'+variant+'-'+port+'-'+str(os.getpid())+'.fifo')
 if fifo.exists():fifo.unlink()
 os.mkfifo(fifo)
 env=dict(os.environ,SDL_VIDEODRIVER='offscreen',SDL_AUDIODRIVER='dummy',KAW_VARIANT=variant,KAW_MOUSE_PORT=port,KAW_MOUSE_FIFO=str(fifo),LD_PRELOAD=str(shared))
-args=['openmsx','-machine','C-BIOS_MSX2' if variant=='V9990' else 'C-BIOS_MSX2+']+(['-ext','gfx9000'] if variant=='V9990' else [])+['-cart','../'+rom+'.ROM','-romtype','ASCII8','-script',script]
+args=['openmsx','-machine','C-BIOS_MSX2' if variant in ('V9990','V9990P1') else 'C-BIOS_MSX2+']+(['-ext','gfx9000'] if variant in ('V9990','V9990P1') else [])+['-cart','../'+rom+'.ROM','-romtype','ASCII8','-script',script]
 try:
  prefix='ROM_SHA256 '+hashlib.sha256((r/(rom+'.ROM')).read_bytes()).hexdigest()+'\n'
  with subprocess.Popen(args,cwd=r/'tests',env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1) as child:

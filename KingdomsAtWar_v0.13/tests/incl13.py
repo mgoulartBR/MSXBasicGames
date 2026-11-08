@@ -5,7 +5,7 @@ from pathlib import Path
 import re,sys,os,subprocess
 R=Path(__file__).resolve().parents[1];v=sys.argv[1]
 funcs=sys.argv[2:] or 'simulate input camera_update fog_update hud video_sprites video_present cache_frame draw_actor paint_world restore_field fog_apply fog_cover structure_bars damage_mask navigation nav_prepare combat_tick economy production tower_tick repair_tick projectile_tick workers asset_read poll_input arrow_draw video_stream'.split()
-nm={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
+nm={'V9990':'KAW9990','V9990P1':'KAW9990P1','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
 mp=(R/'build'/v/(nm+'.map')).read_text();ms=(R/'build'/v/'main.sym').read_text()
 off=int(re.search(r'([0-9A-F]{8})\s+_video_wait\s+main',mp)[1],16)-int(re.search(r'_video_wait\s+([0-9A-F]{8})',ms)[1],16)
 extra={}
@@ -39,7 +39,7 @@ proc dump_incl {phase} {
 '''
 t=t.replace('proc perf_end {phase} {','proc perf_end {phase} {\n dump_incl $phase',1)
 hook='''
- set variant $::env(KAW_VARIANT);set nm [dict get {V9990 KAW9990 PREVIEW KAW68PV V9968 KAW9968} $variant]
+ set variant $::env(KAW_VARIANT);set nm [dict get {V9990 KAW9990 V9990P1 KAW9990P1 PREVIEW KAW68PV V9968 KAW9968} $variant]
  set f [open ../build/$variant/$nm.map];set mtext [read $f];close $f
  foreach fn {%s} {
   set address -1

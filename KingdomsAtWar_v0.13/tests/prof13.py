@@ -5,7 +5,7 @@ GATE restringe as amostras ao interior (inclusivo) de uma funcao global do jogo.
 from pathlib import Path
 import re,sys,os,subprocess
 R=Path(__file__).resolve().parents[1];v=sys.argv[1];rows={}
-nm={'V9990':'KAW9990','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
+nm={'V9990':'KAW9990','V9990P1':'KAW9990P1','PREVIEW':'KAW68PV','V9968':'KAW9968'}[v]
 mp=(R/'build'/v/(nm+'.map')).read_text()
 MAIN_OFF=int(re.search(r'([0-9A-F]{8})\s+_video_wait\s+main',mp)[1],16)-int(re.search(r'_video_wait\s+([0-9A-F]{8})',(R/'build'/v/'main.sym').read_text())[1],16)
 for bank,p in [(0,R/'build'/v/'main.sym')]+[(int(re.search('art_s(\\d+)',p.name)[1]),p)for p in (R/'build'/v).glob('art_s*_b3.sym')]:

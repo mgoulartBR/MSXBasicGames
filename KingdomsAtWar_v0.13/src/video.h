@@ -1,3 +1,6 @@
+#ifdef KAW_P1
+#include "video_p1.h"
+#else
 #ifdef KAW_V9990
 #ifndef KAW_BAR_STRIPS
 #define KAW_BAR_STRIPS
@@ -732,3 +735,5 @@ void video_enable(void) {
 #endif
  video_enabled=1;video_cursor();
 }
+
+#endif

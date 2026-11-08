@@ -153,3 +153,11 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - V9990: 4 unidades 31 quadros em 3,47 s (igual), 1 unidade 43 quadros em 3,0 s (antes 42). Ganho pequeno: o custo restante está nas rotas, no combate, na travessia de células e nas unidades paradas.
 - V9968: 4 unidades 14 quadros em 3,6 s, 1 unidade 23 quadros em 2,97 s.
 - Suítes completas V9990 e V9968 sem falhas.
+
+## Adendo 4: migração do V9990 para o modo P1 (variante experimental KAW9990P1.ROM)
+
+- Mundo em tiles na camada B com scroll por registrador; Fog escolhido por tile (desconhecido, lembrado com dither, visível); HUD em tiles na camada A; unidades, anéis de seleção e ponteiro como sprites; poses copiadas pelo blitter.
+- Ainda faltam: barras de vida, caixa de arrastar, setas, fantasma de construção, oclusão por prédios e árvores, recorte da animação de entrada na mina.
+- Desempenho (V9990 a 3,58 MHz, 4 unidades andando com scroll): P1 59 quadros em 3,44 s (17,2 fps) contra 31 quadros em 3,47 s (8,9 fps) no modo B1. 1 unidade: 69 quadros em 2,97 s (23,2 fps) contra 43 em 3,0 s (14,3 fps).
+- Testes de lógica sem falhas na P1: perf012, fog011, combat011, worker011, camera011, overlay011, perf091, defense011. kernel012 estourou o tempo limite de 180 s e não foi investigado.
+- Boot (até o laço principal): cerca de 36 s emulados na P1, contra cerca de 25 s no B1.
