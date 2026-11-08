@@ -368,7 +368,7 @@ void video_sprites(void) {
  sp_cull();
  for(i=0;i<RN;++i) {
   if(sc_cull&render_bit[i]) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
-  {u8 f=unit_art_frame(i);actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;}
+  {actor_visible[i]=unit_prep(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;}
   if(actor_visible[i])vis|=render_bit[i];
  }
  /* keep last frame's order (nearly sorted already), then append actors that just appeared */

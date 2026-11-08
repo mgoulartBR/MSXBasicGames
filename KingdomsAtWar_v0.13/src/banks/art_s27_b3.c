@@ -88,6 +88,44 @@ u8 object_size(u8 x,u8 y) __banked {
 }
 
 /* Keep native fixed ROM below the ASCII8 switched window. */
+#ifdef KAW_P1
+/* One banked call for the P1 renderer: same rules as unit_art_frame + unit_position, with the worker tests
+ * evaluated once. Returns 1 when the actor is drawn; the frame goes to unit_prep_f. */
+u8 unit_prep_f;
+static const u8 bit8[8]={1,2,4,8,16,32,64,128};
+u8 unit_prep(u8 i) __banked {
+ Unit* u=&units[i];u8 kind=unit_kind[i],d=unit_facing[i],f,mp=0,harvest=0,hmask=0,fl=attack_flash[i],w=kind==0 && i<unit_count && unit_hp[i];
+ if(w) {
+  mp=mine_phase[i];
+  if(i<8)hmask=(builder_working|repair_active)&bit8[i];
+  harvest=worker_task[i]==HARVEST || hmask;
+ }
+ if(mp)d=mp==3?0:2;
+ else if(u->progress) {if(u->nx>u->x)d=1;else if(u->nx<u->x)d=3;else if(u->ny>u->y)d=0;else d=2;}
+ if(harvest) {
+  u8 nx,ny;
+  if(hmask) {const Building* b=&buildings[(repair_active&bit8[i])?repair_target[i]:unit_build[i]];nx=b->x;ny=b->y;}
+  else {nx=node_x[i];ny=node_y[i];}
+  if(nx>u->x)d=1;else if(nx<u->x)d=3;else if(ny>u->y)d=0;else d=2;
+ }
+ unit_facing[i]=d;
+ f=d*4+((u->progress || u->state==MOVING)?unit_walk_phase[i]:1);
+ if(mp)f=d*4+((mine_step[i]>>1)&3);
+ else if(harvest)f=((sim_ticks&8)?16:20)+d;
+ if(fl)f=d*4+(fl>4?3:1);
+ unit_frame[i]=f;unit_prep_f=f;
+ if(!combat_alive(i) || (u->owner && fog_at(u->x,u->y)!=2))return 0;
+ {u8 sz=kind_sizes[kind];
+  unit_draw_x=(i16)u->px+8-cam_x-(sz>>1);unit_draw_y=(i16)u->py+16-cam_y-sz;}
+ if(fl>4) {if(d==0)unit_draw_y+=2;else if(d==2)unit_draw_y-=2;else unit_draw_x+=d==1?2:-2;}
+ if(mp) {
+  if(mp==2)return 0;
+  unit_draw_x+=u->x==10?-(i16)mine_step[i]:mine_step[i];
+  unit_draw_y-=(u16)mine_step[i]*2;
+ }
+ return 1;
+}
+#endif
 u8 unit_art_frame(u8 i) __banked {
  Unit* u=&units[i];u8 d=unit_facing[i],f;
  if(WORKER(i) && mine_phase[i])d=mine_phase[i]==3?0:2;

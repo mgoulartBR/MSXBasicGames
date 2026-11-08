@@ -229,3 +229,8 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Z80: `nav_restore` (restaura o mapa de pais da busca de rotas), `cand_scan` (candidatos a alvo vizinhos em `combat_tick`), `sim_flags` (pula economia, produção e torres quando não há trabalho; produção ainda roda uma vez para zerar `builder_working`), `occ_scan` (ocupação de células em `free_at`, só na P1). `near_box` descarta prédios fora de alcance antes do teste banked.
 - Medido: P1 4 unidades 52 para 57 quadros em 3,4 s; 1 unidade 58 para 63 em 3,0 s. V9990: 33 e 45 quadros; V9968: 15 e 25.
 - V9990 e V9968 recompilados (OPTIMIZED): suítes completas sem falhas nos dois; P1: testes de lógica, oclusão, clarão, kernel012 e box011 sem falhas.
+
+## Adendo 15: unit_art_frame e unit_position em P1
+
+- `unit_prep` (banco 27, só P1) substitui as duas chamadas banked por atores: mesma regra de quadro, visibilidade e origem do desenho, com os testes de trabalhador e de máscara de obra avaliados uma vez. O código do modo B1 e do V9968 não mudou (V9990 e V9968 não precisaram ser recompilados).
+- Medido: P1 4 unidades 57 para 63 quadros em 3,4 s (18,5 fps); 1 unidade 63 para 68 em 3,0 s (22,7 fps). Todos os testes de lógica, oclusão, clarão e box011 sem falhas.
