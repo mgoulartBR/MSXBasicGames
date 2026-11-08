@@ -181,3 +181,11 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Os comandos são emitidos na interrupção de vertical blank, depois do ponteiro e dos sprites, só se o blitter estiver livre; senão ficam para o próximo quadro. A caixa nunca aparece pela metade.
 - Banco de poses reorganizado: poses de 32 px em linhas de 32 e de 48 px em linhas de 48 (1104 linhas, antes 1632); padrões do HUD movidos para o índice 640 em diante.
 - Verificado: `box011` (19 verificações) sem falhas; capturas com a caixa durante o arrasto e depois de soltar (sem resíduo). 4 unidades: 50 quadros em 3,44 s; 1 unidade: 67 quadros em 3,0 s.
+
+## Adendo 8: barras de vida e setas em P1
+
+- Barras de vida das unidades: sprites de 16x2 px com a largura já no padrão (17 larguras, 2 cores), mostrados para inimigos, feridos ou em combate, como no modo B1. Largura em cache por (vida, tipo) para evitar divisão a cada quadro.
+- Setas: sprite de 16x16 com 4 orientações, no mesmo critério de visibilidade do modo B1.
+- Barras e bandeiras de construção: retângulos pintados com LMMV na camada A, na mesma lista da caixa de arrastar, repintados no vertical blank.
+- Não feito: clarão branco de dano (cor da barra e cruz) e fantasma de construção.
+- Medido: 4 unidades 41 quadros em 3,44 s (11,9 fps); 1 unidade 53 quadros em 2,97 s (17,8 fps). Antes das barras e setas: 50 e 67. Testes combat011, defense011 e box011 sem falhas.
