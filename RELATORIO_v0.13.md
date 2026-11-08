@@ -209,3 +209,8 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Implementação: a arte dos tiles de prédio (sem fundo de gramado) fica num banco de bitmap na VRAM; os tiles que cobrem a unidade viram sprites de 16x16 à frente dela (24 slots de padrão, copiados pelo blitter na primeira vez que são necessários e reaproveitados por menos usado recentemente). O prédio só oculta em células visíveis (sem Fog).
 - Barras de vida das unidades passaram a ter largura em passos de 2 px (9 padrões por cor em vez de 17) para liberar padrões de sprite.
 - Verificado por captura com camponeses ao lado do castelo; testes de lógica e box011 sem falhas. 4 unidades: 49 quadros em 3,44 s; 1 unidade: 55 quadros em 2,97 s (antes da oclusão: 52 e 61).
+
+## Adendo 12: clarão de dano em P1
+
+- Com `hurt_flash > 4` a barra da unidade fica branca (cor 15, fundo 12) e uma cruz branca de 5x5 px aparece abaixo dela, como no modo B1. Nove padrões de barra branca e um de cruz; os slots de oclusão passaram de 24 para 14 para liberar padrões.
+- Verificado por captura (vida e `hurt_flash` forçados em duas unidades); testes de lógica, oclusão e box011 sem falhas. 4 unidades: 45 quadros em 3,44 s; 1 unidade: 56 quadros em 2,97 s.

@@ -154,8 +154,10 @@ static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108},{48,51,54,57,60,
 #define CELL_BAR_ALLY 192
 #define CELL_BAR_ENEMY 201
 #define CELL_ARROW 210
-#define CELL_OCC 214
-#define OCC_N 24
+#define CELL_BAR_WHITE 214
+#define CELL_CROSS 223
+#define CELL_OCC 224
+#define OCC_N 14
 #define OV_Y 1296U
 static void pose_pos(u8 kind,u8 f,u16* x,u16* y) {
  if(kind_sizes[kind]==32) {u8 k=(kind==0?0:kind==1?1:kind==3?2:3)*24+f;*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
@@ -421,7 +423,9 @@ void video_sprites(void) {
   if((units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) && o<sattr+496) {
    u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);
    if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);}
-   SPR(x+(sz>>1)-8,y+pose_bounds[((u16)actor_key[i]<<2)+1]-4,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);
+   {i16 bxx=x+(sz>>1)-8,byy=y+pose_bounds[((u16)actor_key[i]<<2)+1]-4;
+    if(hurt_flash[i]>4) {SPR(bxx,byy,CELL_BAR_WHITE+bar_w[i],0x20);SPR(bxx,byy,CELL_CROSS,0x20);}
+    else SPR(bxx,byy,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);}
   }
   if((u16)o+((u16)nn*nn<<2)<=(u16)sattr+500) {e_o=(u16)o;e_x=x;e_y=y;e_cell=cell;e_n=nn;emit_block();o=(u8*)e_o;}
   if(i<N && (selection_mask&render_bit[i]) && o<sattr+496)SPR(x+(sz>>1)-8,y+sz-16,CELL_RING,0x20);
@@ -498,6 +502,15 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
     for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w*2?(col?9:5):12);
     cell_write((col?CELL_BAR_ENEMY:CELL_BAR_ALLY)+w,c2);
    }
+   for(w=0;w<=8;++w) {
+    for(j=0;j<128;++j)c2[j]=0;
+    for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w*2?15:12);
+    cell_write(CELL_BAR_WHITE+w,c2);
+   }
+   for(j=0;j<128;++j)c2[j]=0;
+   for(x=6;x<11;++x)px4(c2,x,12,15);
+   for(k=10;k<15;++k)px4(c2,8,k,15);
+   cell_write(CELL_CROSS,c2);
    for(q2=0;q2<4;++q2) {
     for(j=0;j<128;++j)c2[j]=0;
     if(q2<2) {
