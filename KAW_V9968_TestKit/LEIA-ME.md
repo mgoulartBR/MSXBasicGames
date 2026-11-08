@@ -20,3 +20,11 @@ Tudo o mais (comandos de VDP, VRAM, raster, mouse, lógica) é executado de verd
 - Medido no openMSX (quadros/s com 1 / 4 unidades / scroll): V9990 3,58 MHz 9,6 / 6,9 / 14; 7,2 MHz 23 / 14 / 22; 10,7 MHz 25 / 21 / 27. V9968 via script: 3,58 MHz 5 / 3 / 6; 10,7 MHz 20 / 10 / 16.
 
 **Atenção às configurações do openMSX:** `z80_freq` fica gravado nas configurações do openMSX. Os launchers deste kit usam `-setting kaw_openmsx_settings.xml` (arquivo próprio, criado na pasta do kit), então o modo turbo não vaza para o seu openMSX normal. Se você rodou `set z80_freq` à mão, restaure com `set z80_freq 3579545`.
+
+## KAW9990P1.ROM (experimental, modo P1 do V9990)
+
+Rode `play-v9990-p1.sh` (Linux/macOS) ou `play-v9990-p1.bat` (Windows). Mesma arquitetura do V9990, mas o mundo é de tiles com scroll por hardware e as unidades são sprites.
+
+- Cerca de duas vezes mais quadros por segundo que o KAW9990.ROM com unidades andando.
+- O carregamento inicial é mais longo (cerca de 36 s a 3,58 MHz); a barra de progresso aparece no meio da tela.
+- Ainda faltam barras de vida, caixa de arrastar, setas, fantasma de construção e a oclusão por prédios e árvores.
