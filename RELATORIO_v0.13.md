@@ -168,3 +168,9 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Agora: scroll e lista de sprites são aplicados juntos na interrupção de vertical blank; cada unidade tem dois blocos de pose e só troca depois que a cópia termina; o ponteiro é atualizado na mesma interrupção; gravações de tiles e HUD rodam com interrupções desligadas.
 - Erro encontrado no caminho: células de sprite na última linha da grade (linhas 252 a 255) colidem com a tabela de atributos; ponteiro e anel foram movidos para a linha 14.
 - Medido: 4 unidades 51 quadros em 3,41 s (15 fps); 1 unidade 68 quadros em 3,0 s (22,7 fps). Testes de lógica sem falhas.
+
+## Adendo 6: Fog em P1
+
+- Causa das "treliças": os padrões de tile em P1 são numerados `8 + 4*phy` (visível) e `768 + 4*phy` (lembrado, com pontilhado). O laço de carga percorre 192 tiles, então os padrões 190 e 191 caíam em 768 a 775 e apagavam o pontilhado dos tiles 0 e 1 (os mais comuns do gramado). Células lembradas apareciam sem pontilhado, em faixas em escada.
+- Correção: o bloco de padrões pontilhados passou a começar em 800.
+- Verificado: o mapa de nomes na VRAM coincide com o estado do Fog (0 divergências em 1024 células), e a captura da cena `fog011` mostra a área lembrada uniforme, como no modo B1.

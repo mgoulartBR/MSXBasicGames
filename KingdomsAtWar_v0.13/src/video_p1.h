@@ -16,7 +16,7 @@
 #define POSE_Y0 64U
 #define CACHE_COUNT 1
 #define PB_PLAIN 8U
-#define PB_DITH 768U
+#define PB_DITH 800U
 #define PA_SOLID 1U
 #define PA_FONT 32U
 #define PA_HUDTOP 100U

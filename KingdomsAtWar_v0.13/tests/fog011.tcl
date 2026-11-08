@@ -5,8 +5,8 @@ proc fog_state {x y} {
 }
 proc dump_fog011 {state} {
  set pre fog011-$::env(KAW_VARIANT)-$state
- set device [expr {$::env(KAW_VARIANT) eq "V9990"?"Sunrise GFX9000 VRAM":"VRAM"}]
- set size [expr {$::env(KAW_VARIANT) eq "V9990"?524288:131072}]
+ set device [expr {($::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1")?"Sunrise GFX9000 VRAM":"VRAM"}]
+ set size [expr {($::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1")?524288:131072}]
  delay 0.7
  foreach {suffix dev start length} [list map memory $::S(art_map) 1024 memory memory $::S(fog_memory) 1024 seen memory $::S(fog_seen) 128 visible memory $::S(fog_visible) 128 vram $device 0 $size] {
   set f [open $pre-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $dev $start $length];close $f
