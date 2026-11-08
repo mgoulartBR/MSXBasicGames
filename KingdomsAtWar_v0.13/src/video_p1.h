@@ -126,7 +126,8 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 /* ---- sprites ---- */
 /* Pose slots are double buffered: a new pose is copied into the idle block and shown only once the copy ended,
  * so a half-copied pose is never on screen. Attributes and scroll are committed in the vertical blank. */
-static u8 disp_key[RN],pend_key[RN],act_blk[RN],sattr[125*4],sused;
+static u8 disp_key[RN],pend_key[RN],act_blk[RN],sused;
+#define sattr p1_shared
 static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
 #define MAXR 16
 /* Screen-space rectangles painted into the layer A bitmap (drag box, building bars and banners): the pending
@@ -146,16 +147,16 @@ static void rl_add(i16 x,i16 y,u8 w,u8 h,u8 c) {
  rw_x[rw_n]=x;rw_y[rw_n]=y;rw_w[rw_n]=(x1-x>255)?255:(u8)(x1-x);rw_h[rw_n]=(u8)(y1-y);rw_c[rw_n]=c;++rw_n;
 }
 #define SPAT 0x3FE00UL
-#define CELL_POSE(i,b) (((i)%5)*3+((((i)/5)*6+(b)*3))*16)
+static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108},{48,51,54,57,60,144,147,150,153,156}};
+#define CELL_POSE(i,b) cell_tab[b][i]
 #define CELL_PTR 238
 #define CELL_RING 239
 #define CELL_BAR_ALLY 192
 #define CELL_BAR_ENEMY 209
 #define CELL_ARROW 226
-static void pose_pos(u8 key,u16* x,u16* y) {
- u8 kind=key/24,f=key-kind*24;
+static void pose_pos(u8 kind,u8 f,u16* x,u16* y) {
  if(kind_sizes[kind]==32) {u8 k=(kind==0?0:kind==1?1:kind==3?2:3)*24+f;*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
- else {u8 k=(kind==2?0:kind==4?1:2)*24+f;*x=(u16)(k%5)*48;*y=POSE48_Y+(u16)(k/5)*48;}
+ else {u8 k=(kind==2?0:kind==4?1:2)*24+f,q=(u8)(((u16)k*205)>>10);*x=(u16)(k-q*5)*48;*y=POSE48_Y+(u16)q*48;}
 }
 static void px4(u8* buf,u8 x,u8 y,u8 c) {u8* p=buf+((u16)y<<3)+(x>>1);if(x&1)*p=(*p&0xF0)|c;else *p=(*p&0x0F)|(c<<4);}
 static void cell_write(u8 cell,const u8* src16rows) {
@@ -203,20 +204,164 @@ void video_irq_install(void) {
  __asm ei __endasm;
 }
 void video_cursor(void) {}
+/* Z80: write the n x n sprite attributes (Y, pattern, X, info) of one actor block. */
+static u16 e_o;static i16 e_x,e_y;static u8 e_cell,e_n,e_r,e_c;
+static void emit_block(void) __naked {
+ __asm
+ ld hl,(_e_o)
+ ld a,(_e_y)
+ dec a
+ ld d,a
+ ld a,(_e_cell)
+ ld e,a
+ ld a,(_e_n)
+ ld (_e_r),a
+eb_row:
+ ld bc,(_e_x)
+ ld a,(_e_n)
+ ld (_e_c),a
+ push de
+eb_col:
+ ld (hl),d
+ inc hl
+ ld (hl),e
+ inc hl
+ ld (hl),c
+ inc hl
+ ld a,b
+ and a,#3
+ or a,#0x20
+ ld (hl),a
+ inc hl
+ inc e
+ ld a,c
+ add a,#16
+ ld c,a
+ ld a,b
+ adc a,#0
+ ld b,a
+ ld a,(_e_c)
+ dec a
+ ld (_e_c),a
+ jp nz,eb_col
+ pop de
+ ld a,d
+ add a,#16
+ ld d,a
+ ld a,e
+ add a,#16
+ ld e,a
+ ld a,(_e_r)
+ dec a
+ ld (_e_r),a
+ jp nz,eb_row
+ ld (_e_o),hl
+ ret
+ __endasm;
+}
+static u16 sc_cull,sc_bitw;
+static void sp_cull(void) __naked {
+ __asm
+ ld hl,#0
+ ld (_sc_cull),hl
+ inc l
+ ld (_sc_bitw),hl
+ push ix
+ ld ix,#_units
+ ld c,#0
+cl_loop:
+ ld b,#0
+ ld hl,#_unit_hp
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jp z,cl_cull
+ ld a,c
+ cp a,#8
+ jp nc,cl_alive
+ ld a,(_unit_count)
+ ld e,a
+ ld a,c
+ cp a,e
+ jp nc,cl_cull
+cl_alive:
+ ld e,0(ix)
+ ld d,1(ix)
+ ld hl,#56
+ add hl,de
+ ld de,(_cam_x)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld hl,(_cam_x)
+ ld de,#288
+ add hl,de
+ ld e,0(ix)
+ ld d,1(ix)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld e,2(ix)
+ ld d,3(ix)
+ ld hl,#32
+ add hl,de
+ ld de,(_cam_y)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ ld hl,(_cam_y)
+ ld de,#208
+ add hl,de
+ ld e,2(ix)
+ ld d,3(ix)
+ or a,a
+ sbc hl,de
+ jp c,cl_cull
+ jp cl_next
+cl_cull:
+ ld hl,(_sc_cull)
+ ld de,(_sc_bitw)
+ ld a,l
+ or a,e
+ ld l,a
+ ld a,h
+ or a,d
+ ld h,a
+ ld (_sc_cull),hl
+cl_next:
+ ld de,#16
+ add ix,de
+ ld hl,(_sc_bitw)
+ add hl,hl
+ ld (_sc_bitw),hl
+ inc c
+ ld a,c
+ cp a,#10
+ jp nz,cl_loop
+ pop ix
+ ret
+ __endasm;
+}
 #define SPR(X,Y,P,I) do{i16 _x=(X);*o++=(u8)((Y)-1);*o++=(P);*o++=(u8)_x;*o++=((u8)(_x>>8)&3)|(I);}while(0)
-static u16 bar_sig[RN];static u8 bar_w[RN];
+static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
 void video_sprites(void) {
- u8 order[RN],count=0,i,j,k,n;u8* o=sattr+4;
+ u8 order[RN],count=0,i,j,k,n;u8* o=sattr+4;u16 vis=0;
  ++cache_tick;
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
  if(!v9_busy())for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}
+ sp_cull();
  for(i=0;i<RN;++i) {
-  if(!combat_alive(i) || units[i].px+56<cam_x || units[i].px>cam_x+288 || units[i].py+32<cam_y || units[i].py>cam_y+208) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
+  if(sc_cull&render_bit[i]) {actor_visible[i]=0;rect_now[i].w=0;actor_key[i]=NONE;continue;}
   {u8 f=unit_art_frame(i);actor_visible[i]=unit_position(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+f;}
-  if(actor_visible[i])order[count++]=i;
+  if(actor_visible[i])vis|=render_bit[i];
  }
+ /* keep last frame's order (nearly sorted already), then append actors that just appeared */
+ for(j=0;j<ord_n;++j){i=ord_prev[j];if(vis&render_bit[i]){order[count++]=i;vis&=~render_bit[i];}}
+ for(i=0;i<RN;++i)if(vis&render_bit[i])order[count++]=i;
  /* front to back: larger py first (lower sprite index = in front) */
  for(i=1;i<count;++i) {k=order[i];j=i;while(j && units[order[j-1]].py<units[k].py) {order[j]=order[j-1];--j;}order[j]=k;}
+ for(j=0;j<count;++j)ord_prev[j]=order[j];
+ ord_n=count;
  __asm di __endasm;p1_ready=0;__asm ei __endasm;
  /* arrows: 5x5 px projectiles, in front of everything in the field */
 
@@ -230,7 +375,7 @@ void video_sprites(void) {
   i=order[j];sz=kind_sizes[unit_kind[i]];nn=sz>>4;
   if(actor_key[i]!=disp_key[i] && pend_key[i]==NONE) {
    u8 key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);
-   {u16 px,py;pose_pos(key,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);}
+   {u16 px,py;pose_pos(unit_kind[i],key-unit_kind[i]*24,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);}
    pend_key[i]=key;++frame_uploads;
   }
   if(disp_key[i]==NONE)continue;
@@ -240,15 +385,7 @@ void video_sprites(void) {
    if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]]);}
    SPR(x+(sz>>1)-8,y+pose_bounds[((u16)actor_key[i]<<2)+1]-4,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);
   }
-  {u8 pat=cell;
-   for(sy=0;sy<nn;++sy) {
-    i16 yy=y+((i16)sy<<4);
-    for(sx=0;sx<nn;++sx) {
-     if(o<sattr+500)SPR(x+((i16)sx<<4),yy,pat+sx,0x20);
-    }
-    pat+=16;
-   }
-  }
+  if((u16)o+((u16)nn*nn<<2)<=(u16)sattr+500) {e_o=(u16)o;e_x=x;e_y=y;e_cell=cell;e_n=nn;emit_block();o=(u8*)e_o;}
   if(i<N && (selection_mask&render_bit[i]) && o<sattr+496)SPR(x+(sz>>1)-8,y+sz-16,CELL_RING,0x20);
  }
  n=(u8)((u16)(o-sattr)>>2);
@@ -262,8 +399,8 @@ void video_sprites(void) {
    rl_add(l-cam_x,t-cam_y,1,b-t+1,15);rl_add(r-cam_x,t-cam_y,1,b-t+1,15);
   }
  }
- for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<structure_max_hp(k)) && fog_target(128+k)) {
-  i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=structure_max_hp(k);
+ for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && fog_target(128+k)) {
+  i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;
   if(building_owner[k] || building_hp[k]<max) {
    u8 w=(u8)((u16)building_hp[k]*24/max);
    rl_add(bx+16,by-4,24,2,12);if(w)rl_add(bx+16,by-4,w,2,building_owner[k]?9:5);
@@ -291,9 +428,9 @@ void video_init(void) {
  hud_stamp[0]=hud_stamp[1]=65535;
  shown=0;cache_tick=frame_uploads=frame_hits=rendered_frames=0;
  flip_pending=0;v9_irq_on=0;
- for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;}
+ for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;bar_sig[i]=65535;}
  p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
- sused=0;
+ sused=0;ord_n=0;
  /* clear both name tables and the HUD pattern table head */
  V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);
  {u16 row[32];u8 cy,cx;for(cy=0;cy<20;++cy) {for(cx=0;cx<32;++cx)row[cx]=(u16)cy*32+cx;V9_WriteVRAM(PNT_A+((u16)cy<<7),(const u8*)row,64);}}
@@ -346,7 +483,7 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  for(i=0;i<168;++i)if(poses[i].bank) {
   u8 n=kind_sizes[i/24]>>4;asset_begin(poses+i);
   for(q=0;q<n*n;++q) {
-   u16 x,yy,px,py;u8 k;pose_pos(i,&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
+   u16 x,yy,px,py;u8 k;pose_pos(i/24,i-(i/24)*24,&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
    asset_read(tile_buffer,128);
    for(k=0;k<16;++k)V9_WriteVRAM((u32)(yy+k)*128+(x>>1),tile_buffer+k*8,8);
   }

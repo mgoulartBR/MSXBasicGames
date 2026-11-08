@@ -189,3 +189,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Barras e bandeiras de construção: retângulos pintados com LMMV na camada A, na mesma lista da caixa de arrastar, repintados no vertical blank.
 - Não feito: clarão branco de dano (cor da barra e cruz) e fantasma de construção.
 - Medido: 4 unidades 41 quadros em 3,44 s (11,9 fps); 1 unidade 53 quadros em 2,97 s (17,8 fps). Antes das barras e setas: 50 e 67. Testes combat011, defense011 e box011 sem falhas.
+
+## Adendo 9: montagem de sprites em Z80, boot e pilha na P1
+
+- Z80: escrita dos atributos de um ator (`emit_block`), descarte fora da tela (`sp_cull`), descompressor LZ do carregamento (`lz_decode`). Ordem de profundidade persistente entre quadros, tabela de células de pose (sem divisões por quadro), largura das barras em cache.
+- Boot (até o laço principal): cerca de 36 s emulados (antes cerca de 42 s).
+- Erro encontrado: com o crescimento das variáveis, a margem de pilha caiu para cerca de 235 bytes e os testes passaram a travar (a pilha invadia os dados). A janela do descompressor (256 bytes, usada só no carregamento) e o buffer de atributos de sprite agora compartilham a mesma RAM; margem atual de cerca de 490 bytes.
+- Medido: 4 unidades 52 quadros em 3,44 s (15 fps); 1 unidade 61 quadros em 3,0 s (20 fps). Antes de barras e setas: 50 e 67; com barras e setas: 41 e 53. Testes de lógica e box011 sem falhas.
