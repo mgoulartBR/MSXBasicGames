@@ -118,7 +118,6 @@ nr_st:
  ret
  __endasm;}
 static void nav_reset(void) {
- u16 i;
  if(nav_base_dirty) {nav_prepare();nav_base_dirty=0;nav_clean=1;return;}
  if(nav_clean)return;
  nav_restore(queue,qtail);

@@ -1,14 +1,30 @@
 /* V9990 P1 renderer (KAW_P1).
- * Layer B = world tiles (64x64 names, hardware scroll, fog baked into the name choice),
- * layer A = HUD tiles (fixed), sprites = actors, selection rings and the mouse pointer.
- * VRAM map (byte addresses):
- *   0x00000  layer A pattern table (HUD: blank, solid colours, font)
- *   0x02000  pose bank: 256 px wide 4bpp bitmap (128 bytes per line), 48x48 cells, 5 per row
- *   0x38000  sprite pattern table: 256 patterns of 16x16 laid out as a 256x256 bitmap
- *   0x3FE00  sprite attribute table
- *   0x40000  layer B pattern table (world: fog, plain tiles, dithered tiles)
- *   0x7C000  layer A names, 0x7E000 layer B names
- * VDP commands in P1 address VRAM as a 256 px wide bitmap, so one pose = one rectangle copy.
+ *
+ * Layer B  = the world: 64x64 names (32x32 cells of 16x16 art), hardware scroll. Fog is the choice of pattern
+ *            (1 = unknown, PB_PLAIN + 4*tile = visible, PB_DITH + 4*tile = remembered); see p1_cell().
+ * Layer A  = rows 0..19: a constant 1:1 map onto a 256x160 bitmap that holds the drag box, building bars and the
+ *            placement ghost (rects painted with LMMV); rows 20..26: HUD text and frame.
+ * Sprites  = actors (pose blocks), health bars, arrows, selection rings, building occluders, mouse pointer.
+ *
+ * VRAM (a byte address is 128 * line + x/2 when viewed as the 256 px wide 4bpp bitmap the VDP commands use):
+ *   lines    0..159   layer A pattern table: the box/bars bitmap
+ *   lines  160..183   layer A HUD patterns: solid colours (PA_SOLID), HUD top line, font (PA_FONT)
+ *   lines  192..575   pose bank, 32 px poses (8 per row)
+ *   lines  576..1295  pose bank, 48 px poses (5 per row)
+ *   lines 1296..1439  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
+ *   lines 1792..2047  sprite pattern table (R#25 = 0x38000): 256 cells of 16x16
+ *        cells   0..191   pose blocks, two 3x3 blocks per actor (double buffer)
+ *        cells 192..209   unit health bars (9 widths x 2 colours), 210..213 arrows, 214..222 white bars,
+ *        cell  223        damage cross, 224..237 occluder slots, 238 pointer, 239 selection ring
+ *        (cell row 15 shares lines 252..255 with the attribute table: do not use)
+ *   0x3FE00           sprite attribute table (SPAT)
+ *   0x40000           layer B pattern table
+ *   0x7C000 / 0x7E000 layer A / layer B names
+ *
+ * The vertical-blank handler (irq_p1) applies scroll, the sprite list and the rectangle list together, so a frame
+ * never shows a half-updated state. Main-thread VRAM access that uses the write address runs with interrupts off.
+ * Several globals below exist only because shared game code and the test scripts expect them (the B1 renderer
+ * has the real ones); they are harmless here.
  */
 #define P1_SGT 0x38000UL
 #define P1_PGT_B_BASE 0x40000UL

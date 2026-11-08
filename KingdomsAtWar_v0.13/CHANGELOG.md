@@ -1,3 +1,12 @@
+# v0.13 — Desempenho (novembro de 2026)
+
+- **KAW9990P1.ROM** (novo): V9990 em modo P1, com mapa de tiles e scroll por registrador, Fog como escolha de padrão, HUD em camada própria, unidades, barras de vida, setas, anéis, ponteiro e oclusão por prédios como sprites, e caixa de arrastar, barras de construção e fantasma de construção pintados pelo blitter no vertical blank. 4 unidades andando: cerca de 19 quadros/s (v0.12: cerca de 3,5).
+- V9990 (modo bitmap): apresentação por interrupção, scroll incremental, Fog gravado no mundo residente, comandos do blitter em Z80. 4 unidades: cerca de 9,6 quadros/s.
+- V9968: poses guardadas sem compressão, envio de poses em Z80, scroll incremental, composição por linha de peças. 4 unidades: cerca de 4,2 quadros/s.
+- Comum: rotas com mapa de busca persistente e restauração em Z80, busca de alvos e subsistemas ociosos puláveis, Fog (`fog_merge`) sem varreduras redundantes, entrada por uma varredura de teclado por quadro.
+- Removido: `KAW68PV.ROM` (PREVIEW V9958).
+- Testes: `suite012.sh` aceita `V9990`, `V9968` e `V9990P1`; novos `occl_p1.tcl` e `flash_p1.tcl`; `perf012.tcl` mede 1 e 4 unidades; `tests/prof13.py`, `incl13.py` e `lineprof.py` para perfil.
+
 # v0.12 — Desempenho
 
 Fog estático em cache, stencils completos em ROM, kernel Z80, faixas de dano, sistemas ociosos suspensos, poses nativas recortadas sem perda e transferências em bloco. Resultados e limitações em test_report.md.

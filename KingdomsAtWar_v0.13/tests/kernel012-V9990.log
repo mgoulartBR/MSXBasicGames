@@ -1,5 +1,0 @@
-ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
-ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
-error: Could not open sequencer: No such file or directory
-PASS 257 Z80 cases, 230272 output bytes, IX/IY preserved
-RESULT failures=0

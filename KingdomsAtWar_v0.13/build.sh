@@ -17,7 +17,7 @@ fi
 chmod +x "$KAW_GL"/tools/sdcc/bin/* "$KAW_GL/tools/MSXtk/bin/MSXhex"
 cd "$KAW_DIR/src"
 KAW_VARIANTS=("$@")
-if [[ ${#KAW_VARIANTS[@]} -eq 0 ]]; then KAW_VARIANTS=(V9990 V9968 PREVIEW); fi
+if [[ ${#KAW_VARIANTS[@]} -eq 0 ]]; then KAW_VARIANTS=(V9990 V9968 V9990P1); fi
 for KAW_VARIANT in "${KAW_VARIANTS[@]}"; do
  KAW_TARGET="$KAW_VARIANT" node "$KAW_GL/engine/script/js/build.js" > "$KAW_DIR/build-$KAW_VARIANT.log" 2>&1
  case "$KAW_VARIANT" in V9990) KAW_NAME=KAW9990;; V9990P1) KAW_NAME=KAW9990P1;; V9968) KAW_NAME=KAW9968;; PREVIEW) KAW_NAME=KAW68PV;; esac

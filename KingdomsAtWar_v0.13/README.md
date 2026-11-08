@@ -1,14 +1,15 @@
-# Kingdoms at War v0.12 — Desempenho
+# Kingdoms at War v0.13 — Desempenho
 
-BigFive Studios · 02/11/2026
+BigFive Studios · novembro de 2026
 
-As cinco classes militares existentes agora combatem, com papéis distintos. A economia, os edifícios, o mouse, a seleção por área e os assets aprovados continuam integrados.
+Jogo de estratégia em tempo real para MSX2 (C + Z80, MSXgl, ROM ASCII8 de 256 KiB). A v0.13 é uma versão de desempenho: as regras, a economia, o mouse, a seleção, o Fog of War e os assets aprovados são os da v0.12. O relatório completo, com medições e decisões, está em [`../RELATORIO_v0.13.md`](../RELATORIO_v0.13.md).
 
-## Correções da v0.12
+## O que mudou na v0.13
 
-Fog com visão estática em cache, máscaras completas em ROM, consolidação Z80 e faixas de dano contíguas. Sistemas de projéteis e reparação deixam de percorrer listas vazias. Os personagens nativos usam dados recortados sem perda de pixels. O relatório `test_report.md` traz medições antes/depois, fontes técnicas e limites de validação.
-
-O pacote contém `KAW9968.ROM` (cartucho V9968), `KAW9990.ROM` (V9990/GFX9000) e `KAW68PV.ROM` (PREVIEW V9958 para teste compatível). PREVIEW não reproduz a aceleração do V9968.
+- Rotinas quentes reescritas em Z80: Fog, comandos do V9990, rotas, combate, seleção de alvos, preparo e emissão de sprites, descompressão.
+- V9990 com apresentação por interrupção de vertical blank, scroll incremental e Fog gravado no mundo.
+- **Novo: `KAW9990P1.ROM`**, o V9990 em modo P1 (mapa de tiles com scroll por hardware e unidades como sprites). Com 4 unidades andando, roda a cerca de 19 quadros por segundo no openMSX a 3,58 MHz, contra cerca de 3,5 na v0.12.
+- A ROM `KAW68PV.ROM` (PREVIEW V9958) deixou de ser entregue.
 
 ## Funcionalidades da v0.11 preservadas
 
@@ -60,22 +61,22 @@ Esta versão não inclui IA de expansão, tela de vitória/derrota, novas anima�
 
 | ROM | Destino | Evidência |
 |---|---|---|
-| KAW9968.ROM | V9968 principal/secundário | Compilação e recusa de V9958; execução positiva física pendente |
-| KAW68PV.ROM | MSX2+ / V9958 | PREVIEW compatível executada no openMSX |
-| KAW9990.ROM | MSX2 + V9990/GFX9000 | Executada no openMSX pela saída GFX9000 |
+| KAW9968.ROM | V9968 principal/secundário | Compilação e recusa de V9958; roda no openMSX com o script `v9968_shim.tcl`; execução positiva no hardware pendente |
+| KAW9990.ROM | MSX2 + V9990/GFX9000, modo bitmap | Executada no openMSX pela saída GFX9000 |
+| KAW9990P1.ROM | MSX2 + V9990/GFX9000, modo P1 (tiles e sprites) | Executada no openMSX pela saída GFX9000; mais rápida, carregamento inicial mais longo |
 
-As três ROMs têm **256 KiB, mapper ASCII8**. Use um carregador compatível com esse mapper. Código e gráficos usam bancos separados; não há requisito de RAM Mapper. A leitura dos assets preserva o BIOS e restaura o banco de código. A inicialização do V9990 carrega as 120 poses antes de entrar no jogo e apresenta uma barra de progresso.
+As três ROMs têm **256 KiB, mapper ASCII8**. Use um carregador compatível com esse mapper. Código e gráficos usam bancos separados; não há requisito de RAM Mapper. A leitura dos assets preserva o BIOS e restaura o banco de código.
 
 ```sh
-./play-preview-v9958.sh
-./play-v9990.sh
+./play-v9990.sh      # modo bitmap
+./play-v9990-p1.sh   # modo P1 (kit KAW_V9968_TestKit)
 ```
 
-Os scripts usam openMSX e conectam mouse MSX à porta 1. O jogo detecta o mouse nas duas portas e continua procurando enquanto ele estiver ausente. **M** refaz a detecção durante a partida, por exemplo após trocar a porta no emulador. Testes positivos no V9968 real e em mouse/MSX físicos continuam pendentes. PREVIEW nunca significa execução em V9968.
+Os scripts usam openMSX e conectam mouse MSX à porta 1. O jogo detecta o mouse nas duas portas e continua procurando enquanto ele estiver ausente. **M** refaz a detecção durante a partida, por exemplo após trocar a porta no emulador. Testes positivos no V9968 real e em mouse/MSX físicos continuam pendentes. No openMSX é preciso `set videosource GFX9000` para ver a saída do V9990.
 
 ## WebMSX e mouse
 
-Abra `https://webmsx.org/?MOUSE_MODE=1` para habilitar mouse na porta 1. Para a versão compatível, use MSX2+ e `KAW68PV [ASCII8].rom`; o nome entre colchetes força o mapper correto. `KAW9968.ROM` exige o dispositivo V9968 e não é a prévia do V9958.
+Abra `https://webmsx.org/?MOUSE_MODE=1` para habilitar mouse na porta 1. O WebMSX não emula V9990 nem V9968; este arquivo fica como referência do mouse.
 
 Se habilitar o mouse depois do início, aguarde cerca de um segundo para a detecção. **M**, sem Alt, solicita nova procura nas duas portas. **Alt+M** é um comando do próprio WebMSX e alterna o modo do periférico. **Alt+Caps Lock** prende/libera o ponteiro no WebMSX. Clique esquerdo seleciona; direito dá ordens. O cursor MSX trabalha com deslocamento relativo, portanto pode ter posição diferente da seta do sistema quando o ponteiro estiver solto.
 
@@ -152,18 +153,21 @@ V9990: modo bitmap B1, fundos e todas as 120 poses residentes em VRAM, dois quad
 ```sh
 python3 tools/prepare09.py
 python3 tools/prepare012.py
-MSXGL_ROOT=/caminho/MSXgl bash ./build.sh
-python3 tests/features011.py
-KAW_NO_MOUSE=1 KAW_TEST_SCRIPT=defense011.tcl python3 tests/run_tests.py V9990
-KAW_NO_MOUSE=1 KAW_TEST_SCRIPT=kingdom011.tcl python3 tests/run_tests.py PREVIEW
+MSXGL_ROOT=/caminho/MSXgl bash ./build.sh V9990 V9968 V9990P1
 bash tests/suite012.sh V9990
-bash tests/suite012.sh PREVIEW
-KAW_TEST_SCRIPT=native_missing.tcl python3 tests/run_tests.py V9968
+bash tests/suite012.sh V9968
+bash tests/suite012.sh V9990P1
 ```
+
+`build.sh` aceita as variantes `V9990`, `V9968` e `V9990P1`. `KAW_FAST=1` usa a otimização padrão do SDCC em vez de `OPTIMIZED` (compila em cerca de 3 minutos em vez de 9, com código um pouco maior).
 
 MSXgl fixo em `6fd8858dce9a5a674529b78ec13d64262810eb34`, SDCC 4.6.0 #16555. Requer Node.js, Python/Pillow/NumPy, GCC para o teste de eventos do mouse, openMSX e C-BIOS. O SDK externo não acompanha o pacote.
 
-Todos os recursos dos testes são coletados por comandos normais. O depurador lê RAM/VRAM para verificar resultados, sem escrever saldos, unidades, obras ou posições. A exceção é o teste isolado kernel012, com dados sintéticos para validar a rotina Z80; ele não mede gameplay. Ver `test_report.md` e `tests/validation012.json` para a evidência ligada às ROMs finais.
+`tests/suite012.sh` verifica a memória (código fixo abaixo de A000h, RAM com margem para a pilha) e roda os testes de lógica, desempenho (`perf012`), Fog, combate, trabalhadores, câmera, sobreposições, seleção por área com o mouse e, conforme a variante, defesa ou reino. A variante `V9990P1` roda também `occl_p1` (oclusão por prédios) e `flash_p1` (clarão de dano). `tests/kernel012.tcl` valida a rotina Z80 do Fog contra a referência.
+
+O openMSX **grava `z80_freq` nas configurações**. `tests/helpers.tcl` fixa 3,58 MHz em todo teste; sem isso, medições herdam uma frequência de execuções anteriores.
+
+Todos os recursos dos testes são coletados por comandos normais. O depurador lê RAM/VRAM para verificar resultados, sem escrever saldos, unidades, obras ou posições, com exceção do kernel012 (dados sintéticos para validar a rotina Z80) e dos testes `occl_p1` e `flash_p1`, que posicionam unidades e forçam vida e contadores de dano para produzir as capturas. Ver `test_report.md` (v0.12) e `../RELATORIO_v0.13.md`.
 
 ## Próximas etapas
 

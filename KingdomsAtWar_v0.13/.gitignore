@@ -1,0 +1,12 @@
+# Test outputs and per-run files
+tests/*.log
+tests/*.bin
+tests/*.fifo
+tests/symbols-*.tcl
+tests/host/*.so
+tests/KAW*.ROM
+tests/*_dbg.tcl
+screenshots/
+# Build products (the ROMs and build/<variant>/ maps are published on purpose)
+src/out/
+.toolchain/

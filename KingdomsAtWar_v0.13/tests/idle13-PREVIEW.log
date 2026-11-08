@@ -1,5 +1,0 @@
-ROM_SHA256 de2d00a240619db183b54804ab9d25779097c38468609fad24a77ab47943a868
-ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
-error: Could not open sequencer: No such file or directory
-IDLE loops,charw,swaps,erase,vframes,rendered,ticks start=1957 114 66 0 2000 2 1000 end=2256 124 76 0 2300 2 1149 mouse=56,56
-RESULT failures=0

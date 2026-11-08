@@ -1,7 +1,0 @@
-ROM_SHA256 dff5a8600f7b23831bf32f0112367265b03950c00129d06780ee733feaaad4f2
-ALSA lib seq_hw.c:528:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory
-error: Could not open sequencer: No such file or directory
-PERF seconds=2.9905474019742684 frames=24 loops=41 ticks=90 samples=fixed 165 bank31 25 bank27 17 bank11 4 bank26 11 bank30 2 bank12 33 bank29 4 bank14 6 bank13 2 bank15 6
-PASS one_unit_arrives
-info: Screen saved to ../screenshots/V9990/perf091.png
-RESULT failures=0
