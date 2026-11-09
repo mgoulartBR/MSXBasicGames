@@ -3,9 +3,7 @@ u8 art_index(u8 x,u8 y) __banked;
 u8 art_tile(u8 x,u8 y);
 u8 unit_art_frame(u8 i) __banked;
 u8 unit_position(u8 i) __banked;
-#ifdef KAW_P1
 u8 unit_prep(u8 i) __banked;extern u8 unit_prep_f;
-#endif
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);
 u8 free_at(u8 x,u8 y,u8 who);
@@ -69,7 +67,6 @@ void video_hud_begin(void);
 void video_hud_end(void);
 void video_hud_flush(void);
 void video_cursor(void);
-void video_present(u8 p);
 
 void combat_init(void) __banked;
 void combat_tick(void) __banked;
@@ -85,16 +82,11 @@ void group_context(void) __banked;
 
 void left_prepare(void) __banked;
 
-u16 damage_mask(u8 p,u16 mask,u8 flags) __banked;
 
 u8 military_selected(void) __banked;
 u8 combat_position(u8 i,u8 x,u8 y,u8 t) __banked;
 void combat_impact(u8 t,u8 damage,u8 owner) __banked;
 void projectile_tick(void) __banked;
-u16 arrow_damage(u8 p,u16 mask) __banked;
-void arrow_draw(u8 p) __banked;
-void world_fill(i16 x,i16 y,u8 w,u8 h,u8 p,u8 c);
-void restore_field(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy);
 
 
 u8 fog_at(u8 x,u8 y);
@@ -102,22 +94,16 @@ u8 fog_art(u8 x,u8 y);
 u8 fog_target(u8 t) __banked;
 void fog_init(void) __banked;
 void fog_update(void) __banked;
-u16 fog_damage(u8 p,u16 mask) __banked;
-void fog_apply(u8 p) __banked;
-void fog_cover(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy) __banked;
-void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy);
 u8 line_clear(u8 x,u8 y,u8 tx,u8 ty,u8 water,u8 ignore) __banked;
 u8 military_damage(u8 kind,u8 owner) __banked;
 u8 structure_max_hp(u8 id) __banked;
 void structure_dirty(u8 id) __banked;
-void structure_bars(u8 p) __banked;
 u8 structure_context(void) __banked;
 void tower_tick(void) __banked;
 u8 repair_order(u8 id) __banked;
 void repair_tick(void) __banked;
 u8 repair_context(void) __banked;
 
-u8 fog_page_pending(u8 p) __banked;
 
 void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);

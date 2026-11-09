@@ -10,6 +10,7 @@ Jogo de estratégia em tempo real para MSX2 (C + Z80, MSXgl, ROM ASCII8 de 256 K
 - V9990 com apresentação por interrupção de vertical blank, scroll incremental e Fog gravado no mundo.
 - **Novo: `KAW9990P1.ROM`**, o V9990 em modo P1 (mapa de tiles com scroll por hardware e unidades como sprites). Com 4 unidades andando, roda a cerca de 19 quadros por segundo no openMSX a 3,58 MHz, contra cerca de 3,5 na v0.12.
 - A ROM `KAW68PV.ROM` (PREVIEW V9958) deixou de ser entregue.
+- **Versão congelada:** os renderizadores bitmap V9990 (`KAW9990.ROM`) e V9968 (`KAW9968.ROM`) ficam congelados como binários no commit `3b6414d02c2941c67166ca010190f48b8dd5da9a` (marque com `git tag v0.13-final 3b6414d && git push origin v0.13-final`). A árvore de código atual compila **somente** `KAW9990P1.ROM`; o desenvolvimento segue só em P1.
 
 ## Funcionalidades da v0.11 preservadas
 
@@ -61,8 +62,8 @@ Esta versão não inclui IA de expansão, tela de vitória/derrota, novas anima�
 
 | ROM | Destino | Evidência |
 |---|---|---|
-| KAW9968.ROM | V9968 principal/secundário | Compilação e recusa de V9958; roda no openMSX com o script `v9968_shim.tcl`; execução positiva no hardware pendente |
-| KAW9990.ROM | MSX2 + V9990/GFX9000, modo bitmap | Executada no openMSX pela saída GFX9000 |
+| KAW9968.ROM (congelada) | V9968 principal/secundário | Compilação e recusa de V9958; congelada; script `v9968_shim.tcl` no kit; execução positiva no hardware pendente |
+| KAW9990.ROM (congelada) | MSX2 + V9990/GFX9000, modo bitmap | Executada no openMSX pela saída GFX9000 |
 | KAW9990P1.ROM | MSX2 + V9990/GFX9000, modo P1 (tiles e sprites) | Executada no openMSX pela saída GFX9000; mais rápida, carregamento inicial mais longo |
 
 As três ROMs têm **256 KiB, mapper ASCII8**. Use um carregador compatível com esse mapper. Código e gráficos usam bancos separados; não há requisito de RAM Mapper. A leitura dos assets preserva o BIOS e restaura o banco de código.
@@ -146,20 +147,18 @@ No quartel, o rodapé oferece SWORD, SPEAR e ARCHER. Os tipos avançados exigem 
 
 O cenário preserva as árvores compostas e suas sobreposições. O castelo usa 64×64 pixels, a casa 48×48 e os demais edifícios 64×64, com transparência sobre o terreno. Os arquivos aprovados de v0.6.3 foram integrados sem redesenho em `art07/native`. O gerador reproduzível é `tools/prepare09.py`.
 
-V9990: modo bitmap B1, fundos e todas as 120 poses residentes em VRAM, dois quadros de apresentação. V9968/PREVIEW: dois buffers circulares do campo, scroll fino, atualização das faixas expostas e cache de poses. Ambos usam ordem de profundidade por posição dos pés e sobreposição dos edifícios. O HUD é preparado em área oculta e trocado inteiro; os números atualizam apenas os glifos alterados. Cliques curtos são amostrados durante esperas do VDP e entre os blocos de carregamento das animações.
+V9990 P1: mapa de tiles em duas camadas com scroll por registrador, unidades e efeitos como sprites, retângulos pelo blitter no vertical blank. (Bitmap B1 e V9968: ver commit congelado.) A ordem de profundidade por posição dos pés e sobreposição dos edifícios. O HUD é preparado em área oculta e trocado inteiro; os números atualizam apenas os glifos alterados. Cliques curtos são amostrados durante esperas do VDP e entre os blocos de carregamento das animações.
 
 ## Compilação e testes
 
 ```sh
 python3 tools/prepare09.py
 python3 tools/prepare012.py
-MSXGL_ROOT=/caminho/MSXgl bash ./build.sh V9990 V9968 V9990P1
-bash tests/suite012.sh V9990
-bash tests/suite012.sh V9968
+MSXGL_ROOT=/caminho/MSXgl bash ./build.sh V9990P1
 bash tests/suite012.sh V9990P1
 ```
 
-`build.sh` aceita as variantes `V9990`, `V9968` e `V9990P1`. `KAW_FAST=1` usa a otimização padrão do SDCC em vez de `OPTIMIZED` (compila em cerca de 3 minutos em vez de 9, com código um pouco maior).
+`build.sh` compila a variante `V9990P1` (as variantes bitmap e V9968 estão no commit congelado). `KAW_FAST=1` usa a otimização padrão do SDCC em vez de `OPTIMIZED` (compila em cerca de 3 minutos em vez de 9, com código um pouco maior).
 
 MSXgl fixo em `6fd8858dce9a5a674529b78ec13d64262810eb34`, SDCC 4.6.0 #16555. Requer Node.js, Python/Pillow/NumPy, GCC para o teste de eventos do mouse, openMSX e C-BIOS. O SDK externo não acompanha o pacote.
 

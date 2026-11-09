@@ -194,15 +194,15 @@ u8 building_size(u8 type) {return build_sizes[type];}
 u8 art_tile(u8 x,u8 y) {return art_map[((u16)y<<5)+x];}
 /* S,E,N,W. Kept outside Unit so route/debug ABI stays 16 bytes. */
 
-u8 fog_seen[128],fog_visible[128],fog_next[128],fog_changed[2][128],fog_memory[1024],fog_refresh;
+u8 fog_seen[128],fog_visible[128],fog_next[128],fog_memory[1024],fog_refresh;
 u8 fog_static[128],fog_build_dirty,fog_need[128],fog_delta[128];
 u16 fog_sources[N];
-u8 fog_trail[128],fog_pending[2];u8* fog_dest=fog_next;u16 fog_epoch,fog_checked_epoch[2],fog_checked_x[2],fog_checked_y[2];
+u8 fog_trail[128];u8* fog_dest=fog_next;u16 fog_epoch;
 
 u8 repair_target[N],repair_timer[N],repair_active,repair_pending,tower_cooldown[BMAX];
 u16 tower_shots,repair_spent,repair_healed,fog_updates;
 
-u16 shot_x[PS],shot_y[PS],shot_active,combat_shots,arrow_old[2],arrow_old_x[2][PS],arrow_old_y[2][PS];
+u16 shot_x[PS],shot_y[PS],shot_active,combat_shots;
 i8 shot_dx[PS],shot_dy[PS];
 u8 shot_time[PS],shot_target[PS],shot_damage[PS],shot_owner[PS];
 const u8 unit_range[]={0,1,2,4,1,1,1},unit_damage[]={0,8,7,5,12,36,4},unit_cooldown[]={0,24,30,36,24,60,30};
@@ -307,7 +307,6 @@ u8 passable(u8 x,u8 y)
  t=tile(x,y); return t==0 || t==3;
 }
 u8 combat_alive(u8 i) {return i<RN && unit_hp[i] && (i<unit_count || i>=N);}
-#ifdef KAW_P1
 /* Z80 scan of the unit table: is a living unit standing on, or about to step onto, (fa_x,fa_y)? */
 u8 fa_x,fa_y,fa_who;
 static u8 occ_scan(void) __naked {
@@ -373,18 +372,6 @@ u8 free_at(u8 x,u8 y,u8 who)
  fa_x=x;fa_y=y;fa_who=who;
  return !occ_scan();
 }
-#else
-u8 free_at(u8 x,u8 y,u8 who)
-{
- u8 i;Unit* other=units;
- if(!passable(x,y)) return 0;
- for(i=0;i<RN;++i,++other) if(i!=who && unit_hp[i] && (i<unit_count || i>=N)) {
-  if(other->x==x && other->y==y) return 0;
-  if(other->progress && other->nx==x && other->ny==y) return 0;
- }
- return 1;
-}
-#endif
 
 
 
@@ -458,30 +445,17 @@ void main(void) {
  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
  for(;;) {
   u16 now,dt;
-#ifdef KAW_V9990
   /* With the retrace interrupt doing the page flip, only idle (nothing to draw or flip) waits. */
   video_hud_swap();
-  if(!flip_pending && !sprites_dirty)video_wait();
-#else
-  /* The raster interrupt flips pages; only idle (nothing to draw or flip) waits for the frame. */
-  if(!present_pending && !sprites_dirty)video_wait();
-#endif
+  if(!sprites_dirty)video_wait();
   ++loops;input();now=video_clock();dt=now-last_time;last_time=now;
   if(dt>60)dt=60;
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
-#ifdef KAW_P1
   /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
   if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_update();}
-#else
-  if(fog_refresh)fog_update();
-#endif
   video_stream();camera_update(dt);
-#ifdef KAW_V9990
-  if(sprites_dirty) {while(flip_pending){}video_sprites();sprites_dirty=0;}
-#else
-  if(sprites_dirty) {while(present_pending)Halt();video_sprites();sprites_dirty=0;}
-#endif
+  if(sprites_dirty) {video_sprites();sprites_dirty=0;}
   hud();
  }
 }

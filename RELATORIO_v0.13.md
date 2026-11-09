@@ -1,5 +1,7 @@
 # Relatório v0.13 — desempenho
 
+> **Decisão (novembro de 2026):** o desenvolvimento segue somente em `KAW9990P1.ROM`. Os renderizadores bitmap V9990 e V9968 ficam congelados como binários no commit `3b6414d02c2941c67166ca010190f48b8dd5da9a` (tag `v0.13-final` não pôde ser enviada; criar com `git tag v0.13-final 3b6414d && git push origin v0.13-final`). A árvore de código atual foi simplificada para P1 apenas; `KAW9990.ROM` e `KAW9968.ROM` permanecem como binários de referência e já não são reproduzíveis a partir da árvore atual (use o commit congelado).
+
 BigFive Studios · novembro de 2026 · ROMs reproduzidas com MSXgl 6fd8858 e SDCC 4.6.0.
 
 ## 1. Resumo
@@ -20,11 +22,11 @@ A ROM que mais se aproxima da meta é a P1. O V9968 continua bem abaixo: o camin
 
 | Arquivo | Destino | SHA-256 |
 |---|---|---|
-| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `d3544200cd05c0a725f4fb216c6955c8c3bc654c54d80e89e8134819ec9e8615` |
+| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `964772075064abf63238c44051393910978f4df118007df4f50d2728457fb5fe` |
 | `KAW9990.ROM` | MSX2 + V9990/GFX9000, modo bitmap | `7fd205da8b3b187db8d09f9d965d8cdd900e32704d03b2c6a31e488fa8c4fb4f` |
 | `KAW9968.ROM` | MSX2+ com V9968 (e openMSX com o script do kit) | `9e7374f8b8efab6eb2aeaf8d6309ecbe6263c538088e84625b6295707a93a5c4` |
 
-As três têm 256 KiB (ASCII8) e estão em `KingdomsAtWar_v0.13/` e em `KAW_V9968_TestKit/` (launchers para openMSX, `LEIA-ME.md`, `SHA256SUMS.txt`). A prévia `KAW68PV.ROM` (V9958) deixou de existir. Compilar de novo as fontes do repositório reproduz estes três arquivos byte a byte.
+As três têm 256 KiB (ASCII8) e estão em `KingdomsAtWar_v0.13/` e em `KAW_V9968_TestKit/` (launchers para openMSX, `LEIA-ME.md`, `SHA256SUMS.txt`). A prévia `KAW68PV.ROM` (V9958) deixou de existir. Compilar o commit congelado reproduz estes três arquivos byte a byte; a árvore atual compila só a P1.
 
 ## 3. O modo P1 do V9990
 

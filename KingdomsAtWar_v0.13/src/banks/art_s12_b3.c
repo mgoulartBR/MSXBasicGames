@@ -16,13 +16,12 @@ u8 fog_target(u8 t) __banked {
 }
 static u8 fog_merge_ready;
 void fog_init(void) __banked {
- u16 i;fog_merge_ready=0;fog_dest=fog_next;fog_epoch=0;fog_pending[0]=fog_pending[1]=0;fog_checked_epoch[0]=fog_checked_epoch[1]=65535;fog_checked_x[0]=fog_checked_x[1]=fog_checked_y[0]=fog_checked_y[1]=65535;fog_refresh=1;fog_build_dirty=1;fog_updates=0;repair_active=repair_pending=0;tower_shots=repair_spent=repair_healed=0;
- for(i=0;i<128;++i)fog_trail[i]=fog_seen[i]=fog_visible[i]=fog_changed[0][i]=fog_changed[1][i]=0;
+ u16 i;fog_merge_ready=0;fog_dest=fog_next;fog_epoch=0;fog_refresh=1;fog_build_dirty=1;fog_updates=0;repair_active=repair_pending=0;tower_shots=repair_spent=repair_healed=0;
+ for(i=0;i<128;++i)fog_trail[i]=fog_seen[i]=fog_visible[i]=0;
  for(i=0;i<1024;++i)fog_memory[i]=0;
  for(i=0;i<N;++i){fog_sources[i]=65535;repair_target[i]=NONE;repair_timer[i]=0;}
  for(i=0;i<BMAX;++i)tower_cooldown[i]=0;
  fog_update();
- for(i=0;i<128;++i)fog_changed[0][i]=fog_changed[1][i]=0;
 }
 static u8 fog_merge_acc,fog_work_idx[128],fog_work_n;
 /* Single pass with a fast skip: a byte with next==visible and no trail changes nothing (need/delta are
@@ -134,16 +133,6 @@ fm_work:
  ld hl,#_fog_delta
  add hl,bc
  ld (hl),d
- ld hl,#_fog_changed
- add hl,bc
- ld a,(hl)
- or d
- ld (hl),a
- ld hl,#_fog_changed+128
- add hl,bc
- ld a,(hl)
- or d
- ld (hl),a
  ld a,(_fog_merge_acc)
  or d
  ld (_fog_merge_acc),a
@@ -163,14 +152,6 @@ fm_work:
  pop bc
  jr fm_step
  __endasm;
-#else
- u8 i,changed=0;
- for(i=0;i<128;++i) {
-  u8 v=fog_next[i],fresh=fog_trail[i]&~fog_seen[i],d=(fog_visible[i]^v)|fresh;
-  fog_need[i]=(v&~fog_visible[i])|fresh;fog_delta[i]=d;fog_visible[i]=v;fog_seen[i]|=v|fog_trail[i];fog_trail[i]=0;
-  fog_changed[0][i]|=d;fog_changed[1][i]|=d;changed|=d;
- }
- return changed;
 #endif
 }
 void fog_update(void) __banked {
@@ -198,32 +179,10 @@ void fog_update(void) __banked {
    if(fog_memory[c]!=art_map[c]) {fog_memory[c]=art_map[c];if(video_enabled)video_known_tile(c&31,c>>5);}
   }
  }
- #ifdef KAW_P1
  /* P1: a changed cell is just a new name in the tile map (newly visible, remembered or newly seen). */
  if(changed && video_enabled) {
   for(k=0;k<fog_work_n;++k) {u8 d;i=fog_work_idx[k];d=fog_delta[i];if(d)for(j=0;j<8;++j)if(d&fog_bit_table[j]){c=((u16)i<<3)+j;video_world_tile(c&31,c>>5);}}
  }
- #elif defined(KAW_V9990)
- /* Bake the new fog look into the resident world. Pass 1: tiles of newly visible / newly seen cells.
-  * Pass 2: remembered cells get the dither, one copy per horizontal run (visible->remembered cells
-  * already hold the right tile underneath). Only bytes listed by fog_merge are visited. */
- if(changed && video_enabled) {
-  u8 r,run=0,start=0,rrow=0,previ=255,kk,m;
-  for(k=0;k<fog_work_n;++k) {u8 nd;i=fog_work_idx[k];nd=fog_need[i];if(nd)for(j=0;j<8;++j)if(nd&fog_bit_table[j]){c=((u16)i<<3)+j;video_world_tile(c&31,c>>5);}}
-  for(k=0;k<fog_work_n;++k) {
-   u8 d;i=fog_work_idx[k];r=i>>2;kk=i&3;d=fog_delta[i];
-   if(run && (r!=rrow || i!=(u8)(previ+1))){video_world_dither(start,rrow,run);run=0;}
-   previ=i;
-   if(!d) {if(run){video_world_dither(start,rrow,run);run=0;}continue;}
-   for(j=0;j<8;++j) {
-    m=(kk<<3)|j;
-    if((d&fog_bit_table[j]) && fog_at(m,r)==1) {if(!run){start=m;rrow=r;}if(++run==15){video_world_dither(start,rrow,run);run=0;}}
-    else if(run){video_world_dither(start,rrow,run);run=0;}
-   }
-  }
-  if(run)video_world_dither(start,rrow,run);
- }
- #endif
  }
  if(changed) {
   ++fog_epoch;sprites_dirty=3;

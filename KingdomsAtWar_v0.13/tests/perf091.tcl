@@ -22,8 +22,7 @@ proc perf091 {} {
  set device [expr {$variant eq "V9990"?"Sunrise GFX9000 VRAM":"VRAM"}]
  set size [expr {$variant eq "V9990"?524288:131072}]
  set f [open perf091-$variant-vram.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $device 0 $size];close $f
- set f [open perf091-$variant-cache.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S(cache_key) 14];close $f
- set f [open perf091-$variant-meta.txt w];puts $f "[b shown] [w cam_x] [w cam_y]";close $f
+ set f [open perf091-$variant-meta.txt w];puts $f "0 [w cam_x] [w cam_y]";close $f
  puts stderr "RESULT failures=$::failures";exit
 }
 coroutine profile_case091 guard perf091

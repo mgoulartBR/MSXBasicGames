@@ -7,7 +7,7 @@ proc dump07 {name} {
  set f [open $prefix-map.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S(art_map) 1024];close $f
  if {$::env(KAW_VARIANT) eq "V9990"} {set device {Sunrise GFX9000 VRAM};set size 524288} else {set device VRAM;set size 131072}
  set f [open $prefix-vram.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $device 0 $size];close $f
- set f [open $prefix-meta.txt w];puts $f "[w cam_x] [w cam_y] [b shown]";close $f
+ set f [open $prefix-meta.txt w];puts $f "[w cam_x] [w cam_y] 0";close $f
  shot $prefix
 }
 proc camera07 {} {

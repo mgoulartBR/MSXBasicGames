@@ -19,21 +19,16 @@ Symbol Table
     _fog_at                                                         ******** GX
     _fog_bit_table                                                  ******** GX
     _fog_build_dirty                                                ******** GX
-    _fog_changed                                                    ******** GX
-    _fog_checked_epoch                                              ******** GX
-    _fog_checked_x                                                  ******** GX
-    _fog_checked_y                                                  ******** GX
     _fog_delta                                                      ******** GX
     _fog_dest                                                       ******** GX
     _fog_epoch                                                      ******** GX
-  7 _fog_init                                                       00000131 GR
+  7 _fog_init                                                       00000127 GR
     _fog_memory                                                     ******** GX
-  7 _fog_merge                                                      00000254 GR
+  7 _fog_merge                                                      000001E8 GR
   1 _fog_merge_acc                                                  00000001 R
   1 _fog_merge_ready                                                00000000 R
     _fog_need                                                       ******** GX
     _fog_next                                                       ******** GX
-    _fog_pending                                                    ******** GX
     _fog_refresh                                                    ******** GX
     _fog_seen                                                       ******** GX
     _fog_sources                                                    ******** GX
@@ -42,7 +37,7 @@ Symbol Table
   7 _fog_target                                                     00000080 GR
     _fog_trail                                                      ******** GX
   7 _fog_traverse                                                   0000001F GR
-  7 _fog_update                                                     0000033F GR
+  7 _fog_update                                                     000002C5 GR
     _fog_updates                                                    ******** GX
     _fog_visible                                                    ******** GX
   1 _fog_work_idx                                                   00000002 R
@@ -58,16 +53,16 @@ Symbol Table
     _g_BDOS                                                     =   0000F37D G
     _g_BDRCLR                                                   =   0000F3EB G
     _g_BOTTOM                                                   =   0000FC48 G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_BRDATR                                                   =   0000FCB2 G
     _g_BREAKV                                                   =   0000F325 G
     _g_CAPST                                                    =   0000FCAB G
     _g_CASPRV                                                   =   0000FCB1 G
     _g_CGTABL                                                   =   00000004 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_CHAR_16                                                  =   00000034 G
     _g_CHRCNT                                                   =   0000FAF9 G
     _g_CLIKFL                                                   =   0000FBD9 G
@@ -118,16 +113,16 @@ Symbol Table
     _g_GRPPAT                                                   =   0000F3CF G
     _g_GXPOS                                                    =   0000FCB3 G
     _g_GYPOS                                                    =   0000FCB5 G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_HEADER                                                   =   0000F40A G
     _g_HIGH                                                     =   0000F408 G
     _g_HIMEM                                                    =   0000FC4A G
     _g_INSFLG                                                   =   0000FCA8 G
     _g_INTCNT                                                   =   0000FCA2 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_INTFLG                                                   =   0000FC9B G
     _g_INTVAL                                                   =   0000FCA0 G
     _g_JIFFY                                                    =   0000FC9E G
@@ -178,16 +173,16 @@ Symbol Table
     _g_OLDKEY                                                   =   0000FBDA G
     _g_OLDSCR                                                   =   0000FCB0 G
     _g_OLDSTT                                                   =   0000FB0C G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_ONGSBF                                                   =   0000FBD8 G
     _g_PADX                                                     =   0000FC9D G
     _g_PADY                                                     =   0000FC9C G
     _g_PATWRK                                                   =   0000FC40 G
     _g_PLYCNT                                                   =   0000FB40 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_PROCNM                                                   =   0000FD89 G
     _g_PRSCNT                                                   =   0000FB35 G
     _g_PSG_DataPort                                             =   000000A1 
@@ -238,16 +233,16 @@ Symbol Table
     _g_RG3SAV                                                   =   0000F3E2 G
     _g_RG4SAV                                                   =   0000F3E3 G
     _g_RG5SAV                                                   =   0000F3E4 G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_RG6SAV                                                   =   0000F3E5 G
     _g_RG7SAV                                                   =   0000F3E6 G
     _g_ROMA                                                     =   0000FAFA G
     _g_ROMVersion                                               =   0000002B G
     _g_RS2IQ                                                    =   0000FAF5 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_RSFCB                                                    =   0000FB04 G
     _g_RSIQLN                                                   =   0000FB06 G
     _g_RSTMP                                                    =   0000FB03 G
@@ -298,16 +293,16 @@ Symbol Table
     _g_V9_SatusPort                                             =   00000065 
     _g_V9_SysCtrlPort                                           =   00000067 
     _g_V9_VRAMPort                                              =   00000060 
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_VCBA                                                     =   0000FB41 G
     _g_VCBB                                                     =   0000FB66 G
     _g_VCBC                                                     =   0000FB8B G
     _g_VDP_AddrPort                                             =   00000099 
     _g_VDP_DR                                                   =   00000006 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_VDP_DW                                                   =   00000007 G
     _g_VDP_DataPort                                             =   00000098 
     _g_VDP_IRegPort                                             =   0000009B 
@@ -348,13 +343,12 @@ Symbol Table
     b_fog_target                                                =   0000000C G
     b_fog_traverse                                              =   0000000C G
     b_fog_update                                                =   0000000C G
-  7 fm_cleared                                                      0000029F R
-  7 fm_full                                                         00000280 R
-  7 fm_loop                                                         000002B6 R
-  7 fm_lz                                                           00000269 R
-  7 fm_step                                                         000002CC R
-  7 fm_work                                                         000002DC R
-
+  7 fm_cleared                                                      00000233 R
+  7 fm_full                                                         00000214 R
+  7 fm_loop                                                         0000024A R
+  7 fm_lz                                                           000001FD R
+  7 fm_step                                                         00000260 R
+  7 fm_work                                                         00000270 R
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
@@ -368,7 +362,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG12                                     size      745   flags    0
+   7 _SEG12                                     size      649   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

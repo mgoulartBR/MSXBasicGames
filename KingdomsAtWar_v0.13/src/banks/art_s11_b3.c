@@ -13,21 +13,6 @@ u8 structure_max_hp(u8 id) __banked {return buildings[id].type==0?(building_owne
 void structure_dirty(u8 id) __banked {
  u8 y=buildings[id].y;if(y){video_tile(buildings[id].x+1,y-1);video_tile(buildings[id].x+2,y-1);}hud_dirty=3;sprites_dirty=3;
 }
-void structure_bars(u8 p) __banked {
- u8 i;
- for(i=0;i<building_count;++i)if(buildings[i].state && fog_target(128+i)) {
-  u16 x=(u16)buildings[i].x*16,y=(u16)buildings[i].y*16;u8 max=structure_max_hp(i);
-  if(building_owner[i] || building_hp[i]<max){
-#ifdef KAW_BAR_STRIPS
-   u8 w=(u16)building_hp[i]*24/max;
-   clip_copy(x+16,y-4,288+24-w,1270+(building_owner[i]?0:2),24,2,p,cam_x,cam_y);
-#else
-   world_fill(x+16,y-4,24,2,p,12);world_fill(x+16,y-4,(u16)building_hp[i]*24/max,2,p,building_owner[i]?9:5);
-#endif
-  }
-  if(building_owner[i]){world_fill(x+17,y+1,1,10,p,11);world_fill(x+18,y+1,7,4,p,9);}
- }
-}
 static void hp_text(const c8* name,u8 hp,u8 max) {
  c8 text[30];u8 i=0;while(*name && i<14)text[i++]=*name++;text[i++]=' ';text[i++]='H';text[i++]='P';text[i++]=' ';
  text[i++]='0'+hp/100;text[i++]='0'+hp/10%10;text[i++]='0'+hp%10;text[i++]='/';text[i++]='0'+max/100;text[i++]='0'+max/10%10;text[i++]='0'+max%10;text[i]=0;hud_context_text(text);

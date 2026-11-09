@@ -17,9 +17,6 @@ void input(void) __banked {
  }}
  if(KP(KEY_I) || KP(KEY_J) || KP(KEY_K) || KP(KEY_L))mouse_active=0;
  if(x<0)x=0; if(x>248)x=248; if(y<0)y=0; if(y>204)y=204;
-#ifndef KAW_V9990
- if(mouse_x!=(u8)x || mouse_y!=(u8)y) {sprites_dirty|=1;if(mouse_y>=160 || y>=160)hud_dirty=3;}
-#endif
  mouse_x=x; mouse_y=y;
  if(KP(KEY_LEFT)) cam_keys|=1;
  if(KP(KEY_RIGHT)) cam_keys|=2;

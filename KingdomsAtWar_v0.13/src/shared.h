@@ -1,8 +1,3 @@
-#ifdef KAW_V9990
-#ifndef KAW_BAR_STRIPS
-#define KAW_BAR_STRIPS
-#endif
-#endif
 #pragma once
 
 #include "msxgl.h"
@@ -105,9 +100,7 @@ u8 art_index(u8 x,u8 y) __banked;
 u8 art_tile(u8 x,u8 y);
 u8 unit_art_frame(u8 i) __banked;
 u8 unit_position(u8 i) __banked;
-#ifdef KAW_P1
 u8 unit_prep(u8 i) __banked;extern u8 unit_prep_f;
-#endif
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);
 u8 free_at(u8 x,u8 y,u8 who);
@@ -171,7 +164,6 @@ void video_hud_begin(void);
 void video_hud_end(void);
 void video_hud_flush(void);
 void video_cursor(void);
-void video_present(u8 p);
 
 extern u8 unit_facing[RN],unit_frame[RN],unit_walk_dist[RN],unit_walk_phase[RN];
 
@@ -205,29 +197,14 @@ typedef struct {u8 x,y,add;i16 dx,dy;u16 cx,cy;} DragEdge;
 extern DragEdge left_edges[2];
 extern u8 left_seen,left_x,left_y;extern u16 left_wx,left_wy;
 
-u16 damage_mask(u8 p,u16 mask,u8 flags) __banked;
-#include "render_types.h"
-extern Rect rect_now[RN],rect_old[2][RN];
 extern const u16 render_bit[RN];
-extern DMEnt dm[RN];extern u8 dm_n;
-#ifdef KAW_V9990
-u8 fog_query(u8 p,i16* l,i16* t,i16* r,i16* b) __banked;
-#endif
-extern i16 strip_l[2],strip_t[2],strip_r[2],strip_b[2];extern u8 strip_n;
-extern u8 box_old[2],changed_x[2][32],changed_y[2][32],changed_count[2],ghost_old[2],ghost_size[2];
-extern u16 box_l[2],box_t[2],box_r[2],box_b[2],ghost_x[2],ghost_y[2];
-u8 intersect(const Rect* a,const Rect* b);
 
 u8 military_selected(void) __banked;
 u8 combat_position(u8 i,u8 x,u8 y,u8 t) __banked;
 void combat_impact(u8 t,u8 damage,u8 owner) __banked;
 void projectile_tick(void) __banked;
-u16 arrow_damage(u8 p,u16 mask) __banked;
-void arrow_draw(u8 p) __banked;
-void world_fill(i16 x,i16 y,u8 w,u8 h,u8 p,u8 c);
-void restore_field(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy);
 
-extern u16 shot_x[PS],shot_y[PS],shot_active,combat_shots,arrow_old[2],arrow_old_x[2][PS],arrow_old_y[2][PS];
+extern u16 shot_x[PS],shot_y[PS],shot_active,combat_shots;
 extern i8 shot_dx[PS],shot_dy[PS];
 extern u8 shot_time[PS],shot_target[PS],shot_damage[PS],shot_owner[PS];
 extern const u8 unit_range[],unit_damage[],unit_cooldown[];
@@ -238,35 +215,27 @@ u8 fog_art(u8 x,u8 y);
 u8 fog_target(u8 t) __banked;
 void fog_init(void) __banked;
 void fog_update(void) __banked;
-u16 fog_damage(u8 p,u16 mask) __banked;
-void fog_apply(u8 p) __banked;
-void fog_cover(i16 x,i16 y,u16 w,u16 h,u8 p,u16 cx,u16 cy) __banked;
-void clip_copy(i16 wx,i16 wy,u16 sx,u16 sy,u8 w,u8 h,u8 p,u16 cx,u16 cy);
 u8 line_clear(u8 x,u8 y,u8 tx,u8 ty,u8 water,u8 ignore) __banked;
 u8 military_damage(u8 kind,u8 owner) __banked;
 u8 structure_max_hp(u8 id) __banked;
 void structure_dirty(u8 id) __banked;
-void structure_bars(u8 p) __banked;
 u8 structure_context(void) __banked;
 void tower_tick(void) __banked;
 u8 repair_order(u8 id) __banked;
 void repair_tick(void) __banked;
 u8 repair_context(void) __banked;
 
-extern u8 fog_seen[128],fog_visible[128],fog_next[128],fog_changed[2][128],fog_memory[1024],fog_refresh;
+extern u8 fog_seen[128],fog_visible[128],fog_next[128],fog_memory[1024],fog_refresh;
 extern u16 fog_sources[N];
 extern u8 repair_target[N],repair_timer[N],repair_active,tower_cooldown[BMAX];
 extern u16 tower_shots,repair_spent,repair_healed,fog_updates;
 
-u8 fog_page_pending(u8 p) __banked;
 
 void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);
-void video_world_cell(u8 x,u8 y);
 void video_world_tile(u8 x,u8 y);
-void video_world_dither(u8 x,u8 y,u8 n);
 extern const u8 fog_bit_table[8];
-extern u8 fog_trail[128],fog_pending[2];extern u8* fog_dest;extern u16 fog_epoch,fog_checked_epoch[2],fog_checked_x[2],fog_checked_y[2];
+extern u8 fog_trail[128];extern u8* fog_dest;extern u16 fog_epoch;
 
 extern u8 fog_static[128],fog_build_dirty,repair_pending;
 void fog_stamp(u8 x,u8 y,u8 r) __banked;

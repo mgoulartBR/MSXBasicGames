@@ -5,8 +5,8 @@ set seed 12012
 proc rnd012 {} {set ::seed [expr {(1664525*$::seed+1013904223)&0xFFFFFFFF}];return [expr {($::seed>>24)&255}]}
 proc prepare_kernel {} {
  global S kernel_case expected expected_result
- foreach n {fog_seen fog_visible fog_next fog_trail fog_changed} {
-  set a {};set count [expr {$n eq "fog_changed"?256:128}]
+ foreach n {fog_seen fog_visible fog_next fog_trail} {
+  set a {};set count 128
   for {set i 0} {$i<$count} {incr i} {lappend a [expr {$kernel_case==0?0:[rnd012]}]}
   set input($n) $a;debug write_block memory $S($n) [binary format c* $a]
  }
@@ -14,14 +14,12 @@ proc prepare_kernel {} {
  set sl {};for {set i 0} {$i<128} {incr i} {lappend sl [expr {[lindex $input(fog_seen) $i]|[lindex $input(fog_visible) $i]}]}
  set input(fog_seen) $sl;debug write_block memory $S(fog_seen) [binary format c* $sl]
  set expected_result 0
- foreach n {fog_seen fog_visible fog_trail fog_need fog_delta fog_changed} {set expected($n) {}}
- set c0 {};set c1 {}
+ foreach n {fog_seen fog_visible fog_trail fog_need fog_delta} {set expected($n) {}}
  for {set i 0} {$i<128} {incr i} {
   set seen [lindex $input(fog_seen) $i];set old [lindex $input(fog_visible) $i];set v [lindex $input(fog_next) $i];set trail [lindex $input(fog_trail) $i];set fresh [expr {$trail&(~$seen)&255}];set d [expr {($old^$v)|$fresh}]
   lappend expected(fog_seen) [expr {$seen|$v|$trail}];lappend expected(fog_visible) $v;lappend expected(fog_trail) 0;lappend expected(fog_need) [expr {($v&(~$old))|$fresh}];lappend expected(fog_delta) $d
-  lappend c0 [expr {[lindex $input(fog_changed) $i]|$d}];lappend c1 [expr {[lindex $input(fog_changed) [expr {$i+128}]]|$d}];set expected_result [expr {$expected_result|$d}]
+  set expected_result [expr {$expected_result|$d}]
  }
- set expected(fog_changed) [concat $c0 $c1]
  reg SP 62192;reg IX 4660;reg IY 22136;reg PC 61440
 }
 proc check_kernel {} {

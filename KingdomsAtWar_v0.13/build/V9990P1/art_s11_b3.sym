@@ -8,9 +8,8 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        0000053A R
+  7 ___str_0                                                        00000365 R
     __divuchar                                                      ******** GX
-    __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
     _build_names                                                    ******** GX
     _building_count                                                 ******** GX
@@ -19,9 +18,6 @@ Symbol Table
     _building_selected                                              ******** GX
     _building_size                                                  ******** GX
     _buildings                                                      ******** GX
-    _cam_x                                                          ******** GX
-    _cam_y                                                          ******** GX
-    _clip_copy                                                      ******** GX
     _combat_alive                                                   ******** GX
     _fog_target                                                     ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
@@ -58,15 +54,15 @@ Symbol Table
     _g_CSRX                                                     =   0000F3DD G
     _g_CSRY                                                     =   0000F3DC G
     _g_CSTYLE                                                   =   0000FCAA G
+    _g_DATCNT                                                   =   0000FB17 G
+    _g_DEVNUM                                                   =   0000FB16 G
+    _g_DISKVE                                                   =   0000F323 G
+    _g_DPPAGE                                                   =   0000FAF5 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_DATCNT                                                   =   0000FB17 G
-    _g_DEVNUM                                                   =   0000FB16 G
-    _g_DISKVE                                                   =   0000F323 G
-    _g_DPPAGE                                                   =   0000FAF5 G
     _g_DRWANG                                                   =   0000FCBD G
     _g_DRWFLG                                                   =   0000FCBB G
     _g_DRWSCL                                                   =   0000FCBC G
@@ -118,15 +114,15 @@ Symbol Table
     _g_LINWRK                                                   =   0000FC18 G
     _g_LOGOPR                                                   =   0000FB02 G
     _g_LOW                                                      =   0000F406 G
+    _g_LOWLIM                                                   =   0000FCA4 G
+    _g_LSTCOM                                                   =   0000FB1E G
+    _g_LSTMOD                                                   =   0000FB1F G
+    _g_MASTER                                                   =   0000F348 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_LOWLIM                                                   =   0000FCA4 G
-    _g_LSTCOM                                                   =   0000FB1E G
-    _g_LSTMOD                                                   =   0000FB1F G
-    _g_MASTER                                                   =   0000F348 G
     _g_MAXUPD                                                   =   0000F3EC G
     _g_MCLLEN                                                   =   0000FB3B G
     _g_MCLPTR                                                   =   0000FB3C G
@@ -178,15 +174,15 @@ Symbol Table
     _g_QUEBAK                                                   =   0000F971 G
     _g_QUETAB                                                   =   0000F959 G
     _g_QUEUEN                                                   =   0000FB3E G
+    _g_QUEUES                                                   =   0000F3F3 G
+    _g_RAMAD0                                                   =   0000F341 G
+    _g_RAMAD1                                                   =   0000F342 G
+    _g_RAMAD2                                                   =   0000F343 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_QUEUES                                                   =   0000F3F3 G
-    _g_RAMAD0                                                   =   0000F341 G
-    _g_RAMAD1                                                   =   0000F342 G
-    _g_RAMAD2                                                   =   0000F343 G
     _g_RAMAD3                                                   =   0000F344 G
     _g_RDPRIM                                                   =   0000F380 G
     _g_REPCNT                                                   =   0000F3F7 G
@@ -238,15 +234,15 @@ Symbol Table
     _g_STRSRC                                                   =   00000002 G
     _g_SUBRID                                                   =   00000000 G
     _g_SVFFF8                                                   =   0000FFF8 G
+    _g_SVFFFD                                                   =   0000FFFD G
+    _g_T32ATR                                                   =   0000F3C3 G
+    _g_T32CGP                                                   =   0000F3C1 G
+    _g_T32COL                                                   =   0000F3BF G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_SVFFFD                                                   =   0000FFFD G
-    _g_T32ATR                                                   =   0000F3C3 G
-    _g_T32CGP                                                   =   0000F3C1 G
-    _g_T32COL                                                   =   0000F3BF G
     _g_T32NAM                                                   =   0000F3BD G
     _g_T32PAT                                                   =   0000F3C5 G
     _g_TOCNT                                                    =   0000FB03 G
@@ -294,19 +290,19 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _hp_text                                                        00000360 R
+  7 _hp_text                                                        000001B0 R
     _hud_context_text                                               ******** GX
     _hud_dirty                                                      ******** GX
   7 _line_clear                                                     00000000 GR
+  7 _military_damage                                                00000103 GR
+    _mine_phase                                                     ******** GX
+  7 _repair_context                                                 0000030F GR
+    _repair_target                                                  ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  7 _military_damage                                                0000011B GR
-    _mine_phase                                                     ******** GX
-  7 _repair_context                                                 000004E0 GR
-    _repair_target                                                  ******** GX
     _research_level                                                 ******** GX
     _selected                                                       ******** GX
     _shot_active                                                    ******** GX
@@ -320,27 +316,24 @@ Symbol Table
     _shot_y                                                         ******** GX
     _sim_ticks                                                      ******** GX
     _sprites_dirty                                                  ******** GX
-  7 _structure_bars                                                 000001C8 GR
-  7 _structure_context                                              000004A0 GR
-  7 _structure_dirty                                                00000188 GR
-  7 _structure_max_hp                                               00000151 GR
+  7 _structure_context                                              000002CF GR
+  7 _structure_dirty                                                00000170 GR
+  7 _structure_max_hp                                               00000139 GR
     _tile                                                           ******** GX
     _tower_cooldown                                                 ******** GX
     _tower_shots                                                    ******** GX
-  7 _tower_tick                                                     00000541 GR
+  7 _tower_tick                                                     0000036C GR
     _unit_count                                                     ******** GX
     _unit_damage                                                    ******** GX
     _unit_hp                                                        ******** GX
     _unit_kind                                                      ******** GX
     _units                                                          ******** GX
     _video_tile                                                     ******** GX
-    _world_fill                                                     ******** GX
     b_fog_target                                                    ******** GX
     b_hud_context_text                                              ******** GX
     b_line_clear                                                =   0000000B G
     b_military_damage                                           =   0000000B G
     b_repair_context                                            =   0000000B G
-    b_structure_bars                                            =   0000000B G
     b_structure_context                                         =   0000000B G
     b_structure_dirty                                           =   0000000B G
     b_structure_max_hp                                          =   0000000B G
@@ -359,7 +352,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG11                                     size      91E   flags    0
+   7 _SEG11                                     size      70A   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

@@ -10,4 +10,5 @@ KAW_TEST_SCRIPT="$KAW_SUITE_CASE.tcl" python3 tests/run_tests.py "$KAW_SUITE_VAR
 python3 tests/run_mouse.py "$KAW_SUITE_VARIANT" box011.tcl 1
 if [[ "$KAW_SUITE_VARIANT" == V9990P1 ]]; then
  for KAW_P1_CASE in occl_p1 flash_p1; do KAW_TEST_SCRIPT="$KAW_P1_CASE.tcl" python3 tests/run_tests.py V9990P1; done
+ python3 tests/verify_fog_p1.py
 fi

@@ -9,7 +9,7 @@ proc dump_overlay011 {name} {
  foreach {suffix name len} {memory fog_memory 1024 seen fog_seen 128 visible fog_visible 128} {
   set f [open $prefix-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S($name) $len];close $f
  }
- set f [open $prefix-meta.txt w];puts $f "[b shown] [w cam_x] [w cam_y] [b placement_mode] [b place_valid]";close $f
+ set f [open $prefix-meta.txt w];puts $f "0 [w cam_x] [w cam_y] [b placement_mode] [b place_valid]";close $f
  shot $prefix
 }
 proc overlays093 {} {

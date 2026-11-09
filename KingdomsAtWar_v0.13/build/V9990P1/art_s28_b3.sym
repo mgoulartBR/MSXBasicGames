@@ -8,13 +8,13 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        0000050B R
-  7 ___str_1                                                        00000514 R
-  7 ___str_2                                                        0000051B R
-  7 ___str_3                                                        00000522 R
-  7 ___str_4                                                        0000052A R
-  7 ___str_5                                                        00000532 R
-  7 ___str_6                                                        00000537 R
+  7 ___str_0                                                        000004DF R
+  7 ___str_1                                                        000004E8 R
+  7 ___str_2                                                        000004EF R
+  7 ___str_3                                                        000004F6 R
+  7 ___str_4                                                        000004FE R
+  7 ___str_5                                                        00000506 R
+  7 ___str_6                                                        0000050B R
     _building_selected                                              ******** GX
     _cam_x                                                          ******** GX
     _cam_y                                                          ******** GX
@@ -22,14 +22,14 @@ Symbol Table
     _drag_anchor_x                                                  ******** GX
     _drag_anchor_y                                                  ******** GX
     _drag_b                                                         ******** GX
-  7 _drag_begin                                                     000000C9 GR
+  7 _drag_begin                                                     000000B6 GR
     _drag_down                                                      ******** GX
     _drag_l                                                         ******** GX
     _drag_moved                                                     ******** GX
     _drag_prior                                                     ******** GX
     _drag_r                                                         ******** GX
     _drag_t                                                         ******** GX
-  7 _drag_tick                                                      00000101 GR
+  7 _drag_tick                                                      000000EE GR
   7 _edge_point                                                     00000000 R
     _enemy_selected                                                 ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
@@ -307,10 +307,10 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _group_context                                                  00000449 GR
+  7 _group_context                                                  0000041D GR
     _hud_context_text                                               ******** GX
     _left_edges                                                     ******** GX
-  7 _left_prepare                                                   000000C5 GR
+  7 _left_prepare                                                   000000B2 GR
     _left_seen                                                      ******** GX
     _left_wx                                                        ******** GX
     _left_wy                                                        ******** GX
@@ -355,7 +355,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG28                                     size      53D   flags    0
+   7 _SEG28                                     size      511   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

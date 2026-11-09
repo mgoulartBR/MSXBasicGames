@@ -30,3 +30,8 @@ Rode `play-v9990-p1.sh` (Linux/macOS) ou `play-v9990-p1.bat` (Windows). Mesma ar
 - Tem Fog, HUD, caixa de arrastar, barras de vida, clarão de dano, setas, fantasma de construção e oclusão por prédios.
 - Diferenças em relação ao modo bitmap: barras de vida em passos de 2 px; o Fog revela com até cerca de 0,33 s de atraso; a entrada na mina não recorta a unidade; unidades ficam atrás de prédios, nunca de árvores, como no modo bitmap.
 - Não testada em hardware real nem em outro emulador.
+
+
+## Nota de versão
+
+`KAW9990.ROM` (bitmap) e `KAW9968.ROM` estão **congeladas** (commit `3b6414d`). O desenvolvimento continua só em `KAW9990P1.ROM`.

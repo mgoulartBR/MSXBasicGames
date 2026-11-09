@@ -11,7 +11,7 @@ proc dump_fog011 {state} {
  foreach {suffix dev start length} [list map memory $::S(art_map) 1024 memory memory $::S(fog_memory) 1024 seen memory $::S(fog_seen) 128 visible memory $::S(fog_visible) 128 vram $device 0 $size] {
   set f [open $pre-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $dev $start $length];close $f
  }
- set f [open $pre-meta.txt w];puts $f "[b shown] [w cam_x] [w cam_y]";close $f
+ set f [open $pre-meta.txt w];puts $f "0 [w cam_x] [w cam_y]";close $f
  shot $pre
 }
 proc fog_case011 {} {

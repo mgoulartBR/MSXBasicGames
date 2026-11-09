@@ -7,8 +7,7 @@ proc dump091 {name} {
  set device [expr {$variant eq "V9990"?"Sunrise GFX9000 VRAM":"VRAM"}]
  set size [expr {$variant eq "V9990"?524288:131072}]
  set f [open $name-$variant.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $device 0 $size];close $f
- if {$variant eq "PREVIEW"} {set f [open $name-$variant-keys.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S(cache_key) 14];close $f}
- set f [open $name-$variant.txt w];puts $f "[b shown] [w cam_x] [w cam_y]";close $f
+ set f [open $name-$variant.txt w];puts $f "0 [w cam_x] [w cam_y]";close $f
 }
 proc fast_host011 {command a b} {puts $::mf "$command $a $b";flush $::mf;delay 0.04}
 proc box091 {} {

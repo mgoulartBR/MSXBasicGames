@@ -8,8 +8,8 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        0000174F R
-  7 ___str_1                                                        0000175A R
+  7 ___str_0                                                        000015B6 R
+  7 ___str_1                                                        000015C1 R
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
     _attack_cooldown                                                ******** GX
@@ -23,34 +23,34 @@ Symbol Table
     _buildings                                                      ******** GX
     _cam_x                                                          ******** GX
     _cam_y                                                          ******** GX
-  7 _cand_scan                                                      00000F88 R
+  7 _cand_scan                                                      00000E5C R
     _cargo                                                          ******** GX
     _cargo_kind                                                     ******** GX
     _combat_active                                                  ******** GX
     _combat_alive                                                   ******** GX
     _combat_buildings                                               ******** GX
-  7 _combat_click                                                   00000DD6 GR
-  7 _combat_context                                                 000014F7 GR
-  7 _combat_hit_test                                                00000C23 GR
+  7 _combat_click                                                   00000CA9 GR
+  7 _combat_context                                                 000013B8 GR
+  7 _combat_hit_test                                                00000AF7 GR
     _combat_hits                                                    ******** GX
-  7 _combat_impact                                                  0000058C GR
-  7 _combat_init                                                    0000095F GR
+  7 _combat_impact                                                  00000490 GR
+  7 _combat_init                                                    00000838 GR
     _combat_kills                                                   ******** GX
-  7 _combat_position                                                000001F7 GR
+  7 _combat_position                                                0000013C GR
     _combat_shots                                                   ******** GX
-  7 _combat_stop                                                    00000E93 GR
+  7 _combat_stop                                                    00000D67 GR
     _combat_target                                                  ******** GX
-  7 _combat_tick                                                    00001001 GR
+  7 _combat_tick                                                    00000ED5 GR
     _command_last                                                   ******** GX
   1 _cs_j                                                           00000004 R
   1 _cs_own                                                         00000002 R
   1 _cs_rng                                                         00000003 R
   1 _cs_xi                                                          00000000 R
   1 _cs_yi                                                          00000001 R
-  7 _die                                                            0000046F R
-  7 _distance                                                       000000A8 R
+  7 _die                                                            00000377 R
+  7 _distance                                                       000000AE R
     _enemy_selected                                                 ******** GX
-  7 _face                                                           000003EC R
+  7 _face                                                           000002F7 R
     _fog_refresh                                                    ******** GX
     _fog_target                                                     ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
@@ -334,11 +334,11 @@ Symbol Table
     _job_unit                                                       ******** GX
     _line_clear                                                     ******** GX
     _military_damage                                                ******** GX
-  7 _military_selected                                              000003AD GR
+  7 _military_selected                                              000002B8 GR
     _mine_phase                                                     ******** GX
     _nav_base_dirty                                                 ******** GX
-  7 _near_box                                                       00000F09 R
-  7 _number                                                         000014A8 R
+  7 _near_box                                                       00000DDE R
+  7 _number                                                         00001369 R
     _order_one                                                      ******** GX
     _pose_bounds                                                    ******** GX
     _recruit_names                                                  ******** GX
@@ -368,7 +368,7 @@ Symbol Table
     _sprites_dirty                                                  ******** GX
     _stance                                                         ******** GX
     _stock                                                          ******** GX
-  7 _strike                                                         00000715 R
+  7 _strike                                                         00000617 R
     _structure_dirty                                                ******** GX
   7 _target_box                                                     00000000 R
     _terrain                                                        ******** GX
@@ -409,14 +409,14 @@ Symbol Table
     b_structure_dirty                                               ******** GX
     b_unit_position                                                 ******** GX
     b_work_stop                                                     ******** GX
-  7 cs_dx                                                           00000FB6 R
-  7 cs_dxok                                                         00000FBE R
-  7 cs_dy                                                           00000FC9 R
-  7 cs_dyok                                                         00000FD1 R
-  7 cs_loop                                                         00000F9E R
-  7 cs_next                                                         00000FF2 R
-  7 cs_none                                                         00000FFC R
-  7 cs_ok                                                           00000FEE R
+  7 cs_dx                                                           00000E8A R
+  7 cs_dxok                                                         00000E92 R
+  7 cs_dy                                                           00000E9D R
+  7 cs_dyok                                                         00000EA5 R
+  7 cs_loop                                                         00000E72 R
+  7 cs_next                                                         00000EC6 R
+  7 cs_none                                                         00000ED0 R
+  7 cs_ok                                                           00000EC2 R
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
@@ -430,7 +430,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG26                                     size     1766   flags    0
+   7 _SEG26                                     size     15CD   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

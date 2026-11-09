@@ -81,7 +81,6 @@ nav_store094$:
  * (queue[0..qtail)) and on the unit cells it blocked, so those alone are restored; terrain changes
  * (nav_base_dirty) force the full rebuild. */
 static u8 nav_clean;static u16 nav_marks[2*RN];static u8 nav_mark_n;
-static u8 nav_base(u16 c) {u8 t=terrain[c];return (t==0 || t==3)?255:253;}
 /* Z80: restore the pristine parent map for a list of cells (253 blocked, 255 free by terrain). */
 static void nav_restore(const u16* list,u16 n) __naked {list;n;__asm
  ld a,d

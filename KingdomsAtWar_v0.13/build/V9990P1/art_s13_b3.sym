@@ -305,11 +305,11 @@ Symbol Table
 
     _repair_active                                                  ******** GX
     _repair_healed                                                  ******** GX
-  7 _repair_order                                                   000005AA GR
+  7 _repair_order                                                   000004C2 GR
     _repair_pending                                                 ******** GX
     _repair_spent                                                   ******** GX
     _repair_target                                                  ******** GX
-  7 _repair_tick                                                    000006FC GR
+  7 _repair_tick                                                    00000608 GR
     _repair_timer                                                   ******** GX
     _requested                                                      ******** GX
     _resource_empty                                                 ******** GX
@@ -356,7 +356,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG13                                     size      984   flags    0
+   7 _SEG13                                     size      861   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 
