@@ -21,7 +21,7 @@ void fog_init(void) __banked {
  for(i=0;i<1024;++i)fog_memory[i]=0;
  for(i=0;i<N;++i){fog_sources[i]=65535;repair_target[i]=NONE;repair_timer[i]=0;}
  for(i=0;i<BMAX;++i)tower_cooldown[i]=0;
- fog_update();
+ if(fog_update())fog_apply();
 }
 static u8 fog_merge_acc,fog_work_idx[128],fog_work_n;
 /* Single pass with a fast skip: a byte with next==visible and no trail changes nothing (need/delta are
@@ -154,13 +154,77 @@ fm_work:
  __endasm;
 #endif
 }
-void fog_update(void) __banked {
- u16 c;u8 i,j,changed=0;
+
+static u8 fb_mode,fb_k,fb_v,fb_i,fb_j;static const u8* fb_arr;
+void fog_act(u16 c) {
+ if(fb_mode==0){if(fog_memory[c]!=art_map[c]){fog_memory[c]=art_map[c];if(video_enabled)video_known_tile(c&31,c>>5);}}
+ else video_world_tile(c&31,c>>5);
+}
+/* Z80: visit every set bit of arr[] over the touched bytes in fog_work_idx[]; cell = byte*8+bit. */
+static void fog_bits(const u8* arr) __naked {
+ __asm
+ ld (_fb_arr),hl
+ xor a,a
+ ld (_fb_k),a
+fb_lp:
+ ld a,(_fb_k)
+ ld hl,#_fog_work_n
+ cp a,(hl)
+ jp nc,fb_end
+ ld e,a
+ ld d,#0
+ ld hl,#_fog_work_idx
+ add hl,de
+ ld a,(hl)
+ ld (_fb_i),a
+ ld e,a
+ ld hl,(_fb_arr)
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,fb_nx
+ ld (_fb_v),a
+ xor a,a
+ ld (_fb_j),a
+fb_bit:
+ ld a,(_fb_v)
+ or a,a
+ jp z,fb_nx
+ srl a
+ ld (_fb_v),a
+ jp nc,fb_skip
+ ld a,(_fb_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld a,(_fb_j)
+ ld e,a
+ ld d,#0
+ add hl,de
+ call _fog_act
+fb_skip:
+ ld hl,#_fb_j
+ inc (hl)
+ jp fb_bit
+fb_nx:
+ ld hl,#_fb_k
+ inc (hl)
+ jp fb_lp
+fb_end:
+ ret
+ __endasm;
+}
+static u8 fog_chg;
+/* Phase 1 of a sight update: recompute and merge the visibility (returns 1 when fog_apply must follow). */
+u8 fog_update(void) __banked {
+ u8 i;
  for(i=0;i<N;++i) {
   u16 source=(i<unit_count && unit_hp[i] && !(WORKER(i) && mine_phase[i]==2))?((u16)units[i].y<<5)+units[i].x:65535;
   if(source!=fog_sources[i]){fog_sources[i]=source;fog_refresh=1;}
  }
- if(!fog_refresh)return;fog_refresh=0;++fog_updates;
+ if(!fog_refresh)return 0;fog_refresh=0;++fog_updates;
  if(fog_build_dirty) {
  fog_build_dirty=0;fog_dest=fog_static;__builtin_memset(fog_static,0,128);
  for(i=0;i<building_count;++i)if(!building_owner[i] && buildings[i].state) {
@@ -170,20 +234,15 @@ void fog_update(void) __banked {
  }
  __builtin_memcpy(fog_next,fog_static,128);fog_dest=fog_next;
  for(i=0;i<unit_count;++i)if(fog_sources[i]!=65535)sight(units[i].x,units[i].y,unit_kind[i]==4?6:5);
- changed=fog_merge();
- {u8 k;
- for(k=0;k<fog_work_n;++k) {
-  u8 need;i=fog_work_idx[k];need=fog_need[i];
-  if(need)for(j=0;j<8;++j)if(need&fog_bit_table[j]) {
-   c=((u16)i<<3)+j;
-   if(fog_memory[c]!=art_map[c]) {fog_memory[c]=art_map[c];if(video_enabled)video_known_tile(c&31,c>>5);}
-  }
- }
+ fog_chg=fog_merge();
+ return 1;
+}
+/* Phase 2, one frame later: remembered tiles, tile names and the epoch bump for what phase 1 changed. */
+void fog_apply(void) __banked {
+ u8 i,changed=fog_chg;
+ fb_mode=0;fog_bits(fog_need);
  /* P1: a changed cell is just a new name in the tile map (newly visible, remembered or newly seen). */
- if(changed && video_enabled) {
-  for(k=0;k<fog_work_n;++k) {u8 d;i=fog_work_idx[k];d=fog_delta[i];if(d)for(j=0;j<8;++j)if(d&fog_bit_table[j]){c=((u16)i<<3)+j;video_world_tile(c&31,c>>5);}}
- }
- }
+ if(changed && video_enabled){fb_mode=1;fog_bits(fog_delta);}
  if(changed) {
   ++fog_epoch;sprites_dirty=3;
   if(enemy_selected!=NONE && !fog_target(enemy_selected)){enemy_selected=NONE;hud_dirty=3;}

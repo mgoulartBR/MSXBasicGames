@@ -73,6 +73,7 @@ u8 mouse_x,mouse_y,mode,selected,last_keys,cam_keys;
 u8 hud_mode,hud_selection,hud_state,sprites_dirty;
 u16 sim_ticks,loops,last_time,accumulator,fog_last;
 #define FOG_GAP 20
+u8 fog_pending;
 u16 terrain_copies,scroll_copies,full_redraws,nav_expansions;
 u16 camera_pixels,camera_phase;
 u16 blit_ticks,edge_ticks;
@@ -453,7 +454,8 @@ void main(void) {
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
   /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
-  if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_update();}
+  if(fog_pending){fog_pending=0;fog_apply();}
+  else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}
   video_stream();camera_update(dt);
   if(sprites_dirty) {video_sprites();sprites_dirty=0;}
   hud();

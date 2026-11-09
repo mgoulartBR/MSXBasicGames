@@ -6,6 +6,7 @@
 - Comum: rotas com mapa de busca persistente e restauração em Z80, busca de alvos e subsistemas ociosos puláveis, Fog (`fog_merge`) sem varreduras redundantes, entrada por uma varredura de teclado por quadro.
 - Removido: `KAW68PV.ROM` (PREVIEW V9958).
 - **Desempenho P1:** ordenação dos atores e o laço de emissão de sprites (envio de pose, oclusão, barra de vida, bloco, anel) em Z80. 4 unidades andando: ≈29 quadros/s medidos sem as esperas ociosas do teste (`tests/fps_active.py`); o `perf012` bruto inclui essas esperas e dá ≈22.
+- **Fog em duas fases:** `fog_update` só recalcula e funde a visibilidade; `fog_apply`, no quadro seguinte, atualiza memória, nomes de tiles e época (varredura de bits em Z80). Pior quadro do cenário de 4 unidades: 74 → 59 ms. A média fica em ≈29 fps, no limite da simulação a 30 Hz.
 - **Simplificação:** código bitmap/V9968 removido da árvore (congelado no commit `3b6414d`); `video_p1.h` virou `video.h`; ≈1 KB de RAM liberado (RAM_end EE67); testes B1/V9968 removidos; `verify_fog_p1.py` novo.
 - Testes: `suite012.sh` roda `V9990P1`; novos `occl_p1.tcl` e `flash_p1.tcl`; `perf012.tcl` mede 1 e 4 unidades; `tests/prof13.py`, `incl13.py` e `lineprof.py` para perfil.
 
