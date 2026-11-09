@@ -323,7 +323,7 @@ static u8 unit_prep_in(u8 i) {
 void up_slow(u8 i) {
  actor_visible[i]=unit_prep_in(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;
 }
-static u8 upa_i,upa_v;
+static u8 upa_i,upa_v,up_idle[RN],up_par;static u16 up_fe;
 /* Z80: all render slots. Culled ones are hidden; workers take the C path; the others use up_plain. */
 static void units_prep_asm(void) __naked {
  __asm
@@ -364,9 +364,32 @@ upa_sh:
  or a,a
  jp z,upa_plain
  ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_up_idle
+ add hl,de
+ ld (hl),#0
+ ld a,(_upa_i)
  call _up_slow
  jp upa_next
 upa_plain:
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_up_idle
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,upa_do
+ ld a,(_up_par)
+ xor a,e
+ and a,#15
+ jp z,upa_do
+ call upa_isidle
+ or a,a
+ jp z,upa_do
+ jp upa_next
+upa_do:
  ld a,(_upa_i)
  call _up_plain
  ld (_upa_v),a
@@ -421,11 +444,21 @@ upa_plain:
  ld hl,#_actor_key
  add hl,de
  ld (hl),a
+ call upa_isidle
+ ld hl,#_upa_i
+ ld e,(hl)
+ ld d,#0
+ ld hl,#_up_idle
+ add hl,de
+ ld (hl),a
  jp upa_next
 upa_cull:
  ld a,(_upa_i)
  ld e,a
  ld d,#0
+ ld hl,#_up_idle
+ add hl,de
+ ld (hl),#0
  ld hl,#_actor_visible
  add hl,de
  ld (hl),#0
@@ -436,11 +469,51 @@ upa_next:
  ld hl,#_upa_i
  inc (hl)
  jp upa_lp
+upa_isidle:
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld bc,#_units+13
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jp nz,upa_ni
+ inc hl
+ inc hl
+ ld a,(hl)
+ cp a,#2
+ jp z,upa_ni
+ ld hl,#_attack_flash
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp nz,upa_ni
+ ld hl,#_unit_hp
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,upa_ni
+ ld a,#1
+ ret
+upa_ni:
+ xor a,a
+ ret
  __endasm;
 }
 u8 unit_prep(u8 i) __banked {return unit_prep_in(i);}
 /* All render slots in one banked call. */
-void units_prep(void) __banked {units_prep_asm();}
+void units_prep(void) __banked {
+ u8 i;
+ if(fog_epoch!=up_fe){up_fe=fog_epoch;for(i=0;i<RN;++i)up_idle[i]=0;}
+ ++up_par;units_prep_asm();
+}
+void units_prep_reset(void) __banked {u8 i;for(i=0;i<RN;++i)up_idle[i]=0;up_par=0;up_fe=fog_epoch;}
 u8 unit_art_frame(u8 i) __banked {
  Unit* u=&units[i];u8 d=unit_facing[i],f;
  if(WORKER(i) && mine_phase[i])d=mine_phase[i]==3?0:2;

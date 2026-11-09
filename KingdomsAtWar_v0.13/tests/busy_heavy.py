@@ -6,7 +6,7 @@ from pathlib import Path
 R=Path(__file__).resolve().parents[1];v=sys.argv[1] if len(sys.argv)>1 else 'V9990P1'
 o=subprocess.run([sys.executable,str(R/'tests/prof13.py'),v],env=dict(os.environ,BASE='heavy012.tcl',TOP='9999'),capture_output=True,text=True).stdout
 fr={m[1]:int(m[2]) for m in re.finditer(r'^METRIC (\w+) seconds=\S+ frames=(\d+)',o,re.M)}
-for ph in ('eight','fight'):
+for ph in ('mixed','eight','fight'):
     blk=o.split('PROFILE %s'%ph)[1].split('PROFILE')[0]
     rows=[(int(a),n) for a,n in re.findall(r'^\s+[\d.]+% +(\d+) (\S+)',blk,re.M)]
     tot=sum(a for a,n in rows);idle=sum(a for a,n in rows if n.endswith(('video_wait','V9_GetPort')))

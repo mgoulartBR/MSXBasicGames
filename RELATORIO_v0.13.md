@@ -22,7 +22,7 @@ A ROM que mais se aproxima da meta é a P1. O V9968 continua bem abaixo: o camin
 
 | Arquivo | Destino | SHA-256 |
 |---|---|---|
-| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `896873c05f4698095c0f006e4bf004ed89bbb03ab067a05e4181874955eaf971` |
+| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `e9d429738ca14226987089fcd193d517245d553fce1a363828ba9705134a68dc` |
 | `KAW9990.ROM` | MSX2 + V9990/GFX9000, modo bitmap | `7fd205da8b3b187db8d09f9d965d8cdd900e32704d03b2c6a31e488fa8c4fb4f` |
 | `KAW9968.ROM` | MSX2+ com V9968 (e openMSX com o script do kit) | `9e7374f8b8efab6eb2aeaf8d6309ecbe6263c538088e84625b6295707a93a5c4` |
 

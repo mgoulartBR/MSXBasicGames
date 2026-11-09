@@ -22,9 +22,14 @@ proc heavy012 {} {
   debug write memory [expr {$::S(combat_target)+$i}] 255;debug write memory [expr {$::S(unit_build)+$i}] 255
  }
  debug write memory $::S(unit_count) 8
- foreach {i kind} {0 4 1 3 2 4 3 5 4 4 5 3 6 4 7 5} {debug write memory [expr {$::S(unit_kind)+$i}] $kind;debug write memory [expr {$::S(unit_hp)+$i}] 40}
+ foreach {i kind} {0 4 1 3 2 4 3 5 4 4 5 3 6 4 7 5} {debug write memory [expr {$::S(unit_kind)+$i}] $kind;debug write memory [expr {$::S(unit_hp)+$i}] [lindex {32 48 48 32 72 96 48} $kind]}
  ck eight_units {[b unit_count]==8}
  delay 1
+ # misto: 4 caminham, 4 ficam parados e sem selecao
+ debug write memory $::S(selection_mask) 15;world_point 1 3
+ perf_start;tap 5 32;delay 4
+ if {[info exists ::env(KAW_SHOT)]} {shot mixed-$::env(KAW_SHOT)}
+ delay 4;perf_end mixed
  # todos selecionados caminham para o canto: 8 atores grandes, Fog mudando
  tap 2 64;world_point 1 3
  perf_start;tap 5 32;delay 14;perf_end eight

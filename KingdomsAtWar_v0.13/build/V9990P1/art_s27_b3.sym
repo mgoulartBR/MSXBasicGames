@@ -38,6 +38,7 @@ Symbol Table
     _edge_hold                                                      ******** GX
     _edge_keys                                                      ******** GX
     _fog_at                                                         ******** GX
+    _fog_epoch                                                      ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
     _g_ASPCT2                                                   =   0000F40D G
@@ -57,12 +58,12 @@ Symbol Table
     _g_CHAR_16                                                  =   00000034 G
     _g_CHRCNT                                                   =   0000FAF9 G
     _g_CLIKFL                                                   =   0000FBD9 G
-    _g_CLIKSW                                                   =   0000F3DB G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_CLIKSW                                                   =   0000F3DB G
     _g_CLMLST                                                   =   0000F3B2 G
     _g_CLOC                                                     =   0000F92A G
     _g_CLPRIM                                                   =   0000F38C G
@@ -117,12 +118,12 @@ Symbol Table
     _g_INTFLG                                                   =   0000FC9B G
     _g_INTVAL                                                   =   0000FCA0 G
     _g_JIFFY                                                    =   0000FC9E G
-    _g_KANAMD                                                   =   0000FCAD G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_KANAMD                                                   =   0000FCAD G
     _g_KANAST                                                   =   0000FCAC G
     _g_KANJTABLE                                                =   0000F30F G
     _g_KEYBUF                                                   =   0000FBF0 G
@@ -177,12 +178,12 @@ Symbol Table
     _g_PROCNM                                                   =   0000FD89 G
     _g_PRSCNT                                                   =   0000FB35 G
     _g_PSG_DataPort                                             =   000000A1 
-    _g_PSG_Ext_DataPort                                         =   00000011 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_PSG_Ext_DataPort                                         =   00000011 
     _g_PSG_Ext_RegPort                                          =   00000010 
     _g_PSG_Ext_StatPort                                         =   00000012 
     _g_PSG_RegPort                                              =   000000A0 
@@ -237,12 +238,12 @@ Symbol Table
     _g_RSFCB                                                    =   0000FB04 G
     _g_RSIQLN                                                   =   0000FB06 G
     _g_RSTMP                                                    =   0000FB03 G
-    _g_RTC_AddrPort                                             =   000000B4 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_RTC_AddrPort                                             =   000000B4 
     _g_RTC_DataPort                                             =   000000B5 
     _g_RTYCNT                                                   =   0000FC9A G
     _g_SAVSP                                                    =   0000FB36 G
@@ -297,12 +298,12 @@ Symbol Table
     _g_VDP_DW                                                   =   00000007 G
     _g_VDP_DataPort                                             =   00000098 
     _g_VDP_IRegPort                                             =   0000009B 
-    _g_VDP_PalPort                                              =   0000009A 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_VDP_PalPort                                              =   0000009A 
     _g_VDP_RegPort                                              =   00000099 
     _g_VDP_StatPort                                             =   00000099 
     _g_VOICAQ                                                   =   0000F975 G
@@ -343,7 +344,7 @@ Symbol Table
     _stock                                                          ******** GX
     _terrain                                                        ******** GX
     _tile                                                           ******** GX
-  7 _unit_art_frame                                                 00001046 GR
+  7 _unit_art_frame                                                 00001110 GR
     _unit_build                                                     ******** GX
     _unit_count                                                     ******** GX
     _unit_draw_x                                                    ******** GX
@@ -352,24 +353,28 @@ Symbol Table
     _unit_frame                                                     ******** GX
     _unit_hp                                                        ******** GX
     _unit_kind                                                      ******** GX
-  7 _unit_position                                                  00001345 GR
-  7 _unit_prep                                                      00001037 GR
+  7 _unit_position                                                  0000140F GR
+  7 _unit_prep                                                      000010AE GR
   1 _unit_prep_f                                                    00000000 GR
   7 _unit_prep_in                                                   00000B43 R
     _unit_walk_dist                                                 ******** GX
-    _unit_walk_phase                                                ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _unit_walk_phase                                                ******** GX
     _units                                                          ******** GX
-  7 _units_prep                                                     00001043 GR
+  7 _units_prep                                                     000010BA GR
   7 _units_prep_asm                                                 00000F74 R
+  7 _units_prep_reset                                               000010EE GR
   1 _up_d                                                           00000002 R
   1 _up_f                                                           00000003 R
+  1 _up_fe                                                          00000013 R
   1 _up_fl                                                          00000004 R
   1 _up_i                                                           00000001 R
+  1 _up_idle                                                        00000008 R
+  1 _up_par                                                         00000012 R
   7 _up_plain                                                       000009D7 R
   7 _up_slow                                                        00000EF0 GR
   1 _up_sz                                                          00000005 R
@@ -392,6 +397,7 @@ Symbol Table
     b_unit_position                                             =   0000001B G
     b_unit_prep                                                 =   0000001B G
     b_units_prep                                                =   0000001B G
+    b_units_prep_reset                                          =   0000001B G
   7 up_addf                                                         00000A50 R
   7 up_alive                                                        00000A9A R
   7 up_draw                                                         00000AAF R
@@ -411,26 +417,34 @@ Symbol Table
   7 up_still                                                        00000A4E R
   7 up_two                                                          00000A25 R
   7 up_west                                                         00000A10 R
-  7 upa_cull                                                        0000101E R
+  7 upa_cull                                                        0000105A R
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+  7 upa_do                                                          00000FEB R
+  7 upa_isidle                                                      00001079 R
   7 upa_lo                                                          00000F89 R
   7 upa_lp                                                          00000F78 R
-  7 upa_next                                                        00001030 R
-  7 upa_plain                                                       00000FBD R
+  7 upa_next                                                        00001072 R
+  7 upa_ni                                                          000010AC R
+  7 upa_plain                                                       00000FC9 R
   7 upa_sh                                                          00000F8C R
 
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
 Hexadecimal [32-Bits]
 
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size        8   flags    0
+   1 _DATA                                      size       15   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG27                                     size     14BF   flags    0
+   7 _SEG27                                     size     1589   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

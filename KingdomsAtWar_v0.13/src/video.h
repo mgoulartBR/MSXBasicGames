@@ -575,7 +575,7 @@ void ae_occ(u8 i) {
 }
 void bar_calc(u8 i) {
  bar_sig[i]=unit_hp[i]|((u16)unit_kind[i]<<8);
- bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);
+ {u8 w=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);bar_w[i]=w>8?8:w;}
 }
 static u8 ab_i,ab_w,ab_y;static u16 ab_x;
 static const u8 cbw=CELL_BAR_WHITE,ccross=CELL_CROSS,cba=CELL_BAR_ALLY,cbe=CELL_BAR_ENEMY;
@@ -837,28 +837,23 @@ ae_noocc:
  ld a,(_draw_opt)
  and a,#1
  jp nz,ae_nobar
- ld a,(_draw_opt)
- and a,#8
- jp nz,ae_hpchk
  ld a,(_ae_i)
- ld l,a
- ld h,#0
- add hl,hl
- add hl,hl
- add hl,hl
- add hl,hl
- ld de,#_units+10
- add hl,de
- ld a,(hl)
- or a,a
- jp nz,ae_dobar
- ld a,(_ae_i)
- ld e,a
- ld d,#0
- ld hl,#_combat_target
- add hl,de
- ld a,(hl)
- inc a
+ ld hl,#_enemy_selected
+ cp a,(hl)
+ jp z,ae_dobar
+ cp a,#8
+ jp nc,ae_hpchk
+ ld b,a
+ ld a,#1
+ inc b
+ae_bs:
+ dec b
+ jp z,ae_bsd
+ add a,a
+ jp ae_bs
+ae_bsd:
+ ld hl,#_selection_mask
+ and a,(hl)
  jp nz,ae_dobar
 ae_hpchk:
  ld a,(_ae_i)
@@ -1086,7 +1081,7 @@ void video_init(void) {
  cache_tick=frame_uploads=rendered_frames=0;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;bar_sig[i]=65535;}
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
- draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
+ units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
  for(i=0;i<OCC_N;++i){occ_key[i]=255;occ_stamp[i]=0;occ_pend[i]=0;}
  p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
