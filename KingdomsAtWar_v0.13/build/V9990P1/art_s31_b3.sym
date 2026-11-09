@@ -23,7 +23,7 @@ Symbol Table
     _combat_position                                                ******** GX
     _combat_target                                                  ******** GX
     _combat_tick                                                    ******** GX
-  7 _deposit_choose                                                 00000F74 GR
+  7 _deposit_choose                                                 00000F87 GR
     _deposit_id                                                     ******** GX
     _economy                                                        ******** GX
     _edge_hold                                                      ******** GX
@@ -316,8 +316,8 @@ Symbol Table
     _mine_turn                                                      ******** GX
   7 _mine_waiter                                                    00000130 R
     _mode                                                           ******** GX
-  7 _move_remainder                                                 000019A2 GR
-  7 _move_speed                                                     00001995 GR
+  7 _move_remainder                                                 000019B3 GR
+  7 _move_speed                                                     000019A6 GR
   1 _nav_arg                                                        0000002B R
     _nav_base_dirty                                                 ******** GX
   7 _nav_begin                                                      000003E9 GR
@@ -340,7 +340,7 @@ Symbol Table
   7 _nav_target                                                     000001D5 R
     _nav_targets                                                    ******** GX
     _nav_work_mode                                                  ******** GX
-  7 _navigation                                                     00000DD7 GR
+  7 _navigation                                                     00000DE2 GR
     _node_x                                                         ******** GX
     _node_y                                                         ******** GX
     _object_size                                                    ******** GX
@@ -357,13 +357,14 @@ Symbol Table
     _repair_target                                                  ******** GX
     _repair_tick                                                    ******** GX
     _replans                                                        ******** GX
-    _requested                                                      ******** GX
+  7 _req_any                                                        00000DD7 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  7 _resource_empty                                                 000011DF GR
+    _requested                                                      ******** GX
+  7 _resource_empty                                                 000011F2 GR
     _retry_left                                                     ******** GX
     _retry_wait                                                     ******** GX
     _routes                                                         ******** GX
@@ -371,11 +372,11 @@ Symbol Table
   1 _sf_i                                                           0000002D R
   1 _sf_rate                                                        0000002E R
     _shot_active                                                    ******** GX
-  7 _sim_fast                                                       000012B0 R
-  7 _sim_flags                                                      0000136A R
-  7 _sim_scan                                                       000013B4 R
+  7 _sim_fast                                                       000012C3 R
+  7 _sim_flags                                                      0000137D R
+  7 _sim_scan                                                       000013C7 R
     _sim_ticks                                                      ******** GX
-  7 _simulate                                                       0000145C GR
+  7 _simulate                                                       0000146D GR
     _sprites_dirty                                                  ******** GX
   1 _ss_i                                                           0000002F R
   1 _ss_stage                                                       00000030 R
@@ -391,9 +392,9 @@ Symbol Table
     _unit_walk_phase                                                ******** GX
     _units                                                          ******** GX
     _video_tile                                                     ******** GX
-  7 _work_adjacent                                                  0000110A GR
-  7 _work_route                                                     000010DB GR
-  7 _work_stop                                                      00000EE7 GR
+  7 _work_adjacent                                                  0000111D GR
+  7 _work_route                                                     000010EE GR
+  7 _work_stop                                                      00000EFA GR
     _work_timer                                                     ******** GX
     _worker_task                                                    ******** GX
     b_art_index                                                     ******** GX
@@ -417,12 +418,12 @@ Symbol Table
     b_work_route                                                =   0000001F G
     b_work_stop                                                 =   0000001F G
   7 nav_cell094$                                                    0000035A R
-  7 nav_free094$                                                    00000366 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  7 nav_free094$                                                    00000366 R
   7 nav_row094$                                                     00000358 R
   7 nav_store094$                                                   00000368 R
   7 nb_expand                                                       00000DCE R
@@ -441,34 +442,35 @@ Symbol Table
   7 nr_free                                                         00000394 R
   7 nr_loop                                                         0000037F R
   7 nr_st                                                           00000396 R
-  7 sf_bail                                                         00001366 R
-  7 sf_done                                                         00001361 R
-  7 sf_prog                                                         00001355 R
-  7 sf_walk                                                         00001334 R
-  7 sf_wst                                                          00001354 R
-  7 sf_xneg                                                         00001306 R
-  7 sf_xst                                                          00001309 R
-  7 sf_y                                                            00001312 R
-  7 sf_yst                                                          0000132E R
-  7 sf_ysub                                                         0000132B R
-  7 sfl_b                                                           00001381 R
-  7 sfl_bl                                                          0000138B R
-  7 sfl_end                                                         000013B2 R
-  7 sfl_nx                                                          000013AC R
-  7 sfl_s2                                                          00001395 R
-  7 sfl_tr                                                          000013A0 R
-  7 sfl_w                                                           00001376 R
-  7 sfl_wy                                                          0000137F R
-  7 ss_k4                                                           0000140A R
-  7 ss_k5                                                           0000140F R
-  7 ss_lp                                                           000013B7 R
-  7 ss_next                                                         00001441 R
-  7 ss_none                                                         00001459 R
-  7 ss_noprog                                                       0000141E R
-  7 ss_nr                                                           000013E1 R
-  7 ss_r                                                            00001411 R
-  7 ss_ret0                                                         00001448 R
-  7 ss_ret1                                                         00001450 R
+  7 ra_lp                                                           00000DDD R
+  7 sf_bail                                                         00001379 R
+  7 sf_done                                                         00001374 R
+  7 sf_prog                                                         00001368 R
+  7 sf_walk                                                         00001347 R
+  7 sf_wst                                                          00001367 R
+  7 sf_xneg                                                         00001319 R
+  7 sf_xst                                                          0000131C R
+  7 sf_y                                                            00001325 R
+  7 sf_yst                                                          00001341 R
+  7 sf_ysub                                                         0000133E R
+  7 sfl_b                                                           00001394 R
+  7 sfl_bl                                                          0000139E R
+  7 sfl_end                                                         000013C5 R
+  7 sfl_nx                                                          000013BF R
+  7 sfl_s2                                                          000013A8 R
+  7 sfl_tr                                                          000013B3 R
+  7 sfl_w                                                           00001389 R
+  7 sfl_wy                                                          00001392 R
+  7 ss_k4                                                           0000141F R
+  7 ss_k5                                                           00001424 R
+  7 ss_lp                                                           000013DA R
+  7 ss_next                                                         00001447 R
+  7 ss_none                                                         00001468 R
+  7 ss_noprog                                                       00001433 R
+  7 ss_nr                                                           00001404 R
+  7 ss_r                                                            00001426 R
+  7 ss_ret0                                                         00001453 R
+  7 ss_ret1                                                         0000145D R
 
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
@@ -483,7 +485,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG31                                     size     19AF   flags    0
+   7 _SEG31                                     size     19C0   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

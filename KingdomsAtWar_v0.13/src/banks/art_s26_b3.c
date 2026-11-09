@@ -11,14 +11,18 @@ static u8 distance(u8 i,u8 x,u8 y,u8 n) {
  return (ux<x?x-ux:ux>=x+n?ux-x-n+1:0)+(uy<y?y-uy:uy>=y+n?uy-y-n+1:0);
 }
 /* Manhattan range to nearest footprint cell and Bresenham obstruction test. */
-u8 combat_position(u8 i,u8 ux,u8 uy,u8 t) __banked {
- u8 x,y,n,range=unit_range[unit_kind[i]],tx,ty;i16 dx,dy;
- if(!range || (unit_kind[i]==5 && !(t&128)) || !target_box(t,&x,&y,&n))return 0;
+static u8 cp_core(u8 i,u8 ux,u8 uy,u8 x,u8 y,u8 n) {
+ u8 range=unit_range[unit_kind[i]],tx,ty;i16 dx,dy;
  tx=ux<x?x:ux>=x+n?x+n-1:ux;ty=uy<y?y:uy>=y+n?y+n-1:uy;
  dx=(i16)tx-ux;dy=(i16)ty-uy;
  if((dx<0?-dx:dx)+(dy<0?-dy:dy)>range || (!dx && !dy))return 0;
  if(range==1)return 1;
  return line_clear(ux,uy,tx,ty,unit_kind[i]==3,255);
+}
+u8 combat_position(u8 i,u8 ux,u8 uy,u8 t) __banked {
+ u8 x,y,n,range=unit_range[unit_kind[i]];
+ if(!range || (unit_kind[i]==5 && !(t&128)) || !target_box(t,&x,&y,&n))return 0;
+ return cp_core(i,ux,uy,x,y,n);
 }
 u8 military_selected(void) __banked {
  u8 i;for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i)))return 1;return 0;
@@ -254,6 +258,15 @@ ct_c:
  ld a,(hl)
  or a,a
  jp z,ct_next
+ ld hl,#_combat_target
+ add hl,de
+ ld a,(hl)
+ inc a
+ jp nz,ct_ret
+ ld a,(_sim_ticks)
+ and a,#7
+ jp nz,ct_next
+ct_ret:
  ld a,(_ct_i)
  ret
 ct_next:
@@ -266,11 +279,14 @@ ct_none:
  __endasm;
 }
 void combat_tick(void) __banked {
- u8 i,j,x,y,n,t;combat_active=0;
+ u8 i,j,x,y,n,t,tbv;combat_active=0;
  for(i=ct_scan(0);i!=255;i=ct_scan(i+1)) {
-  t=combat_target[i];if(t!=NONE)combat_active=1;
-  if(t!=NONE && (!target_box(t,&x,&y,&n) || (i<N && !fog_target(t)) || ((t&128)?building_owner[t&127]==units[i].owner:units[t].owner==units[i].owner))) {
-   combat_target[i]=t=NONE;if(i<N)work_stop(i);
+  t=combat_target[i];tbv=0;if(t!=NONE)combat_active=1;
+  if(t!=NONE) {
+   tbv=target_box(t,&x,&y,&n);
+   if(!tbv || (i<N && !fog_target(t)) || ((t&128)?building_owner[t&127]==units[i].owner:units[t].owner==units[i].owner)) {
+    combat_target[i]=t=NONE;tbv=0;if(i<N)work_stop(i);
+   }
   }
   /* Hold/idle allies and stationary defenders retaliate only at melee range. */
   if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || stance[i])) {
@@ -282,8 +298,8 @@ void combat_tick(void) __banked {
     }}
    if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && near_box(units[i].x,units[i].y,buildings[j].x,buildings[j].y,building_size(buildings[j].type),unit_range[unit_kind[i]]) && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
   }
-  if(t==NONE || !target_box(t,&x,&y,&n) || units[i].progress)continue;
-  if(combat_position(i,units[i].x,units[i].y,t)) {
+  if(t==NONE || (!tbv && !target_box(t,&x,&y,&n)) || units[i].progress)continue;
+  if(unit_range[unit_kind[i]] && !(unit_kind[i]==5 && !(t&128)) && cp_core(i,units[i].x,units[i].y,x,y,n)) {
    if(i<N && (requested[i] || units[i].state==MOVING || job_unit==i))work_stop(i);
    face(i,x,y);
    if(!attack_cooldown[i] && !shot_time[i])strike(i,t);

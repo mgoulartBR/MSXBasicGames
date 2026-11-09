@@ -377,9 +377,23 @@ nb_none:
  ret
  __endasm;
 }
+/* Z80: 1 when any unit has a pending order (requested[] is N bytes). */
+static u8 req_any(void) __naked {
+ __asm
+ ld hl,#_requested
+ ld b,#8
+ xor a,a
+ra_lp:
+ or a,(hl)
+ inc hl
+ djnz ra_lp
+ ret
+ __endasm;
+}
 void navigation(void) __banked {
  u8 budget=mode?24:8,i,j;
  if(job_unit==NONE) {
+  if(!req_any())return;
   for(j=0;j<unit_count;++j) {
    i=nav_cursor+j;if(i>=unit_count)i-=unit_count;
    if(requested[i] && !retry_wait[i] && !units[i].progress) {nav_begin(i);nav_cursor=i+1;if(nav_cursor==unit_count)nav_cursor=0;break;}
@@ -611,6 +625,17 @@ static u8 sim_scan(u8 start) __naked {
  start;
  __asm
  ld (_ss_i),a
+ push ix
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units
+ add hl,de
+ push hl
+ pop ix
 ss_lp:
  ld a,(_ss_i)
  ld hl,#_unit_count
@@ -636,19 +661,10 @@ ss_lp:
  jp z,ss_nr
  dec (hl)
 ss_nr:
- ld a,(_ss_i)
- ld l,a
- ld h,#0
- add hl,hl
- add hl,hl
- add hl,hl
- add hl,hl
- ld de,#_units+13
- add hl,de
- ld a,(hl)
+ ld a,13(ix)
  or a,a
  jp z,ss_noprog
- ld a,(_ss_i)
+ ld a,e
  ld (_sf_i),a
  ld a,c
  cp a,#4
@@ -669,42 +685,36 @@ ss_r:
  jp nz,ss_next
  jp ss_ret1
 ss_noprog:
- ld a,(_ss_i)
- ld e,a
- ld d,#0
  ld hl,#_requested
  add hl,de
  ld a,(hl)
  or a,a
  jp nz,ss_next
- ld l,e
- ld h,#0
- add hl,hl
- add hl,hl
- add hl,hl
- add hl,hl
- ld de,#_units+15
- add hl,de
- ld a,(hl)
+ ld a,15(ix)
  cp a,#2
  jp nz,ss_next
  jp ss_ret1
 ss_next:
  ld hl,#_ss_i
  inc (hl)
+ ld de,#16
+ add ix,de
  jp ss_lp
 ss_ret0:
  xor a,a
  ld (_ss_stage),a
  ld a,(_ss_i)
+ pop ix
  ret
 ss_ret1:
  ld a,#1
  ld (_ss_stage),a
  ld a,(_ss_i)
+ pop ix
  ret
 ss_none:
  ld a,#255
+ pop ix
  ret
  __endasm;
 }

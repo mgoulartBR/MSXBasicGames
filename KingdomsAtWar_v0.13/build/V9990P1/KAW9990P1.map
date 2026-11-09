@@ -140,9 +140,9 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000861  l__SEG13                        
      000013F2  l__SEG30                        
      00001589  l__SEG27                        
-     000015DD  l__SEG26                        
+     00001650  l__SEG26                        
      000018C4  l__SEG29                        
-     000019AF  l__SEG31                        
+     000019C0  l__SEG31                        
      00001C67  l__SEG15                        
      00001EB4  l__SEG6                         
      00001EF7  l__SEG4                         
@@ -1102,19 +1102,19 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG26                              001AA000    000015DD =        5597. bytes (REL,CON)
+_SEG26                              001AA000    00001650 =        5712. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     001AA13C  _combat_position                   art_s26_b3
-     001AA2B8  _military_selected                 art_s26_b3
-     001AA490  _combat_impact                     art_s26_b3
-     001AA838  _combat_init                       art_s26_b3
-     001AAAF7  _combat_hit_test                   art_s26_b3
-     001AACA9  _combat_click                      art_s26_b3
-     001AAD67  _combat_stop                       art_s26_b3
-     001AAF55  _combat_tick                       art_s26_b3
-     001AB3C8  _combat_context                    art_s26_b3
+     001AA280  _combat_position                   art_s26_b3
+     001AA2DE  _military_selected                 art_s26_b3
+     001AA4B6  _combat_impact                     art_s26_b3
+     001AA85E  _combat_init                       art_s26_b3
+     001AAB1D  _combat_hit_test                   art_s26_b3
+     001AACCF  _combat_click                      art_s26_b3
+     001AAD8D  _combat_stop                       art_s26_b3
+     001AAF8C  _combat_tick                       art_s26_b3
+     001AB43B  _combat_context                    art_s26_b3
 ASxxxx Linker V05.50.4-SDLD,  page 33.
 Hexadecimal  [32-Bits]
 
@@ -1202,7 +1202,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG31                              001FA000    000019AF =        6575. bytes (REL,CON)
+_SEG31                              001FA000    000019C0 =        6592. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1210,15 +1210,15 @@ _SEG31                              001FA000    000019AF =        6575. bytes (R
      001FA350  _nav_prepare                       art_s31_b3
      001FA3E9  _nav_begin                         art_s31_b3
      001FA99D  _nav_finish                        art_s31_b3
-     001FADD7  _navigation                        art_s31_b3
-     001FAEE7  _work_stop                         art_s31_b3
-     001FAF74  _deposit_choose                    art_s31_b3
-     001FB0DB  _work_route                        art_s31_b3
-     001FB10A  _work_adjacent                     art_s31_b3
-     001FB1DF  _resource_empty                    art_s31_b3
-     001FB45C  _simulate                          art_s31_b3
-     001FB995  _move_speed                        art_s31_b3
-     001FB9A2  _move_remainder                    art_s31_b3
+     001FADE2  _navigation                        art_s31_b3
+     001FAEFA  _work_stop                         art_s31_b3
+     001FAF87  _deposit_choose                    art_s31_b3
+     001FB0EE  _work_route                        art_s31_b3
+     001FB11D  _work_adjacent                     art_s31_b3
+     001FB1F2  _resource_empty                    art_s31_b3
+     001FB46D  _simulate                          art_s31_b3
+     001FB9A6  _move_speed                        art_s31_b3
+     001FB9B3  _move_remainder                    art_s31_b3
 
 ASxxxx Linker V05.50.4-SDLD,  page 38.
 
