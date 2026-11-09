@@ -31,7 +31,10 @@ proc heavy012 {} {
  ck eight_moved {[unit 0 x]<8}
  # luta: grupo ataca o defensor inimigo (unidade 8) e depois a fortaleza
  tap 2 64;view_y [unit 8 py];point [expr {[unit 8 px]+8-[w cam_x]}] [expr {[unit 8 py]-6-[w cam_y]}]
- perf_start;tap 5 32;delay 20;perf_end fight
+ if {[info exists ::env(KAW_DRAW)]} {debug write memory $::S(draw_opt) $::env(KAW_DRAW)}
+ perf_start;tap 5 32;delay 7
+ if {[info exists ::env(KAW_SHOT)]} {view_y [expr {[bd 1 y]*16-40}];delay 1;shot $::env(KAW_SHOT)}
+ delay 13;perf_end fight
  puts stderr "RESULT failures=$::failures";exit
 }
 coroutine heavy012_case guard heavy012
