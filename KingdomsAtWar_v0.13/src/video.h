@@ -367,8 +367,466 @@ static u8 bld_visible(u8 k) {
  bv_state[k]=r;bv_x[k]=x;bv_y[k]=y;return r==2;
 }
 static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
+
+static u8 ord_cur[RN],os_cnt,os_j,os_i,os_ko;static u16 os_kv;
+/* Visible actors in front-to-back order: last frame's order first (nearly sorted), then new arrivals,
+ * then an insertion sort on the feet line (larger py first). Returns the count; result in ord_cur. */
+static u8 ord_sort(void) __naked {
+ __asm
+ xor a,a
+ ld (_os_cnt),a
+ ld (_os_j),a
+os_l1:
+ ld a,(_os_j)
+ ld hl,#_ord_n
+ cp a,(hl)
+ jp nc,os_p2
+ ld e,a
+ ld d,#0
+ ld hl,#_ord_prev
+ add hl,de
+ ld e,(hl)
+ ld hl,#_actor_visible
+ add hl,de
+ ld a,(hl)
+ cp a,#1
+ jp nz,os_n1
+ ld (hl),#2
+ call os_append
+os_n1:
+ ld hl,#_os_j
+ inc (hl)
+ jp os_l1
+os_p2:
+ xor a,a
+ ld (_os_j),a
+os_l2:
+ ld a,(_os_j)
+ cp a,#10
+ jp nc,os_sort
+ ld e,a
+ ld d,#0
+ ld hl,#_actor_visible
+ add hl,de
+ ld a,(hl)
+ cp a,#1
+ jp nz,os_n2
+ ld (hl),#2
+ call os_append
+os_n2:
+ ld hl,#_os_j
+ inc (hl)
+ jp os_l2
+os_append:
+ ld a,(_os_cnt)
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ ld (hl),e
+ inc a
+ ld (_os_cnt),a
+ ret
+os_py:
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units+2
+ add hl,de
+ ld e,(hl)
+ inc hl
+ ld d,(hl)
+ ex de,hl
+ ret
+os_sort:
+ ld a,#1
+ ld (_os_i),a
+os_si:
+ ld a,(_os_i)
+ ld hl,#_os_cnt
+ cp a,(hl)
+ jp nc,os_done
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ ld a,(hl)
+ ld (_os_ko),a
+ call os_py
+ ld (_os_kv),hl
+ ld a,(_os_i)
+ ld (_os_j),a
+os_sj:
+ ld a,(_os_j)
+ or a,a
+ jp z,os_place
+ dec a
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ ld a,(hl)
+ call os_py
+ ld de,(_os_kv)
+ or a,a
+ sbc hl,de
+ jp nc,os_place
+ ld a,(_os_j)
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ dec hl
+ ld a,(hl)
+ inc hl
+ ld (hl),a
+ ld hl,#_os_j
+ dec (hl)
+ jp os_sj
+os_place:
+ ld a,(_os_j)
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ ld a,(_os_ko)
+ ld (hl),a
+ ld hl,#_os_i
+ inc (hl)
+ jp os_si
+os_done:
+ ld a,(_os_cnt)
+ ld (_ord_n),a
+ or a,a
+ jp z,os_fix
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ ld de,#_ord_prev
+ ldir
+os_fix:
+ ld hl,#_actor_visible
+ ld b,#10
+os_fl:
+ ld a,(hl)
+ cp a,#2
+ jp nz,os_fn
+ ld (hl),#1
+os_fn:
+ inc hl
+ djnz os_fl
+ ld a,(_os_cnt)
+ ret
+ __endasm;
+}
+
+static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
+void ae_up(u8 i) {
+ u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
+ pose_pos(unit_kind[i],key-unit_kind[i]*24,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
+ pend_key[i]=key;++frame_uploads;
+}
+void ae_occ(u8 i) {
+ u8 sz=kind_sizes[unit_kind[i]],nb=ae_nb,q;u8* o=(u8*)e_o;
+ if(actor_x[i]+(i16)sz>ub_l && actor_x[i]<ub_r && actor_y[i]+(i16)sz>ub_t && actor_y[i]<ub_b) {
+  const u8* pb=pose_bounds+((u16)actor_key[i]<<2);
+  i16 rl=actor_x[i]+pb[0],rt=actor_y[i]+pb[1],rr=rl+pb[2],rb=rt+pb[3];u16 foot=units[i].py+16;
+  for(q=0;q<nb;++q) {
+   u8 cx,cy,cx0,cx1,cy0,cy1;i16 l2,t2,r2,b2;
+   if(rr<=ob_l[q] || rl>=ob_r[q] || rb<=ob_t[q] || rt>=ob_b[q] || (u16)ob_b[q]<foot)continue;
+   l2=ob_l[q]>rl?ob_l[q]:rl;t2=ob_t[q]>rt?ob_t[q]:rt;r2=ob_r[q]<rr?ob_r[q]:rr;b2=ob_b[q]<rb?ob_b[q]:rb;
+   cx0=l2>>4;cx1=(r2-1)>>4;cy0=t2>>4;cy1=(b2-1)>>4;
+   for(cy=cy0;cy<=cy1;++cy)for(cx=cx0;cx<=cx1;++cx) {
+    u8 t,s2;
+    if(fog_at(cx,cy)!=2)continue;
+    t=fog_art(cx,cy);if(t<64)continue;
+    s2=occ_get(tile_source[t]-50);
+    if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
+   }
+  }
+ }
+ e_o=(u16)o;
+}
+void ae_bar(u8 i) {
+ u8* o=(u8*)e_o;u8 sz=kind_sizes[unit_kind[i]];i16 x=e_x,y=e_y;
+ if(o<sattr+496) {
+  u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);
+  if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);}
+  {i16 bxx=x+(sz>>1)-8,byy=y+pose_bounds[((u16)actor_key[i]<<2)+1]-4;
+   if(hurt_flash[i]>4) {SPR(bxx,byy,CELL_BAR_WHITE+bar_w[i],0x20);SPR(bxx,byy,CELL_CROSS,0x20);}
+   else SPR(bxx,byy,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);}
+ }
+ e_o=(u16)o;
+}
+void ae_ring(u8 i) {
+ u8* o=(u8*)e_o;u8 sz=kind_sizes[unit_kind[i]];i16 x=e_x,y=e_y;
+ if(o<sattr+496)SPR(x+(sz>>1)-8,y+sz-16,CELL_RING,0x20);
+ e_o=(u16)o;
+}
+/* Z80: the per-actor emission loop (pose upload, occluders, life bar, sprite block, selection ring). */
+static void ae_run(void) __naked {
+ __asm
+ xor a,a
+ ld (_ae_j),a
+ae_lp:
+ ld a,(_ae_j)
+ ld hl,#_os_cnt
+ cp a,(hl)
+ jp nc,ae_end
+ ld e,a
+ ld d,#0
+ ld hl,#_ord_cur
+ add hl,de
+ ld a,(hl)
+ ld (_ae_i),a
+ ld e,a
+ ld hl,#_unit_kind
+ add hl,de
+ ld c,(hl)
+ ld b,#0
+ ld hl,#_kind_sizes
+ add hl,bc
+ ld a,(hl)
+ ld (_ae_sz),a
+ ld hl,#_actor_key
+ add hl,de
+ ld b,(hl)
+ ld hl,#_disp_key
+ add hl,de
+ ld a,(hl)
+ cp a,b
+ jp z,ae_noup
+ ld hl,#_pend_key
+ add hl,de
+ ld a,(hl)
+ inc a
+ jp nz,ae_noup
+ ld a,(_ae_i)
+ call _ae_up
+ae_noup:
+ ld a,(_ae_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_disp_key
+ add hl,de
+ ld a,(hl)
+ inc a
+ jp z,ae_next
+ ld hl,#_actor_x
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld hl,(_cam_x)
+ ld a,c
+ sub a,l
+ ld c,a
+ ld a,b
+ sbc a,h
+ ld b,a
+ ld (_e_x),bc
+ ld hl,#_actor_y
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld hl,(_cam_y)
+ ld a,c
+ sub a,l
+ ld c,a
+ ld a,b
+ sbc a,h
+ ld b,a
+ ld (_e_y),bc
+ ld hl,#_act_blk
+ add hl,de
+ ld a,(hl)
+ ld hl,#_cell_tab
+ or a,a
+ jp z,ae_c0
+ ld bc,#10
+ add hl,bc
+ae_c0:
+ add hl,de
+ ld a,(hl)
+ ld (_e_cell),a
+ ld a,(_ae_nb)
+ or a,a
+ jp z,ae_noocc
+ ld hl,#_actor_x
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld hl,(_ub_r)
+ or a,a
+ sbc hl,bc
+ jp m,ae_noocc
+ jp z,ae_noocc
+ ld a,(_ae_sz)
+ ld l,a
+ ld h,#0
+ add hl,bc
+ ld de,(_ub_l)
+ or a,a
+ sbc hl,de
+ jp m,ae_noocc
+ jp z,ae_noocc
+ ld a,(_ae_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_actor_y
+ add hl,de
+ add hl,de
+ ld c,(hl)
+ inc hl
+ ld b,(hl)
+ ld hl,(_ub_b)
+ or a,a
+ sbc hl,bc
+ jp m,ae_noocc
+ jp z,ae_noocc
+ ld a,(_ae_sz)
+ ld l,a
+ ld h,#0
+ add hl,bc
+ ld de,(_ub_t)
+ or a,a
+ sbc hl,de
+ jp m,ae_noocc
+ jp z,ae_noocc
+ ld a,(_ae_i)
+ call _ae_occ
+ae_noocc:
+ ld a,(_ae_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units+10
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp nz,ae_dobar
+ ld a,(_ae_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_combat_target
+ add hl,de
+ ld a,(hl)
+ inc a
+ jp nz,ae_dobar
+ ld hl,#_unit_hp
+ add hl,de
+ ld b,(hl)
+ ld hl,#_unit_kind
+ add hl,de
+ ld e,(hl)
+ ld hl,#_unit_max_hp
+ add hl,de
+ ld a,b
+ cp a,(hl)
+ jp nc,ae_nobar
+ae_dobar:
+ ld a,(_ae_i)
+ call _ae_bar
+ae_nobar:
+ ld a,(_ae_sz)
+ rrca
+ rrca
+ rrca
+ rrca
+ and a,#15
+ ld (_e_n),a
+ ld b,a
+ ld c,a
+ xor a,a
+ae_mul:
+ add a,c
+ djnz ae_mul
+ add a,a
+ add a,a
+ ld e,a
+ ld d,#0
+ ld hl,(_e_o)
+ add hl,de
+ ld de,#_p1_shared+500
+ or a,a
+ sbc hl,de
+ jp c,ae_emit
+ jp nz,ae_ring
+ae_emit:
+ call _emit_block
+ae_ring:
+ ld a,(_ae_i)
+ cp a,#8
+ jp nc,ae_next
+ ld b,a
+ ld a,#1
+ inc b
+ae_sh:
+ dec b
+ jp z,ae_shd
+ add a,a
+ jp ae_sh
+ae_shd:
+ ld hl,#_selection_mask
+ and a,(hl)
+ jp z,ae_next
+ ld hl,(_e_o)
+ ld de,#_p1_shared+496
+ or a,a
+ sbc hl,de
+ jp nc,ae_next
+ ld hl,(_e_o)
+ ld a,(_ae_sz)
+ sub a,#17
+ ld de,#_e_y
+ ex de,hl
+ add a,(hl)
+ ex de,hl
+ ld (hl),a
+ inc hl
+ ld a,(_cell_ring_v)
+ ld (hl),a
+ inc hl
+ push hl
+ ld a,(_ae_sz)
+ rrca
+ and a,#0x7F
+ sub a,#8
+ ld e,a
+ ld d,#0
+ ld hl,(_e_x)
+ add hl,de
+ pop de
+ ld a,l
+ ld (de),a
+ inc de
+ ld a,h
+ and a,#3
+ or a,#0x20
+ ld (de),a
+ inc de
+ ld (_e_o),de
+ae_next:
+ ld hl,#_ae_j
+ inc (hl)
+ jp ae_lp
+ae_end:
+ ret
+ __endasm;
+}
 void video_sprites(void) {
- u8 order[RN],count=0,i,j,k,n,nb;u8* o=sattr+4;u16 vis=0;
+ u8 count,i,j,k,n,nb;u8* o=sattr+4;u16 vis=0;
  ++cache_tick;
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
  if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
@@ -378,16 +836,7 @@ void video_sprites(void) {
   {actor_visible[i]=unit_prep(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;}
   if(actor_visible[i])vis|=render_bit[i];
  }
- /* keep last frame's order (nearly sorted already), then append actors that just appeared */
- for(j=0;j<ord_n;++j){i=ord_prev[j];if(vis&render_bit[i]){order[count++]=i;vis&=~render_bit[i];}}
- for(i=0;i<RN;++i)if(vis&render_bit[i])order[count++]=i;
- /* front to back: larger py first (lower sprite index = in front) */
- {u16 pk[RN];
-  for(j=0;j<count;++j)pk[j]=units[order[j]].py;
-  for(i=1;i<count;++i) {u16 kv=pk[i];u8 ko=order[i];j=i;while(j && pk[j-1]<kv) {pk[j]=pk[j-1];order[j]=order[j-1];--j;}pk[j]=kv;order[j]=ko;}
- }
- for(j=0;j<count;++j)ord_prev[j]=order[j];
- ord_n=count;
+ count=ord_sort();
  __asm di __endasm;p1_ready=0;__asm ei __endasm;
  /* arrows: 5x5 px projectiles, in front of everything in the field */
 
@@ -403,43 +852,7 @@ void video_sprites(void) {
   if(bl+sd<=(i16)cam_x || bl>=(i16)cam_x+256 || bt+sd<=(i16)cam_y || bt>=(i16)cam_y+160)continue;
   ob_l[nb]=bl;ob_t[nb]=bt;ob_r[nb]=bl+sd;ob_b[nb]=bt+sd;if(bl<ub_l)ub_l=bl;if(bt<ub_t)ub_t=bt;if(bl+sd>ub_r)ub_r=bl+sd;if(bt+sd>ub_b)ub_b=bt+sd;++nb;
  }
- for(j=0;j<count;++j) {
-  u8 sz,nn,cell;i16 x,y;
-  i=order[j];sz=kind_sizes[unit_kind[i]];nn=sz>>4;
-  if(actor_key[i]!=disp_key[i] && pend_key[i]==NONE) {
-   u8 key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);
-   {u16 px,py;pose_pos(unit_kind[i],key-unit_kind[i]*24,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);}
-   pend_key[i]=key;++frame_uploads;
-  }
-  if(disp_key[i]==NONE)continue;
-  x=actor_x[i]-cam_x;y=actor_y[i]-cam_y;cell=CELL_POSE(i,act_blk[i]);
-  if(nb && actor_x[i]+(i16)sz>ub_l && actor_x[i]<ub_r && actor_y[i]+(i16)sz>ub_t && actor_y[i]<ub_b) {
-   const u8* pb=pose_bounds+((u16)actor_key[i]<<2);
-   i16 rl=actor_x[i]+pb[0],rt=actor_y[i]+pb[1],rr=rl+pb[2],rb=rt+pb[3];u16 foot=units[i].py+16;u8 q;
-   for(q=0;q<nb;++q) {
-    u8 cx,cy,cx0,cx1,cy0,cy1;i16 l2,t2,r2,b2;
-    if(rr<=ob_l[q] || rl>=ob_r[q] || rb<=ob_t[q] || rt>=ob_b[q] || (u16)ob_b[q]<foot)continue;
-    l2=ob_l[q]>rl?ob_l[q]:rl;t2=ob_t[q]>rt?ob_t[q]:rt;r2=ob_r[q]<rr?ob_r[q]:rr;b2=ob_b[q]<rb?ob_b[q]:rb;
-    cx0=l2>>4;cx1=(r2-1)>>4;cy0=t2>>4;cy1=(b2-1)>>4;
-    for(cy=cy0;cy<=cy1;++cy)for(cx=cx0;cx<=cx1;++cx) {
-     u8 t,s2;
-     if(fog_at(cx,cy)!=2)continue;
-     t=fog_art(cx,cy);if(t<64)continue;
-     s2=occ_get(tile_source[t]-50);
-     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
-    }
-   }
-  }
-  if((units[i].owner || unit_hp[i]<unit_max_hp[unit_kind[i]] || combat_target[i]!=NONE) && o<sattr+496) {
-   u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);
-   if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);}
-   {i16 bxx=x+(sz>>1)-8,byy=y+pose_bounds[((u16)actor_key[i]<<2)+1]-4;
-    if(hurt_flash[i]>4) {SPR(bxx,byy,CELL_BAR_WHITE+bar_w[i],0x20);SPR(bxx,byy,CELL_CROSS,0x20);}
-    else SPR(bxx,byy,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);}
-  }
-  if((u16)o+((u16)nn*nn<<2)<=(u16)sattr+500) {e_o=(u16)o;e_x=x;e_y=y;e_cell=cell;e_n=nn;emit_block();o=(u8*)e_o;}
-  if(i<N && (selection_mask&render_bit[i]) && o<sattr+496)SPR(x+(sz>>1)-8,y+sz-16,CELL_RING,0x20);
- }
+ e_o=(u16)o;ae_nb=nb;ae_run();o=(u8*)e_o;
  n=(u8)((u16)(o-sattr)>>2);
  __asm di __endasm;rw_lock=1;__asm ei __endasm;
  rw_n=0;
