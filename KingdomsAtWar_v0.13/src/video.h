@@ -179,7 +179,7 @@ otv_loop:
 /* Vertical blank: the pointer follows the mouse every frame; a finished sprite list and its scroll go together. */
 static void irq_p1(void) {
  if(io_int&1) {
-  io_int=1;
+  io_int=1;*((volatile u8*)0xF3F6)=255;
   io_vset(SPAT);io_vram=(u8)(mouse_y-1);io_vram=CELL_PTR;io_vram=mouse_x;io_vram=0;
   if(p1_ready) {
    io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)(p1_bx>>3));
@@ -287,38 +287,28 @@ cl_loop:
  cp a,e
  jp nc,cl_cull
 cl_alive:
- ld e,0(ix)
- ld d,1(ix)
- ld hl,#56
- add hl,de
+ ld l,0(ix)
+ ld h,1(ix)
  ld de,(_cam_x)
  or a,a
  sbc hl,de
- jp c,cl_cull
- ld hl,(_cam_x)
- ld de,#288
+ ld de,#56
  add hl,de
- ld e,0(ix)
- ld d,1(ix)
+ ld de,#345
  or a,a
  sbc hl,de
- jp c,cl_cull
- ld e,2(ix)
- ld d,3(ix)
- ld hl,#32
- add hl,de
+ jp nc,cl_cull
+ ld l,2(ix)
+ ld h,3(ix)
  ld de,(_cam_y)
  or a,a
  sbc hl,de
- jp c,cl_cull
- ld hl,(_cam_y)
- ld de,#208
+ ld de,#32
  add hl,de
- ld e,2(ix)
- ld d,3(ix)
+ ld de,#241
  or a,a
  sbc hl,de
- jp c,cl_cull
+ jp nc,cl_cull
  jp cl_next
 cl_cull:
  ld hl,(_sc_cull)
@@ -366,7 +356,7 @@ static u8 bld_visible(u8 k) {
  for(dy=0;dy<n && r==1;++dy)for(dx=0;dx<n;++dx)if(fog_at(x+dx,y+dy)==2){r=2;break;}
  bv_state[k]=r;bv_x[k]=x;bv_y[k]=y;return r==2;
 }
-static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
+static u8 bw_hp[BMAX],bw_w[BMAX],bw_mx[BMAX];static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
 
 static u8 ord_cur[RN],os_cnt,os_j,os_i,os_ko;static u16 os_kv;
 /* Visible actors in front-to-back order: last frame's order first (nearly sorted), then new arrivals,
@@ -550,16 +540,123 @@ void ae_occ(u8 i) {
  }
  e_o=(u16)o;
 }
-void ae_bar(u8 i) {
- u8* o=(u8*)e_o;u8 sz=kind_sizes[unit_kind[i]];i16 x=e_x,y=e_y;
- if(o<sattr+496) {
-  u16 sig=unit_hp[i]|((u16)unit_kind[i]<<8);
-  if(bar_sig[i]!=sig){bar_sig[i]=sig;bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);}
-  {i16 bxx=x+(sz>>1)-8,byy=y+pose_bounds[((u16)actor_key[i]<<2)+1]-4;
-   if(hurt_flash[i]>4) {SPR(bxx,byy,CELL_BAR_WHITE+bar_w[i],0x20);SPR(bxx,byy,CELL_CROSS,0x20);}
-   else SPR(bxx,byy,(units[i].owner?CELL_BAR_ENEMY:CELL_BAR_ALLY)+bar_w[i],0x20);}
- }
- e_o=(u16)o;
+void bar_calc(u8 i) {
+ bar_sig[i]=unit_hp[i]|((u16)unit_kind[i]<<8);
+ bar_w[i]=(u8)(((u8)((u16)unit_hp[i]*16/unit_max_hp[unit_kind[i]])+1)>>1);
+}
+static u8 ab_i,ab_w,ab_y;static u16 ab_x;
+static const u8 cbw=CELL_BAR_WHITE,ccross=CELL_CROSS,cba=CELL_BAR_ALLY,cbe=CELL_BAR_ENEMY;
+/* Z80: life bar of the actor in A (one sprite, or bar + cross while the hurt flash is on). */
+static void ae_bar(u8 i) __naked {
+ i;
+ __asm
+ ld (_ab_i),a
+ ld hl,(_e_o)
+ ld de,#_p1_shared+496
+ or a,a
+ sbc hl,de
+ ret nc
+ ld a,(_ab_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_hp
+ add hl,de
+ ld b,(hl)
+ ld hl,#_unit_kind
+ add hl,de
+ ld c,(hl)
+ ld hl,#_bar_sig
+ add hl,de
+ add hl,de
+ ld a,(hl)
+ cp a,b
+ jp nz,ab_re
+ inc hl
+ ld a,(hl)
+ cp a,c
+ jp z,ab_ok
+ab_re:
+ ld a,(_ab_i)
+ call _bar_calc
+ab_ok:
+ ld a,(_ab_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_bar_w
+ add hl,de
+ ld a,(hl)
+ ld (_ab_w),a
+ ld a,(_ae_sz)
+ rrca
+ and a,#0x7F
+ sub a,#8
+ ld l,a
+ ld h,#0
+ ld bc,(_e_x)
+ add hl,bc
+ ld (_ab_x),hl
+ ld hl,#_actor_key
+ add hl,de
+ ld l,(hl)
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ inc hl
+ ld bc,#_pose_bounds
+ add hl,bc
+ ld a,(hl)
+ sub a,#5
+ ld hl,#_e_y
+ add a,(hl)
+ ld (_ab_y),a
+ ld hl,#_hurt_flash
+ add hl,de
+ ld a,(hl)
+ cp a,#5
+ jp c,ab_norm
+ ld a,(_cbw)
+ ld hl,#_ab_w
+ add a,(hl)
+ call ab_put
+ ld a,(_ccross)
+ jp ab_put
+ab_norm:
+ ld a,(_ab_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units+10
+ add hl,de
+ ld a,(hl)
+ or a,a
+ ld a,(_cba)
+ jp z,ab_pa
+ ld a,(_cbe)
+ab_pa:
+ ld hl,#_ab_w
+ add a,(hl)
+ab_put:
+ ld hl,(_e_o)
+ ld c,a
+ ld a,(_ab_y)
+ ld (hl),a
+ inc hl
+ ld (hl),c
+ inc hl
+ ld a,(_ab_x)
+ ld (hl),a
+ inc hl
+ ld a,(_ab_x+1)
+ and a,#3
+ or a,#0x20
+ ld (hl),a
+ inc hl
+ ld (_e_o),hl
+ ret
+ __endasm;
 }
 void ae_ring(u8 i) {
  u8* o=(u8*)e_o;u8 sz=kind_sizes[unit_kind[i]];i16 x=e_x,y=e_y;
@@ -871,7 +968,7 @@ void video_sprites(void) {
  for(k=0;k<building_count;++k)if(buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
   i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;
   if(building_owner[k] || building_hp[k]<max) {
-   u8 w=(u8)((u16)building_hp[k]*24/max);
+   u8 w;if(bw_hp[k]!=building_hp[k] || bw_mx[k]!=max){bw_hp[k]=building_hp[k];bw_mx[k]=max;bw_w[k]=(u8)((u16)building_hp[k]*24/max);}w=bw_w[k];
    rl_add(bx+16,by-4,24,2,12);if(w)rl_add(bx+16,by-4,w,2,building_owner[k]?9:5);
   }
   if(building_owner[k]){rl_add(bx+17,by+1,1,10,11);rl_add(bx+18,by+1,7,4,9);}

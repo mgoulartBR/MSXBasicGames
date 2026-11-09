@@ -12,7 +12,7 @@ Symbol Table
   7 _art_index                                                      000004FA GR
     _art_map                                                        ******** GX
     _attack_flash                                                   ******** GX
-  7 _bit8                                                           00000D76 R
+  7 _bit8                                                           00000F99 R
     _build_base                                                     ******** GX
     _build_kind                                                     ******** GX
     _builder_working                                                ******** GX
@@ -338,7 +338,7 @@ Symbol Table
     _stock                                                          ******** GX
     _terrain                                                        ******** GX
     _tile                                                           ******** GX
-  7 _unit_art_frame                                                 00000D7E GR
+  7 _unit_art_frame                                                 00000FA1 GR
     _unit_build                                                     ******** GX
     _unit_count                                                     ******** GX
     _unit_draw_x                                                    ******** GX
@@ -347,22 +347,28 @@ Symbol Table
     _unit_frame                                                     ******** GX
     _unit_hp                                                        ******** GX
     _unit_kind                                                      ******** GX
-  7 _unit_position                                                  0000107D GR
-  7 _unit_prep                                                      000009D7 GR
+  7 _unit_position                                                  000012A0 GR
+  7 _unit_prep                                                      00000B43 GR
   1 _unit_prep_f                                                    00000000 GR
     _unit_walk_dist                                                 ******** GX
     _unit_walk_phase                                                ******** GX
     _units                                                          ******** GX
-    _video_camera                                                   ******** GX
-    _video_camera_ready                                             ******** GX
-    _wood                                                           ******** GX
-    _work_timer                                                     ******** GX
-    _work_tries                                                     ******** GX
+  1 _up_d                                                           00000002 R
+  1 _up_f                                                           00000003 R
+  1 _up_fl                                                          00000004 R
+  1 _up_i                                                           00000001 R
+  7 _up_plain                                                       000009D7 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  1 _up_sz                                                          00000005 R
+    _video_camera                                                   ******** GX
+    _video_camera_ready                                             ******** GX
+    _wood                                                           ******** GX
+    _work_timer                                                     ******** GX
+    _work_tries                                                     ******** GX
     _worker_kind                                                    ******** GX
     _worker_task                                                    ******** GX
     b_art_index                                                 =   0000001B G
@@ -374,7 +380,25 @@ Symbol Table
     b_unit_art_frame                                            =   0000001B G
     b_unit_position                                             =   0000001B G
     b_unit_prep                                                 =   0000001B G
-
+  7 up_addf                                                         00000A50 R
+  7 up_alive                                                        00000A9A R
+  7 up_draw                                                         00000AAF R
+  7 up_end                                                          00000B40 R
+  7 up_fa                                                           00000A73 R
+  7 up_mv                                                           00000A46 R
+  7 up_nofl                                                         00000A77 R
+  7 up_nop                                                          00000A2A R
+  7 up_ny                                                           00000A15 R
+  7 up_rd0                                                          00000B27 R
+  7 up_rd2                                                          00000B32 R
+  7 up_ret0                                                         00000B3F R
+  7 up_ret1                                                         00000B3A R
+  7 up_rx1                                                          00000B1F R
+  7 up_rxs                                                          00000B21 R
+  7 up_setd                                                         00000A27 R
+  7 up_still                                                        00000A4E R
+  7 up_two                                                          00000A25 R
+  7 up_west                                                         00000A10 R
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
@@ -382,13 +406,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size        1   flags    0
+   1 _DATA                                      size        6   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG27                                     size     11F7   flags    0
+   7 _SEG27                                     size     141A   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

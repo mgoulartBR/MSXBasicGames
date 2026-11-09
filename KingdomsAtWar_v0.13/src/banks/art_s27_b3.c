@@ -92,8 +92,204 @@ u8 object_size(u8 x,u8 y) __banked {
  * evaluated once. Returns 1 when the actor is drawn; the frame goes to unit_prep_f. */
 u8 unit_prep_f;
 static const u8 bit8[8]={1,2,4,8,16,32,64,128};
+static u8 up_i,up_d,up_f,up_fl,up_sz;
+/* Z80: unit_prep for everything that is not a worker (no mining/harvest/build poses). */
+static u8 up_plain(u8 i) __naked {
+ i;
+ __asm
+ ld (_up_i),a
+ push ix
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units
+ add hl,de
+ push hl
+ pop ix
+ ld a,(_up_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_facing
+ add hl,de
+ ld a,(hl)
+ ld (_up_d),a
+ ld a,13(ix)
+ or a,a
+ jp z,up_nop
+ ld a,8(ix)
+ cp a,4(ix)
+ jp z,up_ny
+ jp c,up_west
+ ld a,#1
+ jp up_setd
+up_west:
+ ld a,#3
+ jp up_setd
+up_ny:
+ ld a,9(ix)
+ cp a,5(ix)
+ jp z,up_two
+ jp c,up_two
+ xor a,a
+ jp up_setd
+up_two:
+ ld a,#2
+up_setd:
+ ld (_up_d),a
+up_nop:
+ ld hl,#_unit_facing
+ add hl,de
+ ld a,(_up_d)
+ ld (hl),a
+ add a,a
+ add a,a
+ ld (_up_f),a
+ ld a,13(ix)
+ or a,a
+ jp nz,up_mv
+ ld a,15(ix)
+ cp a,#2
+ jp nz,up_still
+up_mv:
+ ld hl,#_unit_walk_phase
+ add hl,de
+ ld a,(hl)
+ jp up_addf
+up_still:
+ ld a,#1
+up_addf:
+ ld hl,#_up_f
+ add a,(hl)
+ ld (hl),a
+ ld hl,#_attack_flash
+ add hl,de
+ ld a,(hl)
+ ld (_up_fl),a
+ or a,a
+ jp z,up_nofl
+ ld a,(_up_d)
+ add a,a
+ add a,a
+ ld b,a
+ ld a,(_up_fl)
+ cp a,#5
+ ld a,#1
+ jp c,up_fa
+ ld a,#3
+up_fa:
+ add a,b
+ ld (_up_f),a
+up_nofl:
+ ld a,(_up_f)
+ ld hl,#_unit_frame
+ add hl,de
+ ld (hl),a
+ ld (_unit_prep_f),a
+ ld hl,#_unit_hp
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,up_ret0
+ ld a,(_up_i)
+ cp a,#8
+ jp nc,up_alive
+ ld hl,#_unit_count
+ cp a,(hl)
+ jp nc,up_ret0
+up_alive:
+ ld a,10(ix)
+ or a,a
+ jp z,up_draw
+ ld a,4(ix)
+ ld l,5(ix)
+ call _fog_at
+ cp a,#2
+ jp nz,up_ret0
+up_draw:
+ ld a,(_up_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_kind
+ add hl,de
+ ld e,(hl)
+ ld hl,#_kind_sizes
+ add hl,de
+ ld a,(hl)
+ ld (_up_sz),a
+ ld l,0(ix)
+ ld h,1(ix)
+ ld de,#8
+ add hl,de
+ ld de,(_cam_x)
+ or a,a
+ sbc hl,de
+ ld a,(_up_sz)
+ srl a
+ ld e,a
+ ld d,#0
+ or a,a
+ sbc hl,de
+ ld (_unit_draw_x),hl
+ ld l,2(ix)
+ ld h,3(ix)
+ ld de,#16
+ add hl,de
+ ld de,(_cam_y)
+ or a,a
+ sbc hl,de
+ ld a,(_up_sz)
+ ld e,a
+ ld d,#0
+ or a,a
+ sbc hl,de
+ ld (_unit_draw_y),hl
+ ld a,(_up_fl)
+ cp a,#5
+ jp c,up_ret1
+ ld a,(_up_d)
+ or a,a
+ jp z,up_rd0
+ cp a,#2
+ jp z,up_rd2
+ ld hl,(_unit_draw_x)
+ cp a,#1
+ jp z,up_rx1
+ dec hl
+ dec hl
+ jp up_rxs
+up_rx1:
+ inc hl
+ inc hl
+up_rxs:
+ ld (_unit_draw_x),hl
+ jp up_ret1
+up_rd0:
+ ld hl,(_unit_draw_y)
+ inc hl
+ inc hl
+ ld (_unit_draw_y),hl
+ jp up_ret1
+up_rd2:
+ ld hl,(_unit_draw_y)
+ dec hl
+ dec hl
+ ld (_unit_draw_y),hl
+up_ret1:
+ ld a,#1
+ jp up_end
+up_ret0:
+ xor a,a
+up_end:
+ pop ix
+ ret
+ __endasm;
+}
 u8 unit_prep(u8 i) __banked {
  Unit* u=&units[i];u8 kind=unit_kind[i],d=unit_facing[i],f,mp=0,harvest=0,hmask=0,fl=attack_flash[i],w=kind==0 && i<unit_count && unit_hp[i];
+ if(!w)return up_plain(i);
  if(w) {
   mp=mine_phase[i];
   if(i<8)hmask=(builder_working|repair_active)&bit8[i];

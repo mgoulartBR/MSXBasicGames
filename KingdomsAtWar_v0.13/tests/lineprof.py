@@ -27,7 +27,7 @@ for l in B.read_text().split('\n'):
         a=int(mm[1],16)
         if fa<=a<fe and cur not in first: first[cur]=a
 if not first:sys.exit('sem linhas')
-t=(R/'tests/perf012.tcl').read_text()
+t=(R/'tests'/os.environ.get('SCRIPT','perf012.tcl')).read_text()
 hook='''set ::lp_last ""; set ::lp_t 0; array set ::lp_acc {}
 proc lp_hit {line} {if {!$::perf_running} return;set now [machine_info time];if {$::lp_last ne ""} {if {[info exists ::lp_acc($::lp_last)]} {set ::lp_acc($::lp_last) [expr {$::lp_acc($::lp_last)+$now-$::lp_t}]} else {set ::lp_acc($::lp_last) [expr {$now-$::lp_t}]}};set ::lp_last $line;set ::lp_t $now}
 proc lp_end {} {if {$::lp_last ne ""} {set now [machine_info time];if {[info exists ::lp_acc($::lp_last)]} {set ::lp_acc($::lp_last) [expr {$::lp_acc($::lp_last)+$now-$::lp_t}]} else {set ::lp_acc($::lp_last) [expr {$now-$::lp_t}]}};set ::lp_last ""}
@@ -40,7 +40,7 @@ entry=' debug set_bp %d {%s} {lp_end}\n'%(fa+off,cond)
 t=hook+t
 t=t.replace(' perf_start;delay 2;perf_end idle',lines+entry+' perf_start;delay 2;perf_end idle',1)
 t=t.replace(' puts stderr "RESULT failures=$::failures";exit',' foreach k [array names ::lp_acc] {puts stderr "LP $k $::lp_acc($k)"}\n puts stderr "RESULT failures=$::failures";exit',1)
-t=t.replace('proc perf_end {phase} {','proc perf_end {phase} {\n if {$phase ne "four"} {array unset ::lp_acc;set ::lp_last ""}',1)
+t=t.replace('proc perf_end {phase} {','proc perf_end {phase} {\n if {$phase ne "'+os.environ.get('PHASE','four')+'"} {array unset ::lp_acc;set ::lp_last ""}',1)
 (R/'tests/lineprof_run.tcl').write_text(t)
 env=dict(os.environ,KAW_TEST_SCRIPT='lineprof_run.tcl')
 out=subprocess.run([sys.executable,str(R/'tests/run_tests.py'),v],env=env,capture_output=True,text=True)
