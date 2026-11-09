@@ -140,7 +140,7 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000861  l__SEG13                        
      000013F2  l__SEG30                        
      00001589  l__SEG27                        
-     000015C9  l__SEG26                        
+     000015DD  l__SEG26                        
      000018C4  l__SEG29                        
      000019AF  l__SEG31                        
      00001C67  l__SEG15                        
@@ -1102,7 +1102,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG26                              001AA000    000015C9 =        5577. bytes (REL,CON)
+_SEG26                              001AA000    000015DD =        5597. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1113,8 +1113,8 @@ _SEG26                              001AA000    000015C9 =        5577. bytes (R
      001AAAF7  _combat_hit_test                   art_s26_b3
      001AACA9  _combat_click                      art_s26_b3
      001AAD67  _combat_stop                       art_s26_b3
-     001AAF41  _combat_tick                       art_s26_b3
-     001AB3B4  _combat_context                    art_s26_b3
+     001AAF55  _combat_tick                       art_s26_b3
+     001AB3C8  _combat_context                    art_s26_b3
 ASxxxx Linker V05.50.4-SDLD,  page 33.
 Hexadecimal  [32-Bits]
 

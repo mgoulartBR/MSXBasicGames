@@ -8,8 +8,8 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        000015B2 R
-  7 ___str_1                                                        000015BD R
+  7 ___str_0                                                        000015C6 R
+  7 ___str_1                                                        000015D1 R
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
     _attack_cooldown                                                ******** GX
@@ -30,7 +30,7 @@ Symbol Table
     _combat_alive                                                   ******** GX
     _combat_buildings                                               ******** GX
   7 _combat_click                                                   00000CA9 GR
-  7 _combat_context                                                 000013B4 GR
+  7 _combat_context                                                 000013C8 GR
   7 _combat_hit_test                                                00000AF7 GR
     _combat_hits                                                    ******** GX
   7 _combat_impact                                                  00000490 GR
@@ -40,7 +40,7 @@ Symbol Table
     _combat_shots                                                   ******** GX
   7 _combat_stop                                                    00000D67 GR
     _combat_target                                                  ******** GX
-  7 _combat_tick                                                    00000F41 GR
+  7 _combat_tick                                                    00000F55 GR
     _command_last                                                   ******** GX
   1 _cs_j                                                           00000004 R
   1 _cs_own                                                         00000002 R
@@ -340,7 +340,7 @@ Symbol Table
     _mine_phase                                                     ******** GX
     _nav_base_dirty                                                 ******** GX
   7 _near_box                                                       00000DDE R
-  7 _number                                                         00001365 R
+  7 _number                                                         00001379 R
     _order_one                                                      ******** GX
     _pose_bounds                                                    ******** GX
     _recruit_names                                                  ******** GX
@@ -424,12 +424,14 @@ Hexadecimal [32-Bits]
 Symbol Table
 
   7 cs_ok                                                           00000EC2 R
-  7 ct_a                                                            00000EF7 R
-  7 ct_c                                                            00000F1A R
-  7 ct_h                                                            00000F0B R
+  7 ct_a                                                            00000F01 R
+  7 ct_ad                                                           00000EFC R
+  7 ct_c                                                            00000F2E R
+  7 ct_h                                                            00000F1F R
+  7 ct_hd                                                           00000F1A R
   7 ct_lp                                                           00000ED8 R
-  7 ct_next                                                         00000F37 R
-  7 ct_none                                                         00000F3E R
+  7 ct_next                                                         00000F4B R
+  7 ct_none                                                         00000F52 R
 
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
@@ -444,7 +446,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG26                                     size     15C9   flags    0
+   7 _SEG26                                     size     15DD   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

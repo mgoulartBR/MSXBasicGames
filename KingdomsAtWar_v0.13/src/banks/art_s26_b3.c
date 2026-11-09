@@ -205,6 +205,12 @@ ct_lp:
  dec (hl)
  ld a,#1
  ld (_combat_active),a
+ ld a,(hl)
+ or a,a
+ jp z,ct_ad
+ cp a,#4
+ jp nz,ct_a
+ct_ad:
  ld a,#3
  ld (_sprites_dirty),a
 ct_a:
@@ -216,6 +222,12 @@ ct_a:
  dec (hl)
  ld a,#1
  ld (_combat_active),a
+ ld a,(hl)
+ or a,a
+ jp z,ct_hd
+ cp a,#4
+ jp nz,ct_h
+ct_hd:
  ld a,#3
  ld (_sprites_dirty),a
 ct_h:
