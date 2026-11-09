@@ -769,5 +769,5 @@ void simulate(void) __banked {
    }
   }
  }
- if(shot_active)projectile_tick();if(combat_active || !(sim_ticks&7))combat_tick();navigation();{u8 pf=sim_flags();if(pf&1)economy();if((pf&2) || builder_working)production();if(repair_pending || repair_active)repair_tick();if(pf&4)tower_tick();}
+ if(shot_active)projectile_tick();if(!(sim_ticks&1) && (combat_active || !(sim_ticks&7)))combat_tick();navigation();{u8 pf=sim_flags();if(pf&1)economy();if((pf&2) || builder_working)production();if(repair_pending || repair_active)repair_tick();if(pf&4)tower_tick();}
 }

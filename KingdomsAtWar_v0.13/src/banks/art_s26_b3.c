@@ -206,14 +206,23 @@ ct_lp:
  ld a,(hl)
  or a,a
  jp z,ct_a
- dec (hl)
+ ld b,a
+ sub a,#2
+ jp nc,ct_a1
+ xor a,a
+ct_a1:
+ ld (hl),a
+ ld c,a
  ld a,#1
  ld (_combat_active),a
- ld a,(hl)
+ ld a,c
  or a,a
  jp z,ct_ad
- cp a,#4
- jp nz,ct_a
+ cp a,#5
+ jp nc,ct_a
+ ld a,b
+ cp a,#5
+ jp c,ct_a
 ct_ad:
  ld a,#3
  ld (_sprites_dirty),a
@@ -223,14 +232,23 @@ ct_a:
  ld a,(hl)
  or a,a
  jp z,ct_h
- dec (hl)
+ ld b,a
+ sub a,#2
+ jp nc,ct_h1
+ xor a,a
+ct_h1:
+ ld (hl),a
+ ld c,a
  ld a,#1
  ld (_combat_active),a
- ld a,(hl)
+ ld a,c
  or a,a
  jp z,ct_hd
- cp a,#4
- jp nz,ct_h
+ cp a,#5
+ jp nc,ct_h
+ ld a,b
+ cp a,#5
+ jp c,ct_h
 ct_hd:
  ld a,#3
  ld (_sprites_dirty),a
@@ -240,7 +258,11 @@ ct_h:
  ld a,(hl)
  or a,a
  jp z,ct_c
- dec (hl)
+ sub a,#2
+ jp nc,ct_c1
+ xor a,a
+ct_c1:
+ ld (hl),a
  ld a,#1
  ld (_combat_active),a
 ct_c:

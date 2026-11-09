@@ -140,9 +140,9 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000861  l__SEG13                        
      000013F2  l__SEG30                        
      00001589  l__SEG27                        
-     00001650  l__SEG26                        
+     00001672  l__SEG26                        
      000018C4  l__SEG29                        
-     000019C0  l__SEG31                        
+     000019C5  l__SEG31                        
      00001C67  l__SEG15                        
      00001EB4  l__SEG6                         
      00001EF7  l__SEG4                         
@@ -1102,7 +1102,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG26                              001AA000    00001650 =        5712. bytes (REL,CON)
+_SEG26                              001AA000    00001672 =        5746. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1113,8 +1113,8 @@ _SEG26                              001AA000    00001650 =        5712. bytes (R
      001AAB1D  _combat_hit_test                   art_s26_b3
      001AACCF  _combat_click                      art_s26_b3
      001AAD8D  _combat_stop                       art_s26_b3
-     001AAF8C  _combat_tick                       art_s26_b3
-     001AB43B  _combat_context                    art_s26_b3
+     001AAFAE  _combat_tick                       art_s26_b3
+     001AB45D  _combat_context                    art_s26_b3
 ASxxxx Linker V05.50.4-SDLD,  page 33.
 Hexadecimal  [32-Bits]
 
@@ -1202,7 +1202,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG31                              001FA000    000019C0 =        6592. bytes (REL,CON)
+_SEG31                              001FA000    000019C5 =        6597. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1217,8 +1217,8 @@ _SEG31                              001FA000    000019C0 =        6592. bytes (R
      001FB11D  _work_adjacent                     art_s31_b3
      001FB1F2  _resource_empty                    art_s31_b3
      001FB46D  _simulate                          art_s31_b3
-     001FB9A6  _move_speed                        art_s31_b3
-     001FB9B3  _move_remainder                    art_s31_b3
+     001FB9AB  _move_speed                        art_s31_b3
+     001FB9B8  _move_remainder                    art_s31_b3
 
 ASxxxx Linker V05.50.4-SDLD,  page 38.
 

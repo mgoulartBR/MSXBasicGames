@@ -316,8 +316,8 @@ Symbol Table
     _mine_turn                                                      ******** GX
   7 _mine_waiter                                                    00000130 R
     _mode                                                           ******** GX
-  7 _move_remainder                                                 000019B3 GR
-  7 _move_speed                                                     000019A6 GR
+  7 _move_remainder                                                 000019B8 GR
+  7 _move_speed                                                     000019AB GR
   1 _nav_arg                                                        0000002B R
     _nav_base_dirty                                                 ******** GX
   7 _nav_begin                                                      000003E9 GR
@@ -485,7 +485,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG31                                     size     19C0   flags    0
+   7 _SEG31                                     size     19C5   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 
