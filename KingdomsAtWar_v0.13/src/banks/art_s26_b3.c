@@ -184,13 +184,78 @@ cs_none:
  ret
  __endasm;
 }
+static u8 ct_i;
+/* Z80: tick down the flash/cooldown counters of every unit and return the next unit at or after `start` that
+ * is alive and can fight (255 = none). */
+static u8 ct_scan(u8 start) __naked {
+ start;
+ __asm
+ ld (_ct_i),a
+ct_lp:
+ ld a,(_ct_i)
+ cp a,#10
+ jp nc,ct_none
+ ld e,a
+ ld d,#0
+ ld hl,#_attack_flash
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ct_a
+ dec (hl)
+ ld a,#1
+ ld (_combat_active),a
+ ld a,#3
+ ld (_sprites_dirty),a
+ct_a:
+ ld hl,#_hurt_flash
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ct_h
+ dec (hl)
+ ld a,#1
+ ld (_combat_active),a
+ ld a,#3
+ ld (_sprites_dirty),a
+ct_h:
+ ld hl,#_attack_cooldown
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ct_c
+ dec (hl)
+ ld a,#1
+ ld (_combat_active),a
+ct_c:
+ ld hl,#_unit_hp
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ct_next
+ ld hl,#_unit_kind
+ add hl,de
+ ld c,(hl)
+ ld b,#0
+ ld hl,#_unit_range
+ add hl,bc
+ ld a,(hl)
+ or a,a
+ jp z,ct_next
+ ld a,(_ct_i)
+ ret
+ct_next:
+ ld hl,#_ct_i
+ inc (hl)
+ jp ct_lp
+ct_none:
+ ld a,#255
+ ret
+ __endasm;
+}
 void combat_tick(void) __banked {
  u8 i,j,x,y,n,t;combat_active=0;
- for(i=0;i<RN;++i) {
-  if(attack_flash[i]) {combat_active=1;--attack_flash[i];sprites_dirty=3;}
-  if(hurt_flash[i]) {combat_active=1;--hurt_flash[i];sprites_dirty=3;}
-  if(attack_cooldown[i]){combat_active=1;--attack_cooldown[i];}
-  if(!unit_hp[i] || !unit_range[unit_kind[i]])continue;
+ for(i=ct_scan(0);i!=255;i=ct_scan(i+1)) {
   t=combat_target[i];if(t!=NONE)combat_active=1;
   if(t!=NONE && (!target_box(t,&x,&y,&n) || (i<N && !fog_target(t)) || ((t&128)?building_owner[t&127]==units[i].owner:units[t].owner==units[i].owner))) {
    combat_target[i]=t=NONE;if(i<N)work_stop(i);

@@ -316,8 +316,8 @@ Symbol Table
     _mine_turn                                                      ******** GX
   7 _mine_waiter                                                    00000130 R
     _mode                                                           ******** GX
-  7 _move_remainder                                                 0000194C GR
-  7 _move_speed                                                     0000193F GR
+  7 _move_remainder                                                 000019A2 GR
+  7 _move_speed                                                     00001995 GR
   1 _nav_arg                                                        0000002B R
     _nav_base_dirty                                                 ******** GX
   7 _nav_begin                                                      000003E9 GR
@@ -373,9 +373,12 @@ Symbol Table
     _shot_active                                                    ******** GX
   7 _sim_fast                                                       000012B0 R
   7 _sim_flags                                                      0000136A R
+  7 _sim_scan                                                       000013B4 R
     _sim_ticks                                                      ******** GX
-  7 _simulate                                                       000013B4 GR
+  7 _simulate                                                       0000145C GR
     _sprites_dirty                                                  ******** GX
+  1 _ss_i                                                           0000002F R
+  1 _ss_stage                                                       00000030 R
     _terrain                                                        ******** GX
     _tile                                                           ******** GX
     _tower_tick                                                     ******** GX
@@ -415,14 +418,14 @@ Symbol Table
     b_work_stop                                                 =   0000001F G
   7 nav_cell094$                                                    0000035A R
   7 nav_free094$                                                    00000366 R
-  7 nav_row094$                                                     00000358 R
-  7 nav_store094$                                                   00000368 R
-  7 nb_expand                                                       00000DCE R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  7 nav_row094$                                                     00000358 R
+  7 nav_store094$                                                   00000368 R
+  7 nb_expand                                                       00000DCE R
   7 nb_goal                                                         00000DC3 R
   7 nb_loop                                                         00000D69 R
   7 nb_none                                                         00000DD3 R
@@ -456,6 +459,16 @@ Symbol Table
   7 sfl_tr                                                          000013A0 R
   7 sfl_w                                                           00001376 R
   7 sfl_wy                                                          0000137F R
+  7 ss_k4                                                           0000140A R
+  7 ss_k5                                                           0000140F R
+  7 ss_lp                                                           000013B7 R
+  7 ss_next                                                         00001441 R
+  7 ss_none                                                         00001459 R
+  7 ss_noprog                                                       0000141E R
+  7 ss_nr                                                           000013E1 R
+  7 ss_r                                                            00001411 R
+  7 ss_ret0                                                         00001448 R
+  7 ss_ret1                                                         00001450 R
 
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
@@ -464,13 +477,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       2F   flags    0
+   1 _DATA                                      size       31   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG31                                     size     1959   flags    0
+   7 _SEG31                                     size     19AF   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

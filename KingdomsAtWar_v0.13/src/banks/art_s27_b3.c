@@ -287,7 +287,7 @@ up_end:
  ret
  __endasm;
 }
-u8 unit_prep(u8 i) __banked {
+static u8 unit_prep_in(u8 i) {
  Unit* u=&units[i];u8 kind=unit_kind[i],d=unit_facing[i],f,mp=0,harvest=0,hmask=0,fl=attack_flash[i],w=kind==0 && i<unit_count && unit_hp[i];
  if(!w)return up_plain(i);
  if(w) {
@@ -320,6 +320,127 @@ u8 unit_prep(u8 i) __banked {
  }
  return 1;
 }
+void up_slow(u8 i) {
+ actor_visible[i]=unit_prep_in(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;
+}
+static u8 upa_i,upa_v;
+/* Z80: all render slots. Culled ones are hidden; workers take the C path; the others use up_plain. */
+static void units_prep_asm(void) __naked {
+ __asm
+ xor a,a
+ ld (_upa_i),a
+upa_lp:
+ ld a,(_upa_i)
+ cp a,#10
+ ret nc
+ ld hl,#_sc_cull
+ cp a,#8
+ jp c,upa_lo
+ inc hl
+ sub a,#8
+upa_lo:
+ ld b,a
+ inc b
+ ld a,(hl)
+upa_sh:
+ rrca
+ djnz upa_sh
+ jp c,upa_cull
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_kind
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp nz,upa_plain
+ ld a,(_upa_i)
+ ld hl,#_unit_count
+ cp a,(hl)
+ jp nc,upa_plain
+ ld hl,#_unit_hp
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,upa_plain
+ ld a,(_upa_i)
+ call _up_slow
+ jp upa_next
+upa_plain:
+ ld a,(_upa_i)
+ call _up_plain
+ ld (_upa_v),a
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_actor_visible
+ add hl,de
+ ld a,(_upa_v)
+ ld (hl),a
+ ld l,e
+ ld h,#0
+ add hl,hl
+ ld bc,#_actor_x
+ add hl,bc
+ ex de,hl
+ ld hl,(_unit_draw_x)
+ ld bc,(_cam_x)
+ add hl,bc
+ ex de,hl
+ ld (hl),e
+ inc hl
+ ld (hl),d
+ ld a,(_upa_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ ld bc,#_actor_y
+ add hl,bc
+ ex de,hl
+ ld hl,(_unit_draw_y)
+ ld bc,(_cam_y)
+ add hl,bc
+ ex de,hl
+ ld (hl),e
+ inc hl
+ ld (hl),d
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_kind
+ add hl,de
+ ld a,(hl)
+ ld b,a
+ add a,a
+ add a,b
+ add a,a
+ add a,a
+ add a,a
+ ld hl,#_unit_prep_f
+ add a,(hl)
+ ld hl,#_actor_key
+ add hl,de
+ ld (hl),a
+ jp upa_next
+upa_cull:
+ ld a,(_upa_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_actor_visible
+ add hl,de
+ ld (hl),#0
+ ld hl,#_actor_key
+ add hl,de
+ ld (hl),#255
+upa_next:
+ ld hl,#_upa_i
+ inc (hl)
+ jp upa_lp
+ __endasm;
+}
+u8 unit_prep(u8 i) __banked {return unit_prep_in(i);}
+/* All render slots in one banked call. */
+void units_prep(void) __banked {units_prep_asm();}
 u8 unit_art_frame(u8 i) __banked {
  Unit* u=&units[i];u8 d=unit_facing[i],f;
  if(WORKER(i) && mine_phase[i])d=mine_phase[i]==3?0:2;

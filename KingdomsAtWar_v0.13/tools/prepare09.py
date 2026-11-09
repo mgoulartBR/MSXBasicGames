@@ -58,6 +58,14 @@ flat=b''.join(pack(a) for a in tiles);atlas=np.zeros((192,256),dtype='uint8')
 for t,a in enumerate(tiles):atlas[(t>>4)*16:(t>>4)*16+16,(t&15)*16:(t&15)*16+16]=a
 png(atlas,out/'static.png');atlasrefs=[add('static'+str(i),flat[i*8192:(i+1)*8192]) for i in range(3)]
 font=expand((r/'art/reference_v68_font.bin').read_bytes());font=remap[font];font[font==14]=15;fontref=add('font',pack(font));png(font,out/'font.png')
+def pose_cells(bounds,sizes):
+    out=[]
+    for k in range(168):
+        n=sizes[k//24]//16;l,t,w,h=bounds[k*4:k*4+4]
+        if w and h:cx0=l>>4;cy0=t>>4;cols=((l+w-1)>>4)-cx0+1;rows=((t+h-1)>>4)-cy0+1
+        else:cx0=cy0=0;cols=rows=n
+        out+=[cy0*16+cx0,cols*16+rows]
+    return out
 roles=['peasant','swordsman','spearman','archer','knight','ram','enemy_sword'];sizes=[32,32,48,32,48,48,32];refs=['{0,0}']*168;bounds=[0]*672
 # Canvas/cache layout stays stable. Compile the two oversized classes at the
 # infantry scale, using one transform for every direction and walking phase.
@@ -84,7 +92,7 @@ for j,data in enumerate(chunks,4):
  (r/'src/banks'/f'art_s{j}_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_%d[] = {\n'%j+'\n'.join(','.join(map(str,data[i:i+32]))+',' for i in range(0,len(data),32))+'\n};\n')
 def emit(n,a):return 'const u8 '+n+'[]={'+','.join(map(str,a))+'};\n'
 text='typedef struct {u8 bank;u16 ptr;} Asset;\nconst Asset static_assets[]={'+','.join(atlasrefs)+'};\nconst Asset font_asset='+fontref+';\nconst Asset poses[]={'+','.join(refs)+'};\n'
-text+=emit('build_base',base)+emit('build_sizes',[4,3,4,4,4,4,4,4])+emit('kind_sizes',sizes)+emit('tile_source',mapping)+emit('pose_bounds',bounds)
+text+=emit('build_base',base)+emit('build_sizes',[4,3,4,4,4,4,4,4])+emit('kind_sizes',sizes)+emit('tile_source',mapping)+emit('pose_bounds',bounds)+emit('pose_cells',pose_cells(bounds,sizes))
 text+=emit('palette68',[v for red,green,blue in levels for v in [(red<<4)|blue,green]])+emit('palette9',[round(c*31/7) for pix in levels for c in pix])
 ring=[0]*128
 for y,l,rr in [(10,6,9),(11,3,12),(12,1,14),(13,3,12),(14,6,9)]:

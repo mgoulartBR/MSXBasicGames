@@ -604,6 +604,110 @@ sfl_end:
  ret
  __endasm;
 }
+static u8 ss_i,ss_stage;
+/* Z80: next unit at or after `start` that needs the full C movement code (255 = none). Dead units, units that
+ * just walk on inside a tile (sim_fast) and idle ones are handled here. ss_stage=1: retry_wait/sim_fast done. */
+static u8 sim_scan(u8 start) __naked {
+ start;
+ __asm
+ ld (_ss_i),a
+ss_lp:
+ ld a,(_ss_i)
+ ld hl,#_unit_count
+ cp a,(hl)
+ jp nc,ss_none
+ ld e,a
+ ld d,#0
+ ld hl,#_unit_hp
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ss_next
+ ld hl,#_unit_kind
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ss_ret0
+ ld c,a
+ ld hl,#_retry_wait
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ss_nr
+ dec (hl)
+ss_nr:
+ ld a,(_ss_i)
+ ld l,a
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units+13
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp z,ss_noprog
+ ld a,(_ss_i)
+ ld (_sf_i),a
+ ld a,c
+ cp a,#4
+ jp z,ss_k4
+ cp a,#5
+ jp z,ss_k5
+ ld a,#8
+ jp ss_r
+ss_k4:
+ ld a,#10
+ jp ss_r
+ss_k5:
+ ld a,#4
+ss_r:
+ ld (_sf_rate),a
+ call _sim_fast
+ or a,a
+ jp nz,ss_next
+ jp ss_ret1
+ss_noprog:
+ ld a,(_ss_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_requested
+ add hl,de
+ ld a,(hl)
+ or a,a
+ jp nz,ss_next
+ ld l,e
+ ld h,#0
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ add hl,hl
+ ld de,#_units+15
+ add hl,de
+ ld a,(hl)
+ cp a,#2
+ jp nz,ss_next
+ jp ss_ret1
+ss_next:
+ ld hl,#_ss_i
+ inc (hl)
+ jp ss_lp
+ss_ret0:
+ xor a,a
+ ld (_ss_stage),a
+ ld a,(_ss_i)
+ ret
+ss_ret1:
+ ld a,#1
+ ld (_ss_stage),a
+ ld a,(_ss_i)
+ ret
+ss_none:
+ ld a,#255
+ ret
+ __endasm;
+}
 void simulate(void) __banked {
  u8 i,animate;Unit* u=units;
  ++sim_ticks;
@@ -612,10 +716,10 @@ void simulate(void) __banked {
  animate=!(sim_ticks&7);
  if(animate && builder_working)sprites_dirty=3;
  /* One pass: cave animation changes no logical positions or reservations. */
- for(i=0;i<unit_count;++i,++u) {
+ for(i=sim_scan(0);i!=255;i=sim_scan(i+1)) {
   u8 kind,speed;
-  if(!unit_hp[i])continue;
-  kind=unit_kind[i];
+  u=&units[i];kind=unit_kind[i];
+  if(!ss_stage) {
   if(!kind) {
    if(mine_phase[i]==1) {
     if(++mine_step[i]==8){mine_phase[i]=2;fog_refresh=1;}
@@ -630,6 +734,7 @@ void simulate(void) __banked {
   }
   if(retry_wait[i])--retry_wait[i];
   if(u->progress) {sf_i=i;sf_rate=kind==4?10:kind==5?4:8;if(sim_fast())continue;}
+  }
   if(!u->progress && (requested[i] || u->state!=MOVING)) continue;
   u->phase+=kind==4?10:kind==5?4:8; speed=move_speed[u->phase]; u->phase=move_remainder[u->phase]; /* 80 px/s at 30 Hz */
   while(speed) {

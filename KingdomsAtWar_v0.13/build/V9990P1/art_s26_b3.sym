@@ -8,8 +8,8 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        000015B6 R
-  7 ___str_1                                                        000015C1 R
+  7 ___str_0                                                        000015B2 R
+  7 ___str_1                                                        000015BD R
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
     _attack_cooldown                                                ******** GX
@@ -30,7 +30,7 @@ Symbol Table
     _combat_alive                                                   ******** GX
     _combat_buildings                                               ******** GX
   7 _combat_click                                                   00000CA9 GR
-  7 _combat_context                                                 000013B8 GR
+  7 _combat_context                                                 000013B4 GR
   7 _combat_hit_test                                                00000AF7 GR
     _combat_hits                                                    ******** GX
   7 _combat_impact                                                  00000490 GR
@@ -40,13 +40,15 @@ Symbol Table
     _combat_shots                                                   ******** GX
   7 _combat_stop                                                    00000D67 GR
     _combat_target                                                  ******** GX
-  7 _combat_tick                                                    00000ED5 GR
+  7 _combat_tick                                                    00000F41 GR
     _command_last                                                   ******** GX
   1 _cs_j                                                           00000004 R
   1 _cs_own                                                         00000002 R
   1 _cs_rng                                                         00000003 R
   1 _cs_xi                                                          00000000 R
   1 _cs_yi                                                          00000001 R
+  1 _ct_i                                                           00000005 R
+  7 _ct_scan                                                        00000ED5 R
   7 _die                                                            00000377 R
   7 _distance                                                       000000AE R
     _enemy_selected                                                 ******** GX
@@ -56,13 +58,13 @@ Symbol Table
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
     _g_ASPCT2                                                   =   0000F40D G
-    _g_ATRBYT                                                   =   0000F3F2 G
-    _g_AVCSAV                                                   =   0000FAF7 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_ATRBYT                                                   =   0000F3F2 G
+    _g_AVCSAV                                                   =   0000FAF7 G
     _g_BAKCLR                                                   =   0000F3EA G
     _g_BASROM                                                   =   0000FBB1 G
     _g_BASRVN                                                   =   0000002B G
@@ -116,13 +118,13 @@ Symbol Table
     _g_GETPNT                                                   =   0000F3FA G
     _g_GRPACX                                                   =   0000FCB7 G
     _g_GRPACY                                                   =   0000FCB9 G
-    _g_GRPATR                                                   =   0000F3CD G
-    _g_GRPCGP                                                   =   0000F3CB G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_GRPATR                                                   =   0000F3CD G
+    _g_GRPCGP                                                   =   0000F3CB G
     _g_GRPCOL                                                   =   0000F3C9 G
     _g_GRPHED                                                   =   0000FCA6 G
     _g_GRPNAM                                                   =   0000F3C7 G
@@ -176,13 +178,13 @@ Symbol Table
     _g_MSXMID                                                   =   0000002E G
     _g_MSXMusic_DataPort                                        =   0000007D 
     _g_MSXMusic_IndexPort                                       =   0000007C 
-    _g_MSXVER                                                   =   0000002D G
-    _g_MUSICF                                                   =   0000FB3F G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_MSXVER                                                   =   0000002D G
+    _g_MUSICF                                                   =   0000FB3F G
     _g_NEWKEY                                                   =   0000FBE5 G
     _g_NORUSE                                                   =   0000FAFD G
     _g_OLDINT                                                   =   0000FB0C G
@@ -236,13 +238,13 @@ Symbol Table
     _g_RG20SAV                                                  =   0000FFF3 G
     _g_RG21SAV                                                  =   0000FFF4 G
     _g_RG22SAV                                                  =   0000FFF5 G
-    _g_RG23SAV                                                  =   0000FFF6 G
-    _g_RG25SAV                                                  =   0000FFFA G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_RG23SAV                                                  =   0000FFF6 G
+    _g_RG25SAV                                                  =   0000FFFA G
     _g_RG26SAV                                                  =   0000FFFB G
     _g_RG27SAV                                                  =   0000FFFC G
     _g_RG2SAV                                                   =   0000F3E1 G
@@ -296,13 +298,13 @@ Symbol Table
     _g_V9_Kanji2DataPort                                        =   0000006B 
     _g_V9_KanjiAddrHPort                                        =   00000069 
     _g_V9_KanjiAddrLPort                                        =   00000068 
-    _g_V9_KanjiDataPort                                         =   00000069 
-    _g_V9_OutputCtrPort                                         =   0000006F 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _g_V9_KanjiDataPort                                         =   00000069 
+    _g_V9_OutputCtrPort                                         =   0000006F 
     _g_V9_PalettePort                                           =   00000061 
     _g_V9_RegDataPort                                           =   00000063 
     _g_V9_RegSelectPort                                         =   00000064 
@@ -338,7 +340,7 @@ Symbol Table
     _mine_phase                                                     ******** GX
     _nav_base_dirty                                                 ******** GX
   7 _near_box                                                       00000DDE R
-  7 _number                                                         00001369 R
+  7 _number                                                         00001365 R
     _order_one                                                      ******** GX
     _pose_bounds                                                    ******** GX
     _recruit_names                                                  ******** GX
@@ -356,13 +358,13 @@ Symbol Table
     _shot_dy                                                        ******** GX
     _shot_owner                                                     ******** GX
     _shot_target                                                    ******** GX
-    _shot_time                                                      ******** GX
-    _shot_x                                                         ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _shot_time                                                      ******** GX
+    _shot_x                                                         ******** GX
     _shot_y                                                         ******** GX
     _sim_ticks                                                      ******** GX
     _sprites_dirty                                                  ******** GX
@@ -416,21 +418,33 @@ Symbol Table
   7 cs_loop                                                         00000E72 R
   7 cs_next                                                         00000EC6 R
   7 cs_none                                                         00000ED0 R
-  7 cs_ok                                                           00000EC2 R
-
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+  7 cs_ok                                                           00000EC2 R
+  7 ct_a                                                            00000EF7 R
+  7 ct_c                                                            00000F1A R
+  7 ct_h                                                            00000F0B R
+  7 ct_lp                                                           00000ED8 R
+  7 ct_next                                                         00000F37 R
+  7 ct_none                                                         00000F3E R
+
+
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
 Hexadecimal [32-Bits]
 
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size        5   flags    0
+   1 _DATA                                      size        6   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG26                                     size     15CD   flags    0
+   7 _SEG26                                     size     15C9   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

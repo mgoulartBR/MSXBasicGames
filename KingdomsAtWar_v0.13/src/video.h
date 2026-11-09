@@ -207,22 +207,22 @@ void video_irq_install(void) {
 }
 void video_cursor(void) {}
 /* Z80: write the n x n sprite attributes (Y, pattern, X, info) of one actor block. */
-static u16 e_o;static i16 e_x,e_y;static u8 e_cell,e_n,e_r,e_c;
+static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;
 static void emit_block(void) __naked {
  __asm
  ld hl,(_e_o)
- ld a,(_e_y)
+ ld a,(_e_by)
  dec a
  ld d,a
- ld a,(_e_cell)
+ ld a,(_e_bc)
  ld e,a
- ld a,(_e_n)
+ ld a,(_e_rows)
  ld (_e_r),a
 eb_row:
- ld bc,(_e_x)
- ld a,(_e_n)
- ld (_e_c),a
  push de
+ ld bc,(_e_bx)
+ ld a,(_e_n)
+ ex af,af'
 eb_col:
  ld (hl),d
  inc hl
@@ -239,13 +239,15 @@ eb_col:
  ld a,c
  add a,#16
  ld c,a
- ld a,b
- adc a,#0
- ld b,a
- ld a,(_e_c)
+ jr nc,eb_nc
+ inc b
+eb_nc:
+ ex af,af'
  dec a
- ld (_e_c),a
- jp nz,eb_col
+ jr z,eb_cd
+ ex af,af'
+ jr eb_col
+eb_cd:
  pop de
  ld a,d
  add a,#16
@@ -261,7 +263,7 @@ eb_col:
  ret
  __endasm;
 }
-static u16 sc_cull,sc_bitw;
+u16 sc_cull;static u16 sc_bitw;
 static void sp_cull(void) __naked {
  __asm
  ld hl,#0
@@ -432,6 +434,35 @@ os_py:
  ex de,hl
  ret
 os_sort:
+ ld a,(_os_cnt)
+ cp a,#2
+ jp c,os_done
+ ld a,(_ord_cur)
+ call os_py
+ ld (_os_kv),hl
+ ld a,#1
+ ld (_os_i),a
+os_ck:
+ ld a,(_os_i)
+ ld hl,#_os_cnt
+ cp a,(hl)
+ jp nc,os_done
+ ld c,a
+ ld b,#0
+ ld hl,#_ord_cur
+ add hl,bc
+ ld a,(hl)
+ call os_py
+ ld de,(_os_kv)
+ ex de,hl
+ or a,a
+ sbc hl,de
+ jp c,os_full
+ ld (_os_kv),de
+ ld hl,#_os_i
+ inc (hl)
+ jp os_ck
+os_full:
  ld a,#1
  ld (_os_i),a
 os_si:
@@ -836,14 +867,55 @@ ae_dobar:
  ld a,(_ae_i)
  call _ae_bar
 ae_nobar:
- ld a,(_ae_sz)
+ ld a,(_ae_i)
+ ld e,a
+ ld d,#0
+ ld hl,#_disp_key
+ add hl,de
+ ld l,(hl)
+ ld h,#0
+ add hl,hl
+ ld de,#_pose_cells
+ add hl,de
+ ld a,(hl)
+ ld (_bb_off),a
+ inc hl
+ ld b,(hl)
+ ld a,b
+ and a,#15
+ ld (_e_rows),a
+ ld a,b
  rrca
  rrca
  rrca
  rrca
  and a,#15
  ld (_e_n),a
+ ld a,(_bb_off)
+ ld hl,#_e_cell
+ add a,(hl)
+ ld (_e_bc),a
+ ld a,(_bb_off)
+ and a,#0xF0
+ ld e,a
+ ld d,#0
+ ld hl,(_e_y)
+ add hl,de
+ ld (_e_by),hl
+ ld a,(_bb_off)
+ and a,#15
+ add a,a
+ add a,a
+ add a,a
+ add a,a
+ ld e,a
+ ld d,#0
+ ld hl,(_e_x)
+ add hl,de
+ ld (_e_bx),hl
+ ld a,(_e_n)
  ld b,a
+ ld a,(_e_rows)
  ld c,a
  xor a,a
 ae_mul:
@@ -923,16 +995,12 @@ ae_end:
  __endasm;
 }
 void video_sprites(void) {
- u8 count,i,j,k,n,nb;u8* o=sattr+4;u16 vis=0;
+ u8 count,i,j,k,n,nb;u8* o=sattr+4;
  ++cache_tick;
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
  if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
  sp_cull();
- for(i=0;i<RN;++i) {
-  if(sc_cull&render_bit[i]) {actor_visible[i]=0;actor_key[i]=NONE;continue;}
-  {actor_visible[i]=unit_prep(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;}
-  if(actor_visible[i])vis|=render_bit[i];
- }
+ units_prep();
  count=ord_sort();
  __asm di __endasm;p1_ready=0;__asm ei __endasm;
  /* arrows: 5x5 px projectiles, in front of everything in the field */
@@ -984,6 +1052,7 @@ void video_sprites(void) {
 static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,14,PA_SOLID+10);}
 void video_init(void) {
  u8 i,j,q;u16 y;
+
  VDP_SetMode(VDP_MODE_SCREEN5);VDP_SetFrequency(VDP_FREQ_60HZ);VDP_EnableVBlank(TRUE);VDP_EnableDisplay(FALSE);
  V9_SetPort(V9_P07,2);V9_SetPort(V9_P07,0);
  V9_SetScreenMode(V9_MODE_P1);V9_SetDisplayEnable(FALSE);V9_SetInterrupt(V9_INT_NONE);

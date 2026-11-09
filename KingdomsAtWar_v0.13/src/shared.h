@@ -101,6 +101,7 @@ u8 art_tile(u8 x,u8 y);
 u8 unit_art_frame(u8 i) __banked;
 u8 unit_position(u8 i) __banked;
 u8 unit_prep(u8 i) __banked;extern u8 unit_prep_f;
+void units_prep(void) __banked;extern u16 sc_cull;extern i16 actor_x[RN],actor_y[RN];extern u8 actor_visible[RN],actor_key[RN];
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);
 u8 free_at(u8 x,u8 y,u8 who);
@@ -167,7 +168,7 @@ void video_cursor(void);
 
 extern u8 unit_facing[RN],unit_frame[RN],unit_walk_dist[RN],unit_walk_phase[RN];
 
-extern const u8 kind_sizes[],pose_bounds[],build_base[];
+extern const u8 kind_sizes[],pose_bounds[],pose_cells[],build_base[];
 
 extern u8 raw_down,raw_latched;extern i16 raw_dx,raw_dy;
 void poll_input(void);
