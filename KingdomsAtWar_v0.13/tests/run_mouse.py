@@ -14,7 +14,7 @@ fifo=r/'tests'/('mouse-'+variant+'-'+port+'-'+str(os.getpid())+'.fifo')
 if fifo.exists():fifo.unlink()
 os.mkfifo(fifo)
 env=dict(os.environ,SDL_VIDEODRIVER='offscreen',SDL_AUDIODRIVER='dummy',KAW_VARIANT=variant,KAW_MOUSE_PORT=port,KAW_MOUSE_FIFO=str(fifo),LD_PRELOAD=str(shared))
-args=['openmsx','-machine','C-BIOS_MSX2' if variant in ('V9990','V9990P1') else 'C-BIOS_MSX2+']+(['-ext','gfx9000'] if variant in ('V9990','V9990P1') else [])+['-cart','../'+rom+'.ROM','-romtype','ASCII8','-script',script]
+args=['openmsx','-machine',os.environ.get('KAW_MACHINE','C-BIOS_MSX2' if variant in ('V9990','V9990P1') else 'C-BIOS_MSX2+')]+(['-ext','gfx9000'] if variant in ('V9990','V9990P1') else [])+['-cart','../'+rom+'.ROM','-romtype','ASCII8','-script',script]
 try:
  prefix='ROM_SHA256 '+hashlib.sha256((r/(rom+'.ROM')).read_bytes()).hexdigest()+'\n'
  with subprocess.Popen(args,cwd=r/'tests',env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1) as child:

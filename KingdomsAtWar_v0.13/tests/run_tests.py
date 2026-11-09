@@ -8,7 +8,7 @@ for variant in (sys.argv[1:] or ['V9990','PREVIEW']):
  sym={m[1]:int(m[0],16) for m in re.findall(r'^\s+([0-9A-F]{8})\s+_(\w+)\s+main\s*$',s,re.M)}
  (root/'tests'/('symbols-'+variant+'.tcl')).write_text('\n'.join('set S(%s) %d'%(k,v)for k,v in sym.items())+'\n')
  env=dict(os.environ,SDL_VIDEODRIVER='offscreen',SDL_AUDIODRIVER='dummy',KAW_VARIANT=variant)
- args=['openmsx','-machine','C-BIOS_MSX2' if variant in ('V9990','V9990P1') else 'C-BIOS_MSX2+']
+ args=['openmsx','-machine',os.environ.get('KAW_MACHINE','C-BIOS_MSX2' if variant in ('V9990','V9990P1') else 'C-BIOS_MSX2+')]
  if variant in ('V9990','V9990P1'):args+=['-ext','gfx9000']
  script=os.environ.get('KAW_TEST_SCRIPT','boot07.tcl')
  args+=['-cart','../'+name+'.ROM','-romtype','ASCII8','-script',script]

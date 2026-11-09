@@ -422,11 +422,42 @@ u8 building_order(u8 x,u8 y) __banked;
 
 
 
+/* No V9990 on the bus (status port reads 0xFF; a real V9990 never does): say so on the MSX2 text screen and stop. */
+static void v9990_check(void) __naked {
+ __asm
+ in a,(#0x65)
+ cp a,#0xFF
+ ret nz
+ call #0x006C
+ ld hl,#vm_text
+vm_lp:
+ ld a,(hl)
+ or a,a
+ jp z,vm_end
+ push hl
+ call #0x00A2
+ pop hl
+ inc hl
+ jp vm_lp
+vm_end:
+ di
+vm_halt:
+ jp vm_halt
+vm_text:
+ .ascii "KINGDOMS AT WAR"
+ .db 13,10,13,10
+ .ascii "NEEDS A V9990 (GFX9000)."
+ .db 13,10
+ .ascii "NONE FOUND ON THIS MSX."
+ .db 13,10,0
+ __endasm;
+}
 void main(void) {
  __asm
   ld a,#0
   ld (0xF3DB),a
  __endasm;
+ v9990_check();
  left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;

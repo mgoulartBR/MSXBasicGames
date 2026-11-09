@@ -31,22 +31,22 @@ Symbol Table
     ___sdcc_bcall_ehl                                               ******** GX
   0 ___str_0                                                        00003A81 R
   0 ___str_1                                                        00003A87 R
-  0 ___str_10                                                       00003F18 R
-  0 ___str_11                                                       00003F1E R
-  0 ___str_12                                                       00003F24 R
-  0 ___str_13                                                       00003F2C R
-  0 ___str_14                                                       00003F32 R
-  0 ___str_15                                                       00003F38 R
-  0 ___str_16                                                       00003F3F R
-  0 ___str_17                                                       00003F46 R
+  0 ___str_10                                                       00003F7F R
+  0 ___str_11                                                       00003F85 R
+  0 ___str_12                                                       00003F8B R
+  0 ___str_13                                                       00003F93 R
+  0 ___str_14                                                       00003F99 R
+  0 ___str_15                                                       00003F9F R
+  0 ___str_16                                                       00003FA6 R
+  0 ___str_17                                                       00003FAD R
   0 ___str_2                                                        00003A8D R
   0 ___str_3                                                        00003A93 R
-  0 ___str_4                                                        00003EED R
-  0 ___str_5                                                        00003EF4 R
-  0 ___str_6                                                        00003EFA R
-  0 ___str_7                                                        00003F03 R
-  0 ___str_8                                                        00003F0B R
-  0 ___str_9                                                        00003F11 R
+  0 ___str_4                                                        00003F54 R
+  0 ___str_5                                                        00003F5B R
+  0 ___str_6                                                        00003F61 R
+  0 ___str_7                                                        00003F6A R
+  0 ___str_8                                                        00003F72 R
+  0 ___str_9                                                        00003F78 R
     __divuchar                                                      ******** GX
     __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
@@ -560,7 +560,7 @@ Symbol Table
   1 _lz_cnt                                                         000021AE GR
   0 _lz_decode                                                      00000833 R
   1 _lz_dst                                                         000021AC GR
-  0 _main                                                           00003C3C GR
+  0 _main                                                           00003CA0 GR
   1 _max_camera_step                                                00001E73 GR
   1 _mine_phase                                                     0000005B GR
   1 _mine_step                                                      00000063 GR
@@ -750,6 +750,7 @@ Symbol Table
   1 _units                                                          000004FD GR
     _units_prep                                                     ******** GX
     _units_prep_reset                                               ******** GX
+  0 _v9990_check                                                    00003C3C R
   0 _v9_busy                                                        00000C44 R
   0 _v9_lmmm                                                        00000C49 R
   1 _v9c                                                            00002B62 GR
@@ -777,12 +778,12 @@ Symbol Table
   1 _wood                                                           0000046F GR
   1 _work_timer                                                     0000004B GR
   1 _work_tries                                                     00000053 GR
-  1 _worker_kind                                                    00000033 GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 14
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  1 _worker_kind                                                    00000033 GR
   1 _worker_task                                                    0000001B GR
   0 ab_norm                                                         0000228D R
   0 ab_ok                                                           0000223A R
@@ -837,12 +838,12 @@ Symbol Table
   0 lz_r1                                                           00000874 R
   0 lz_r2                                                           00000880 R
   0 lz_run                                                          0000086A R
-  0 lz_run_ok                                                       0000085B R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 15
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  0 lz_run_ok                                                       0000085B R
   0 lz_shift                                                        000008D5 R
   0 oc_alive                                                        00003B2C R
   0 oc_hit                                                          00003B63 R
@@ -868,13 +869,18 @@ Symbol Table
   0 os_sort                                                         00001C6B R
   0 otv_loop                                                        0000159E R
   0 set_bank                                                        00000BAB GR
+  0 vm_end                                                          00003C55 R
+  0 vm_halt                                                         00003C56 R
+  0 vm_lp                                                           00003C47 R
+  0 vm_text                                                         00003C59 R
+
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 16
 Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size     3F4A   flags    0
+   0 _CODE                                      size     3FB1   flags    0
    1 _DATA                                      size     2DEA   flags    0
    2 _INITIALIZED                               size       27   flags    0
    3 _DABS                                      size        0   flags    8
