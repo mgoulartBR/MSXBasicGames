@@ -216,7 +216,7 @@ void video_irq_install(void) {
 }
 void video_cursor(void) {}
 /* Z80: write the n x n sprite attributes (Y, pattern, X, info) of one actor block. */
-static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;
+static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;static u16 pal_o;
 static void emit_block(void) __naked {
  __asm
  ld hl,(_e_o)
@@ -959,6 +959,32 @@ ae_mul:
  jp c,ae_emit
  jp nz,ae_ring
 ae_emit:
+ ld a,(_ae_i)
+ cp a,#8
+ jp c,ae_emit1
+ ld hl,(_e_o)
+ ld (_pal_o),hl
+ call _emit_block
+ ld hl,(_pal_o)
+ ld de,(_e_o)
+ inc hl
+ inc hl
+ inc hl
+ae_pal:
+ ld a,l
+ sub a,e
+ ld a,h
+ sbc a,d
+ jp nc,ae_ring
+ ld a,(hl)
+ or a,#0x40
+ ld (hl),a
+ inc hl
+ inc hl
+ inc hl
+ inc hl
+ jp ae_pal
+ae_emit1:
  call _emit_block
 ae_ring:
  ld a,(_draw_opt)
@@ -1023,9 +1049,28 @@ ae_end:
  ret
  __endasm;
 }
+
+/* Team colours for the enemy kingdom: sprite palette group 1 (bit 6 of the sprite info byte). Entries 6..8 are the
+ * tunic/cloth tones of the enemy poses; everything else keeps the shared palette. Option 0 = the original look. */
+u8 team_opt,team_cur;
+static const u8 team_pal[5][9]={
+ {9,4,4,18,9,4,13,9,4},      /* 0 original */
+ {22,4,4,27,10,6,15,4,4},    /* 1 crimson */
+ {14,6,20,20,10,26,9,5,13},  /* 2 imperial purple */
+ {5,5,8,12,12,16,3,3,5},     /* 3 black steel */
+ {4,13,13,8,22,22,3,9,9}     /* 4 teal */
+};
+static void team_apply(void) {
+ u8 i;const u8* t=team_pal[team_opt<5?team_opt:0];
+ __asm di __endasm;
+ for(i=0;i<16;++i)V9_SetPaletteEntry(16+i,(i>=6&&i<=8)?t+(i-6)*3:palette9+i*3);
+ __asm ei __endasm;
+ team_cur=team_opt;
+}
 void video_sprites(void) {
  u8 count,i,j,k,n,nb;u8* o=sattr+4;
  ++cache_tick;
+ if(team_cur!=team_opt)team_apply();
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
  if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];disp_crop[i]=pend_crop[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
  sp_cull();
@@ -1096,7 +1141,7 @@ void video_init(void) {
  V9_SetScreenMode(V9_MODE_P1);V9_SetDisplayEnable(FALSE);V9_SetInterrupt(V9_INT_NONE);
  V9_SetCursorEnable(FALSE);V9_SetSpriteEnable(TRUE);V9_SetSpritePatternAddr(V9_P1_SGT_38000);
  V9_SetBackgroundColor(0);V9_SetCommandWriteMask(0xFFFF);V9_SetScrolling(0,0);V9_SetScrollingB(0,0);
- for(i=0;i<64;++i)V9_SetPaletteEntry(i,palette9+(i&15)*3);
+ for(i=0;i<64;++i)V9_SetPaletteEntry(i,palette9+(i&15)*3);team_opt=team_cur=0;
  cache_tick=frame_uploads=rendered_frames=0;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;disp_crop[i]=pend_crop[i]=0;actor_crop[i]=0;act_blk[i]=0;bar_sig[i]=65535;}
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
