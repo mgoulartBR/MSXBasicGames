@@ -8,7 +8,7 @@ Decisão de direção de arte: **realista e sujo**, igual aos humanos. Os mortos
 3. Me envie a folha. Eu converto com `python3 tools/convert_units.py --realista ...` (sombreado por difusão de erro) e integro com `tools/integrate_units.py`.
 
 ## Bloco ESTILO (colar sempre)
-> The attached image is a reference sprite sheet from the human faction of the same game. Create the undead faction's sprite sheet in EXACTLY the same rendering style as the reference: gritty 1990s PC strategy game sprites (Warcraft I / Dune II feel), top-down 3/4 view. NO continuous black outline: edges are defined by darker shades of the object's own colors. Each material has 3–4 tones with dithered, noisy, textured shading and a few stray highlight pixels. Realistic body proportions: small head (about one sixth of the body height), lean limbs, weary hunched posture. Dull, dirty, low-saturation palette: dust/bone beige, dried brown bandages, tarnished dark gold, oxidized bronze, dim blue-green (verdigris), dried-blood rust, charcoal — no bright cream, no pure white, no saturated turquoise or yellow. The undead are desiccated, gaunt and menacing — NOT cute, NOT chibi, NOT cartoon. Same frame size, same camera angle, same layout as the reference. Transparent background, no anti-aliasing, max 16 colors, no gradients.
+> The attached image is a reference sprite sheet from the human faction of the same game. Create the undead faction's sprite sheet in EXACTLY the same rendering style as the reference: gritty 1990s PC strategy game sprites (Warcraft I / Dune II feel), top-down 3/4 view. NO continuous black outline: edges are defined by darker shades of the object's own colors. Each material has 3–4 tones with dithered, noisy, textured shading and a few stray highlight pixels. Realistic body proportions: small head (about one sixth of the body height), lean limbs, weary hunched posture. Dull, dirty, low-saturation palette: dust/bone beige, dried brown bandages, tarnished dark gold, oxidized bronze, dim blue-green (verdigris), dried-blood rust, charcoal — no bright cream, no pure white, no saturated turquoise or yellow. The undead are desiccated, gaunt and menacing — NOT cute, NOT chibi, NOT cartoon. Same frame size, same camera angle, same layout as the reference. Transparent background, no anti-aliasing, max 16 colors, no gradients. Make the face read clearly at 32 px (dark skull face, two small dim blue-green eye pixels). Make accents distinct: verdigris patina on bronze clearly blue-green (not brown), steel bright gray, tarnished-yellow gold highlights. Feet always on the same baseline, identical proportions in every frame.
 
 ## Unidades
 
@@ -44,3 +44,6 @@ Anexe o prédio humano correspondente (`anexo_predio_*.png`) e use o **bloco EST
 | `anexo_predio_7_oficina_cerco.png` | 64×64 | Galpão com rodas e sarcófago em obra |
 
 Peça cada prédio em **imagem separada**, no tamanho exato, base alinhada à linha de baixo.
+
+## Resultado já aprovado
+Guerreiro-múmia (folha realista) aprovado em novembro de 2026 como referência de estilo para o restante.
