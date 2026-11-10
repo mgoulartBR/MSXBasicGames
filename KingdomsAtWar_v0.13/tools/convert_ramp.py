@@ -10,8 +10,26 @@ from convert_buildings import HUM,lab
 def idx_of(rgb):return int(((HUM[1:]-np.array(rgb))**2).sum(1).argmin())+1
 RAMP=[idx_of(c) for c in [(0x21,0x21,0x21),(0x4A,0x21,0x21),(0x6B,0x4A,0x21),(0xB5,0x94,0x4A),(0xDE,0xDE,0x94)]]
 RED=idx_of((0x94,0x4A,0x21));GOLD=idx_of((0xDE,0x94,0x4A))
+def keybg(im):
+    a=np.array(im)
+    if (a[...,3]<250).any():return im
+    from collections import deque
+    rgb=a[...,:3].astype(int);bgc=(rgb.min(2)>215)&((rgb.max(2)-rgb.min(2))<14)
+    h,w=bgc.shape;seen=np.zeros_like(bgc);q=deque()
+    for x in range(w):
+        for y in (0,h-1):
+            if bgc[y,x]:q.append((y,x));seen[y,x]=1
+    for y in range(h):
+        for x in (0,w-1):
+            if bgc[y,x] and not seen[y,x]:q.append((y,x));seen[y,x]=1
+    while q:
+        y,x=q.popleft()
+        for dy,dx in((1,0),(-1,0),(0,1),(0,-1)):
+            ny,nx=y+dy,x+dx
+            if 0<=ny<h and 0<=nx<w and bgc[ny,nx] and not seen[ny,nx]:seen[ny,nx]=1;q.append((ny,nx))
+    a[seen,3]=0;return Image.fromarray(a)
 def convert(path,size,ss=4,cuts=(0.10,0.32,0.62,0.9)):
-    im=Image.open(path).convert('RGBA');al=np.array(im)[...,3]>128
+    im=keybg(Image.open(path).convert('RGBA'));al=np.array(im)[...,3]>128
     ys,xs=np.nonzero(al);box=(xs.min(),ys.min(),xs.max()+1,ys.max()+1);sw,sh=box[2]-box[0],box[3]-box[1]
     sc=min((size-2)/sw,(size-1)/sh);tw,th=round(sw*sc),round(sh*sc)
     big=im.crop(box).resize((tw*ss,th*ss),Image.LANCZOS);a_=big.split()[3]
