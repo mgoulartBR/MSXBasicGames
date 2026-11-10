@@ -15,7 +15,7 @@ proc dump_fog011 {state} {
  shot $pre
 }
 proc fog_case011 {} {
- delay 45
+ delay 55
  ck home_visible {[fog_state 4 8]==2 && [fog_state 8 4]==2}
  ck enemy_unexplored {[fog_state 3 23]==0 && [fog_state 8 23]==0 && [fog_state 3 28]==0}
  camera_until cam_y 288 64

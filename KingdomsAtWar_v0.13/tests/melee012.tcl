@@ -12,7 +12,7 @@ proc perf_end {phase} {
 }
 proc wr {name off v} {debug write memory [expr {$::S($name)+$off}] $v}
 proc melee012 {} {
- delay 45;materials
+ delay 55;materials
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
  set cells {{4 5} {5 6} {7 6} {9 6} {6 4} {8 4}}
  for {set k 0} {$k<4} {incr k} {

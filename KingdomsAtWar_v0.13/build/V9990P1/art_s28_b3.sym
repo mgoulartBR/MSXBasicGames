@@ -8,13 +8,13 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        000004DF R
-  7 ___str_1                                                        000004E8 R
-  7 ___str_2                                                        000004EF R
-  7 ___str_3                                                        000004F6 R
-  7 ___str_4                                                        000004FE R
-  7 ___str_5                                                        00000506 R
-  7 ___str_6                                                        0000050B R
+  7 ___str_0                                                        000006CB R
+  7 ___str_1                                                        000006D4 R
+  7 ___str_2                                                        000006DB R
+  7 ___str_3                                                        000006E2 R
+  7 ___str_4                                                        000006EA R
+  7 ___str_5                                                        000006F2 R
+  7 ___str_6                                                        000006F7 R
     _building_selected                                              ******** GX
     _cam_x                                                          ******** GX
     _cam_y                                                          ******** GX
@@ -307,7 +307,7 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _group_context                                                  0000041D GR
+  7 _group_context                                                  00000609 GR
     _hud_context_text                                               ******** GX
     _left_edges                                                     ******** GX
   7 _left_prepare                                                   000000B2 GR
@@ -318,6 +318,7 @@ Symbol Table
     _left_y                                                         ******** GX
     _mouse_x                                                        ******** GX
     _mouse_y                                                        ******** GX
+    _pose_base                                                      ******** GX
     _pose_bounds                                                    ******** GX
     _raw_down                                                       ******** GX
     _select_at                                                      ******** GX
@@ -325,6 +326,7 @@ Symbol Table
     _selection_count                                                ******** GX
     _selection_mask                                                 ******** GX
     _selection_update                                               ******** GX
+    _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _unit_count                                                     ******** GX
     _unit_draw_x                                                    ******** GX
@@ -342,7 +344,6 @@ Symbol Table
     b_selection_update                                              ******** GX
     b_unit_position                                                 ******** GX
 
-
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
@@ -355,7 +356,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG28                                     size      511   flags    0
+   7 _SEG28                                     size      6FD   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

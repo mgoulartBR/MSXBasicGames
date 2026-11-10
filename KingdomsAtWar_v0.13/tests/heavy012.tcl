@@ -12,7 +12,7 @@ proc perf_end {phase} {
 }
 proc poke16 {name v} {debug write memory $::S($name) [expr {$v&255}];debug write memory [expr {$::S($name)+1}] [expr {$v>>8}]}
 proc heavy012 {} {
- delay 45;materials
+ delay 55;materials
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
  perf_start;delay 2;perf_end idle
  set cells {{4 5} {5 6} {7 6} {9 6}}

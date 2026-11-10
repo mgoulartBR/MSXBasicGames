@@ -1,13 +1,14 @@
 # Golpe e dano: o clarao e o gesto de ataque aparecem, depois somem (so renderiza nas transicoes).
 source kingdom_helpers.tcl
 proc fs_case {} {
- delay 45
+ delay 55
  debug write memory $::S(unit_hp) 20
  debug write memory [expr {$::S(unit_hp)+2}] 24
  debug write memory $::S(sprites_dirty) 3
  delay 1
  debug write memory $::S(attack_flash) 8
  debug write memory [expr {$::S(hurt_flash)+2}] 8
+ debug write memory $::S(combat_active) 1 ;# como o golpe real: mantem o combate ativo
  debug write memory $::S(sprites_dirty) 3
  delay 0.07
  shot flashseq-strike

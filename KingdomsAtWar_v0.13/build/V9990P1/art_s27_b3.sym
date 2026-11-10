@@ -334,6 +334,7 @@ Symbol Table
     _place_y                                                        ******** GX
     _placement_mode                                                 ******** GX
     _placement_valid                                                ******** GX
+    _pose_base                                                      ******** GX
     _repair_active                                                  ******** GX
     _repair_target                                                  ******** GX
     _requested                                                      ******** GX
@@ -341,11 +342,12 @@ Symbol Table
     _sc_cull                                                        ******** GX
     _scroll_copies                                                  ******** GX
     _sim_ticks                                                      ******** GX
+    _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _stock                                                          ******** GX
     _terrain                                                        ******** GX
     _tile                                                           ******** GX
-  7 _unit_art_frame                                                 0000114D GR
+  7 _unit_art_frame                                                 00001171 GR
     _unit_build                                                     ******** GX
     _unit_count                                                     ******** GX
     _unit_draw_x                                                    ******** GX
@@ -354,27 +356,28 @@ Symbol Table
     _unit_frame                                                     ******** GX
     _unit_hp                                                        ******** GX
     _unit_kind                                                      ******** GX
-  7 _unit_position                                                  0000144C GR
-  7 _unit_prep                                                      000010EB GR
-  1 _unit_prep_f                                                    00000000 GR
-  7 _unit_prep_in                                                   00000B43 R
+  7 _unit_position                                                  00001470 GR
+  7 _unit_prep                                                      0000110F GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  1 _unit_prep_f                                                    00000000 GR
+  7 _unit_prep_in                                                   00000B43 R
     _unit_walk_dist                                                 ******** GX
     _unit_walk_phase                                                ******** GX
     _units                                                          ******** GX
-  7 _units_prep                                                     000010F7 GR
-  7 _units_prep_asm                                                 00000FA5 R
-  7 _units_prep_reset                                               0000112B GR
+  7 _units_prep                                                     0000111B GR
+  7 _units_prep_asm                                                 00000FA6 R
+  7 _units_prep_reset                                               0000114F GR
   1 _up_d                                                           00000002 R
   1 _up_f                                                           00000003 R
-  1 _up_fe                                                          00000013 R
+  1 _up_fe                                                          0000001D R
   1 _up_fl                                                          00000004 R
   1 _up_i                                                           00000001 R
   1 _up_idle                                                        00000008 R
+  1 _up_kind                                                        00000013 R
   1 _up_par                                                         00000012 R
   7 _up_plain                                                       000009D7 R
   7 _up_slow                                                        00000EF0 GR
@@ -415,23 +418,24 @@ Symbol Table
   7 up_rx1                                                          00000B1F R
   7 up_rxs                                                          00000B21 R
   7 up_setd                                                         00000A27 R
-  7 up_still                                                        00000A4E R
-  7 up_two                                                          00000A25 R
-  7 up_west                                                         00000A10 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  7 upa_cull                                                        00001091 R
-  7 upa_do                                                          0000101C R
-  7 upa_isidle                                                      000010B6 R
-  7 upa_lo                                                          00000FBA R
-  7 upa_lp                                                          00000FA9 R
-  7 upa_next                                                        000010AF R
-  7 upa_ni                                                          000010E9 R
-  7 upa_plain                                                       00000FFA R
-  7 upa_sh                                                          00000FBD R
+  7 up_still                                                        00000A4E R
+  7 up_two                                                          00000A25 R
+  7 up_west                                                         00000A10 R
+  7 upa_cull                                                        000010B5 R
+  7 upa_do                                                          0000102A R
+  7 upa_isidle                                                      000010DA R
+  7 upa_k1                                                          0000108C R
+  7 upa_lo                                                          00000FBB R
+  7 upa_lp                                                          00000FAA R
+  7 upa_next                                                        000010D3 R
+  7 upa_ni                                                          0000110D R
+  7 upa_plain                                                       00000FFB R
+  7 upa_sh                                                          00000FBE R
 
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
@@ -440,13 +444,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       15   flags    0
+   1 _DATA                                      size       1F   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG27                                     size     15C6   flags    0
+   7 _SEG27                                     size     15EA   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

@@ -168,7 +168,8 @@ void video_cursor(void);
 
 extern u8 unit_facing[RN],unit_frame[RN],unit_walk_dist[RN],unit_walk_phase[RN];
 
-extern const u8 kind_sizes[],pose_bounds[],pose_cells[],build_base[];
+#define POSE_KEY(i) ((u8)(pose_base[(i)<N?unit_kind[i]:skin_map[unit_kind[i]]]+unit_frame[i]))
+extern const u8 kind_sizes[],pose_bounds[],pose_cells[],build_base[],key_slot[],pose_base[],pose_count[],skin_map[];
 
 extern u8 raw_down,raw_latched;extern i16 raw_dx,raw_dy;
 void poll_input(void);

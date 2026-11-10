@@ -26,7 +26,7 @@ void drag_tick(void) __banked {
   for(i=0;i<unit_count;++i) {
    if(!unit_hp[i]) {mask&=~(1<<i);continue;}
    if(unit_position(i)) {
-    const u8* bb=pose_bounds+(u16)(unit_kind[i]*24+unit_frame[i])*4;
+    const u8* bb=pose_bounds+(u16)POSE_KEY(i)*4;
     i16 ux=unit_draw_x+cam_x+bb[0],uy=unit_draw_y+cam_y+bb[1];
     if(ux<=(i16)r && ux+bb[2]>(i16)l && uy<=(i16)b && uy+bb[3]>(i16)t)mask|=1<<i;
    }

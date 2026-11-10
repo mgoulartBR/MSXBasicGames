@@ -11,7 +11,7 @@ proc dump091 {name} {
 }
 proc fast_host011 {command a b} {puts $::mf "$command $a $b";flush $::mf;delay 0.04}
 proc box091 {} {
- delay 45;mouse_open
+ delay 55;mouse_open
  mp 34 20;press091;mp 116 68
  ck rectangle_live {[b drag_down] && [b drag_moved] && [b selection_mask]==3 && [b selection_count]==2}
  shot box091-held;dump091 box091-held

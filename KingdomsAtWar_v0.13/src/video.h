@@ -9,9 +9,10 @@
  * VRAM (a byte address is 128 * line + x/2 when viewed as the 256 px wide 4bpp bitmap the VDP commands use):
  *   lines    0..159   layer A pattern table: the box/bars bitmap
  *   lines  160..183   layer A HUD patterns: solid colours (PA_SOLID), HUD top line, font (PA_FONT)
- *   lines  192..575   pose bank, 32 px poses (8 per row)
- *   lines  576..1295  pose bank, 48 px poses (5 per row)
- *   lines 1296..1439  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
+
+ *   lines  192..639   pose bank, 32 px poses (8 per row; slots from key_slot[])
+ *   lines  640..1599  pose bank, 48 px poses (5 per row)
+ *   lines 1600..1743  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
  *   lines 1792..2047  sprite pattern table (R#25 = 0x38000): 256 cells of 16x16
  *        cells   0..191   pose blocks, two 3x3 blocks per actor (double buffer)
  *        cells 192..209   unit health bars (9 widths x 2 colours), 210..213 arrows, 214..222 white bars,
@@ -28,7 +29,7 @@
 #define P1_PGT_B_BASE 0x40000UL
 #define P1_SGT_LINE 1792U
 #define POSE32_Y 192U
-#define POSE48_Y 576U
+#define POSE48_Y 640U
 #define PB_PLAIN 8U
 #define PB_DITH 800U
 #define PA_SOLID 641U
@@ -165,10 +166,12 @@ static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108},{48,51,54,57,60,
 #define CELL_CROSS 223
 #define CELL_OCC 224
 #define OCC_N 14
-#define OV_Y 1296U
-static void pose_pos(u8 kind,u8 f,u16* x,u16* y) {
- if(kind_sizes[kind]==32) {u8 k=(kind==0?0:kind==1?1:kind==3?2:3)*24+f;*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
- else {u8 k=(kind==2?0:kind==4?1:2)*24+f,q=(u8)(((u16)k*205)>>10);*x=(u16)(k-q*5)*48;*y=POSE48_Y+(u16)q*48;}
+#define OV_Y 1600U
+/* Pose key -> position in the pose bank (key_slot[] = slot inside the 32 px or the 48 px bank). */
+static void pose_pos(u8 key,u8 sz,u16* x,u16* y) {
+ u8 k=key_slot[key];
+ if(sz==32){*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
+ else {u8 q=(u8)(((u16)k*205)>>10);*x=(u16)(k-q*5)*48;*y=POSE48_Y+(u16)q*48;}
 }
 static void px4(u8* buf,u8 x,u8 y,u8 c) {u8* p=buf+((u16)y<<3)+(x>>1);if(x&1)*p=(*p&0xF0)|c;else *p=(*p&0x0F)|(c<<4);}
 static void cell_write(u8 cell,const u8* src16rows) {
@@ -558,7 +561,7 @@ u8 draw_opt;
 static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
 void ae_up(u8 i) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
- pose_pos(unit_kind[i],key-unit_kind[i]*24,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
+ pose_pos(key,sz,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
  {u8 cr=actor_crop[i];if(cr){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
  pend_key[i]=key;++frame_uploads;
 }
@@ -1195,14 +1198,19 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
    tile_patterns(P1_PGT_B_BASE,PB_DITH+phy*4,tile_buffer);
   }
  }
- for(i=0;i<168;++i)if(poses[i].bank) {
-  u8 n=kind_sizes[i/24]>>4;asset_begin(poses+i);
-  for(q=0;q<n*n;++q) {
-   u16 x,yy,px,py;u8 k;pose_pos(i/24,i-(i/24)*24,&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
-   asset_read(tile_buffer,128);
-   for(k=0;k<16;++k)V9_WriteVRAM((u32)(yy+k)*128+(x>>1),tile_buffer+k*8,8);
+ for(i=0;i<12;++i) {
+  u8 f,n=kind_sizes[i]>>4;
+  for(f=0;f<pose_count[i];++f) {
+   u8 key=pose_base[i]+f;
+   if(!poses[key].bank)continue;
+   asset_begin(poses+key);
+   for(q=0;q<n*n;++q) {
+    u16 x,yy,px,py;u8 k;pose_pos(key,kind_sizes[i],&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
+    asset_read(tile_buffer,128);
+    for(k=0;k<16;++k)V9_WriteVRAM((u32)(yy+k)*128+(x>>1),tile_buffer+k*8,8);
+   }
+   ++boot_poses;load_progress((u8)((u16)boot_poses*16/208));
   }
-  ++boot_poses;load_progress((u8)((u16)boot_poses*16/104));
  }
  for(y=0;y<32;++y)for(j=0;j<32;++j)p1_cell(j,y);
  for(i=0;i<16;++i)hud_name(8+i,14,0);

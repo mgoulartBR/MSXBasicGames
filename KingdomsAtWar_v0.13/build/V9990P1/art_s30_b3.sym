@@ -33,7 +33,7 @@ Symbol Table
     _drag_begin                                                     ******** GX
     _drag_down                                                      ******** GX
     _drag_tick                                                      ******** GX
-  7 _economy_order                                                  000011FC GR
+  7 _economy_order                                                  00001216 GR
     _edge_hold                                                      ******** GX
     _edge_keys                                                      ******** GX
     _enemy_selected                                                 ******** GX
@@ -316,7 +316,7 @@ Symbol Table
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
     _game_seconds                                                   ******** GX
-  7 _goal_free                                                      00000D89 GR
+  7 _goal_free                                                      00000DA3 GR
     _gold                                                           ******** GX
     _group_orders                                                   ******** GX
   7 _hud                                                            00000A0A GR
@@ -351,7 +351,7 @@ Symbol Table
     _mouse_y                                                        ******** GX
     _node_x                                                         ******** GX
     _node_y                                                         ******** GX
-  7 _order_at                                                       00000EF5 GR
+  7 _order_at                                                       00000F0F GR
     _order_one                                                      ******** GX
     _passable                                                       ******** GX
     _place_valid                                                    ******** GX
@@ -370,6 +370,7 @@ Symbol Table
     _poll_input                                                     ******** GX
     _population_free                                                ******** GX
     _population_limit                                               ******** GX
+    _pose_base                                                      ******** GX
     _pose_bounds                                                    ******** GX
     _production_cancel                                              ******** GX
     _raw_command_down                                               ******** GX
@@ -386,6 +387,7 @@ Symbol Table
     _selection_count                                                ******** GX
     _selection_mask                                                 ******** GX
   7 _selection_update                                               00000A4A GR
+    _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _stance                                                         ******** GX
     _tile                                                           ******** GX
@@ -416,13 +418,13 @@ Symbol Table
     b_combat_click                                                  ******** GX
     b_combat_hit_test                                               ******** GX
     b_combat_stop                                                   ******** GX
-    b_drag_begin                                                    ******** GX
-    b_drag_tick                                                     ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_drag_begin                                                    ******** GX
+    b_drag_tick                                                     ******** GX
     b_economy_order                                             =   0000001E G
     b_format_amount                                             =   0000001E G
     b_goal_free                                                 =   0000001E G
@@ -462,7 +464,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG30                                     size     13F2   flags    0
+   7 _SEG30                                     size     140C   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

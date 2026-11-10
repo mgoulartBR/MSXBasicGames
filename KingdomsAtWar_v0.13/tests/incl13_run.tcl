@@ -1,5 +1,5 @@
 
-array set ::extra {__str_0 24575 __str_1 24581 __str_10 25751 __str_11 25757 __str_12 25763 __str_13 25771 __str_14 25777 __str_15 25783 __str_16 25790 __str_17 25797 __str_2 24587 __str_3 24593 __str_4 25708 __str_5 25715 __str_6 25721 __str_7 25730 __str_8 25738 __str_9 25744 art_tile 19202 asset_begin 16494 asset_read 18257 bank_support 19175 build_base 17098 build_gold 16530 build_sizes 17106 build_wood 16522 building_size 19186 cell_write 21138 clip_copy 19831 combat_alive 24686 cursor 16550 fog_art 19276 fog_at 19219 fog_bit_table 19565 font_asset 16591 free_at 24718 gpu_wait 19621 hud_name 20746 intersect 19328 kind_sizes 17114 load_progress 22851 main 25085 name_set2 20347 order_one 24924 p1_cell 20382 p1_copy 19659 palette68 18049 palette9 18081 passable 24658 pat_write 19880 poll_input 18543 pose_bounds 17377 poses 16594 recruit_gold 16544 recruit_wood 16538 render_bit 19573 restore_field 19863 ring_pixels 18129 site_tiles 16518 spr_attr 21383 static_assets 16582 tile 24641 tile_patterns 20110 tile_source 17121 unit_cooldown 19558 unit_damage 19551 unit_max_hp 19195 unit_range 19544 v9_busy 19593 v9_lmmm 19598 video_camera 19819 video_camera_ready 19827 video_char 20826 video_clock 19744 video_cursor 21425 video_enable 24599 video_fill 20935 video_hud_begin 19813 video_hud_end 19814 video_hud_flush 19815 video_hud_swap 19751 video_init 22882 video_known_tile 20682 video_present 19818 video_sprites 21485 video_stream 19830 video_text 20876 video_tile 20693 video_wait 19781 video_world_cell 20641 video_world_dither 20647 video_world_tile 20644 world_fill 19849}
+array set ::extra {__str_0 32808 __str_1 32814 __str_10 33978 __str_11 33984 __str_12 33990 __str_13 33998 __str_14 34004 __str_15 34010 __str_16 34017 __str_17 34024 __str_2 32820 __str_3 32826 __str_4 33935 __str_5 33942 __str_6 33948 __str_7 33957 __str_8 33965 __str_9 33971 art_tile 19173 asset_begin 16494 asset_read 18452 bank_support 19146 bld_visible 23528 build_base 17098 build_gold 16530 build_sizes 17106 build_wood 16522 building_size 19157 cell_tab 21711 cell_write 21793 clip_copy 19802 combat_alive 32920 cursor 16550 emit_block 22810 fog_art 19247 fog_at 19190 fog_bit_table 19536 font_asset 16591 free_at 33048 gpu_wait 19592 hud_name 20730 intersect 19299 io_lmmv 21128 io_rw 20332 io_vset 20318 irq_p1 22092 kind_sizes 17114 load_progress 30042 lz_decode 18257 main 33260 names_put 20338 occ_get 23057 occ_scan 32952 order_one 33099 otir_vram 22080 p1_cell 20417 p1_copy 19630 palette68 18049 palette9 18081 passable 32892 pat_write 19851 poll_input 18514 pose_bounds 17377 pose_pos 21491 poses 16594 px4 21731 recruit_gold 16544 recruit_wood 16538 render_bit 19544 restore_field 19834 ring_pixels 18129 rl_add 21216 site_tiles 16518 sp_cull 22894 spr_attr 22038 static_assets 16582 tile 32875 tile_patterns 20081 tile_source 17121 unit_cooldown 19529 unit_damage 19522 unit_max_hp 19166 unit_range 19515 v9_busy 19564 v9_lmmm 19569 video_camera 19790 video_camera_ready 19798 video_char 20813 video_clock 19715 video_cursor 22809 video_enable 32832 video_fill 20923 video_hud_begin 19784 video_hud_end 19785 video_hud_flush 19786 video_hud_swap 19722 video_init 30073 video_irq_install 22777 video_known_tile 20666 video_present 19789 video_sprites 23821 video_stream 19801 video_text 20864 video_tile 20677 video_wait 19752 video_world_cell 20625 video_world_dither 20631 video_world_tile 20628 world_fill 19820}
 
 set ::incl [dict create];set ::calls [dict create];set ::pend [dict create]
 proc trk_enter {name} {
@@ -38,7 +38,7 @@ proc perf_end {phase} {
  puts stderr "CALLS $phase $::counts"
 }
 proc perf012 {} {
- delay 45;choose 2;world_point 0 0
+ delay 55;choose 2;world_point 0 0
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
  set variant $::env(KAW_VARIANT);set name [dict get {V9990 KAW9990 V9990P1 KAW9990P1 PREVIEW KAW68PV V9968 KAW9968} $variant]
  set f [open ../build/$variant/$name.map];set text [read $f];close $f
@@ -52,7 +52,7 @@ proc perf012 {} {
 
  set variant $::env(KAW_VARIANT);set nm [dict get {V9990 KAW9990 V9990P1 KAW9990P1 PREVIEW KAW68PV V9968 KAW9968} $variant]
  set f [open ../build/$variant/$nm.map];set mtext [read $f];close $f
- foreach fn {simulate input poll_input fog_update hud video_sprites navigation combat_tick economy production tower_tick camera_update} {
+ foreach fn {simulate input camera_update fog_update hud video_sprites irq_p1 video_wait unit_prep emit_block sp_cull p1_copy} {
   set address -1
   if {[info exists ::extra($fn)]} {set address $::extra($fn);set bank 0;set pc $address;set condition "\$::perf_running";debug set_bp $pc $condition "trk_enter $fn";continue}
   if {[regexp "(\[0-9A-F\]{8})\\s+_$fn\\s" $mtext whole address]} {

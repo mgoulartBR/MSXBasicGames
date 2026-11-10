@@ -132,7 +132,7 @@ void select_at(u16 wx,u16 wy,u8 additive) __banked {
   if(!building_owner[i] && bl->state && wx/16>=bl->x && wx/16<bl->x+n && wy/16>=bl->y && wy/16<bl->y+n)bid=i;
  }
  for(i=0;i<unit_count;++i)if(unit_position(i)) {
-  const u8* bb=pose_bounds+(u16)(unit_kind[i]*24+unit_frame[i])*4;
+  const u8* bb=pose_bounds+(u16)POSE_KEY(i)*4;
   i16 ux=unit_draw_x+cam_x,uy=unit_draw_y+cam_y;
   if((i16)wx>=ux+bb[0] && (i16)wx<ux+bb[0]+bb[2] && (i16)wy>=uy+bb[1] && (i16)wy<uy+bb[1]+bb[3] && (bid==NONE || units[i].py+16>(u16)(buildings[bid].y+building_size(buildings[bid].type))*16)) {
    if(hit==NONE || units[i].py>=units[hit].py)hit=i;

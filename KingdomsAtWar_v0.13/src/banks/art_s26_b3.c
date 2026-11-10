@@ -85,7 +85,7 @@ void combat_init(void) __banked {
 }
 u8 combat_hit_test(u16 wx,u16 wy) __banked {
  u8 i;
- for(i=N;i<RN;++i)if(unit_position(i)) {const u8* b=pose_bounds+(u16)(unit_kind[i]*24+unit_frame[i])*4;i16 x=unit_draw_x+cam_x,y=unit_draw_y+cam_y;
+ for(i=N;i<RN;++i)if(unit_position(i)) {const u8* b=pose_bounds+(u16)POSE_KEY(i)*4;i16 x=unit_draw_x+cam_x,y=unit_draw_y+cam_y;
   if((i16)wx>=x+b[0] && (i16)wx<x+b[0]+b[2] && (i16)wy>=y+b[1] && (i16)wy<y+b[1]+b[3])return i;
  }
  if(wx<512 && wy<512) {i=tile(wx>>4,wy>>4);if(i>=10 && i-10<building_count && building_owner[i-10] && buildings[i-10].state && fog_target(128+i-10))return 128+i-10;}
