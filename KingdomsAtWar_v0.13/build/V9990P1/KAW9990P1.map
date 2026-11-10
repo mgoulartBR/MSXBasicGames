@@ -138,23 +138,23 @@ Area                                    Addr        Size        Decimal Bytes (A
      000006FD  l__SEG28                        
      0000070A  l__SEG11                        
      00000861  l__SEG13                        
-     00000B34  l__SEG20                        
      0000105D  l__SEG9                         
      0000140C  l__SEG30                        
      000015EA  l__SEG27                        
      00001677  l__SEG26                        
      000018C4  l__SEG29                        
      000019C5  l__SEG31                        
+     00001A38  l__SEG20                        
      00001C67  l__SEG15                        
+     00001E7D  l__SEG17                        
      00001EB4  l__SEG6                         
      00001EF7  l__SEG4                         
      00001EF7  l__SEG7                         
+     00001F0F  l__SEG18                        
+     00001F45  l__SEG16                        
      00001F46  l__SEG5                         
-     00001F4B  l__SEG16                        
-     00001F4F  l__SEG19                        
      00001F5F  l__SEG8                         
-     00001F78  l__SEG18                        
-     00001FBF  l__SEG17                        
+     00001F76  l__SEG19                        
      00002F3F  l__DATA                         
      00004000  s__CODE                         
      0000551E  l__CODE                         
@@ -1117,7 +1117,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG16                              0010A000    00001F4B =        8011. bytes (REL,CON)
+_SEG16                              0010A000    00001F45 =        8005. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1128,7 +1128,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG17                              0011A000    00001FBF =        8127. bytes (REL,CON)
+_SEG17                              0011A000    00001E7D =        7805. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1139,7 +1139,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG18                              0012A000    00001F78 =        8056. bytes (REL,CON)
+_SEG18                              0012A000    00001F0F =        7951. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1150,7 +1150,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG19                              0013A000    00001F4F =        8015. bytes (REL,CON)
+_SEG19                              0013A000    00001F76 =        8054. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1161,7 +1161,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG20                              0014A000    00000B34 =        2868. bytes (REL,CON)
+_SEG20                              0014A000    00001A38 =        6712. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
