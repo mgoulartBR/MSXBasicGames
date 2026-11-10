@@ -47,6 +47,9 @@ def convert(path,size,margin=1,ss=4,smooth=0):
             if k not in used:amap[c]=k+1;used.add(k);break
         else:amap[c]=int(d.argmin())+1
     idx=np.array(amap)[lab_c];idx[~op]=-1
+    if __import__('os').environ.get('MAP')=='nearest':
+        Lq=L.copy();c=float(__import__('os').environ.get('CONTRAST','1'));m_=np.median(L[...,0][op]);Lq[...,0]=np.clip((L[...,0]-m_)*c+m_+float(__import__('os').environ.get('LIFT','0')),0,100)
+        d=((Lq.reshape(-1,1,3)-PL[None])**2).sum(2);idx=(d.argmin(1)+1).reshape(L.shape[:2]);idx[~op]=-1
     out=np.full((size,size),-1,int);ox=(size-tw)//2;oy=size-th
     for ty in range(th):
         for tx in range(tw):
