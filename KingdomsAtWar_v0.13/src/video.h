@@ -37,7 +37,7 @@
 const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
-i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN];
+i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
 volatile struct {u16 r[6];u8 arg,lop;} v9c;
 static u8 v9_busy(void) __naked {__asm
  in a,(#0x65)
@@ -124,7 +124,7 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 /* ---- sprites ---- */
 /* Pose slots are double buffered: a new pose is copied into the idle block and shown only once the copy ended,
  * so a half-copied pose is never on screen. Attributes and scroll are committed in the vertical blank. */
-static u8 disp_key[RN],pend_key[RN],act_blk[RN],sused;
+static u8 disp_key[RN],pend_key[RN],act_blk[RN],sused;static u8 disp_crop[RN],pend_crop[RN];
 #define sattr p1_shared
 static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
 #define MAXR 20
@@ -137,6 +137,15 @@ static void io_lmmv(u8 x,u8 y,u8 w,u8 h,u8 c) {
  io_sel=36;io_reg=x;io_reg=0;io_reg=y;io_reg=0;io_reg=w;io_reg=0;io_reg=h;io_reg=0;
  io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=c*17;io_reg=c*17;
  io_sel=52;io_reg=0x20;
+}
+/* Main-thread rectangle clear (colour 0 = transparent) inside the VRAM bitmap view; 16-bit coordinates. */
+static void p1_fill0(u16 dx,u16 dy,u16 w,u16 h) {
+ gpu_wait();
+ __asm di __endasm;
+ io_sel=36;io_reg=(u8)dx;io_reg=(u8)(dx>>8);io_reg=(u8)dy;io_reg=(u8)(dy>>8);io_reg=(u8)w;io_reg=(u8)(w>>8);io_reg=(u8)h;io_reg=(u8)(h>>8);
+ io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=0;io_reg=0;
+ io_sel=52;io_reg=0x20;
+ __asm ei __endasm;
 }
 static void rl_add(i16 x,i16 y,u8 w,u8 h,u8 c) {
  i16 x1=x+w,y1=y+h;
@@ -550,6 +559,7 @@ static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
 void ae_up(u8 i) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
  pose_pos(unit_kind[i],key-unit_kind[i]*24,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
+ {u8 cr=actor_crop[i];if(cr){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
  pend_key[i]=key;++frame_uploads;
 }
 void ae_occ(u8 i) {
@@ -728,7 +738,16 @@ ae_lp:
  add hl,de
  ld a,(hl)
  cp a,b
+ jp nz,ae_upk
+ ld hl,#_actor_crop
+ add hl,de
+ ld b,(hl)
+ ld hl,#_disp_crop
+ add hl,de
+ ld a,(hl)
+ cp a,b
  jp z,ae_noup
+ae_upk:
  ld hl,#_pend_key
  add hl,de
  ld a,(hl)
@@ -1008,7 +1027,7 @@ void video_sprites(void) {
  u8 count,i,j,k,n,nb;u8* o=sattr+4;
  ++cache_tick;
  /* copies issued earlier are finished once the engine is idle: switch those blocks in */
- if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
+ if(!v9_busy()) {for(i=0;i<RN;++i)if(pend_key[i]!=NONE) {act_blk[i]^=1;disp_key[i]=pend_key[i];disp_crop[i]=pend_crop[i];pend_key[i]=NONE;}for(i=0;i<OCC_N;++i)occ_pend[i]=0;}
  sp_cull();
  units_prep();
  count=ord_sort();
@@ -1079,7 +1098,7 @@ void video_init(void) {
  V9_SetBackgroundColor(0);V9_SetCommandWriteMask(0xFFFF);V9_SetScrolling(0,0);V9_SetScrollingB(0,0);
  for(i=0;i<64;++i)V9_SetPaletteEntry(i,palette9+(i&15)*3);
  cache_tick=frame_uploads=rendered_frames=0;
- for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;act_blk[i]=0;bar_sig[i]=65535;}
+ for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;disp_crop[i]=pend_crop[i]=0;actor_crop[i]=0;act_blk[i]=0;bar_sig[i]=65535;}
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
  units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
  for(i=0;i<OCC_N;++i){occ_key[i]=255;occ_stamp[i]=0;occ_pend[i]=0;}

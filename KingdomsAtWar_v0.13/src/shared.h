@@ -101,7 +101,7 @@ u8 art_tile(u8 x,u8 y);
 u8 unit_art_frame(u8 i) __banked;
 u8 unit_position(u8 i) __banked;
 u8 unit_prep(u8 i) __banked;extern u8 unit_prep_f;
-void units_prep(void) __banked;void units_prep_reset(void) __banked;extern u16 sc_cull;extern i16 actor_x[RN],actor_y[RN];extern u8 actor_visible[RN],actor_key[RN];
+void units_prep(void) __banked;void units_prep_reset(void) __banked;extern u16 sc_cull;extern i16 actor_x[RN],actor_y[RN];extern u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
 u8 tile(u8 x,u8 y);
 u8 passable(u8 x,u8 y);
 u8 free_at(u8 x,u8 y,u8 who);

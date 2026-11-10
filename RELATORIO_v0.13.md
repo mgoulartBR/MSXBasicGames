@@ -22,7 +22,7 @@ A ROM que mais se aproxima da meta é a P1. O V9968 continua bem abaixo: o camin
 
 | Arquivo | Destino | SHA-256 |
 |---|---|---|
-| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `8403a8808d4b12a754e217e967ad87bae0d469d415deb8acbc1c94d875eb8263` |
+| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `7d792b071223c607116dfd56efa7c1b964581fd1806e409b4227bc49199aeb67` |
 | `KAW9990.ROM` | MSX2 + V9990/GFX9000, modo bitmap | `7fd205da8b3b187db8d09f9d965d8cdd900e32704d03b2c6a31e488fa8c4fb4f` |
 | `KAW9968.ROM` | MSX2+ com V9968 (e openMSX com o script do kit) | `9e7374f8b8efab6eb2aeaf8d6309ecbe6263c538088e84625b6295707a93a5c4` |
 
@@ -44,7 +44,7 @@ O modo bitmap do V9990 obriga a restaurar fundo, redesenhar atores e inverter p�
 ### Diferenças conhecidas em relação ao modo bitmap
 
 - Barras de vida das unidades em passos de 2 px (para liberar padrões de sprite).
-- O visual de entrada na mina (recorte da unidade) não foi reproduzido: a unidade aparece inteira.
+- O recorte da unidade na entrada e na saída da mina foi reproduzido: as linhas de cima da pose são apagadas (4 px por passo) na cópia da pose para o sprite (`tests/mine_crop_p1.tcl`, `reference/recorte_mina.png`).
 - O Fog é recalculado no máximo a cada 20 ticks de vídeo (cerca de 0,33 s), então o Fog revela com até esse atraso e a visibilidade de inimigos em combate acompanha. Só vale para a P1.
 - O carregamento inicial leva cerca de 36 s a 3,58 MHz (antes cerca de 25 s no modo bitmap): são mais padrões e a decodificação roda no Z80 uma vez.
 - Cerca de 16 sprites por linha de varredura é o limite do chip (observado no protótipo; não medi o número exato). Grupos grandes de unidades lado a lado perto desse limite podem perder sprites.

@@ -321,6 +321,7 @@ static u8 unit_prep_in(u8 i) {
  return 1;
 }
 void up_slow(u8 i) {
+ actor_crop[i]=mine_phase[i]?(u8)(mine_step[i]*4):0;
  actor_visible[i]=unit_prep_in(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=unit_kind[i]*24+unit_prep_f;
 }
 static u8 upa_i,upa_v,up_idle[RN],up_par;static u16 up_fe;
@@ -400,6 +401,9 @@ upa_do:
  add hl,de
  ld a,(_upa_v)
  ld (hl),a
+ ld hl,#_actor_crop
+ add hl,de
+ ld (hl),#0
  ld l,e
  ld h,#0
  add hl,hl
@@ -465,6 +469,9 @@ upa_cull:
  ld hl,#_actor_key
  add hl,de
  ld (hl),#255
+ ld hl,#_actor_crop
+ add hl,de
+ ld (hl),#0
 upa_next:
  ld hl,#_upa_i
  inc (hl)
