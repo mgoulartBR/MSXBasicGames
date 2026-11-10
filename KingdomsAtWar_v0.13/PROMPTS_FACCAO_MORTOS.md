@@ -52,3 +52,24 @@ Dicas: um prédio por imagem, no tamanho exato; se o prédio sair maior que o qu
 
 ## Resultado já aprovado
 Guerreiro-múmia (folha realista) aprovado em novembro de 2026 como referência de estilo para o restante.
+
+## Prédios: paleta obrigatória (descoberta técnica)
+Os prédios são tiles e compartilham a paleta do terreno e dos humanos (16 cores fixas); só as unidades têm paleta própria. Por isso, **gere os prédios usando SOMENTE estas cores** (imagem `paleta_do_jogo.png`):
+
+- `#212121` quase preto
+- `#214A21` verde escuro
+- `#4A6B4A` verde (grama)
+- `#21214A` azul escuro
+- `#4A6B94` azul acinzentado
+- `#4A2121` vinho escuro
+- `#944A21` laranja queimado
+- `#6B4A21` marrom
+- `#DE944A` laranja claro
+- `#B5944A` areia escura
+- `#DEDE94` creme
+- `#4A4A4A` cinza escuro
+- `#949494` cinza
+- `#DEDEDE` cinza claro
+- `#FFFFDE` creme claro
+
+Acrescente ao pedido de cada prédio: *"Use ONLY these 15 colors (exact hex values), nothing else, no anti-aliasing: [lista]. Map: sandstone = #...; wood = brown; red cloth = dark wine red; gold trim = light orange/sand; verdigris/teal accents = blue-grey; metal = greys."* (substitua pelos hex acima). Mantenha o resto do bloco de estilo.
