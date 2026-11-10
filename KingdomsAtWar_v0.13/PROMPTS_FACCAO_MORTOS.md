@@ -73,3 +73,22 @@ Os prédios são tiles e compartilham a paleta do terreno e dos humanos (16 core
 - `#FFFFDE` creme claro
 
 Acrescente ao pedido de cada prédio: *"Use ONLY these 15 colors (exact hex values), nothing else, no anti-aliasing: [lista]. Map: sandstone = #...; wood = brown; red cloth = dark wine red; gold trim = light orange/sand; verdigris/teal accents = blue-grey; metal = greys."* (substitua pelos hex acima). Mantenha o resto do bloco de estilo.
+
+## Prédios v2 — formas simples (recomendado após teste de suavização)
+
+Bloco de estilo (cole antes de cada prédio):
+
+> Isometric pixel-art building, hand-painted for a retro 16-colour game, viewed from a 3/4 top-down angle, transparent background, single building centred, nothing else. Desert necropolis style: sandstone blocks, bleached bone, tattered dark-blue cloth, green oxidised bronze. FLAT SHADING ONLY: each material uses just 3 tones (light, mid, dark) with hard edges, no gradients, no textures, no cracks, no vines, no scattered debris, no tiny details. Big bold readable shapes, strong silhouette, thick roof planes, one light source from the top-left (right/bottom faces darker). Maximum 15 colours, ONLY these: #212121 #214A21 #4A6B4A #21214A #4A6B94 #4A2121 #944A21 #6B4A21 #DE944A #B5944A #DEDE94 #4A4A4A #949494 #DEDEDE #FFFFDE. Design it as if it will be shrunk to 64x64 pixels: every feature must be at least 4 pixels wide at 256x256 size. No outline, no text.
+
+Um prédio por imagem (acrescente depois do bloco):
+
+1. **Castelo (QG):** a squat sandstone keep with one tall square tower on the left, a big pyramid-shaped roof on the right, one dark arched door, two bone-white banners.
+2. **Casa:** a small flat-roofed mud-brick hut with a single dark doorway and a dark-blue cloth awning. Smaller than the others.
+3. **Quartel:** a wide low sandstone hall with a flat roof, a large dark arched entrance, two bone pillars, a skull emblem above the door (one big shape).
+4. **Serraria:** an open-sided wooden shed with a big sloped roof, one large round saw blade on the front, a stack of 3 thick logs.
+5. **Forja:** a stone building with a thick chimney on the right, a glowing orange furnace opening on the front, one large anvil shape beside it.
+6. **Estábulo:** a wide open-front stable with a thick sloped roof, two big posts, a hay pile and a bone-white horse skull above the entrance.
+7. **Torre:** a tall tapered round-square sandstone tower with a crenellated top (4 big blocks), one narrow dark window, a blue flame on top.
+8. **Oficina de cerco:** a wide open workshop with a sloped roof, a big wooden wheel on the left front, a large ram log resting on the right.
+
+Dica: se o gerador insistir em detalhes finos, adicione "paint it like a children's wooden toy: chunky, simple, large flat colour areas".

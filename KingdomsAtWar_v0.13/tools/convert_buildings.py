@@ -27,11 +27,15 @@ def kmeans(S,K,rng):
         for k in range(K):
             if (l==k).any():cent[k]=S[l==k].mean(0)
     return cent
-def convert(path,size,margin=1,ss=4):
+def convert(path,size,margin=1,ss=4,smooth=0):
     im=Image.open(path).convert('RGBA');a=np.array(im);al=a[...,3]>128
     ys,xs=np.nonzero(al);box=(xs.min(),ys.min(),xs.max()+1,ys.max()+1);sw,sh=box[2]-box[0],box[3]-box[1]
     sc=min((size-2*margin)/sw,(size-margin)/sh);tw,th=round(sw*sc),round(sh*sc)
-    big=im.crop(box).resize((tw*ss,th*ss),Image.LANCZOS);b=np.array(big);op=b[...,3]>128
+    big=im.crop(box).resize((tw*ss,th*ss),Image.LANCZOS)
+    if smooth:
+        from PIL import ImageFilter
+        a_=big.split()[3];big=big.convert('RGB').filter(ImageFilter.MedianFilter(2*smooth+1)).filter(ImageFilter.SMOOTH_MORE);big.putalpha(a_)
+    b=np.array(big);op=b[...,3]>128
     L=lab(b[...,:3].reshape(-1,3)).reshape(b.shape[:2]+(3,))
     px=L[op];rng=np.random.default_rng(1);S=px[rng.choice(len(px),size=min(30000,len(px)),replace=False)]
     cent=kmeans(S,15,rng)
@@ -49,8 +53,20 @@ def convert(path,size,margin=1,ss=4):
             blk=idx[ty*ss:(ty+1)*ss,tx*ss:(tx+1)*ss].ravel();vis=blk[blk>=0]
             if len(vis)<0.45*blk.size:continue
             cnt=np.bincount(vis,minlength=16);out[oy+ty,ox+tx]=cnt.argmax()
+    if smooth:
+        for _ in range(smooth):
+            o2=out.copy()
+            for y in range(1,size-1):
+                for x in range(1,size-1):
+                    c=out[y,x]
+                    if c<0:continue
+                    nb=[out[y+dy,x+dx] for dy in(-1,0,1) for dx in(-1,0,1) if (dy or dx)]
+                    if nb.count(c)<=1:
+                        v=[n for n in nb if n>=0]
+                        if v:o2[y,x]=np.bincount(v).argmax()
+            out=o2
     return out
 if __name__=='__main__':
     out=Path(sys.argv[1]);out.mkdir(parents=True,exist_ok=True)
     for spec in sys.argv[2:]:
-        p,s=spec.split(':');idx=convert(p,int(s));np.save(out/(Path(p).stem+'_idx.npy'),idx)
+        p,s=spec.split(':');idx=convert(p,int(s),smooth=int(__import__('os').environ.get('SMOOTH','0')));np.save(out/(Path(p).stem+'_idx.npy'),idx)
