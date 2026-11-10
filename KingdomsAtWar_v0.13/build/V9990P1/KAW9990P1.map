@@ -139,22 +139,23 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000070A  l__SEG11                        
      00000861  l__SEG13                        
      0000105D  l__SEG9                         
+     0000115D  l__SEG21                        
      0000140C  l__SEG30                        
      000015EA  l__SEG27                        
      00001677  l__SEG26                        
      000018C4  l__SEG29                        
      000019C5  l__SEG31                        
-     00001A38  l__SEG20                        
      00001C67  l__SEG15                        
-     00001E7D  l__SEG17                        
+     00001DDB  l__SEG20                        
      00001EB4  l__SEG6                         
+     00001EF3  l__SEG19                        
      00001EF7  l__SEG4                         
      00001EF7  l__SEG7                         
-     00001F0F  l__SEG18                        
-     00001F45  l__SEG16                        
+     00001F39  l__SEG16                        
      00001F46  l__SEG5                         
      00001F5F  l__SEG8                         
-     00001F76  l__SEG19                        
+     00001FB0  l__SEG17                        
+     00001FF8  l__SEG18                        
      00002F3F  l__DATA                         
      00004000  s__CODE                         
      0000551E  l__CODE                         
@@ -176,7 +177,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000F343  _g_RAMAD2                          art_s31_b3
      0000F344  _g_RAMAD3                          art_s31_b3
      0000F348  _g_MASTER                          art_s31_b3
-     0000F37D  _g_BDOS                            art_s31_b3
 ASxxxx Linker V05.50.4-SDLD,  page 4.
 Hexadecimal  [32-Bits]
 
@@ -186,6 +186,7 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000F37D  _g_BDOS                            art_s31_b3
      0000F380  _g_RDPRIM                          system
      0000F385  _g_WRPRIM                          system
      0000F38C  _g_CLPRIM                          system
@@ -236,7 +237,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000F3EF  _g_MINUPD                          system
      0000F3F2  _g_ATRBYT                          system
      0000F3F3  _g_QUEUES                          system
-     0000F3F5  _g_FRCNEW                          system
 ASxxxx Linker V05.50.4-SDLD,  page 5.
 Hexadecimal  [32-Bits]
 
@@ -246,6 +246,7 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000F3F5  _g_FRCNEW                          system
      0000F3F6  _g_SCNCNT                          system
      0000F3F7  _g_REPCNT                          system
      0000F3F8  _g_PUTPNT                          system
@@ -296,7 +297,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000FB36  _g_SAVSP                           system
      0000FB38  _g_VOICEN                          system
      0000FB39  _g_SAVVOL                          system
-     0000FB3B  _g_MCLLEN                          system
 ASxxxx Linker V05.50.4-SDLD,  page 6.
 Hexadecimal  [32-Bits]
 
@@ -306,6 +306,7 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000FB3B  _g_MCLLEN                          system
      0000FB3C  _g_MCLPTR                          system
      0000FB3E  _g_QUEUEN                          system
      0000FB3F  _g_MUSICF                          system
@@ -356,7 +357,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000FCB5  _g_GYPOS                           system
      0000FCB7  _g_GRPACX                          system
      0000FCB9  _g_GRPACY                          system
-     0000FCBB  _g_DRWFLG                          system
 ASxxxx Linker V05.50.4-SDLD,  page 7.
 Hexadecimal  [32-Bits]
 
@@ -366,6 +366,7 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000FCBB  _g_DRWFLG                          system
      0000FCBC  _g_DRWSCL                          system
      0000FCBD  _g_DRWANG                          system
      0000FCC1  _g_EXPTBL                          system
@@ -413,10 +414,9 @@ Area                                    Addr        Size        Decimal Bytes (A
      0012A000  s__SEG18                        
      0013A000  s__SEG19                        
      0014A000  s__SEG20                        
+     0015A000  s__SEG21                        
      0019A000  s__SEG25                        
      001AA000  s__SEG26                        
-     001BA000  s__SEG27                        
-     001CA000  s__SEG28                        
 ASxxxx Linker V05.50.4-SDLD,  page 8.
 Hexadecimal  [32-Bits]
 
@@ -426,6 +426,8 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     001BA000  s__SEG27                        
+     001CA000  s__SEG28                        
      001DA000  s__SEG29                        
      001EA000  s__SEG30                        
      001FA000  s__SEG31                        
@@ -1117,7 +1119,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG16                              0010A000    00001F45 =        8005. bytes (REL,CON)
+_SEG16                              0010A000    00001F39 =        7993. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1128,7 +1130,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG17                              0011A000    00001E7D =        7805. bytes (REL,CON)
+_SEG17                              0011A000    00001FB0 =        8112. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1139,7 +1141,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG18                              0012A000    00001F0F =        7951. bytes (REL,CON)
+_SEG18                              0012A000    00001FF8 =        8184. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1150,7 +1152,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG19                              0013A000    00001F76 =        8054. bytes (REL,CON)
+_SEG19                              0013A000    00001EF3 =        7923. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1161,7 +1163,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG20                              0014A000    00001A38 =        6712. bytes (REL,CON)
+_SEG20                              0014A000    00001DDB =        7643. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1172,13 +1174,24 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
+_SEG21                              0015A000    0000115D =        4445. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0015A000  _artbank_21                        art_s21_b3
+
+ASxxxx Linker V05.50.4-SDLD,  page 38.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
 _SEG25                              0019A000    00000112 =         274. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
      0019A000  _projectile_tick                   art_s25_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 38.
+ASxxxx Linker V05.50.4-SDLD,  page 39.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1196,7 +1209,7 @@ _SEG26                              001AA000    00001677 =        5751. bytes (R
      001AAD92  _combat_stop                       art_s26_b3
      001AAFB3  _combat_tick                       art_s26_b3
      001AB462  _combat_context                    art_s26_b3
-ASxxxx Linker V05.50.4-SDLD,  page 39.
+ASxxxx Linker V05.50.4-SDLD,  page 40.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1216,7 +1229,7 @@ _SEG27                              001BA000    000015EA =        5610. bytes (R
      001BB171  _unit_art_frame                    art_s27_b3
      001BB470  _unit_position                     art_s27_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 40.
+ASxxxx Linker V05.50.4-SDLD,  page 41.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1230,7 +1243,7 @@ _SEG28                              001CA000    000006FD =        1789. bytes (R
      001CA0EE  _drag_tick                         art_s28_b3
      001CA609  _group_context                     art_s28_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 41.
+ASxxxx Linker V05.50.4-SDLD,  page 42.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1257,7 +1270,7 @@ _SEG29                              001DA000    000018C4 =        6340. bytes (R
      001DAC1B  _production                        art_s29_b3
      001DB376  _hud_context_text                  art_s29_b3
      001DB3DA  _hud_actions                       art_s29_b3
-ASxxxx Linker V05.50.4-SDLD,  page 42.
+ASxxxx Linker V05.50.4-SDLD,  page 43.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1278,7 +1291,7 @@ _SEG30                              001EA000    0000140C =        5132. bytes (R
      001EAF0F  _order_at                          art_s30_b3
      001EB216  _economy_order                     art_s30_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 43.
+ASxxxx Linker V05.50.4-SDLD,  page 44.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1301,7 +1314,7 @@ _SEG31                              001FA000    000019C5 =        6597. bytes (R
      001FB9AB  _move_speed                        art_s31_b3
      001FB9B8  _move_remainder                    art_s31_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 44.
+ASxxxx Linker V05.50.4-SDLD,  page 45.
 
 Files Linked                              [ module(s) ]
 
@@ -1341,6 +1354,8 @@ Files Linked                              [ module(s) ]
                                           [ art_s19_b3 ]
 /tmp/claude-0/-home-user-MSXBasicGames/4527bde8-f4ff-521f-8bcc-a6ecfa430c6f/scratchpad/bp/V9990P1/src/out/art_s20_b3.rel
                                           [ art_s20_b3 ]
+/tmp/claude-0/-home-user-MSXBasicGames/4527bde8-f4ff-521f-8bcc-a6ecfa430c6f/scratchpad/bp/V9990P1/src/out/art_s21_b3.rel
+                                          [ art_s21_b3 ]
 /tmp/claude-0/-home-user-MSXBasicGames/4527bde8-f4ff-521f-8bcc-a6ecfa430c6f/scratchpad/bp/V9990P1/src/out/art_s25_b3.rel
                                           [ art_s25_b3 ]
 /tmp/claude-0/-home-user-MSXBasicGames/4527bde8-f4ff-521f-8bcc-a6ecfa430c6f/scratchpad/bp/V9990P1/src/out/art_s26_b3.rel
@@ -1380,7 +1395,7 @@ Libraries Linked                          [ object file ]
 /home/user/aoineko-fr/msxgl/tools/sdcc/lib/z80/z80.lib
                                           [ __sdcc_call_hl.rel ]
 
-ASxxxx Linker V05.50.4-SDLD,  page 45.
+ASxxxx Linker V05.50.4-SDLD,  page 46.
 
 User Base Address Definitions
 
@@ -1402,6 +1417,7 @@ _SEG17=0x0011A000
 _SEG18=0x0012A000
 _SEG19=0x0013A000
 _SEG20=0x0014A000
+_SEG21=0x0015A000
 _SEG25=0x0019A000
 _SEG26=0x001AA000
 _SEG27=0x001BA000

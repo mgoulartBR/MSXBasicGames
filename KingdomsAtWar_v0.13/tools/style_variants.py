@@ -2,7 +2,7 @@
 """Variantes de legibilidade da facção inimiga, aplicadas aos indices/paleta convertidos (sem custo em jogo):
   contorno: 1 px externo na cor mais escura da paleta (sombra das proprias cores, nao preto puro)
   contraste: curva de luminosidade na paleta (escuros mais escuros, claros mais claros) e pouco mais de croma
-uso: style_variants.py dir_entrada dir_saida [contorno] [contraste]"""
+uso: style_variants.py dir_entrada dir_saida [contorno] [suave] [contraste]   (suave: contorno no segundo tom mais escuro; recomendado: contorno suave contraste)"""
 import sys,shutil,colorsys
 from pathlib import Path
 import numpy as np
@@ -14,7 +14,7 @@ def dil(m):
         for dx in (-1,0,1):o|=p[1+dy:1+dy+m.shape[0],1+dx:1+dx+m.shape[1]]
     return o
 pal=np.load(src/'palette.npy').astype(float)
-dark=int(pal.sum(1).argmin())
+order=pal.sum(1).argsort();dark=int(order[1] if 'suave' in opts else order[0])
 for n,sz in SZ.items():
     idx=np.load(src/f'{n}_idx.npy').copy()
     if 'contorno' in opts:
