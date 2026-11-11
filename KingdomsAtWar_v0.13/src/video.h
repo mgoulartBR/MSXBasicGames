@@ -32,6 +32,7 @@
 #define POSE48_Y 640U
 #define PB_PLAIN 8U
 #define PB_DITH 800U
+#define ENEMY_PAT 1568U /* enemy-kingdom building tiles (plain only), after the dithered block */
 #define PA_SOLID 641U
 #define PA_FONT 672U
 #define PA_HUDTOP 660U
@@ -105,7 +106,17 @@ static void p1_cell(u8 x,u8 y) {
  u8 st=fog_at(x,y);u16 n;u32 a;
  a=PNT_B+((u16)y<<8)+((u16)x<<2);
  if(!st) {names_put(a,1,1,1,1);return;}
- n=(st==1?PB_DITH:PB_PLAIN)+(u16)tile_source[fog_art(x,y)]*4;
+ {u8 art=fog_art(x,y);
+  if(art>=64 && art<185) {
+   u8 t=terrain[((u16)y<<5)+x];
+   if(t>=10 && building_owner[t-10]) {
+    Building* b=&buildings[t-10];
+    n=ENEMY_PAT+(u16)enemy_tile_map[(b->type<<4)+(y-b->y)*build_sizes[b->type]+x-b->x]*4;
+    names_put(a,n,n+1,n+2,n+3);return;
+   }
+  }
+  n=(st==1?PB_DITH:PB_PLAIN)+(u16)tile_source[art]*4;
+ }
  names_put(a,n,n+1,n+2,n+3);
 }
 void video_world_tile(u8 x,u8 y) {p1_cell(x,y);}
@@ -1197,6 +1208,13 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
    for(b=0;b<128;++b){u8 row=b>>3,v=tile_buffer[b];if(row&1)v=(v&0xF0)|0x01;else v=(v&0x0F)|0x10;tile_buffer[b]=v;}
    tile_patterns(P1_PGT_B_BASE,PB_DITH+phy*4,tile_buffer);
   }
+ }
+ asset_begin(&enemy_tiles_asset);
+ for(i=0;i<ENEMY_TILES;++i) {
+  u8 b;
+  asset_read(tile_buffer,128);
+  for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x30;if(!(v&0x0F))v|=0x03;tile_buffer[b]=v;}
+  tile_patterns(P1_PGT_B_BASE,ENEMY_PAT+(u16)i*4,tile_buffer);
  }
  for(i=0;i<12;++i) {
   u8 f,n=kind_sizes[i]>>4;

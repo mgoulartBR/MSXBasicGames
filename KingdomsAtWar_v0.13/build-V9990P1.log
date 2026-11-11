@@ -1,0 +1,187 @@
+[44m╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  ██▀▀█▀▀███▀▀▀▀▀▀▀███▀▀█▀▀▀▀▀▀▀▀█                                         ║
+║  ██  ▀  ██   ▄▄▄▄  ▀  ▄█ ▄▀▀ █  █                                         ║
+║  █  ▄ ▄  ▀▀▀   █▀  ▄  ▀█ ▀▄█ █▄ █                                         ║
+║  █▄▄█▄█▄▄▄▄▄▄▄██▄▄███▄▄█▄▄▄▄▄▄▄▄█                                         ║
+║                                                                           ║
+║   ▄▄▄       ▄  ▄▄    ▄▄   ▄▄▄▄           ▄▄                               ║
+║   ██▄▀ ██ █ ▄  ██   ▄██    ██  ▄█▀▄ ▄█▀▄ ██                               ║
+║   ██▄▀ ▀█▄█ ██ ▀█▄ ▀▄██    ██  ▀█▄▀ ▀█▄▀ ▀█▄                              ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+[0mMSXgl Build Tool using Node.js v22.23.4 (linux)
+
+» Project: KAW9990P1
+» Machine: MSX2
+» Target:  256KB ROM using ASCII-8 mapper (starting at 4000h)
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ COMPILE                                                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+[94mCompiling KAW9990P1 using SDCC...[0m
+Creating crt0 config file...
+» MSXgl Modules: system,bios,vdp,input,memory,v9990
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
+[92mSuccess[0m
+[94mCompiling ./main.c using SDCC C compiler...[0m
+In file included from ./main.c:302:
+./video.h:248:10: warning: missing terminating ' character
+  248 |  ex af,af'
+      |          ^
+./video.h:268:10: warning: missing terminating ' character
+  268 |  ex af,af'
+      |          ^
+./video.h:271:10: warning: missing terminating ' character
+  271 |  ex af,af'
+      |          ^
+./video.h:1129: warning 85: in function video_sprites unreferenced local variable : 'j'
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/bios.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/vdp.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/input.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/memory.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mCompiling /home/user/aoineko-fr/msxgl/engine/src/v9990.c using SDCC C compiler...[0m
+[92mSuccess[0m
+[94mSearching for extra mapper segments to compile [1-31] (banks/art_s?_b?)...[0m
+Segment found: banks/art_s4_b3.c (addr: 0004A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s4_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s5_b3.c (addr: 0005A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s5_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s6_b3.c (addr: 0006A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s6_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s7_b3.c (addr: 0007A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s7_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s8_b3.c (addr: 0008A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s8_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s9_b3.c (addr: 0009A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s9_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s10_b3.c (addr: 000AA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s10_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s11_b3.c (addr: 000BA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s11_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s12_b3.c (addr: 000CA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s12_b3.c using SDCC C compiler...[0m
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s12_b3.c:217: warning 85: in function fog_bits unreferenced function parameter : 'arr'
+[92mSuccess[0m
+Segment found: banks/art_s13_b3.c (addr: 000DA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s13_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s15_b3.c (addr: 000FA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s15_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s16_b3.c (addr: 0010A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s16_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s17_b3.c (addr: 0011A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s17_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s18_b3.c (addr: 0012A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s18_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s19_b3.c (addr: 0013A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s19_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s20_b3.c (addr: 0014A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s20_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s21_b3.c (addr: 0015A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s21_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s22_b3.c (addr: 0016A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s22_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s25_b3.c (addr: 0019A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s25_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s26_b3.c (addr: 001AA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c using SDCC C compiler...[0m
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'n' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:326: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:326: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:329: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:329: warning 84: 'auto' variable 'x' may be used before initialization
+[92mSuccess[0m
+Segment found: banks/art_s27_b3.c (addr: 001BA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s27_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s28_b3.c (addr: 001CA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s28_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s29_b3.c (addr: 001DA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s29_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s30_b3.c (addr: 001EA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s30_b3.c using SDCC C compiler...[0m
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s30_b3.c:137: warning 346: possibly invalid pointer dereferenced or array index out of bounds
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s30_b3.c:138: warning 346: possibly invalid pointer dereferenced or array index out of bounds
+[92mSuccess[0m
+Segment found: banks/art_s31_b3.c (addr: 001FA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s31_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ LINK                                                                      │
+└───────────────────────────────────────────────────────────────────────────┘
+[94mGenerate msxgl.lib...[0m
+[92mSuccess[0m
+[94mLink KAW9990P1 project using SDCC...[0m
+SDCC : mcs51/z80/z180/r2k/r2ka/r3ka/r4k/r5k/r6k/sm83/tlcs90/ez80/z80n/r800/ds390/pic16/pic14/TININative/ds400/hc08/s08/stm8/pdk13/pdk14/pdk15/mos6502/mos65c02/f8/f8l TD- 4.6.0 #16555 (Linux)
+published under GNU General Public License (GPL)
+[92mSuccess[0m
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ PACKAGE                                                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+[94mPackaging binary...[0m
+MSXhex 1.0.0 - Convert an Intel HEX file to binary
+ Start=00004000h Size=00040000h Bank=00002000h Pad=FFh
+Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
+ Seg[0000]: Lower=4000h Higher=971Fh Size=22304 (Holes=0)
+ Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
+ Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
+ Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
+ Seg[0007]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
+ Seg[0008]: Lower=A000h Higher=BF5Eh Size=8031 (Holes=0)
+ Seg[0009]: Lower=A000h Higher=B05Ch Size=4189 (Holes=0)
+ Seg[0010]: Lower=A000h Higher=A000h Size=1 (Holes=0)
+ Seg[0011]: Lower=A000h Higher=A709h Size=1802 (Holes=0)
+ Seg[0012]: Lower=A000h Higher=A621h Size=1570 (Holes=0)
+ Seg[0013]: Lower=A000h Higher=A860h Size=2145 (Holes=0)
+ Seg[0015]: Lower=A000h Higher=BC66h Size=7271 (Holes=0)
+ Seg[0016]: Lower=A000h Higher=BFE7h Size=8168 (Holes=0)
+ Seg[0017]: Lower=A000h Higher=BFD4h Size=8149 (Holes=0)
+ Seg[0018]: Lower=A000h Higher=BE99h Size=7834 (Holes=0)
+ Seg[0019]: Lower=A000h Higher=BFD1h Size=8146 (Holes=0)
+ Seg[0020]: Lower=A000h Higher=BE61h Size=7778 (Holes=0)
+ Seg[0021]: Lower=A000h Higher=A5ADh Size=1454 (Holes=0)
+ Seg[0022]: Lower=A000h Higher=BD61h Size=7522 (Holes=0)
+ Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
+ Seg[0026]: Lower=A000h Higher=B676h Size=5751 (Holes=0)
+ Seg[0027]: Lower=A000h Higher=B5E9h Size=5610 (Holes=0)
+ Seg[0028]: Lower=A000h Higher=A6FCh Size=1789 (Holes=0)
+ Seg[0029]: Lower=A000h Higher=B8C3h Size=6340 (Holes=0)
+ Seg[0030]: Lower=A000h Higher=B40Bh Size=5132 (Holes=0)
+ Seg[0031]: Lower=A000h Higher=B9C4h Size=6597 (Holes=0)
+ Total size: 159577
+[92mSuccess[0m
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ POST BUILD                                                                │
+└───────────────────────────────────────────────────────────────────────────┘
