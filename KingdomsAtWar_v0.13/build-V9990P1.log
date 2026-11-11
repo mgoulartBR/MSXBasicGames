@@ -25,7 +25,7 @@ Creating crt0 config file...
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
-In file included from ./main.c:302:
+In file included from ./main.c:303:
 ./video.h:248:10: warning: missing terminating ' character
   248 |  ex af,af'
       |          ^
@@ -105,18 +105,21 @@ Segment found: banks/art_s21_b3.c (addr: 0015A000h)
 Segment found: banks/art_s22_b3.c (addr: 0016A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s22_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
+Segment found: banks/art_s23_b3.c (addr: 0017A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s23_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
 Segment found: banks/art_s25_b3.c (addr: 0019A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s25_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
 Segment found: banks/art_s26_b3.c (addr: 001AA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c using SDCC C compiler...[0m
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'n' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:324: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:326: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:326: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:329: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:329: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:325: warning 84: 'auto' variable 'n' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:325: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:325: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:327: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:327: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:330: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:330: warning 84: 'auto' variable 'x' may be used before initialization
 [92mSuccess[0m
 Segment found: banks/art_s27_b3.c (addr: 001BA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s27_b3.c using SDCC C compiler...[0m
@@ -172,14 +175,15 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0020]: Lower=A000h Higher=BE61h Size=7778 (Holes=0)
  Seg[0021]: Lower=A000h Higher=A5ADh Size=1454 (Holes=0)
  Seg[0022]: Lower=A000h Higher=BD61h Size=7522 (Holes=0)
+ Seg[0023]: Lower=A000h Higher=AC9Bh Size=3228 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
- Seg[0026]: Lower=A000h Higher=B676h Size=5751 (Holes=0)
+ Seg[0026]: Lower=A000h Higher=B6AEh Size=5807 (Holes=0)
  Seg[0027]: Lower=A000h Higher=B5E9h Size=5610 (Holes=0)
  Seg[0028]: Lower=A000h Higher=A6FCh Size=1789 (Holes=0)
  Seg[0029]: Lower=A000h Higher=B8C3h Size=6340 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B40Bh Size=5132 (Holes=0)
- Seg[0031]: Lower=A000h Higher=B9C4h Size=6597 (Holes=0)
- Total size: 159577
+ Seg[0031]: Lower=A000h Higher=B9D4h Size=6613 (Holes=0)
+ Total size: 162877
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

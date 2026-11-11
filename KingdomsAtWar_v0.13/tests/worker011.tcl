@@ -11,10 +11,10 @@ proc worker_case {} {
  tap 4 128;await {[b unit_count]==5} 30
  ck fifth_is_worker {[b unit_kind 4]==0 && [conserved]}
  set saw [build 3 4 14]
- choose 4;world_point 10 15;tap 5 32
+ choose 4;world_point 10 13;tap 5 32
  set bank [w wood];await {[w wood]>$bank} 40
  ck new_worker_delivers_to_sawmill {[b deposit_id 4]==$saw && [w deposits]>0 && [conserved]}
- await {[b stock [expr {15*32+10}]]==0 && [b cargo 4]==0 && [b worker_task 4]==0} 60
+ await {[b stock [expr {13*32+10}]]==0 && [b cargo 4]==0 && [b worker_task 4]==0} 60
  choose 4;world_point 9 7;tap 5 32
  await {[b mine_phase 4]==2 && [b actor_visible 4]==0} 60
  ck recruited_worker_hidden_in_mine {[b actor_visible 4]==0 && [b worker_task 4]==2 && [conserved]}

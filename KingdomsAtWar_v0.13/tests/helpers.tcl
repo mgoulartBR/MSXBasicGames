@@ -8,6 +8,8 @@ source symbols-$::env(KAW_VARIANT).tcl
 if {$::env(KAW_VARIANT) eq "V9968"} {source v9968_shim.tcl}
 if {$::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1"} {set videosource GFX9000}
 set failures 0
+# Os testes antigos assumem a base inimiga vazia: desliga a IA inimiga (ai_enabled) logo apos a inicializacao, salvo KAW_AI=1.
+if {![info exists ::env(KAW_AI)]} {after time 9 {debug write memory $::S(ai_enabled) 0}}
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}
 proc w {name} {return [expr {[b $name]+256*[b $name 1]}]}
 proc ck {label expression} {

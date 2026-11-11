@@ -46,6 +46,9 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000000D  b_repair_order                     art_s13_b3
      0000000D  b_repair_tick                      art_s13_b3
      0000000F  b_fog_stamp                        art_s15_b3
+     00000017  b_ai_init                          art_s23_b3
+     00000017  b_ai_move                          art_s23_b3
+     00000017  b_ai_second                        art_s23_b3
      00000019  b_projectile_tick                  art_s25_b3
      0000001A  b_combat_click                     art_s26_b3
      0000001A  b_combat_context                   art_s26_b3
@@ -54,9 +57,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000001A  b_combat_init                      art_s26_b3
      0000001A  b_combat_position                  art_s26_b3
      0000001A  b_combat_stop                      art_s26_b3
-     0000001A  b_combat_tick                      art_s26_b3
-     0000001A  b_military_selected                art_s26_b3
-     0000001B  b_art_index                        art_s27_b3
 ASxxxx Linker V05.50.4-SDLD,  page 2.
 Hexadecimal  [32-Bits]
 
@@ -66,6 +66,9 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000001A  b_combat_tick                      art_s26_b3
+     0000001A  b_military_selected                art_s26_b3
+     0000001B  b_art_index                        art_s27_b3
      0000001B  b_camera_update                    art_s27_b3
      0000001B  b_init_world                       art_s27_b3
      0000001B  b_object_size                      art_s27_b3
@@ -114,9 +117,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000001F  b_navigation                       art_s31_b3
      0000001F  b_resource_empty                   art_s31_b3
      0000001F  b_simulate                         art_s31_b3
-     0000001F  b_work_adjacent                    art_s31_b3
-     0000001F  b_work_route                       art_s31_b3
-     0000001F  b_work_stop                        art_s31_b3
 ASxxxx Linker V05.50.4-SDLD,  page 3.
 Hexadecimal  [32-Bits]
 
@@ -126,6 +126,9 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000001F  b_work_adjacent                    art_s31_b3
+     0000001F  b_work_route                       art_s31_b3
+     0000001F  b_work_stop                        art_s31_b3
      00000028  l__INITIALIZED                  
      00000028  l__INITIALIZER                  
      0000002B  _g_BASRVN                          system
@@ -139,12 +142,13 @@ Area                                    Addr        Size        Decimal Bytes (A
      000006FD  l__SEG28                        
      0000070A  l__SEG11                        
      00000861  l__SEG13                        
+     00000C9C  l__SEG23                        
      0000105D  l__SEG9                         
      0000140C  l__SEG30                        
      000015EA  l__SEG27                        
-     00001677  l__SEG26                        
+     000016AF  l__SEG26                        
      000018C4  l__SEG29                        
-     000019C5  l__SEG31                        
+     000019D5  l__SEG31                        
      00001C67  l__SEG15                        
      00001D62  l__SEG22                        
      00001E62  l__SEG20                        
@@ -157,7 +161,7 @@ Area                                    Addr        Size        Decimal Bytes (A
      00001FD2  l__SEG19                        
      00001FD5  l__SEG17                        
      00001FE8  l__SEG16                        
-     00002F3F  l__DATA                         
+     00002F57  l__DATA                         
      00004000  s__CODE                         
      000056F8  l__CODE                         
      000096F8  s__HOME                         
@@ -166,17 +170,13 @@ Area                                    Addr        Size        Decimal Bytes (A
      00009720  s__GSFINAL                      
      00009720  s__GSINIT                       
      0000C000  s__DATA                         
-     0000EF3F  s__INITIALIZED                  
-     0000EF67  s__BSEG                         
-     0000EF67  s__BSS                          
-     0000EF67  s__HEAP                         
+     0000EF57  s__INITIALIZED                  
+     0000EF7F  s__BSEG                         
+     0000EF7F  s__BSS                          
+     0000EF7F  s__HEAP                         
      0000F30F  _g_KANJTABLE                       art_s31_b3
      0000F323  _g_DISKVE                          art_s31_b3
      0000F325  _g_BREAKV                          art_s31_b3
-     0000F341  _g_RAMAD0                          art_s31_b3
-     0000F342  _g_RAMAD1                          art_s31_b3
-     0000F343  _g_RAMAD2                          art_s31_b3
-     0000F344  _g_RAMAD3                          art_s31_b3
 ASxxxx Linker V05.50.4-SDLD,  page 4.
 Hexadecimal  [32-Bits]
 
@@ -186,6 +186,10 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000F341  _g_RAMAD0                          art_s31_b3
+     0000F342  _g_RAMAD1                          art_s31_b3
+     0000F343  _g_RAMAD2                          art_s31_b3
+     0000F344  _g_RAMAD3                          art_s31_b3
      0000F348  _g_MASTER                          art_s31_b3
      0000F37D  _g_BDOS                            art_s31_b3
      0000F380  _g_RDPRIM                          system
@@ -233,10 +237,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000F3E8  _g_TRGFLG                          system
      0000F3E9  _g_FORCLR                          system
      0000F3EA  _g_BAKCLR                          system
-     0000F3EB  _g_BDRCLR                          system
-     0000F3EC  _g_MAXUPD                          system
-     0000F3EF  _g_MINUPD                          system
-     0000F3F2  _g_ATRBYT                          system
 ASxxxx Linker V05.50.4-SDLD,  page 5.
 Hexadecimal  [32-Bits]
 
@@ -246,6 +246,10 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000F3EB  _g_BDRCLR                          system
+     0000F3EC  _g_MAXUPD                          system
+     0000F3EF  _g_MINUPD                          system
+     0000F3F2  _g_ATRBYT                          system
      0000F3F3  _g_QUEUES                          system
      0000F3F5  _g_FRCNEW                          system
      0000F3F6  _g_SCNCNT                          system
@@ -293,10 +297,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000FB1C  _g_ESTBLS                          system
      0000FB1D  _g_COMMSK                          system
      0000FB1E  _g_LSTCOM                          system
-     0000FB1F  _g_LSTMOD                          system
-     0000FB35  _g_PRSCNT                          system
-     0000FB36  _g_SAVSP                           system
-     0000FB38  _g_VOICEN                          system
 ASxxxx Linker V05.50.4-SDLD,  page 6.
 Hexadecimal  [32-Bits]
 
@@ -306,6 +306,10 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000FB1F  _g_LSTMOD                          system
+     0000FB35  _g_PRSCNT                          system
+     0000FB36  _g_SAVSP                           system
+     0000FB38  _g_VOICEN                          system
      0000FB39  _g_SAVVOL                          system
      0000FB3B  _g_MCLLEN                          system
      0000FB3C  _g_MCLPTR                          system
@@ -353,10 +357,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0000FCAF  _g_SCRMOD                          system
      0000FCB0  _g_OLDSCR                          system
      0000FCB1  _g_CASPRV                          system
-     0000FCB2  _g_BRDATR                          system
-     0000FCB3  _g_GXPOS                           system
-     0000FCB5  _g_GYPOS                           system
-     0000FCB7  _g_GRPACX                          system
 ASxxxx Linker V05.50.4-SDLD,  page 7.
 Hexadecimal  [32-Bits]
 
@@ -366,6 +366,10 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0000FCB2  _g_BRDATR                          system
+     0000FCB3  _g_GXPOS                           system
+     0000FCB5  _g_GYPOS                           system
+     0000FCB7  _g_GRPACX                          system
      0000FCB9  _g_GRPACY                          system
      0000FCBB  _g_DRWFLG                          system
      0000FCBC  _g_DRWSCL                          system
@@ -413,10 +417,6 @@ Area                                    Addr        Size        Decimal Bytes (A
      0010A000  s__SEG16                        
      0011A000  s__SEG17                        
      0012A000  s__SEG18                        
-     0013A000  s__SEG19                        
-     0014A000  s__SEG20                        
-     0015A000  s__SEG21                        
-     0016A000  s__SEG22                        
 ASxxxx Linker V05.50.4-SDLD,  page 8.
 Hexadecimal  [32-Bits]
 
@@ -426,6 +426,11 @@ Area                                    Addr        Size        Decimal Bytes (A
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
+     0013A000  s__SEG19                        
+     0014A000  s__SEG20                        
+     0015A000  s__SEG21                        
+     0016A000  s__SEG22                        
+     0017A000  s__SEG23                        
      0019A000  s__SEG25                        
      001AA000  s__SEG26                        
      001BA000  s__SEG27                        
@@ -433,6 +438,7 @@ Area                                    Addr        Size        Decimal Bytes (A
      001DA000  s__SEG29                        
      001EA000  s__SEG30                        
      001FA000  s__SEG31                        
+
 ASxxxx Linker V05.50.4-SDLD,  page 9.
 Hexadecimal  [32-Bits]
 
@@ -689,7 +695,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F3F =       12095. bytes (REL,CON)
+_DATA                               0000C000    00002F57 =       12119. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -748,7 +754,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F3F =       12095. bytes (REL,CON)
+_DATA                               0000C000    00002F57 =       12119. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -808,7 +814,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F3F =       12095. bytes (REL,CON)
+_DATA                               0000C000    00002F57 =       12119. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -868,7 +874,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F3F =       12095. bytes (REL,CON)
+_DATA                               0000C000    00002F57 =       12119. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -888,101 +894,113 @@ _DATA                               0000C000    00002F3F =       12095. bytes (R
      0000E21B  _combat_hits                       main
      0000E21D  _combat_kills                      main
      0000E21F  _combat_buildings                  main
-     0000E221  _unit_facing                       main
-     0000E22B  _unit_frame                        main
-     0000E235  _unit_walk_dist                    main
-     0000E23F  _unit_walk_phase                   main
-     0000E249  _fog_seen                          main
-     0000E2C9  _fog_visible                       main
-     0000E349  _fog_next                          main
-     0000E3C9  _fog_memory                        main
-     0000E7C9  _fog_refresh                       main
-     0000E7CA  _fog_static                        main
-     0000E84A  _fog_build_dirty                   main
-     0000E84B  _fog_need                          main
-     0000E8CB  _fog_delta                         main
-     0000E94B  _fog_sources                       main
-     0000E95B  _fog_trail                         main
-     0000E9DB  _fog_epoch                         main
-     0000E9DD  _repair_target                     main
-     0000E9E5  _repair_timer                      main
-     0000E9ED  _repair_active                     main
-     0000E9EE  _repair_pending                    main
-     0000E9EF  _tower_cooldown                    main
-     0000E9FB  _tower_shots                       main
-     0000E9FD  _repair_spent                      main
-     0000E9FF  _repair_healed                     main
-     0000EA01  _fog_updates                       main
-     0000EA03  _shot_x                            main
-     0000EA23  _shot_y                            main
-     0000EA43  _shot_active                       main
-     0000EA45  _combat_shots                      main
-     0000EA47  _shot_dx                           main
-     0000EA57  _shot_dy                           main
-     0000EA67  _shot_time                         main
-     0000EA77  _shot_target                       main
-     0000EA87  _shot_damage                       main
-     0000EA97  _shot_owner                        main
+     0000E221  _ai_wood                           main
+     0000E223  _ai_gold                           main
+     0000E225  _ai_launch                         main
+     0000E227  _ai_enabled                        main
+     0000E228  _ai_step                           main
+     0000E229  _ai_wave                           main
+     0000E22A  _ai_site                           main
+     0000E22B  _ai_left                           main
+     0000E22C  _ai_state                          main
+     0000E22E  _ai_timer                          main
+     0000E230  _ai_stuck                          main
+     0000E232  _ai_dir                            main
+     0000E234  _ai_kind                           main
+     0000E236  _unit_facing                       main
+     0000E240  _unit_frame                        main
+     0000E24A  _unit_walk_dist                    main
+     0000E254  _unit_walk_phase                   main
+     0000E25E  _fog_seen                          main
+     0000E2DE  _fog_visible                       main
+     0000E35E  _fog_next                          main
+     0000E3DE  _fog_memory                        main
+     0000E7DE  _fog_refresh                       main
+     0000E7DF  _fog_static                        main
+     0000E85F  _fog_build_dirty                   main
+     0000E860  _fog_need                          main
+     0000E8E0  _fog_delta                         main
+     0000E960  _fog_sources                       main
+     0000E970  _fog_trail                         main
+     0000E9F0  _fog_epoch                         main
+     0000E9F2  _repair_target                     main
+     0000E9FA  _repair_timer                      main
+     0000EA02  _repair_active                     main
+     0000EA03  _repair_pending                    main
+     0000EA04  _tower_cooldown                    main
+     0000EA10  _tower_shots                       main
 ASxxxx Linker V05.50.4-SDLD,  page 19.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F3F =       12095. bytes (REL,CON)
+_DATA                               0000C000    00002F57 =       12119. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000EAA7  _tile_buffer                       main
-     0000EB27  _boot_poses                        main
-     0000EB28  _cache_tick                        main
-     0000EB29  _frame_uploads                     main
-     0000EB2B  _rendered_frames                   main
-     0000EB2D  _actor_x                           main
-     0000EB41  _actor_y                           main
-     0000EB55  _actor_visible                     main
-     0000EB5F  _actor_key                         main
-     0000EB69  _actor_crop                        main
-     0000EB73  _v9c                               main
-     0000EC9A  _sc_cull                           main
-     0000EE04  _draw_opt                          main
-     0000EE0E  _fa_x                              main
-     0000EE0F  _fa_y                              main
-     0000EE10  _fa_who                            main
-     0000EEA7  _unit_prep_f                       art_s27_b3
-     0000EEF9  _g_Mouse_OffsetX                   input
-     0000EEFA  _g_Mouse_OffsetY                   input
-     0000EEFB  _g_Mouse_Buttons                   input
-     0000EEFC  _g_VDP_REGSAV                      vdp
-     0000EF18  _g_VDP_Data                        vdp
-     0000EF1A  _g_VDP_Command                     vdp
-     0000EF29  _g_VDP_Sprite                      vdp
-     0000EF2D  _g_ScreenLayoutLow                 vdp
-     0000EF2F  _g_ScreenColorLow                  vdp
-     0000EF31  _g_ScreenPatternLow                vdp
-     0000EF33  _g_SpriteAttributeLow              vdp
-     0000EF35  _g_SpritePatternLow                vdp
-     0000EF37  _g_SpriteColorLow                  vdp
-     0000EF39  _g_ScreenLayoutHigh                vdp
-     0000EF3A  _g_ScreenColorHigh                 vdp
-     0000EF3B  _g_ScreenPatternHigh               vdp
-     0000EF3C  _g_SpriteAttributeHigh             vdp
-     0000EF3D  _g_SpritePatternHigh               vdp
-     0000EF3E  _g_SpriteColorHigh                 vdp
-
+     0000EA12  _repair_spent                      main
+     0000EA14  _repair_healed                     main
+     0000EA16  _fog_updates                       main
+     0000EA18  _shot_x                            main
+     0000EA38  _shot_y                            main
+     0000EA58  _shot_active                       main
+     0000EA5A  _combat_shots                      main
+     0000EA5C  _shot_dx                           main
+     0000EA6C  _shot_dy                           main
+     0000EA7C  _shot_time                         main
+     0000EA8C  _shot_target                       main
+     0000EA9C  _shot_damage                       main
+     0000EAAC  _shot_owner                        main
+     0000EABC  _tile_buffer                       main
+     0000EB3C  _boot_poses                        main
+     0000EB3D  _cache_tick                        main
+     0000EB3E  _frame_uploads                     main
+     0000EB40  _rendered_frames                   main
+     0000EB42  _actor_x                           main
+     0000EB56  _actor_y                           main
+     0000EB6A  _actor_visible                     main
+     0000EB74  _actor_key                         main
+     0000EB7E  _actor_crop                        main
+     0000EB88  _v9c                               main
+     0000ECAF  _sc_cull                           main
+     0000EE19  _draw_opt                          main
+     0000EE23  _fa_x                              main
+     0000EE24  _fa_y                              main
+     0000EE25  _fa_who                            main
+     0000EEBF  _unit_prep_f                       art_s27_b3
+     0000EF11  _g_Mouse_OffsetX                   input
+     0000EF12  _g_Mouse_OffsetY                   input
+     0000EF13  _g_Mouse_Buttons                   input
+     0000EF14  _g_VDP_REGSAV                      vdp
+     0000EF30  _g_VDP_Data                        vdp
+     0000EF32  _g_VDP_Command                     vdp
+     0000EF41  _g_VDP_Sprite                      vdp
+     0000EF45  _g_ScreenLayoutLow                 vdp
+     0000EF47  _g_ScreenColorLow                  vdp
+     0000EF49  _g_ScreenPatternLow                vdp
+     0000EF4B  _g_SpriteAttributeLow              vdp
+     0000EF4D  _g_SpritePatternLow                vdp
+     0000EF4F  _g_SpriteColorLow                  vdp
+     0000EF51  _g_ScreenLayoutHigh                vdp
+     0000EF52  _g_ScreenColorHigh                 vdp
+     0000EF53  _g_ScreenPatternHigh               vdp
+     0000EF54  _g_SpriteAttributeHigh             vdp
+     0000EF55  _g_SpritePatternHigh               vdp
+     0000EF56  _g_SpriteColorHigh                 vdp
 ASxxxx Linker V05.50.4-SDLD,  page 20.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZED                        0000EF3F    00000028 =          40. bytes (REL,CON)
+_INITIALIZED                        0000EF57    00000028 =          40. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000EF3F  _build_names                       main
-     0000EF4F  _recruit_names                     main
-     0000EF5B  _kbrow                             main
-     0000EF64  _fog_dest                          main
-     0000EF66  _g_VDPInitilized                   vdp
+     0000EF57  _build_names                       main
+     0000EF67  _recruit_names                     main
+     0000EF73  _kbrow                             main
+     0000EF7C  _fog_dest                          main
+     0000EF7E  _g_VDPInitilized                   vdp
 
 ASxxxx Linker V05.50.4-SDLD,  page 21.
 Hexadecimal  [32-Bits]
@@ -1200,18 +1218,30 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
+_SEG23                              0017A000    00000C9C =        3228. bytes (REL,CON)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+     0017A000  _ai_init                           art_s23_b3
+     0017A4FB  _ai_second                         art_s23_b3
+     0017AC7B  _ai_move                           art_s23_b3
+ASxxxx Linker V05.50.4-SDLD,  page 40.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
 _SEG25                              0019A000    00000112 =         274. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
      0019A000  _projectile_tick                   art_s25_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 40.
+ASxxxx Linker V05.50.4-SDLD,  page 41.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG26                              001AA000    00001677 =        5751. bytes (REL,CON)
+_SEG26                              001AA000    000016AF =        5807. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1219,12 +1249,12 @@ _SEG26                              001AA000    00001677 =        5751. bytes (R
      001AA2DE  _military_selected                 art_s26_b3
      001AA4B6  _combat_impact                     art_s26_b3
      001AA85E  _combat_init                       art_s26_b3
-     001AAB1D  _combat_hit_test                   art_s26_b3
-     001AACD4  _combat_click                      art_s26_b3
-     001AAD92  _combat_stop                       art_s26_b3
-     001AAFB3  _combat_tick                       art_s26_b3
-     001AB462  _combat_context                    art_s26_b3
-ASxxxx Linker V05.50.4-SDLD,  page 41.
+     001AAB25  _combat_hit_test                   art_s26_b3
+     001AACDC  _combat_click                      art_s26_b3
+     001AAD9A  _combat_stop                       art_s26_b3
+     001AAFBB  _combat_tick                       art_s26_b3
+     001AB46A  _combat_context                    art_s26_b3
+ASxxxx Linker V05.50.4-SDLD,  page 42.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1244,7 +1274,7 @@ _SEG27                              001BA000    000015EA =        5610. bytes (R
      001BB171  _unit_art_frame                    art_s27_b3
      001BB470  _unit_position                     art_s27_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 42.
+ASxxxx Linker V05.50.4-SDLD,  page 43.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1258,7 +1288,7 @@ _SEG28                              001CA000    000006FD =        1789. bytes (R
      001CA0EE  _drag_tick                         art_s28_b3
      001CA609  _group_context                     art_s28_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 43.
+ASxxxx Linker V05.50.4-SDLD,  page 44.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1285,7 +1315,7 @@ _SEG29                              001DA000    000018C4 =        6340. bytes (R
      001DAC1B  _production                        art_s29_b3
      001DB376  _hud_context_text                  art_s29_b3
      001DB3DA  _hud_actions                       art_s29_b3
-ASxxxx Linker V05.50.4-SDLD,  page 44.
+ASxxxx Linker V05.50.4-SDLD,  page 45.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
@@ -1306,12 +1336,12 @@ _SEG30                              001EA000    0000140C =        5132. bytes (R
      001EAF0F  _order_at                          art_s30_b3
      001EB216  _economy_order                     art_s30_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 45.
+ASxxxx Linker V05.50.4-SDLD,  page 46.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG31                              001FA000    000019C5 =        6597. bytes (REL,CON)
+_SEG31                              001FA000    000019D5 =        6613. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -1326,10 +1356,10 @@ _SEG31                              001FA000    000019C5 =        6597. bytes (R
      001FB11D  _work_adjacent                     art_s31_b3
      001FB1F2  _resource_empty                    art_s31_b3
      001FB46D  _simulate                          art_s31_b3
-     001FB9AB  _move_speed                        art_s31_b3
-     001FB9B8  _move_remainder                    art_s31_b3
+     001FB9BB  _move_speed                        art_s31_b3
+     001FB9C8  _move_remainder                    art_s31_b3
 
-ASxxxx Linker V05.50.4-SDLD,  page 46.
+ASxxxx Linker V05.50.4-SDLD,  page 47.
 
 Files Linked                              [ module(s) ]
 
@@ -1373,6 +1403,8 @@ Files Linked                              [ module(s) ]
                                           [ art_s21_b3 ]
 /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/art_s22_b3.rel
                                           [ art_s22_b3 ]
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/art_s23_b3.rel
+                                          [ art_s23_b3 ]
 /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/art_s25_b3.rel
                                           [ art_s25_b3 ]
 /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/art_s26_b3.rel
@@ -1414,7 +1446,7 @@ Libraries Linked                          [ object file ]
 /home/user/aoineko-fr/msxgl/tools/sdcc/lib/z80/z80.lib
                                           [ __sdcc_call_hl.rel ]
 
-ASxxxx Linker V05.50.4-SDLD,  page 47.
+ASxxxx Linker V05.50.4-SDLD,  page 48.
 
 User Base Address Definitions
 
@@ -1438,6 +1470,7 @@ _SEG19=0x0013A000
 _SEG20=0x0014A000
 _SEG21=0x0015A000
 _SEG22=0x0016A000
+_SEG23=0x0017A000
 _SEG25=0x0019A000
 _SEG26=0x001AA000
 _SEG27=0x001BA000

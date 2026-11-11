@@ -82,6 +82,7 @@ void combat_init(void) __banked {
  building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
  for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;
  for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=i==N?3:8;u->y=u->ty=u->ny=23;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
+ ai_init();
 }
 u8 combat_hit_test(u16 wx,u16 wy) __banked {
  u8 i;
@@ -333,7 +334,7 @@ void combat_tick(void) __banked {
 static void number(c8* p,u8 value) {p[0]='0'+value/100;p[1]='0'+value/10%10;p[2]='0'+value%10;p[3]=0;}
 u8 combat_context(void) __banked {
  c8 text[30];u8 i=0,hp,max;const c8* name;
- if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {hp=building_hp[t&127];max=180;name="ENEMY KEEP";}else {hp=unit_hp[t];max=48;name="ENEMY SWORD";}}
+ if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {u8 bt=buildings[t&127].type;hp=building_hp[t&127];max=bt?96:180;name=bt?build_names[bt]:"ENEMY KEEP";}else {hp=unit_hp[t];max=48;name="ENEMY SWORD";}}
  else if(selected!=NONE && unit_kind[selected]>=1 && unit_kind[selected]<=5) {hp=unit_hp[selected];max=unit_max_hp[unit_kind[selected]];name=recruit_names[unit_kind[selected]];}
  else return 0;
  while(*name)text[i++]=*name++;text[i++]=' ';text[i++]='H';text[i++]='P';text[i++]=' ';number(text+i,hp);i+=3;text[i++]='/';number(text+i,max);i+=3;
