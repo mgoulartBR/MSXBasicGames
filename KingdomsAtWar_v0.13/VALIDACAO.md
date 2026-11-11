@@ -34,3 +34,4 @@ Ambiente de teste: openMSX 19.1 (único emulador com V9990 disponível no ambien
 - Deixe o jogo rodando ~2 minutos sem explorar: a base inimiga (sul do mapa, a partir de y=19) só aparece depois que você a revelar com um soldado; aos 200 s a primeira onda (2 guardas esqueleto) sai pelo corredor central e ataca a sua base.
 - Se uma onda for destruída, a próxima (espadachins, depois lanceiro+arqueiro, cavaleiros...) sai cerca de 1 minuto depois.
 - Para desligar a IA em testes: `ai_enabled = 0` (RAM) ou `KAW_AI` ausente nos scripts em `tests/`.
+- Defesa automática: com soldados parados perto da sua base, quando uma onda chega eles passam a atacar sozinhos os inimigos que aparecem a até 5 células. Para que um soldado só revide no alcance (sem perseguir), use "segurar posição".

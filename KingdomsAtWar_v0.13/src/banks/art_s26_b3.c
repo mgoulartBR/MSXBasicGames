@@ -1,4 +1,5 @@
 #include "../shared.h"
+#define AGGRO 5 /* idle soldiers defend themselves against visible enemies this many cells away (both axes) */
 /* Military roles share the budgeted multi-goal navigator. */
 static u8 target_box(u8 t,u8* x,u8* y,u8* n) {
  if(t==NONE)return 0;
@@ -82,7 +83,7 @@ void combat_init(void) __banked {
  building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
  for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;
  for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=i==N?3:8;u->y=u->ty=u->ny=23;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
- ai_init();
+ auto_defend=1;ai_init();
 }
 u8 combat_hit_test(u16 wx,u16 wy) __banked {
  u8 i;
@@ -311,12 +312,14 @@ void combat_tick(void) __banked {
     combat_target[i]=t=NONE;tbv=0;if(i<N)work_stop(i);
    }
   }
-  /* Hold/idle allies and stationary defenders retaliate only at melee range. */
-  if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || stance[i])) {
-   {u8 rng=unit_range[unit_kind[i]];cs_xi=units[i].x;cs_yi=units[i].y;cs_own=units[i].owner;cs_rng=rng;cs_j=0;
+  /* Hold-position soldiers and stationary defenders retaliate only inside their range. Idle soldiers without the
+   * hold order (stance 0) also defend themselves: a visible enemy within AGGRO cells becomes their target and the
+   * regular approach code below walks them to it (rams never chase units). */
+  if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || !requested[i]) && (i>=N || auto_defend || stance[i])) {
+   {u8 rng=unit_range[unit_kind[i]],aggro=(i<N && auto_defend && !stance[i] && unit_kind[i]!=5);cs_xi=units[i].x;cs_yi=units[i].y;cs_own=units[i].owner;cs_rng=aggro?AGGRO:rng;cs_j=0;
     for(;;) {
      j=cand_scan();if(j==255)break;
-     if((i>=N || fog_target(j)) && combat_position(i,units[i].x,units[i].y,j)) {combat_target[i]=t=j;break;}
+     if((i>=N || fog_target(j)) && (aggro || combat_position(i,units[i].x,units[i].y,j))) {combat_target[i]=t=j;break;}
      cs_j=j+1;
     }}
    if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && near_box(units[i].x,units[i].y,buildings[j].x,buildings[j].y,building_size(buildings[j].type),unit_range[unit_kind[i]]) && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
