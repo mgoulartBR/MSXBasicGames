@@ -3,7 +3,7 @@ void init_world(void) __banked
 {
  u8 x,y,i;
  nav_base_dirty=1;unit_count=4;building_count=1;building_selected=placement_mode=builder_working=research_level=0;build_kind=1;edge_hold=edge_keys=mouse_active=0;
- for(i=0;i<BMAX;++i)buildings[i].state=0;
+ for(i=0;i<BMAX;++i){buildings[i].state=0;buildings[i].training=0;buildings[i].time=0;}
  buildings[0].type=0;buildings[0].state=2;buildings[0].x=BASE_X;buildings[0].y=BASE_Y;buildings[0].worker=NONE;buildings[0].training=0;
  buildings[0].rallyx=6;buildings[0].rallyy=10;
  for(y=0;y<32;++y) for(x=0;x<32;++x) {

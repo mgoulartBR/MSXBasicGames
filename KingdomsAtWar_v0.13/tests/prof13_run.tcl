@@ -10,8 +10,8 @@ proc sample_prof {} {
  after time 0.0005 sample_prof
 }
 proc sorted_prof {} {set a {};dict for {k v} $::samples_prof {lappend a [list $v $k]};return [lsort -decreasing -integer -index 0 $a]}
-# Cenarios pesados de desempenho (somente medicao): 8 unidades grandes andando e luta em grupo.
-# O depurador escreve ouro/madeira, o tipo das unidades e o foco da luta; o resto usa os controles normais.
+# Desempenho com a IA inimiga: 8 unidades humanas na base, base inimiga em obra (ai_idle), onda de dois soldados
+# marchando (march) e a luta na base com defesa automatica (fight). Rodar com KAW_AI=1 KAW_DEF=1.
 source helpers011.tcl
 set perf_running 0
 proc perf_start {} {set ::samples_prof [dict create];set ::perf_times {};set ::perf_running 1;
@@ -25,10 +25,9 @@ proc perf_end {phase} {
  puts stderr "CALLS $phase"
 }
 proc poke16 {name v} {debug write memory $::S($name) [expr {$v&255}];debug write memory [expr {$::S($name)+1}] [expr {$v>>8}]}
-proc heavy012 {} {
+proc wave_perf {} {
  delay 55;materials
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
- perf_start;delay 2;perf_end idle
  set cells {{4 5} {5 6} {7 6} {9 6}}
  for {set k 0} {$k<4} {incr k} {
   set i [expr {4+$k}];lassign [lindex $cells $k] cx cy;set a [expr {$::S(units)+16*$i}]
@@ -37,24 +36,20 @@ proc heavy012 {} {
  }
  debug write memory $::S(unit_count) 8
  foreach {i kind} {0 4 1 3 2 4 3 5 4 4 5 3 6 4 7 5} {debug write memory [expr {$::S(unit_kind)+$i}] $kind;debug write memory [expr {$::S(unit_hp)+$i}] [lindex {32 48 48 32 72 96 48} $kind]}
- ck eight_units {[b unit_count]==8}
- delay 1
- # misto: 4 caminham, 4 ficam parados e sem selecao
- debug write memory $::S(selection_mask) 15;world_point 1 3
- perf_start;tap 5 32;delay 4
- if {[info exists ::env(KAW_SHOT)]} {shot mixed-$::env(KAW_SHOT)}
- delay 4;perf_end mixed
- # todos selecionados caminham para o canto: 8 atores grandes, Fog mudando
- tap 2 64;world_point 1 3
- perf_start;tap 5 32;delay 14;perf_end eight
- ck eight_moved {[unit 0 x]<8}
- # luta: grupo ataca o defensor inimigo (unidade 8) e depois a fortaleza
- tap 2 64;view_y [unit 8 py];point [expr {[unit 8 px]+8-[w cam_x]}] [expr {[unit 8 py]-6-[w cam_y]}]
- if {[info exists ::env(KAW_DRAW)]} {debug write memory $::S(draw_opt) $::env(KAW_DRAW)}
- perf_start;tap 5 32;delay 7
- if {[info exists ::env(KAW_SHOT)]} {view_y [expr {[bd 1 y]*16-40}];delay 1;shot $::env(KAW_SHOT)}
- delay 13;perf_end fight
+ debug write memory $::S(sprites_dirty) 3;debug write memory $::S(fog_refresh) 1
+ view_y 60;delay 2
+ perf_start;delay 2;perf_end idle
+ # onda forte: cavaleiro e arqueiro saem agora
+  debug write memory [expr {$::S(unit_kind)+8}] 4;debug write memory [expr {$::S(unit_hp)+8}] 72
+ debug write memory [expr {$::S(unit_kind)+9}] 3;debug write memory [expr {$::S(unit_hp)+9}] 32
+ poke16 ai_launch 0
+ # marcha sem medir ate o primeiro contato (inimigo a menos de 16 linhas)
+ for {set n 0} {$n<40 && [unit 8 y]>=14} {incr n} {delay 1}
+ perf_start;delay 6;perf_end melee
+ if {[info exists ::env(KAW_SHOT)]} {shot wave-melee-$::env(KAW_SHOT)}
+ perf_start;delay 10;perf_end late
+ puts stderr "INFO wave=[b ai_wave] enemy hp=[b unit_hp 8],[b unit_hp 9] pos=[unit 8 x],[unit 8 y]/[unit 9 x],[unit 9 y] kills=[w combat_kills]"
  puts stderr "RESULT failures=$::failures";exit
 }
-coroutine heavy012_case guard heavy012
-after realtime 400 {puts stderr "FAIL heavy watchdog";exit}
+coroutine wp_run guard wave_perf
+after realtime 900 {puts stderr "FAIL wave_perf watchdog";exit}

@@ -592,6 +592,21 @@ sfl_bl:
  ld a,d
  cp a,#1
  jr nz,sfl_s2
+ ; enemy-owned construction sites need no production work (the AI times them itself)
+ push hl
+ push de
+ ld a,(_building_count)
+ sub a,b
+ ld e,a
+ ld d,#0
+ ld hl,#_building_owner
+ add hl,de
+ ld a,(hl)
+ pop de
+ pop hl
+ or a,a
+ ld a,d
+ jr nz,sfl_s2
  set 1,c
 sfl_s2:
  cp a,#2

@@ -178,12 +178,12 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0023]: Lower=A000h Higher=AC9Bh Size=3228 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
  Seg[0026]: Lower=A000h Higher=B975h Size=6518 (Holes=0)
- Seg[0027]: Lower=A000h Higher=B5E9h Size=5610 (Holes=0)
+ Seg[0027]: Lower=A000h Higher=B603h Size=5636 (Holes=0)
  Seg[0028]: Lower=A000h Higher=A6FCh Size=1789 (Holes=0)
  Seg[0029]: Lower=A000h Higher=B8C3h Size=6340 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B41Ah Size=5147 (Holes=0)
- Seg[0031]: Lower=A000h Higher=B9D4h Size=6613 (Holes=0)
- Total size: 163603
+ Seg[0031]: Lower=A000h Higher=B9E8h Size=6633 (Holes=0)
+ Total size: 163649
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
