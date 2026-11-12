@@ -184,6 +184,7 @@ u16 drag_anchor_x,drag_anchor_y,drag_l,drag_t,drag_r,drag_b;
 u8 unit_hp[RN],combat_target[RN],attack_cooldown[RN],attack_flash[RN],hurt_flash[RN],stance[N];
 u8 building_hp[BMAX],building_owner[BMAX],enemy_selected,command_last,combat_active;
 u16 combat_hits,combat_kills,combat_buildings;
+u8 auto_hx[N],auto_hy[N],auto_try[N];
 u16 ai_wood,ai_gold,ai_launch;u8 auto_defend,ai_enabled,ai_step,ai_wave,ai_site,ai_left,ai_state[2],ai_timer[2],ai_stuck[2],ai_dir[2],ai_kind[2];
 
 const u8 unit_max_hp[]={32,48,48,32,72,96,48};

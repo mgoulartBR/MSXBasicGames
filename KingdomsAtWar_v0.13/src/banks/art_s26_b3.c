@@ -1,4 +1,5 @@
 #include "../shared.h"
+#define LEASH 8 /* an auto-defending soldier gives up a chase this many cells (either axis) from its post and walks back */
 #define AGGRO 5 /* idle soldiers defend themselves against visible enemies this many cells away (both axes) */
 /* Military roles share the budgeted multi-goal navigator. */
 static u8 target_box(u8 t,u8* x,u8* y,u8* n) {
@@ -6,6 +7,9 @@ static u8 target_box(u8 t,u8* x,u8* y,u8* n) {
  if(t&128) {u8 id=t&127;if(id>=building_count || !buildings[id].state || !building_hp[id])return 0;*x=buildings[id].x;*y=buildings[id].y;*n=building_size(buildings[id].type);}
  else {if(!combat_alive(t))return 0;*x=units[t].x;*y=units[t].y;*n=1;}
  return 1;
+}
+static u8 cheb(u8 ax,u8 ay,u8 bx,u8 by) {
+ u8 dx=ax>bx?ax-bx:bx-ax,dy=ay>by?ay-by:by-ay;return dx>dy?dx:dy;
 }
 static u8 distance(u8 i,u8 x,u8 y,u8 n) {
  u8 ux=units[i].x,uy=units[i].y;
@@ -37,7 +41,7 @@ static void die(u8 i) {
  if(i<N) {repair_target[i]=NONE;repair_active&=~(1<<i);work_stop(i);requested[i]=retry_wait[i]=0;worker_task[i]=0;
   if(unit_build[i]!=NONE) {buildings[unit_build[i]].worker=NONE;unit_build[i]=NONE;builder_working&=~(1<<i);}
   /* Carried resources are lost with the worker, not credited to the bank. */
-  cargo[i]=cargo_kind[i]=0;mine_phase[i]=0;selection_mask&=~(1<<i);selection_update();
+  cargo[i]=cargo_kind[i]=0;mine_phase[i]=0;auto_hx[i]=255;selection_mask&=~(1<<i);selection_update();
  }
  units[i].progress=units[i].len=units[i].pos=0;units[i].state=IDLE;
  if(enemy_selected==i)enemy_selected=NONE;
@@ -76,7 +80,7 @@ void combat_init(void) __banked {
  for(i=0;i<PS;++i)shot_time[i]=0;
  combat_shots=shot_active=0;combat_active=0;combat_hits=combat_kills=combat_buildings=0;enemy_selected=NONE;command_last=0;
  for(i=0;i<RN;++i) {shot_time[i]=0;unit_hp[i]=i<unit_count?unit_max_hp[unit_kind[i]]:0;combat_target[i]=NONE;attack_cooldown[i]=attack_flash[i]=hurt_flash[i]=0;}
- for(i=0;i<N;++i)stance[i]=0;
+ for(i=0;i<N;++i){stance[i]=0;auto_hx[i]=255;}
  for(i=0;i<BMAX;++i) {building_owner[i]=0;building_hp[i]=i?0:240;}
  nav_base_dirty=1;
  for(y=20;y<32;++y)for(x=0;x<12;++x) {u16 c=((u16)y<<5)+x;terrain[c]=0;stock[c]=0;}
@@ -96,11 +100,11 @@ u8 combat_hit_test(u16 wx,u16 wy) __banked {
 u8 combat_click(u16 wx,u16 wy) __banked {
  u8 i,t=combat_hit_test(wx,wy);
  if(t==NONE || !fog_target(t))return 0;combat_active=1;
- for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i))) {if(unit_kind[i]==5 && !(t&128))continue;work_stop(i);combat_target[i]=t;stance[i]=0;}
+ for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i))) {if(unit_kind[i]==5 && !(t&128))continue;work_stop(i);combat_target[i]=t;stance[i]=0;auto_hx[i]=255;}
  sprites_dirty=3;hud_dirty=3;return 1;
 }
 void combat_stop(u8 hold) __banked {
- u8 i;for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i))) {work_stop(i);combat_target[i]=NONE;stance[i]=hold;attack_flash[i]=0;}
+ u8 i;for(i=0;i<unit_count;++i)if(unit_hp[i] && unit_kind[i]>=1 && unit_kind[i]<=5 && (selection_mask&(1<<i))) {work_stop(i);combat_target[i]=NONE;stance[i]=hold;attack_flash[i]=0;auto_hx[i]=255;}
  sprites_dirty=3;hud_dirty=3;
 }
 /* Cheap reject before the banked range test: Manhattan distance from (ux,uy) to the n x n box at (bx,by). */
@@ -312,17 +316,24 @@ void combat_tick(void) __banked {
     combat_target[i]=t=NONE;tbv=0;if(i<N)work_stop(i);
    }
   }
+  /* Leash: an auto-chase that drags the soldier too far from its post is dropped. */
+  if(t!=NONE && i<N && auto_hx[i]!=255 && cheb(units[i].x,units[i].y,auto_hx[i],auto_hy[i])>LEASH) {combat_target[i]=t=NONE;tbv=0;work_stop(i);}
   /* Hold-position soldiers and stationary defenders retaliate only inside their range. Idle soldiers without the
    * hold order (stance 0) also defend themselves: a visible enemy within AGGRO cells becomes their target and the
    * regular approach code below walks them to it (rams never chase units). */
   if(t==NONE && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && (i>=N || !requested[i]) && (i>=N || auto_defend || stance[i])) {
-   {u8 rng=unit_range[unit_kind[i]],aggro=(i<N && auto_defend && !stance[i] && unit_kind[i]!=5);cs_xi=units[i].x;cs_yi=units[i].y;cs_own=units[i].owner;cs_rng=aggro?AGGRO:rng;cs_j=0;
+   {u8 rng=unit_range[unit_kind[i]],aggro=(i<N && auto_defend && !stance[i] && unit_kind[i]!=5 && (auto_hx[i]==255 || cheb(units[i].x,units[i].y,auto_hx[i],auto_hy[i])<=LEASH));cs_xi=units[i].x;cs_yi=units[i].y;cs_own=units[i].owner;cs_rng=aggro?AGGRO:rng;cs_j=0;
     for(;;) {
      j=cand_scan();if(j==255)break;
-     if((i>=N || fog_target(j)) && (aggro || combat_position(i,units[i].x,units[i].y,j))) {combat_target[i]=t=j;break;}
+     if((i>=N || fog_target(j)) && (aggro || combat_position(i,units[i].x,units[i].y,j))) {combat_target[i]=t=j;if(aggro && auto_hx[i]==255){auto_hx[i]=units[i].x;auto_hy[i]=units[i].y;auto_try[i]=0;}break;}
      cs_j=j+1;
     }}
    if(t==NONE && i>=N)for(j=0;j<building_count;++j)if(buildings[j].state && building_hp[j] && building_owner[j]!=units[i].owner && near_box(units[i].x,units[i].y,buildings[j].x,buildings[j].y,building_size(buildings[j].type),unit_range[unit_kind[i]]) && combat_position(i,units[i].x,units[i].y,128+j)){combat_target[i]=t=128+j;break;}
+  }
+  /* No target left: walk back to the post (give up after a few blocked attempts or once next to it). */
+  if(t==NONE && i<N && auto_hx[i]!=255 && !(sim_ticks&7) && !units[i].progress && units[i].state!=MOVING && !requested[i] && job_unit!=i && !retry_wait[i]) {
+   if(cheb(units[i].x,units[i].y,auto_hx[i],auto_hy[i])<=1 || ++auto_try[i]>6)auto_hx[i]=255;
+   else {order_one(i,auto_hx[i],auto_hy[i]);retry_wait[i]=15;}
   }
   if(t==NONE || (!tbv && !target_box(t,&x,&y,&n)) || units[i].progress)continue;
   if(unit_range[unit_kind[i]] && !(unit_kind[i]==5 && !(t&128)) && cp_core(i,units[i].x,units[i].y,x,y,n)) {

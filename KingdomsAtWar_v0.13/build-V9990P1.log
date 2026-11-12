@@ -25,7 +25,7 @@ Creating crt0 config file...
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
-In file included from ./main.c:303:
+In file included from ./main.c:304:
 ./video.h:248:10: warning: missing terminating ' character
   248 |  ex af,af'
       |          ^
@@ -113,13 +113,13 @@ Segment found: banks/art_s25_b3.c (addr: 0019A000h)
 [92mSuccess[0m
 Segment found: banks/art_s26_b3.c (addr: 001AA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c using SDCC C compiler...[0m
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:328: warning 84: 'auto' variable 'n' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:328: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:328: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:330: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:330: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:333: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:333: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:339: warning 84: 'auto' variable 'n' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:339: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:339: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:341: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:341: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:344: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:344: warning 84: 'auto' variable 'x' may be used before initialization
 [92mSuccess[0m
 Segment found: banks/art_s27_b3.c (addr: 001BA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s27_b3.c using SDCC C compiler...[0m
@@ -177,13 +177,13 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0022]: Lower=A000h Higher=BD61h Size=7522 (Holes=0)
  Seg[0023]: Lower=A000h Higher=AC9Bh Size=3228 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
- Seg[0026]: Lower=A000h Higher=B733h Size=5940 (Holes=0)
+ Seg[0026]: Lower=A000h Higher=B975h Size=6518 (Holes=0)
  Seg[0027]: Lower=A000h Higher=B5E9h Size=5610 (Holes=0)
  Seg[0028]: Lower=A000h Higher=A6FCh Size=1789 (Holes=0)
  Seg[0029]: Lower=A000h Higher=B8C3h Size=6340 (Holes=0)
- Seg[0030]: Lower=A000h Higher=B40Bh Size=5132 (Holes=0)
+ Seg[0030]: Lower=A000h Higher=B41Ah Size=5147 (Holes=0)
  Seg[0031]: Lower=A000h Higher=B9D4h Size=6613 (Holes=0)
- Total size: 163010
+ Total size: 163603
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
