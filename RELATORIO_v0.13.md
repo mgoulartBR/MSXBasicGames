@@ -1,4 +1,4 @@
-# Relatório v0.13 — desempenho
+# Relatório v0.13 — desempenho, reino dos mortos e IA
 
 > **Decisão (novembro de 2026):** o desenvolvimento segue somente em `KAW9990P1.ROM`. Os renderizadores bitmap V9990 e V9968 ficam congelados como binários no commit `3b6414d02c2941c67166ca010190f48b8dd5da9a` (tag `v0.13-final` não pôde ser enviada; criar com `git tag v0.13-final 3b6414d && git push origin v0.13-final`). A árvore de código atual foi simplificada para P1 apenas; `KAW9990.ROM` e `KAW9968.ROM` permanecem como binários de referência e já não são reproduzíveis a partir da árvore atual (use o commit congelado).
 
@@ -6,23 +6,32 @@ BigFive Studios · novembro de 2026 · ROMs reproduzidas com MSXgl 6fd8858 e SDC
 
 ## 1. Resumo
 
-O pedido foi um ganho real de quadros por segundo no Z80 comum de 3,58 MHz, sem mudar regras, economia, mouse, seleção, Fog nem assets. A meta era 30 quadros por segundo. **Ela não foi atingida.** O resultado é um ganho grande, mas não suficiente:
+O pedido foi um ganho real de quadros por segundo no Z80 comum de 3,58 MHz, sem mudar regras, economia, mouse, seleção, Fog nem assets. A meta era 30 quadros por segundo. **Na P1 ela foi praticamente atingida**: 29,6 quadros/s com 4 unidades andando, medido no fim da fase da IA (ver a seção 10). Nos cenários pesados fica em 23 a 27 e o pior caso medido (os primeiros 6 s de contato de uma onda inimiga com 8 unidades grandes) em 13,5. Os números abaixo são os do início da v0.13, antes das otimizações seguintes, e ficam como referência histórica; o estado final está no fim desta seção e na seção 10:
 
 | ROM | 4 unidades andando | 1 unidade andando | v0.12 (4 / 1 unidade) |
 |---|---:|---:|---:|
-| `KAW9990P1.ROM` (V9990, modo P1) | 22,0 quadros/s | 24,2 quadros/s | — |
+| `KAW9990P1.ROM` (V9990, modo P1, início da v0.13) | 22,0 quadros/s | 24,2 quadros/s | — |
 | `KAW9990.ROM` (V9990, modo bitmap) | 9,6 | 15,0 | 3,5 / 6,0 |
 | `KAW9968.ROM` (V9968, via script no openMSX) | 4,2 | 8,3 | — / — |
 
 Medição: openMSX 19.1, Z80 a 3,58 MHz, `tests/perf012.tcl`, janela de cerca de 3 s emulados com unidades se movendo e câmera parada. Quadros contados são os apresentados. A oscilação entre execuções vizinhas é de 2 a 3 quadros; diferenças menores que isso não são confiáveis. Todos os números deste documento são de emulação; **nada foi medido em hardware real**.
 
-A ROM que mais se aproxima da meta é a P1. O V9968 continua bem abaixo: o caminho nativo tem de repintar atores e fundo por cópias de VRAM, e o V9958 emulado não tem o V9968 acelerado.
+**Estado final da P1** (mesma metodologia: openMSX 19.1, 3,58 MHz, `tests/fps_active.py` e `tests/fps_heavy.py`; ROM de antes da IA → ROM atual com a IA desligada):
+
+| Cenário | Antes da IA | Atual |
+|---|---:|---:|
+| 4 unidades andando | 29,2 quadros/s | 29,6 |
+| Misto (4 andando, 4 paradas) | 27,4 | 26,6 |
+| 8 unidades grandes andando | 24,3 | 23,5 |
+| Luta em grupo | 24,4 | 23,2 |
+
+Com a IA ligada, o custo está na seção 10.5. A ROM que mais se aproxima da meta é a P1. O V9968 continua bem abaixo: o caminho nativo tem de repintar atores e fundo por cópias de VRAM, e o V9958 emulado não tem o V9968 acelerado.
 
 ## 2. Entregáveis
 
 | Arquivo | Destino | SHA-256 |
 |---|---|---|
-| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 (novo) | `34611c87afed6fd0b7f8bde55a225af97545d5790530c8b157bfb3914ae9b415` |
+| `KAW9990P1.ROM` | MSX2 + V9990/GFX9000, modo P1 | `9cd2b27700fc5d84cd82a3f1434598e89e28341ba365e959837eb5c20f4d6aa1` (a ROM de antes da IA era `34611c87afed6fd0b7f8bde55a225af97545d5790530c8b157bfb3914ae9b415`) |
 | `KAW9990.ROM` | MSX2 + V9990/GFX9000, modo bitmap | `7fd205da8b3b187db8d09f9d965d8cdd900e32704d03b2c6a31e488fa8c4fb4f` |
 | `KAW9968.ROM` | MSX2+ com V9968 (e openMSX com o script do kit) | `9e7374f8b8efab6eb2aeaf8d6309ecbe6263c538088e84625b6295707a93a5c4` |
 
@@ -75,15 +84,16 @@ Cada item foi medido e **revertido**:
 
 ## 6. Riscos e lições
 
-- **Margem de pilha.** Na P1 a RAM livre entre as variáveis e a pilha chegou a cerca de 235 bytes e os testes passaram a travar (a pilha invadia dados). Hoje a margem é de cerca de 290 bytes. A janela de 256 bytes do descompressor (só usada no carregamento) e o buffer de atributos de sprite compartilham a mesma RAM. Qualquer variável nova na P1 precisa checar `RAM_end` em `tests/check_memory092.py`.
+- **Margem de pilha.** Na P1 a RAM livre entre as variáveis e a pilha chegou a cerca de 235 bytes e os testes passaram a travar (a pilha invadia dados). No fim da fase da IA `RAM_end` é EF9A, a cerca de 1000 bytes do limite de F380; a IA, as chaves de teste e o fim de jogo somaram menos de 50 bytes de RAM. A janela de 256 bytes do descompressor (só usada no carregamento) e o buffer de atributos de sprite compartilham a mesma RAM. Qualquer variável nova na P1 precisa checar `RAM_end` em `tests/check_memory092.py`.
 - **Medição.** O openMSX grava `z80_freq` nas configurações e herda valores de execuções anteriores (por exemplo 10,7 MHz). `tests/helpers.tcl` fixa 3,58 MHz; os launchers do kit usam um arquivo de configuração próprio. Medidas antigas que mostravam 22 a 25 quadros/s eram desse artefato.
 - **Perfil.** O tempo que o perfil por linha atribui a `video_sprites` inclui a interrupção de vertical blank, que roda no meio de qualquer linha.
 - **Estado do V9968.** O openMSX não tem V9968; o kit roda a ROM inalterada no núcleo V9958 e emula só a leitura do ID por script. Execução no cartucho real continua pendente.
-- **Limites conhecidos de teste.** Nada foi testado em outro emulador, em hardware real ou com mouse físico.
+- **Limites conhecidos de teste.** Nada foi testado em hardware real ou com mouse físico. O autor relatou ter testado a P1 no WebMSX ("excelente", sem roteiro preenchido) e o recorte da mina ("tudo correto"); a IA, a defesa automática, as torres inimigas, o fim de jogo e o reinício só foram executados no openMSX.
+- **Falhas silenciosas de compilação.** Duas vezes o teste rodou numa ROM antiga porque a compilação falhou (`build.sh` não imprime o erro no terminal; ver `build-V9990P1.log`). Conferir a linha `PASS V9990P1 fixed_end=… RAM_end=…` antes de confiar num resultado.
 
 ## 7. Validação
 
-`bash tests/suite012.sh <variante>` com `V9990`, `V9968` ou `V9990P1` verifica a memória (código fixo abaixo de A000h, RAM com margem) e roda: `kernel012` (rotina Z80 do Fog contra a referência, 257 casos, 230272 bytes), `perf012`, `fog011`, `combat011`, `worker011`, `camera011`, `overlay011`, `perf091`, `defense011` (ou `kingdom011` no V9968) e `box011` (seleção por área com eventos de mouse injetados). Na P1 entram também `occl_p1` (oclusão) e `flash_p1` (clarão de dano). Resultado final: V9990 19 verificações sem falhas, V9968 19 sem falhas, V9990P1 23 sem falhas.
+`bash tests/suite012.sh <variante>` com `V9990`, `V9968` ou `V9990P1` verifica a memória (código fixo abaixo de A000h, RAM com margem) e roda: `kernel012` (rotina Z80 do Fog contra a referência, 257 casos, 230272 bytes), `perf012`, `fog011`, `combat011`, `worker011`, `camera011`, `overlay011`, `perf091`, `defense011` (ou `kingdom011` no V9968) e `box011` (seleção por área com eventos de mouse injetados). Na P1 entram também `occl_p1` (oclusão) e `flash_p1` (clarão de dano). Resultado do início da v0.13: V9990 19 verificações sem falhas, V9968 19 sem falhas, V9990P1 23 sem falhas. **Estado atual (só P1):** `suite012.sh V9990P1` com 206 verificações e nenhuma falha, incluindo `flashseq_p1`, `mine_crop_p1`, `enemy_kinds`, `defend011`, `enemy_tower`, `endgame` e `enemy_visual`; `ai_enemy`, `ai_waves` e `wave_perf` rodam à parte.
 
 Os testes de lógica leem RAM e VRAM sem escrever saldos nem posições. Exceções: `kernel012` (dados sintéticos), `occl_p1` e `flash_p1` (posicionam unidades e forçam vida e contadores de dano para gerar as capturas).
 
@@ -98,9 +108,51 @@ cd KingdomsAtWar_v0.13 && bash tests/suite012.sh V9990P1
 
 ## 9. Próximos passos
 
-- Chegar a 30 quadros/s com 4 unidades exigiria cortar o custo por quadro de cerca de 45 ms para cerca de 33 ms. Os custos restantes, na P1, estão espalhados (`video_sprites` perto de metade do tempo, `simulate` perto de um sexto, espera do vertical blank, entrada e Fog); nenhum bloco isolado paga o que falta.
-- Opções de design que mudariam o jogo ou o visual: simulação a 15 Hz com posições interpoladas no desenho, animação de poses mais lenta, menos anéis e barras por quadro.
-- Testar a P1 em outro emulador e no hardware real.
+- Jogar partidas reais e ajustar o equilíbrio da IA (a calibração atual é por modelo).
+- Reduzir o custo da luta com muitas unidades grandes: o pior caso medido (13,5 quadros/s por cerca de 6 s) é espalhado entre desenho de sprites (~35%), combate (~15%), simulação (~8%) e HUD (~3%), sem ponto único.
+- Canteiro de obras próprio dos mortos (arte nova) e mais de dois soldados inimigos ao mesmo tempo (exige rever o layout de memória de sprites).
+- Testar a P1 em BIOS real, GFX9000 físico e outros emuladores, em especial a varredura de teclado desligada (`SCNCNT`), o reinício por `jp 0` e a cópia de tiles da linha 3072 da VRAM.
+
+---
+
+## 10. Fase seguinte: reino dos mortos, IA e fim de jogo
+
+Depois do desempenho, o jogo ganhou um adversário completo. Tudo roda só na `KAW9990P1.ROM`.
+
+### 10.1 Arte e integração
+
+- **Unidades:** seis tipos de múmia (camponês, espadachim, lanceiro, arqueiro, cavaleiro de camelo, aríete-sarcófago), em estilo realista como os humanos (decisão do autor após comparar com uma versão cartoon). Folhas geradas pelo autor, convertidas por `tools/convert_units.py` (quantização com quotas de matiz) com contorno só nas bordas de baixo e da direita e curva de contraste (zero custo em tempo de execução), integradas por `tools/integrate_units.py`. Paleta própria no grupo 1 dos sprites.
+- **Prédios:** oito tipos, convertidos por rampa de luminosidade (`tools/convert_ramp.py`: 5 tons de arenito, rampa cinza para metal, cores próprias para vermelho e dourado), porque os tiles da camada B compartilham a paleta do terreno. As tentativas anteriores (mapeamento por cor mais próxima, agrupamento por regiões) saíram enlameadas. Entram como **92 tiles únicos** (banco 22, 7,5 KB LZ) nos patterns 1568 em diante, com a versão tracejada do Fog lembrado (`ENEMY_DITH`). O V9990 aceita números de pattern bem acima de 2047 (sonda `tests/patlimit_probe.tcl`: 3000 funciona).
+- **Oclusão:** os tiles inimigos ficam crus na VRAM a partir da linha 3072 (`EOV_Y`) e alimentam os sprites oclusores. Antes da correção, uma unidade ao lado de um prédio inimigo recebia por cima o tile do prédio humano de mesmo índice.
+- A oficina de cerco é o prédio de pior legibilidade; o autor aceitou assim.
+
+### 10.2 IA (`src/banks/art_s23_b3.c`)
+
+Economia abstrata (sem camponeses simulados), obras em ordem fixa (15 s cada, um prédio por vez), treino dos dois atores inimigos (slots 8 e 9, o limite `RN=10` da memória de sprites), ondas com tabela de composições e movimento próprio (passo de uma célula, 75 px/s, parado entre as células para o `combat_tick` escolher alvos, ponto de passagem no corredor da base). A base deixa um corredor livre porque um passo guloso oscilava diante de uma fileira de prédios (achado no primeiro teste). Parâmetros de equilíbrio como constantes (primeira onda 150 s, intervalo 40 s, treino 15/25 s, ouro +2 a cada 3 s); ver `tools/ai_timeline.py`.
+
+### 10.3 Defesa automática
+
+Soldado parado sem HOLD persegue inimigos visíveis a até 5 células (`AGGRO`), guarda o posto e abandona a perseguição a mais de 8 células (`LEASH`), voltando ao posto. Ordens do jogador apagam o posto.
+
+### 10.4 Vitória, derrota e reinício
+
+`end_check` (uma vez por segundo) decide o fim; `game_over` congela `simulate`; o HUD mostra a mensagem; **Enter** reinicia por `jp 0` depois de silenciar a interrupção do V9990.
+
+### 10.5 Desempenho com a IA
+
+Dois defeitos foram achados na medição e corrigidos: `init_world` não zerava `training`/`time` dos prédios (com a IA, `building_count` sobe até 12 e `sim_flags` lia lixo, ligando `production()` em todo tick: 6% da CPU) e `sim_flags` contava canteiros inimigos como trabalho. Depois disso, numa onda de dois soldados (cavaleiro e arqueiro) contra 8 unidades humanas grandes com defesa automática: marcha até o contato por volta de 26 quadros/s; primeiros 6 s de contato 13,5 quadros/s (mediana 69 ms, p90 103 ms); depois cerca de 22,5. Perfil do contato: sprites ~35%, combate ~15%, simulação ~8%, HUD ~3%.
+
+### 10.6 Testes
+
+Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os testes antigos, que pressupõem a base inimiga vazia: `tests/helpers.tcl` as desliga salvo `KAW_AI`, `KAW_DEF` ou `KAW_END`. Cenários novos: `ai_enemy` (8 prédios em ≤130 s, onda marcha até a base humana), `ai_waves` (baixas, treino, retorno com a composição seguinte, três ondas), `defend011`, `enemy_tower`, `endgame`, `enemy_visual`, `wave_perf`/`fps_wave.py`.
+
+### 10.7 Limites e riscos
+
+- A IA só tem dois soldados por vez: a pressão vem do ritmo e da qualidade. Um jogador competente com 8 unidades e torres deve vencer sempre; um jogador lento ou passivo toma uma onda a cada cerca de 1:20 com cavaleiros a partir dos 5 minutos. O equilíbrio é um chute informado por simulação, não por partidas.
+- Soldados humanos sem HOLD agora se defendem sozinhos, mas operários não; a IA ataca a unidade ou prédio mais próximo, sem preferir operários.
+- O reinício por `jp 0`, a varredura de teclado desligada e a cópia de tiles da linha 3072 só foram testados no openMSX com C-BIOS.
+- O canteiro de obras inimigo é o dos humanos.
+- O pior caso de desempenho (contato com muitas unidades grandes) continua em 13,5 quadros/s por cerca de 6 s.
 
 ---
 
