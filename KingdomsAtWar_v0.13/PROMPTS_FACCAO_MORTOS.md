@@ -92,3 +92,13 @@ Um prédio por imagem (acrescente depois do bloco):
 8. **Oficina de cerco:** a wide open workshop with a sloped roof, a big wooden wheel on the left front, a large ram log resting on the right.
 
 Dica: se o gerador insistir em detalhes finos, adicione "paint it like a children's wooden toy: chunky, simple, large flat colour areas".
+
+## Canteiro de obras dos mortos
+
+Uma única imagem, que o jogo usa para todo prédio inimigo em obra (em 64×64 para os prédios 4×4 e reduzida a 48×48 para a casa). Segue as lições dos prédios: poucas formas grandes, contraste forte entre claro e escuro, nada de detalhe fino.
+
+Cole depois do bloco de estilo dos prédios:
+
+> Construction site for an undead desert faction, NOT a finished building. Same gritty realistic pixel-art style as the previous buildings, isometric 3/4 view, transparent background, one object only, centred, filling a square footprint about as wide as it is tall (the whole picture must read as a flat-ish square lot, low profile, nothing taller than half the width). Content: a low wooden scaffolding frame made of 4 thick dark-brown posts and 2 horizontal beams, around a rough stack of pale sandstone blocks (light faces, darker shadowed faces), a few loose blocks in front, one coil of rope, one bleached bone beam leaning on the frame, one small torn dark cloth hung on a post. IMPORTANT for readability at 64x64 pixels: strong light-dark contrast (pale sandstone against dark wood and a dark ground patch), big simple shapes, flat shading with 3 tones per material, every feature at least 4 pixels wide at 256x256 size. Forbidden: skulls, banners, torches, hieroglyphs, small tools, text, plants, outlines, tiny debris. Use ONLY these colours: #212121 #214A21 #4A6B4A #21214A #4A6B94 #4A2121 #944A21 #6B4A21 #DE944A #B5944A #DEDE94 #4A4A4A #949494 #DEDEDE #FFFFDE.
+
+Dicas: se o gerador entregar um prédio quase pronto, peça "much lower, only the frame and the stone pile, clearly unfinished". Se vier com fundo xadrez "transparente", não precisa corrigir (a conversão remove).
