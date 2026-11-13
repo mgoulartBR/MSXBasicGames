@@ -105,17 +105,25 @@ static void names_put(u32 a,u16 n0,u16 n1,u16 n2,u16 n3) {
  io_vset(a+128);io_vram=(u8)n2;io_vram=(u8)(n2>>8);io_vram=(u8)n3;io_vram=(u8)(n3>>8);
  __asm ei __endasm;
 }
+/* Enemy-kingdom art of cell (x,y) of building t: a tile of enemy_tile_map (0 = empty), or 255 = use the human art
+ * (the enemy construction site map entries stay 255 until site art is integrated). */
+static u8 enemy_tile_of(u8 t,u8 x,u8 y) {
+ Building* b=&buildings[t];u8 n=build_sizes[b->type],i=(u8)((y-b->y)*n+x-b->x);
+ return b->state==1?enemy_tile_map[128+(n==3?16:0)+i]:enemy_tile_map[(b->type<<4)+i];
+}
 static void p1_cell(u8 x,u8 y) {
  u8 st=fog_at(x,y);u16 n;u32 a;
  a=PNT_B+((u16)y<<8)+((u16)x<<2);
  if(!st) {names_put(a,1,1,1,1);return;}
  {u8 art=fog_art(x,y);
-  if(art>=64 && art<185) {
+  if(art>=64 && art<201) {
    u8 t=terrain[((u16)y<<5)+x];
    if(t>=10 && building_owner[t-10]) {
-    Building* b=&buildings[t-10];
-    n=(st==1?ENEMY_DITH:ENEMY_PAT)+(u16)enemy_tile_map[(b->type<<4)+(y-b->y)*build_sizes[b->type]+x-b->x]*4;
-    names_put(a,n,n+1,n+2,n+3);return;
+    u8 e=enemy_tile_of(t-10,x,y);
+    if(e!=255) {
+     n=(st==1?ENEMY_DITH:ENEMY_PAT)+(u16)e*4;
+     names_put(a,n,n+1,n+2,n+3);return;
+    }
    }
   }
   n=(st==1?PB_DITH:PB_PLAIN)+(u16)tile_source[art]*4;
@@ -605,11 +613,10 @@ void ae_occ(u8 i) {
     if(fog_at(cx,cy)!=2)continue;
     t=fog_art(cx,cy);if(t<64)continue;
     {u8 tt=terrain[((u16)cy<<5)+cx];
-     if(t<185 && tt>=10 && building_owner[tt-10]) {
-      u8 e=enemy_tile_map[(buildings[tt-10].type<<4)+(cy-buildings[tt-10].y)*build_sizes[buildings[tt-10].type]+cx-buildings[tt-10].x];
-      if(!e)continue;
-      s2=occ_get(OCC_ENEMY+e);
-     } else s2=occ_get(tile_source[t]-50);}
+     u8 e=255;
+     if(t<201 && tt>=10 && building_owner[tt-10])e=enemy_tile_of(tt-10,cx,cy);
+     if(e==0)continue;
+     s2=e!=255?occ_get(OCC_ENEMY+e):occ_get(tile_source[t]-50);}
     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
    }
   }

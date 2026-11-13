@@ -20,6 +20,17 @@ for t in range(8):
             k=blk.tobytes()
             if k not in keys:keys[k]=len(tiles);tiles.append(blk)
             emap[t*16+ty*n+tx]=keys[k]
+# Canteiro de obras dos mortos (opcional): site_idx.npy 64x64 (predios 4x4) e site3_idx.npy 48x48 (casa); entradas 128..159
+# do mapa; 255 = usar o canteiro dos humanos.
+emap+=[255]*32
+for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144)):
+    if not (d/name).exists():continue
+    a=np.load(d/name);assert a.shape==(16*n,16*n),(name,a.shape)
+    for ty in range(n):
+        for tx in range(n):
+            blk=np.where(a[ty*16:(ty+1)*16,tx*16:(tx+1)*16]>=0,a[ty*16:(ty+1)*16,tx*16:(tx+1)*16],0).astype(np.uint8);k=blk.tobytes()
+            if k not in keys:keys[k]=len(tiles);tiles.append(blk)
+            emap[base+ty*n+tx]=keys[k]
 raw=b''.join(pack(t) for t in tiles);enc=lz(raw)
 assert len(enc)<=8192,len(enc)
 body=enc
