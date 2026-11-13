@@ -2,7 +2,7 @@
 source helpers011.tcl
 proc wr {name off v} {debug write memory [expr {$::S($name)+$off}] $v}
 proc ek_case {} {
- delay 55;materials
+ delay 65;materials
  set ex [unit 8 x];set ey [unit 8 y]
  # aliados perto para revelar a area (4 a 7), parados, sem combate
  set fx [unit 9 x];set fy [unit 9 y];set cells [list [list [expr {$ex+2}] [expr {$ey-2}]] [list [expr {$fx+2}] [expr {$fy-2}]] [list [expr {$ex+2}] [expr {$ey+2}]] [list [expr {$fx+2}] [expr {$fy+2}]]]

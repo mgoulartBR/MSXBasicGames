@@ -11,7 +11,7 @@ proc dump07 {name} {
  shot $prefix
 }
 proc camera07 {} {
- delay 55
+ delay 65
  camera_until cam_x 256 128;camera_until cam_y 352 64;delay 1;dump07 corner
  ck camera_corner {[w cam_x]==256 && [w cam_y]==352}
  camera_until cam_x 144 16;camera_until cam_y 176 32;delay 1;dump07 middle

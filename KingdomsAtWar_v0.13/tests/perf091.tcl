@@ -1,6 +1,6 @@
 source kingdom_helpers.tcl
 proc perf091 {} {
- delay 55
+ delay 65
  choose 2;world_point 0 0
  set t [machine_info time];set f [w rendered_frames];set l [w loops];set ticks [w sim_ticks]
  tap 5 32

@@ -9,7 +9,7 @@ proc set_name {x y n0} {
  foreach {off n} [list 0 $n0 2 [expr {$n0+1}] 128 [expr {$n0+2}] 130 [expr {$n0+3}]] {vw [expr {$a+$off}] [expr {$n&255}];vw [expr {$a+$off+1}] [expr {$n>>8}]}
 }
 proc pl_case {} {
- delay 55
+ delay 65
  # tile do castelo humano em (3,7): le o nome atual
  set a [expr {0x7E000+(7<<8)+(3<<2)}]
  set n0 [expr {[vr $a]+256*[vr [expr {$a+1}]]}]

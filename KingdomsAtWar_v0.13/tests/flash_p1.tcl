@@ -1,6 +1,6 @@
 source kingdom_helpers.tcl
 proc flash_case {} {
- delay 55
+ delay 65
  debug write memory $::S(unit_hp) 20 ;# unit 0
  debug write memory [expr {$::S(unit_hp)+2}] 24
  debug write memory [expr {$::S(hurt_flash)+2}] 200

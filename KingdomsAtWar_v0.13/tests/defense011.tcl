@@ -1,6 +1,6 @@
 source helpers011.tcl
 proc defense011 {} {
- delay 55;materials;fund 128 32
+ delay 65;materials;fund 128 32
  ck collected_for_realm {[w wood]>=128 && [w gold]>=32 && [conserved]}
  move_unit 0 1 24
  move_unit 2 1 22

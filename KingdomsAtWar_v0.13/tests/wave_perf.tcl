@@ -12,7 +12,7 @@ proc perf_end {phase} {
 }
 proc poke16 {name v} {debug write memory $::S($name) [expr {$v&255}];debug write memory [expr {$::S($name)+1}] [expr {$v>>8}]}
 proc wave_perf {} {
- delay 55;materials
+ delay 65;materials
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
  set cells {{4 5} {5 6} {7 6} {9 6}}
  for {set k 0} {$k<4} {incr k} {

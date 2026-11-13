@@ -1,6 +1,6 @@
 source helpers.tcl
 proc boot {} {
- delay 55
+ delay 65
  ck enabled {[b video_enabled]==1 && [w loops]>5}
  ck four_units {[b unit_count]==4 && [b unit_kind]==0 && [b unit_kind 2]==1}
  ck keyclick_off {[debug read memory 0xF3DB]==0}

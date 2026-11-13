@@ -11,7 +11,7 @@ proc place_enemy {k type x y} {
  }}
 }
 proc eb_case {} {
- delay 55
+ delay 65
  # fileira de cima (y=21): casa, quartel, serraria, forja; fileira de baixo (y=27): castelo inimigo, estabulo, torre, oficina
  foreach {k type x y} {2 1 0 21  3 2 4 21  4 3 8 21  5 4 12 21  6 5 8 27  7 6 12 27  8 7 16 27} {place_enemy $k $type $x $y}
  wr building_count 0 9

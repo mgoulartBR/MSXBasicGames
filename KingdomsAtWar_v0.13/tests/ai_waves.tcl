@@ -3,7 +3,7 @@ set ::env(KAW_AI) 1
 source helpers011.tcl
 proc wr {name off v} {debug write memory [expr {$::S($name)+$off}] $v}
 proc aw_case {} {
- delay 55
+ delay 65
  set limit [expr {[machine_info time]+400}]
  while {[machine_info time]<$limit && ([b ai_step]<8 || [b ai_site]!=255)} {delay 1}
  ck expanded {[b ai_step]==8 && [b ai_site]==255}

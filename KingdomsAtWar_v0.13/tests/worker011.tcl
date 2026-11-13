@@ -1,6 +1,6 @@
 source helpers011.tcl
 proc worker_case {} {
- delay 55;materials;fund 96 48
+ delay 65;materials;fund 96 48
  ck harvested_start {[w wood]>=64 && [w gold]>=32 && [conserved]}
  choose 0;camera_until cam_y 0 32;point 120 204;tap 5 128;world_point 0 10
  ck forge_locked_without_quartel {[b build_kind]==4 && ![b place_valid] && [conserved]};tap 7 4

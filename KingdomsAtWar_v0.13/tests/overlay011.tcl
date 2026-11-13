@@ -13,7 +13,7 @@ proc dump_overlay011 {name} {
  shot $prefix
 }
 proc overlays093 {} {
- delay 55
+ delay 65
  choose 0;point 24 204;tap 5 128
  world_point 12 0;delay 1
  ck ghost_first {[b placement_mode]==1 && [b place_x]==12 && [b place_y]==0}

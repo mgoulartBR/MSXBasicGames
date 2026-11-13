@@ -10,7 +10,7 @@ proc attack09 {id target} {
  tap 5 32
 }
 proc combat09 {} {
- delay 55;materials
+ delay 65;materials
  ck two_kingdoms {[b unit_count]==4 && [b unit_hp 8]==48 && [b unit_hp 9]==48 && [b building_owner 1]==1 && [b building_hp 1]==180}
  choose 1;world_point 9 7;tap 5 32
  await {[w gold]>=8} 90

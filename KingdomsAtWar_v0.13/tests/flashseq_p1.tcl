@@ -1,7 +1,7 @@
 # Golpe e dano: o clarao e o gesto de ataque aparecem, depois somem (so renderiza nas transicoes).
 source kingdom_helpers.tcl
 proc fs_case {} {
- delay 55
+ delay 65
  debug write memory $::S(unit_hp) 20
  debug write memory [expr {$::S(unit_hp)+2}] 24
  debug write memory $::S(sprites_dirty) 3

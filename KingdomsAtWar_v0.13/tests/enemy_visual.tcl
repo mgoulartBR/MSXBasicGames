@@ -15,7 +15,7 @@ proc place {i x y} {
  foreach {o v} [list 0 [expr {$x*16&255}] 1 [expr {$x*16>>8}] 2 [expr {$y*16&255}] 3 [expr {$y*16>>8}] 4 $x 5 $y 6 $x 7 $y 8 $x 9 $y 12 0 13 0 14 0 15 0] {debug write memory [expr {$a+$o}] $v}
 }
 proc ev_case {} {
- delay 55
+ delay 65
  # quartel e torre inimigos na area ainda nao vista; soldados humanos encostados nas laterais (oclusao)
  place_enemy 2 2 5 24;place_enemy 3 6 5 28;wr building_count 0 4
  place 2 4 26;place 3 9 26;place 0 4 30;place 1 9 30

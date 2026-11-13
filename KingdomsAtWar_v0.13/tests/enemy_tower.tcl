@@ -15,7 +15,7 @@ proc place {i x y} {
  foreach {o v} [list 0 [expr {$x*16&255}] 1 [expr {$x*16>>8}] 2 [expr {$y*16&255}] 3 [expr {$y*16>>8}] 4 $x 5 $y 6 $x 7 $y 8 $x 9 $y 12 0 13 0 14 0 15 0] {debug write memory [expr {$a+$o}] $v}
 }
 proc et_case {} {
- delay 55
+ delay 65
  # torre inimiga pronta em (6,12) (cobre x6..9, y12..15); soldado humano 2 em (6,10): 2 celulas, soldado 3 em (6,3): fora do alcance
  place_enemy 2 6 6 12;wr building_count 0 3
  place 2 6 10;place 3 6 3

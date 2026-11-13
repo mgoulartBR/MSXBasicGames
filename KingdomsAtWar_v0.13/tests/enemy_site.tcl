@@ -15,7 +15,7 @@ proc place {i x y} {
  foreach {o v} [list 0 [expr {$x*16&255}] 1 [expr {$x*16>>8}] 2 [expr {$y*16&255}] 3 [expr {$y*16>>8}] 4 $x 5 $y 6 $x 7 $y 8 $x 9 $y 12 0 13 0 14 0 15 0] {debug write memory [expr {$a+$o}] $v}
 }
 proc es_case {} {
- delay 55
+ delay 65
  place_site 2 2 5 24;place_site 3 1 10 24;wr building_count 0 4
  place 2 4 26;place 3 9 26;place 0 4 30;place 1 9 30
  wr sprites_dirty 0 3;wr fog_refresh 0 1

@@ -16,7 +16,7 @@ Jogo de estratégia em tempo real para MSX2 (C + Z80, MSXgl, ROM ASCII8 de 256 K
 
 ## O reino dos mortos
 
-O adversário é uma facção de múmias do deserto, com arte realista no estilo dos humanos: seis tipos de unidade (camponês, espadachim, lanceiro, arqueiro, cavaleiro de camelo e aríete-sarcófago) e oito tipos de prédio. As unidades usam uma paleta própria (grupo de paleta 1 dos sprites, sem custo por quadro). Os prédios usam a paleta do terreno, porque os tiles da camada B compartilham uma só: foram convertidos por uma rampa de luminosidade (`tools/convert_ramp.py`), com cinza para metal e cores próprias para vermelho e dourado. Os prédios inimigos têm versão tracejada no Fog lembrado e oclusão correta (a unidade ao lado do prédio passa por trás da borda dele). O canteiro de obras ainda é o dos humanos.
+O adversário é uma facção de múmias do deserto, com arte realista no estilo dos humanos: seis tipos de unidade (camponês, espadachim, lanceiro, arqueiro, cavaleiro de camelo e aríete-sarcófago) e oito tipos de prédio. As unidades usam uma paleta própria (grupo de paleta 1 dos sprites, sem custo por quadro). Os prédios usam a paleta do terreno, porque os tiles da camada B compartilham uma só: foram convertidos por uma rampa de luminosidade (`tools/convert_ramp.py`), com cinza para metal e cores próprias para vermelho e dourado. Os prédios inimigos têm versão tracejada no Fog lembrado e oclusão correta (a unidade ao lado do prédio passa por trás da borda dele). O canteiro de obras dos mortos também tem arte própria.
 
 ## IA inimiga: expansão e ondas
 
@@ -79,7 +79,7 @@ O jogador inicia ao norte com dois camponeses e dois espadachins. Ao sul, na mes
 
 Barras mostram vida; a unidade militar selecionada mostra HP no HUD. Os ataques reutilizam poses existentes como gestos provisórios. A morte remove a unidade e libera sua vaga; o próximo recrutamento pode reutilizá-la. Destruir o castelo libera o terreno. A arte e as escalas aprovadas foram preservadas.
 
-Esta versão não inclui animações definitivas de ataque, cadáveres, ruínas nem um canteiro de obras próprio dos mortos. Sem BIOS real, GFX9000 físico ou outro emulador, nada do que está aqui foi testado fora do openMSX.
+Esta versão não inclui animações definitivas de ataque, cadáveres nem ruínas. O canteiro de obras humano ainda é o procedural original. Sem BIOS real, GFX9000 físico ou outro emulador, nada do que está aqui foi testado fora do openMSX.
 
 ## ROMs e execução
 
@@ -194,4 +194,4 @@ Todos os recursos dos testes são coletados por comandos normais. O depurador l�
 
 ## Próximas etapas
 
-Jogar partidas reais para ajustar o equilíbrio da IA (primeira onda, intervalo, treino, ouro e tabela de ondas). Canteiro de obras dos mortos (precisa de arte nova). Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout da memória de sprites). Reduzir o custo da luta com muitas unidades grandes (o pior caso medido é de cerca de 13,5 quadros/s por uns 6 s). Testar em BIOS real e GFX9000 físico, em especial a varredura de teclado desligada (`SCNCNT`) e o reinício por `jp 0`. Animações definitivas de ataque, minimap, áudio e save/load ficam para etapas futuras. O rio continua como barreira; pontes não são colocadas automaticamente.
+Jogar partidas reais para ajustar o equilíbrio da IA (primeira onda, intervalo, treino, ouro e tabela de ondas). Canteiro de obras humano com arte nova. Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout da memória de sprites). Reduzir o custo da luta com muitas unidades grandes (o pior caso medido é de cerca de 13,5 quadros/s por uns 6 s). Testar em BIOS real e GFX9000 físico, em especial a varredura de teclado desligada (`SCNCNT`) e o reinício por `jp 0`. Animações definitivas de ataque, minimap, áudio e save/load ficam para etapas futuras. O rio continua como barreira; pontes não são colocadas automaticamente.

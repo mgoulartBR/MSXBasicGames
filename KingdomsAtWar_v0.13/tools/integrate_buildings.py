@@ -31,11 +31,18 @@ for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144)):
             blk=np.where(a[ty*16:(ty+1)*16,tx*16:(tx+1)*16]>=0,a[ty*16:(ty+1)*16,tx*16:(tx+1)*16],0).astype(np.uint8);k=blk.tobytes()
             if k not in keys:keys[k]=len(tiles);tiles.append(blk)
             emap[base+ty*n+tx]=keys[k]
-raw=b''.join(pack(t) for t in tiles);enc=lz(raw)
-assert len(enc)<=8192,len(enc)
-body=enc
-(r/'src/banks/art_s22_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_22[] = {\n'+'\n'.join(','.join(map(str,body[i:i+32]))+',' for i in range(0,len(body),32))+'\n};\n')
+# Os tiles saem em ate dois bancos de 8 KB (22 e 24): corte guloso pelo tamanho comprimido.
+def chunk_enc(ts):return lz(b''.join(pack(t) for t in ts))
+k=len(tiles)
+while len(chunk_enc(tiles[:k]))>8192:k-=1
+first=tiles[:k];second=tiles[k:]
+enc1=chunk_enc(first);enc2=chunk_enc(second) if second else b''
+assert len(enc2)<=8192,len(enc2)
+def cfile(n,body):
+    (r/'src/banks'/f'art_s{n}_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_%d[] = {\n'%n+'\n'.join(','.join(map(str,(body or bytes([0]))[i:i+32]))+',' for i in range(0,len(body or bytes([0])),32))+'\n};\n')
+cfile(22,enc1);cfile(24,enc2)
 t=(r/'src/art07.h').read_text()
-t=re.sub(r'const Asset enemy_tiles_asset=.*?;\n','',t);t=re.sub(r'const u8 enemy_tile_map\[\]=.*?;\n','',t);t=re.sub(r'#define ENEMY_TILES \d+\n','',t)
-t+='const Asset enemy_tiles_asset={22,0xA000};\nconst u8 enemy_tile_map[]={'+','.join(map(str,emap))+'};\n#define ENEMY_TILES %d\n'%len(tiles)
-(r/'src/art07.h').write_text(t);print('tiles unicos',len(tiles),'bytes LZ',len(enc))
+for pat in (r'const Asset enemy_tiles_asset2?=.*?;\n',r'const u8 enemy_tile_map\[\]=.*?;\n',r'#define ENEMY_TILES1? \d+\n'):t=re.sub(pat,'',t)
+t+='const Asset enemy_tiles_asset={22,0xA000};\nconst Asset enemy_tiles_asset2={24,0xA000};\nconst u8 enemy_tile_map[]={'+','.join(map(str,emap))+'};\n#define ENEMY_TILES %d\n#define ENEMY_TILES1 %d\n'%(len(tiles),len(first))
+(r/'src/art07.h').write_text(t);enc=enc1+enc2;print('bancos: 22 =',len(enc1),'B (',len(first),'tiles ), 24 =',len(enc2),'B (',len(second),'tiles )')
+print('tiles unicos',len(tiles))

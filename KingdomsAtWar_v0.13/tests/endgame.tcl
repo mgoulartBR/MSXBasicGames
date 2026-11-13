@@ -4,7 +4,7 @@ source helpers011.tcl
 proc wr {name off v} {debug write memory [expr {$::S($name)+$off}] $v}
 proc hud_line {} {set s "";for {set i 0} {$i<29} {incr i} {append s [format %c [b hud_context [expr {$i}]]]};return $s}
 proc eg_case {} {
- delay 55
+ delay 65
  ck playing {[b game_over]==0}
  # vitoria: o castelo inimigo (predio 1) e destruido
  wr building_hp 1 0;wr buildings [expr {12*1+1}] 0

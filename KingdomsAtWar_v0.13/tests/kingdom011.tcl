@@ -1,6 +1,6 @@
 source helpers011.tcl
 proc kingdom011 {} {
- delay 55;materials;fund 320 192
+ delay 65;materials;fund 320 192
  ck collected_for_realm {[w wood]>=320 && [w gold]>=192 && [conserved]}
  move_unit 0 1 24
  move_unit 2 1 22

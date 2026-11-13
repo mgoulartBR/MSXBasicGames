@@ -12,7 +12,7 @@ proc perf_end {phase} {
  puts stderr "CALLS $phase $::counts"
 }
 proc perf012 {} {
- delay 55;choose 2;world_point 0 0
+ delay 65;choose 2;world_point 0 0
  debug set_watchpoint write_mem $::S(rendered_frames) {$::perf_running} {lappend ::perf_times [machine_info time]}
  set variant $::env(KAW_VARIANT);set name [dict get {V9990 KAW9990 V9990P1 KAW9990P1 PREVIEW KAW68PV V9968 KAW9968} $variant]
  set f [open ../build/$variant/$name.map];set text [read $f];close $f

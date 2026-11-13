@@ -8,7 +8,7 @@ proc place_unit {id x y} {
  foreach off {5 7 9} {debug write memory [expr {$a+$off}] $y}
 }
 proc occl_case {} {
- delay 55
+ delay 65
  place_unit 0 3 7
  place_unit 1 5 8
  place_unit 2 2 6

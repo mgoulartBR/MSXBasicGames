@@ -3,7 +3,7 @@ set ::env(KAW_AI) 1
 source helpers011.tcl
 proc wr {name off v} {debug write memory [expr {$::S($name)+$off}] $v}
 proc ai_case {} {
- delay 55
+ delay 65
  ck ai_start {[b ai_wave]==0 && [b unit_kind 8]==6}
  # acelera o relogio do jogo: 120 s de simulacao em tempo curto (os ticks continuam normais)
  set t0 [w game_seconds]

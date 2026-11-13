@@ -9,7 +9,7 @@ proc mine_watch {} {
  }
 }
 proc mine_case {} {
- delay 55;materials
+ delay 65;materials
  debug set_watchpoint write_mem $::S(rendered_frames) {} mine_watch
  choose 1;world_point 9 7;tap 5 32
  await {[b mine_phase 1]==1} 60
