@@ -175,7 +175,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0020]: Lower=A000h Higher=BE61h Size=7778 (Holes=0)
  Seg[0021]: Lower=A000h Higher=A5ADh Size=1454 (Holes=0)
  Seg[0022]: Lower=A000h Higher=BD61h Size=7522 (Holes=0)
- Seg[0023]: Lower=A000h Higher=ACF9h Size=3322 (Holes=0)
+ Seg[0023]: Lower=A000h Higher=AD00h Size=3329 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
  Seg[0026]: Lower=A000h Higher=B97Eh Size=6527 (Holes=0)
  Seg[0027]: Lower=A000h Higher=B603h Size=5636 (Holes=0)
@@ -183,7 +183,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0029]: Lower=A000h Higher=B94Ah Size=6475 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B41Ah Size=5147 (Holes=0)
  Seg[0031]: Lower=A000h Higher=B9F8h Size=6649 (Holes=0)
- Total size: 163938
+ Total size: 163945
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

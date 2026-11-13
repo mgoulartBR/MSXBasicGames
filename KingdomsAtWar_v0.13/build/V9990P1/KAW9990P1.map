@@ -143,7 +143,7 @@ Area                                    Addr        Size        Decimal Bytes (A
      000006FD  l__SEG28                        
      0000070A  l__SEG11                        
      00000861  l__SEG13                        
-     00000CFA  l__SEG23                        
+     00000D01  l__SEG23                        
      0000105D  l__SEG9                         
      0000141B  l__SEG30                        
      00001604  l__SEG27                        
@@ -1235,14 +1235,14 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG23                              0017A000    00000CFA =        3322. bytes (REL,CON)
+_SEG23                              0017A000    00000D01 =        3329. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
      0017A000  _ai_init                           art_s23_b3
      0017A4FB  _ai_second                         art_s23_b3
-     0017A756  _end_check                         art_s23_b3
-     0017ACD9  _ai_move                           art_s23_b3
+     0017A75D  _end_check                         art_s23_b3
+     0017ACE0  _ai_move                           art_s23_b3
 
 ASxxxx Linker V05.50.4-SDLD,  page 41.
 Hexadecimal  [32-Bits]

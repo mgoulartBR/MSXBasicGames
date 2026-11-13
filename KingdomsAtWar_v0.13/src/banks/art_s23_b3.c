@@ -5,13 +5,18 @@
 /* Sites keep the corridor x=4..7 (y=19..22) free: soldiers cross it at the gate (5,21). */
 static const u8 ord_type[8]={2,3,1,6,5,7,1,6};
 static const u8 ord_x[8]={7,0,0,8,7,0,0,8},ord_y[8]={24,19,24,19,28,15,28,15};
-static const u8 wave_kind[12]={1,1, 2,3, 4,1, 4,3, 4,4, 5,4};
+/* Balance knobs (see CHANGELOG): first wave, gap between launches, training times, gold income, wave table. */
+#define AI_FIRST_WAVE 150
+#define AI_WAVE_GAP 40
+#define AI_TRAIN_LIGHT 15
+#define AI_TRAIN_HEAVY 25
+static const u8 wave_kind[12]={2,3, 4,1, 4,3, 4,4, 5,4, 4,4};
 static const i8 ddx[4]={1,0,-1,0},ddy[4]={0,1,0,-1};
 static const u8 face_of[4]={1,0,3,2},muster_x[2]={3,8};
 static u8 tg_x,tg_y,tg_n;
 void ai_init(void) __banked {
  u8 i;
- ai_enabled=1;ai_wood=60;ai_gold=40;ai_launch=200;ai_step=ai_wave=0;ai_site=NONE;ai_left=0;
+ ai_enabled=1;ai_wood=60;ai_gold=40;ai_launch=AI_FIRST_WAVE;ai_step=ai_wave=0;ai_site=NONE;ai_left=0;
  for(i=0;i<2;++i)ai_state[i]=ai_timer[i]=ai_stuck[i]=ai_dir[i]=ai_kind[i]=0;
  /* Trees at the edge of the enemy base (x=0 and x=10, y=15..19) are cleared so that the 4x4 sites fit. */
  for(i=15;i<20;i+=2)terrain[((u16)i<<5)+0]=terrain[((u16)i<<5)+10]=stock[((u16)i<<5)+0]=stock[((u16)i<<5)+10]=0;
@@ -54,7 +59,7 @@ static u8 spawn(u8 s) {
 void ai_second(void) __banked {
  u8 s,i,k;
  if(!ai_enabled)return;
- ai_wood+=1+ai_has(3);if(game_seconds&1)++ai_gold;
+ ai_wood+=1+ai_has(3);if(game_seconds%3)++ai_gold;
  if(ai_wood>400)ai_wood=400;if(ai_gold>400)ai_gold=400;
  if(ai_site!=NONE) {
   Building* b=&buildings[ai_site];
@@ -70,7 +75,7 @@ void ai_second(void) __banked {
    while(k>1 && !ai_has(need_of(k)))k=k==5?4:k==4?2:k==3?1:1;
    if(!ai_has(2))continue;
    if(ai_wood>=recruit_wood[k] && ai_gold>=recruit_gold[k]) {
-    ai_wood-=recruit_wood[k];ai_gold-=recruit_gold[k];ai_kind[s]=k;ai_timer[s]=k>=4?30:20;ai_state[s]=3;
+    ai_wood-=recruit_wood[k];ai_gold-=recruit_gold[k];ai_kind[s]=k;ai_timer[s]=k>=4?AI_TRAIN_HEAVY:AI_TRAIN_LIGHT;ai_state[s]=3;
    }
   } else if(ai_state[s]==3) {
    if(ai_timer[s])--ai_timer[s];
@@ -78,7 +83,7 @@ void ai_second(void) __banked {
   }
  }
  if(!ai_state[0] && !ai_state[1] && unit_hp[8] && unit_hp[9] && game_seconds>=ai_launch) {
-  ai_state[0]=ai_state[1]=1;++ai_wave;ai_launch=game_seconds+60;ai_stuck[0]=ai_stuck[1]=0;
+  ai_state[0]=ai_state[1]=1;++ai_wave;ai_launch=game_seconds+AI_WAVE_GAP;ai_stuck[0]=ai_stuck[1]=0;
  }
 }
 /* Once per second: the game ends when a keep falls (defeat wins a tie). The simulation then stops (simulate). */

@@ -17,14 +17,14 @@ proc aw_case {} {
  ck casualties_detected {[b ai_state]>=2 && [b ai_state 1]>=2}
  await {[b unit_hp 8]>0 && [b unit_hp 9]>0 && [b ai_state]==0 && [b ai_state 1]==0} 120
  puts stderr "INFO respawn kinds=[b unit_kind 8],[b unit_kind 9] pos=[unit 8 x],[unit 8 y] / [unit 9 x],[unit 9 y] wood=[w ai_wood] gold=[w ai_gold]"
- ck respawn_wave2 {[b unit_kind 8]==1 && [b unit_kind 9]==1 && [unit 8 y]==23 && [unit 9 y]==23}
+ ck respawn_wave2 {[b unit_kind 8]==2 && [b unit_kind 9]==3 && [unit 8 y]==23 && [unit 9 y]==23}
  await {[b ai_wave]==2} 120
  ck wave2_launched {[b ai_wave]==2 && [b ai_state]==1}
- # segundo ciclo: lanceiro + arqueiro
+ # segundo ciclo: cavaleiro + espadachim
  wr unit_hp 8 0;wr unit_hp 9 0
  await {[b ai_state]>=2 && [b ai_state 1]>=2} 10
- await {[b unit_hp 8]>0 && [b unit_hp 9]>0 && [b ai_state]==0 && [b ai_state 1]==0} 150
- ck respawn_wave3 {[b unit_kind 8]==2 && [b unit_kind 9]==3}
+ await {[b unit_hp 8]>0 && [b unit_hp 9]>0 && [b ai_state]==0 && [b ai_state 1]==0} 200
+ ck respawn_wave3 {[b unit_kind 8]==4 && [b unit_kind 9]==1}
  await {[b ai_wave]==3} 120
  ck wave3_launched {[b ai_wave]==3}
  puts stderr "RESULT failures=$::failures";exit
