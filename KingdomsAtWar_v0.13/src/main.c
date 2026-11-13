@@ -108,12 +108,15 @@ u8 graphics_slot,bios_slot,asset_bank;
 /* Sample edges while the VDP is busy so short clicks survive a slow frame. */
 /* One matrix scan per video frame; every key test below is a constant-mask lookup. */
 u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
+extern u8 game_over;
+void game_restart(void); /* video.h: soft reset after a victory or defeat */
 #define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
 void poll_input(void) {
  u8 keys=0,commands=0;u16 tick;
  if(!video_enabled)return;
  tick=video_clock();if(tick==raw_tick)return;raw_tick=tick;
  {u8 r;for(r=0;r<9;++r)kbrow[r]=Keyboard_Read(r);}
+ if(game_over && KP(KEY_RET))game_restart();
  {
   u8 rescan=KP(KEY_M);
   if(rescan && !mouse_rescan_down) {

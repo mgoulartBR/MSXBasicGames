@@ -175,7 +175,7 @@ void hud_actions(void) __banked {
  else if(building_selected)hud_context_text(build_names[buildings[building_selected-1].type]);
  else if(selected!=NONE)hud_context_text(recruit_names[unit_kind[selected]]);
  else hud_context_text("HUMAN KINGDOM");
- if(game_over)line="RESET THE MSX TO PLAY AGAIN";
+ if(game_over)line="PRESS ENTER TO PLAY AGAIN";
  else if(military_selected())line="STOP      HOLD";
  else if(WORKER(selected))line="HOU BAR SAW FOR STA TOW SIE";
  else if(building_selected) {

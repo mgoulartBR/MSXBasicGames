@@ -228,6 +228,15 @@ void video_irq_install(void) {
  V9_SetInterrupt(V9_INT_VBLANK);
  __asm ei __endasm;
 }
+/* After the game ends, Enter restarts everything like a power-on: silence the V9990 interrupt (the BIOS knows nothing
+ * about it) and jump to the BIOS reset vector; the cartridge boots again. */
+void game_restart(void) {
+ __asm di __endasm;
+ V9_SetInterrupt(V9_INT_NONE);io_int=7;
+ __asm
+  jp 0
+ __endasm;
+}
 void video_cursor(void) {}
 /* Z80: write the n x n sprite attributes (Y, pattern, X, info) of one actor block. */
 static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;static u16 pal_o;

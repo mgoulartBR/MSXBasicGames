@@ -10,18 +10,18 @@ Symbol Table
     ___sdcc_bcall_ehl                                               ******** GX
   7 ___str_0                                                        0000184D R
   7 ___str_1                                                        0000186B R
-  7 ___str_10                                                       00001923 R
-  7 ___str_11                                                       0000192E R
-  7 ___str_12                                                       0000193D R
-  7 ___str_13                                                       0000194C R
+  7 ___str_10                                                       00001921 R
+  7 ___str_11                                                       0000192C R
+  7 ___str_12                                                       0000193B R
+  7 ___str_13                                                       0000194A R
   7 ___str_2                                                        00001887 R
   7 ___str_3                                                        00001895 R
-  7 ___str_4                                                        000018B1 R
-  7 ___str_5                                                        000018C0 R
-  7 ___str_6                                                        000018DC R
-  7 ___str_7                                                        000018ED R
-  7 ___str_8                                                        000018FC R
-  7 ___str_9                                                        00001915 R
+  7 ___str_4                                                        000018AF R
+  7 ___str_5                                                        000018BE R
+  7 ___str_6                                                        000018DA R
+  7 ___str_7                                                        000018EB R
+  7 ___str_8                                                        000018FA R
+  7 ___str_9                                                        00001913 R
     __divuchar                                                      ******** GX
     __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
@@ -462,7 +462,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG29                                     size     194D   flags    0
+   7 _SEG29                                     size     194B   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 
