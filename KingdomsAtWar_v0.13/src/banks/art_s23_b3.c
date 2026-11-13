@@ -81,6 +81,14 @@ void ai_second(void) __banked {
   ai_state[0]=ai_state[1]=1;++ai_wave;ai_launch=game_seconds+60;ai_stuck[0]=ai_stuck[1]=0;
  }
 }
+/* Once per second: the game ends when a keep falls (defeat wins a tie). The simulation then stops (simulate). */
+void end_check(void) __banked {
+ u8 i;
+ if(game_over || !end_enabled)return;
+ if(!buildings[0].state || !building_hp[0])game_over=2;
+ else if(!buildings[1].state || !building_hp[1])game_over=1;
+ if(game_over) {for(i=0;i<RN;++i)attack_flash[i]=hurt_flash[i]=0;combat_active=0;hud_dirty=3;sprites_dirty=3;}
+}
 static u8 bdist(u8 ux,u8 uy,u8 x,u8 y,u8 n) {
  return (ux<x?x-ux:ux>=x+n?ux-x-n+1:0)+(uy<y?y-uy:uy>=y+n?uy-y-n+1:0);
 }

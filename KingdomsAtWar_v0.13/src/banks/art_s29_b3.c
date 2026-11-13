@@ -164,7 +164,8 @@ void hud_context_text(const c8* text) __banked {
 }
 void hud_actions(void) __banked {
  u8 p=hud_draw,i,step=0,old;const c8* line;
- if(placement_mode) {
+ if(game_over)hud_context_text(game_over==1?"VICTORY: ENEMY KEEP DESTROYED":"DEFEAT: YOUR KEEP DESTROYED");
+ else if(placement_mode) {
   c8 text[30];u8 k=0;const c8* name=build_names[build_kind];
   while(*name)text[k++]=*name++;text[k++]=' ';text[k++]='[';text[k++]='0'+build_wood[build_kind]/10;text[k++]='0'+build_wood[build_kind]%10;
   text[k++]=']';text[k++]='0'+build_gold[build_kind]/10;text[k++]='0'+build_gold[build_kind]%10;
@@ -174,7 +175,8 @@ void hud_actions(void) __banked {
  else if(building_selected)hud_context_text(build_names[buildings[building_selected-1].type]);
  else if(selected!=NONE)hud_context_text(recruit_names[unit_kind[selected]]);
  else hud_context_text("HUMAN KINGDOM");
- if(military_selected())line="STOP      HOLD";
+ if(game_over)line="RESET THE MSX TO PLAY AGAIN";
+ else if(military_selected())line="STOP      HOLD";
  else if(WORKER(selected))line="HOU BAR SAW FOR STA TOW SIE";
  else if(building_selected) {
   Building* b=&buildings[building_selected-1];

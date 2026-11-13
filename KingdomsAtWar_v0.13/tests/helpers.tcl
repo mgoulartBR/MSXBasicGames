@@ -10,6 +10,8 @@ if {$::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1"} {set vid
 set failures 0
 # Os testes antigos assumem a base inimiga vazia: desliga a IA inimiga (ai_enabled) logo apos a inicializacao, salvo KAW_AI=1.
 if {![info exists ::env(KAW_AI)]} {after time 9 {debug write memory $::S(ai_enabled) 0}}
+# Idem para o fim de jogo (end_enabled: vitoria/derrota congelam a simulacao), salvo KAW_END=1.
+if {![info exists ::env(KAW_END)]} {after time 9 {debug write memory $::S(end_enabled) 0}}
 # Idem para a defesa automatica dos soldados parados (auto_defend), salvo KAW_DEF=1.
 if {![info exists ::env(KAW_DEF)]} {after time 9 {debug write memory $::S(auto_defend) 0}}
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}

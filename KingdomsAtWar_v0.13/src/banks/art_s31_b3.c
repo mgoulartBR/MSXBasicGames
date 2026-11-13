@@ -735,9 +735,10 @@ ss_none:
 }
 void simulate(void) __banked {
  u8 i,animate;Unit* u=units;
+ if(game_over)return;
  ++sim_ticks;
  if(edge_keys) {if(edge_hold<6)++edge_hold;}else edge_hold=0;
- if(++second_phase==30) {second_phase=0;++game_seconds;hud_dirty=3;ai_second();}
+ if(++second_phase==30) {second_phase=0;++game_seconds;hud_dirty=3;ai_second();end_check();}
  animate=!(sim_ticks&7);
  if(animate && builder_working)sprites_dirty=3;
  /* One pass: cave animation changes no logical positions or reservations. */

@@ -36,3 +36,4 @@ Ambiente de teste: openMSX 19.1 (único emulador com V9990 disponível no ambien
 - Para desligar a IA em testes: `ai_enabled = 0` (RAM) ou `KAW_AI` ausente nos scripts em `tests/`.
 - Defesa automática: com soldados parados perto da sua base, quando uma onda chega eles passam a atacar sozinhos os inimigos que aparecem a até 5 células. Para que um soldado só revide no alcance (sem perseguir), use "segurar posição".
 - Limite de perseguição: um soldado em defesa automática não passa de 8 células do posto onde estava parado; depois da luta ele volta sozinho ao posto. Qualquer ordem sua (mover, atacar, parar) cancela o posto.
+- Fim de jogo: destruir o castelo inimigo (a fortaleza ao sul) mostra "VICTORY" e congela o jogo; perder o seu castelo mostra "DEFEAT". Depois disso só dá para olhar o mapa; para jogar de novo, reinicie o MSX.
