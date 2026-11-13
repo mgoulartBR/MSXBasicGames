@@ -32,7 +32,10 @@
 #define POSE48_Y 640U
 #define PB_PLAIN 8U
 #define PB_DITH 800U
-#define ENEMY_PAT 1568U /* enemy-kingdom building tiles (plain only), after the dithered block */
+#define ENEMY_PAT 1568U /* enemy-kingdom building tiles (plain), after the dithered block */
+#define ENEMY_DITH (ENEMY_PAT+(u16)ENEMY_TILES*4) /* and their dithered (remembered) versions */
+#define EOV_Y 3072U /* VRAM line (0x60000) of the raw enemy tiles for occlusion, 16 per row */
+#define OCC_ENEMY 144 /* occluder cache key offset for enemy tiles (human ones use 0..143) */
 #define PA_SOLID 641U
 #define PA_FONT 672U
 #define PA_HUDTOP 660U
@@ -111,7 +114,7 @@ static void p1_cell(u8 x,u8 y) {
    u8 t=terrain[((u16)y<<5)+x];
    if(t>=10 && building_owner[t-10]) {
     Building* b=&buildings[t-10];
-    n=ENEMY_PAT+(u16)enemy_tile_map[(b->type<<4)+(y-b->y)*build_sizes[b->type]+x-b->x]*4;
+    n=(st==1?ENEMY_DITH:ENEMY_PAT)+(u16)enemy_tile_map[(b->type<<4)+(y-b->y)*build_sizes[b->type]+x-b->x]*4;
     names_put(a,n,n+1,n+2,n+3);return;
    }
   }
@@ -377,7 +380,9 @@ static u8 occ_get(u8 idx) {
  for(s=0;s<OCC_N;++s)if(occ_key[s]==idx) {occ_stamp[s]=cache_tick;return occ_pend[s]?255:s;}
  for(s=0;s<OCC_N;++s)if(occ_stamp[s]!=cache_tick) {u8 a=(u8)(cache_tick-occ_stamp[s]);if(best==255 || a>age){best=s;age=a;}}
  if(best==255)return 255;
- {u8 c=CELL_OCC+best;p1_copy((u16)(idx&15)<<4,OV_Y+((u16)(idx>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
+ {u8 c=CELL_OCC+best;
+  if(idx>=OCC_ENEMY){u8 e=idx-OCC_ENEMY;p1_copy((u16)(e&15)<<4,EOV_Y+((u16)(e>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
+  else p1_copy((u16)(idx&15)<<4,OV_Y+((u16)(idx>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
  occ_key[best]=idx;occ_pend[best]=1;occ_stamp[best]=cache_tick;return 255;
 }
 static u16 bv_epoch;static u8 bv_state[BMAX],bv_x[BMAX],bv_y[BMAX];
@@ -599,7 +604,12 @@ void ae_occ(u8 i) {
     u8 t,s2;
     if(fog_at(cx,cy)!=2)continue;
     t=fog_art(cx,cy);if(t<64)continue;
-    s2=occ_get(tile_source[t]-50);
+    {u8 tt=terrain[((u16)cy<<5)+cx];
+     if(t<185 && tt>=10 && building_owner[tt-10]) {
+      u8 e=enemy_tile_map[(buildings[tt-10].type<<4)+(cy-buildings[tt-10].y)*build_sizes[buildings[tt-10].type]+cx-buildings[tt-10].x];
+      if(!e)continue;
+      s2=occ_get(OCC_ENEMY+e);
+     } else s2=occ_get(tile_source[t]-50);}
     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
    }
   }
@@ -1222,8 +1232,11 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  for(i=0;i<ENEMY_TILES;++i) {
   u8 b;
   asset_read(tile_buffer,128);
+  {u16 bx=(u16)(i&15)<<4,by=EOV_Y+((u16)(i>>4)<<4);u8 k;for(k=0;k<16;++k)V9_WriteVRAM((u32)(by+k)*128+(bx>>1),tile_buffer+(k<<3),8);}
   for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x30;if(!(v&0x0F))v|=0x03;tile_buffer[b]=v;}
   tile_patterns(P1_PGT_B_BASE,ENEMY_PAT+(u16)i*4,tile_buffer);
+  for(b=0;b<128;++b){u8 row=b>>3,v=tile_buffer[b];if(row&1)v=(v&0xF0)|0x01;else v=(v&0x0F)|0x10;tile_buffer[b]=v;}
+  tile_patterns(P1_PGT_B_BASE,ENEMY_DITH+(u16)i*4,tile_buffer);
  }
  for(i=0;i<12;++i) {
   u8 f,n=kind_sizes[i]>>4;

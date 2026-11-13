@@ -26,16 +26,16 @@ Creating crt0 config file...
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
 In file included from ./main.c:307:
-./video.h:257:10: warning: missing terminating ' character
-  257 |  ex af,af'
-      |          ^
-./video.h:277:10: warning: missing terminating ' character
-  277 |  ex af,af'
+./video.h:260:10: warning: missing terminating ' character
+  260 |  ex af,af'
       |          ^
 ./video.h:280:10: warning: missing terminating ' character
   280 |  ex af,af'
       |          ^
-./video.h:1138: warning 85: in function video_sprites unreferenced local variable : 'j'
+./video.h:283:10: warning: missing terminating ' character
+  283 |  ex af,af'
+      |          ^
+./video.h:1148: warning 85: in function video_sprites unreferenced local variable : 'j'
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -156,7 +156,7 @@ published under GNU General Public License (GPL)
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
  Start=00004000h Size=00040000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=9742h Size=22339 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=9900h Size=22785 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -183,7 +183,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0029]: Lower=A000h Higher=B94Ah Size=6475 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B41Ah Size=5147 (Holes=0)
  Seg[0031]: Lower=A000h Higher=B9F8h Size=6649 (Holes=0)
- Total size: 163945
+ Total size: 164391
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
