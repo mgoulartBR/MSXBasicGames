@@ -110,7 +110,7 @@ cd KingdomsAtWar_v0.13 && bash tests/suite012.sh V9990P1
 
 - Jogar partidas reais e ajustar o equilíbrio da IA (a calibração atual é por modelo).
 - Reduzir o custo da luta com muitas unidades grandes: o pior caso medido (13,5 quadros/s por cerca de 6 s) é espalhado entre desenho de sprites (~35%), combate (~15%), simulação (~8%) e HUD (~3%), sem ponto único.
-- Canteiro de obras humano com arte nova e mais de dois soldados inimigos ao mesmo tempo (exige rever o layout de memória de sprites).
+- Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout de memória de sprites).
 - Testar a P1 em BIOS real, GFX9000 físico e outros emuladores, em especial a varredura de teclado desligada (`SCNCNT`), o reinício por `jp 0` e a cópia de tiles da linha 3072 da VRAM.
 
 ---
@@ -151,7 +151,7 @@ Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os te
 - A IA só tem dois soldados por vez: a pressão vem do ritmo e da qualidade. Um jogador competente com 8 unidades e torres deve vencer sempre; um jogador lento ou passivo toma uma onda a cada cerca de 1:20 com cavaleiros a partir dos 5 minutos. O equilíbrio é um chute informado por simulação, não por partidas.
 - Soldados humanos sem HOLD agora se defendem sozinhos, mas operários não; a IA ataca a unidade ou prédio mais próximo, sem preferir operários.
 - O reinício por `jp 0`, a varredura de teclado desligada e a cópia de tiles da linha 3072 só foram testados no openMSX com C-BIOS.
-- O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados. O canteiro humano ainda é o procedural.
+- O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados (60,0 s com o canteiro humano). O canteiro humano também ganhou arte própria (136 tiles no pool, bancos 22 e 24); a carga inicial chegou a 60,0 s emulados.
 - O pior caso de desempenho (contato com muitas unidades grandes) continua em 13,5 quadros/s por cerca de 6 s.
 
 ---

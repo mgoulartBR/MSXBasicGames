@@ -22,8 +22,8 @@ for t in range(8):
             emap[t*16+ty*n+tx]=keys[k]
 # Canteiro de obras dos mortos (opcional): site_idx.npy 64x64 (predios 4x4) e site3_idx.npy 48x48 (casa); entradas 128..159
 # do mapa; 255 = usar o canteiro dos humanos.
-emap+=[255]*32
-for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144)):
+emap+=[255]*64  # 128..159 canteiro dos mortos, 160..191 canteiro humano (hsite*_idx.npy)
+for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144),('hsite_idx.npy',4,160),('hsite3_idx.npy',3,176)):
     if not (d/name).exists():continue
     a=np.load(d/name);assert a.shape==(16*n,16*n),(name,a.shape)
     for ty in range(n):

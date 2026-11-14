@@ -79,7 +79,7 @@ O jogador inicia ao norte com dois camponeses e dois espadachins. Ao sul, na mes
 
 Barras mostram vida; a unidade militar selecionada mostra HP no HUD. Os ataques reutilizam poses existentes como gestos provisórios. A morte remove a unidade e libera sua vaga; o próximo recrutamento pode reutilizá-la. Destruir o castelo libera o terreno. A arte e as escalas aprovadas foram preservadas.
 
-Esta versão não inclui animações definitivas de ataque, cadáveres nem ruínas. O canteiro de obras humano ainda é o procedural original. Sem BIOS real, GFX9000 físico ou outro emulador, nada do que está aqui foi testado fora do openMSX.
+Esta versão não inclui animações definitivas de ataque, cadáveres nem ruínas. Os canteiros de obras dos dois reinos têm arte própria. Sem BIOS real, GFX9000 físico ou outro emulador, nada do que está aqui foi testado fora do openMSX.
 
 ## ROMs e execução
 
@@ -194,4 +194,4 @@ Todos os recursos dos testes são coletados por comandos normais. O depurador l�
 
 ## Próximas etapas
 
-Jogar partidas reais para ajustar o equilíbrio da IA (primeira onda, intervalo, treino, ouro e tabela de ondas). Canteiro de obras humano com arte nova. Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout da memória de sprites). Reduzir o custo da luta com muitas unidades grandes (o pior caso medido é de cerca de 13,5 quadros/s por uns 6 s). Testar em BIOS real e GFX9000 físico, em especial a varredura de teclado desligada (`SCNCNT`) e o reinício por `jp 0`. Animações definitivas de ataque, minimap, áudio e save/load ficam para etapas futuras. O rio continua como barreira; pontes não são colocadas automaticamente.
+Jogar partidas reais para ajustar o equilíbrio da IA (primeira onda, intervalo, treino, ouro e tabela de ondas). Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout da memória de sprites). Reduzir o custo da luta com muitas unidades grandes (o pior caso medido é de cerca de 13,5 quadros/s por uns 6 s). Testar em BIOS real e GFX9000 físico, em especial a varredura de teclado desligada (`SCNCNT`) e o reinício por `jp 0`. Animações definitivas de ataque, minimap, áudio e save/load ficam para etapas futuras. O rio continua como barreira; pontes não são colocadas automaticamente.
