@@ -397,3 +397,10 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - Faixas livres só existem nas fases 4–11; **Hill, Melon, Bridge e Castle não têm nenhuma janela livre de 72 px de largura** (Hill: 0 posições mesmo com 4 linhas). Hill, a fase de referência, não ganha nada.
 - Em Apple (fase 7) o HUD apareceu corrompido com as faixas (`apple_strips_corrupt.png`): provável colisão com regiões escritas em tempo de execução (`AppleBitmap`/streams) marcadas como livres. Sem verificar fase a fase, não é seguro distribuir.
 - Hill medido: 22,75 fps (sem diferença). ROM não publicada.
+
+## 0.9.70-hudmove (corte de trabalho do VDP: HUD movido em 1 comando)
+
+- Em vez de restaurar o painel antigo do HUD (≈15 cópias de tile) e redesenhá-lo (18 cópias do cache) a cada quadro de scroll, `RingScene` copia o painel dentro da página (1 comando HMMM, ou LMMM se a paridade de X for ímpar, com DIX/DIY para sobreposição) e restaura só o "L" descoberto, com pixel exato (`RectX(..., exact=1)`).
+- `ActorsPrepare` decide (`HudMoveClear`): só usa o caminho curto se o HUD não mudou (valores iguais), |Δx|≤16, |Δy|≤4 e nenhum ator visível (varredura Z80 `ScanWin`) toca as caixas antiga/nova do painel; senão cai no caminho normal. `RingScene` também cai no normal se a caixa cruza a borda do anel.
+- Hill, 7,16 MHz: 23,05 → **25,20 fps** (+9%); comandos VDP por quadro 23 → ~11. 3,58 MHz: 7,35 fps (CPU-bound, sem ganho). Capturas: ~250 quadros em Hill sem HUD ausente/fantasma; fases 2, 4, 7 com HUD correto (Apple já mostrava HUD duplicado antes desta mudança).
+- Aprendizado: o custo da verificação importa — a primeira versão (laço C sobre 58 registros) custava 10% e anulava o ganho; com `ScanWin` e verificando só os registros novos, ficou ~2%.
