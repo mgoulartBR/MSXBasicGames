@@ -418,3 +418,9 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - `ScanWin` reescrito com DE como ponteiro do registro e H/L como contador/índice, teste de X só com registradores e pulo por `stride-1`/`stride-3`: 28,4 → **29,05 fps** (Hill, 7,16 MHz). 3,58 MHz: 7,55 → 8,75 fps.
 - Caveat: duas capturas isoladas em t=15 s (uma sem HUD/Keen, outra com sprite embaralhado sobre o HUD) não reproduziram em 8 execuções de 5 capturas e ~250 quadros extras; provavelmente quadro de transição do cenário de teste, não confirmado.
 - Soma desde 0.9.68: 22,75 → 29,05 fps (+28%).
+
+## 0.9.73-ring (laços do RingScene/CleanSave)
+
+- `SlotScan` virou `slotscan.inc` (compartilhado) e `RingScene` o usa para visitar só os atores com algum bit visível; o laço de `CleanSave` anda por ponteiro. Hill 7,16 MHz: 29,05 fps (sem mudança); 5,37 MHz: 18,85; 3,58 MHz: 8,75 → 8,90.
+- **Achado:** o quadro agora cabe em 2 vblanks (33 ms) na maior parte do tempo, e o desenho espera o flip do quadro anterior (`while(flip_flag)Halt()`). O ritmo fica travado perto de 30 fps (NTSC); 29,05 = ~97% dos quadros em 2 vblanks. Ganhos adicionais de CPU a 7,16 MHz só reduzem os quadros lentos (teto 30,0); por isso o fps não mudou apesar de menos CPU.
+- O `Columns` não foi alterado: o tempo dele é espera do VDP (≈12 comandos HMMM pequenos em série por quadro de scroll), sem cópia equivalente mais barata (copiar da página da frente carregaria atores).
