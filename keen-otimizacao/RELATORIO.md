@@ -404,3 +404,9 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - `ActorsPrepare` decide (`HudMoveClear`): só usa o caminho curto se o HUD não mudou (valores iguais), |Δx|≤16, |Δy|≤4 e nenhum ator visível (varredura Z80 `ScanWin`) toca as caixas antiga/nova do painel; senão cai no caminho normal. `RingScene` também cai no normal se a caixa cruza a borda do anel.
 - Hill, 7,16 MHz: 23,05 → **25,20 fps** (+9%); comandos VDP por quadro 23 → ~11. 3,58 MHz: 7,35 fps (CPU-bound, sem ganho). Capturas: ~250 quadros em Hill sem HUD ausente/fantasma; fases 2, 4, 7 com HUD correto (Apple já mostrava HUD duplicado antes desta mudança).
 - Aprendizado: o custo da verificação importa — a primeira versão (laço C sobre 58 registros) custava 10% e anulava o ganho; com `ScanWin` e verificando só os registros novos, ficou ~2%.
+
+## 0.9.71-prepare (ActorsPrepare + HWUpload)
+
+- `SlotScan` (Z80): lista só os slots que o primeiro laço de `ActorsPrepare` precisa visitar (HUD, visíveis agora ou em qualquer página); o laço C itera ~10 slots em vez de 29. `ActorsPrepare` 11,2 → 10,0 ms/chamada; 25,2 → 25,8 fps.
+- `HWUpload`: laço de atributos desenrolado por linha de 8 sprites com ponteiro (o SDCC gastava ~7% do tempo ali); 25,8 → **26,7 fps** (Hill, 7,16 MHz). Sprite do Keen verificado em captura.
+- Soma desde 0.9.68: 22,75 → 26,7 fps (+17%). Faltam ~12% para 30 fps: `VDP_CommandWait` ~9%, `Columns` ~5%, `HillSelect` ~4%, `ScanWin`/`SlotScan` ~3–4% cada (os núcleos Z80 usam IX/IY e gastam ~300 T por item; uma versão com HL só deve cortar metade).
