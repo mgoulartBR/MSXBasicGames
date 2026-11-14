@@ -381,3 +381,12 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 ### Riscos / limites
 - Testado só no openMSX (C-BIOS MSX2 e MSX2+). A ISR de vblank escreve em `R#2/5/6/8/11/23/26/27` com as escritas em pares do VDP dentro da interrupção; o jogo só mexe nesses registradores fora de `DrawScene` pela própria ISR, e todo código de VDP do MSXgl usa DI/EI, mas **precisa de teste em hardware real** (sobretudo MSX2+/Turbo R).
 - 30 fps a 7,16 MHz ainda não: faltam ~25%.
+
+## 0.9.69-scan (item 3: laços de coleta em Z80)
+
+- `HWUpload`: laço de atributos com invariantes fora do laço (+0,4%).
+- `scanwin.inc`: varredura em Z80 (`ScanWin`) da janela de tela para bônus e pickups; o C só trata os candidatos visíveis (+0,9%).
+- Hill, 7,16 MHz: 22,75 → **23,05 fps**. Imagem verificada (bônus/pickups visíveis).
+- Perfil do `RingScene`: custo próprio de desenho ≈15% (Columns 3,9, MapTileKernel 3,5, Rect 3,0, RingScene 2,3); o resto são esperas do VDP (HudFast 51%, restaurações 45%).
+- Experimento: HUD em 1 comando em vez de 18 → 24,0 fps (+5% no teto); não há retângulo 72×32 livre no atlas de Hill.
+- Conclusão: restam ganhos de 1–5% por item; 30 fps a 7,16 MHz exige reduzir trabalho do VDP/redesenho (alternativas 1 e 2 propostas).
