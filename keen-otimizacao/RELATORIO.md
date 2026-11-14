@@ -410,3 +410,11 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - `SlotScan` (Z80): lista só os slots que o primeiro laço de `ActorsPrepare` precisa visitar (HUD, visíveis agora ou em qualquer página); o laço C itera ~10 slots em vez de 29. `ActorsPrepare` 11,2 → 10,0 ms/chamada; 25,2 → 25,8 fps.
 - `HWUpload`: laço de atributos desenrolado por linha de 8 sprites com ponteiro (o SDCC gastava ~7% do tempo ali); 25,8 → **26,7 fps** (Hill, 7,16 MHz). Sprite do Keen verificado em captura.
 - Soma desde 0.9.68: 22,75 → 26,7 fps (+17%). Faltam ~12% para 30 fps: `VDP_CommandWait` ~9%, `Columns` ~5%, `HillSelect` ~4%, `ScanWin`/`SlotScan` ~3–4% cada (os núcleos Z80 usam IX/IY e gastam ~300 T por item; uma versão com HL só deve cortar metade).
+
+## 0.9.72-z80 (HillSelect + núcleos Z80 sem IX)
+
+- `HillSelect`: janelas comparadas em 1/16 px com aritmética u16 (sem deslocamentos por ator); equivalência com a versão original verificada por simulação (3 M casos, 0 divergências para posições < ~3900 px; Hill tem < 2000 px). 26,7 → 27,4 fps.
+- `SlotScan` reescrito com HL/BC/DE e ponteiros relativos (sem IX; o slot do HUD entra sempre porque `visible`=1): 27,4 → 28,4 fps.
+- `ScanWin` reescrito com DE como ponteiro do registro e H/L como contador/índice, teste de X só com registradores e pulo por `stride-1`/`stride-3`: 28,4 → **29,05 fps** (Hill, 7,16 MHz). 3,58 MHz: 7,55 → 8,75 fps.
+- Caveat: duas capturas isoladas em t=15 s (uma sem HUD/Keen, outra com sprite embaralhado sobre o HUD) não reproduziram em 8 execuções de 5 capturas e ~250 quadros extras; provavelmente quadro de transição do cenário de teste, não confirmado.
+- Soma desde 0.9.68: 22,75 → 29,05 fps (+28%).
