@@ -354,3 +354,30 @@ O protótipo de 13,4 fps é, portanto, um teto que **não se realiza no jogo com
 - **A. Mirar CPU acelerada** (recomendado): a 0.9.67 já serve; só falta confirmar em hardware/emulador acelerado e, se quiser, ligar o modo turbo na inicialização (ex.: `CHGCPU`/porta do Turbo R) — a lógica de tempo usa o JIFFY e se adapta.
 - **B. Ficar em 3,58 MHz**: sobram ganhos de 5–10% por item (`HWUpload` incremental, `ActorsCollect`, restauração por faixas) → ~8 fps; 30 fps não é alcançável sem refazer a arte/atores.
 - **C. Redesenhar a arte para sprites** (menos cores por linha) e reescrever dano/atores: projeto de várias semanas, visual diferente do original.
+
+---
+## 0.9.68-vblank: troca de página/scroll na interrupção de vblank (alvo: 7,16 MHz)
+
+**ROM:** `0.9.68-vblank/keen_msx_0.9.68-vblank.rom` (acumulado; patch sobre a 0.9.63: `all-changes-since-0.9.63.patch`).
+
+### O que muda
+No clock de 7,16 MHz o perfil por PC mostrou o `Halt()` de sincronismo do vblank (CPU parada dentro de `DrawScene`) em **15,5% do tempo** (~9 ms por quadro), mais 9,9% esperando o VDP. Agora `DrawScene` não espera: grava em RAM tudo o que precisa mudar junto no vblank (página `R#2`, tabela de sprites `R#5/R#6/R#8/R#11`, scroll `R#23/R#26/R#27` calculado de `drawn_camera_*`) e marca `flip_flag`; a **ISR do vblank** (`SoundISR`, gancho `H.TIMI`) aplica tudo de uma vez e zera a marca, enquanto a CPU já roda a lógica do próximo quadro. O início de `DrawScene` e `HWHide` esperam `flip_flag==0`.
+- RAM: **zero bytes novos**: as 6 variáveis `flip_*` ocupam o lugar dos 6 contadores de profiling antigos (`cost_*`, `stamp`), cujas atualizações foram removidas.
+- Bug encontrado no caminho: `flip_flag` precisa ser zerado no boot (a RAM não é zerada; um valor aleatório escrevia lixo em `R#8` e corrompia a VRAM). `R#8` é escrito como constante (0x28 / 0x2A com sprites desligados), porque o espelho de `R#8` do MSXgl não é confiável.
+- Menores (exatos): faixas sem sinal e câmera em variável local em `BonusCollect`, laço de pickups e `HillSelect`.
+
+### Medição (openMSX MSX2+, Hill, Keen andando ao lado dos inimigos, 20 s)
+| Z80 | 0.9.67 | 0.9.68 | `DrawScene` |
+|---|---|---|---|
+| 3,58 MHz | 6,3 fps | **7,55 fps** (+20%) | 94,6 → 77 ms |
+| 7,16 MHz | 17,9 fps | **22,75 fps** (+27%) | 42,6 → 32,8 ms |
+| 10,7 MHz (0.9.67) | 29,7 fps | — (não medido) | — |
+
+Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador): idêntica à da 0.9.67.
+
+### Onde está o tempo a 7,16 MHz agora (PC)
+`VDP_CommandWait` 13% (CPU esperando comandos do VDP), `ActorsPrepare` ~11%, `HWUpload` 6,5%, `CombatTick` 4,5%, `Columns` 4%, `HillSelect` 3,8%, `ActorsCollect` 3,7%, `MapTileKernel` 3,6%, `Game_Tick2` 3,4%, `BonusCollect` 3,3%.
+
+### Riscos / limites
+- Testado só no openMSX (C-BIOS MSX2 e MSX2+). A ISR de vblank escreve em `R#2/5/6/8/11/23/26/27` com as escritas em pares do VDP dentro da interrupção; o jogo só mexe nesses registradores fora de `DrawScene` pela própria ISR, e todo código de VDP do MSXgl usa DI/EI, mas **precisa de teste em hardware real** (sobretudo MSX2+/Turbo R).
+- 30 fps a 7,16 MHz ainda não: faltam ~25%.

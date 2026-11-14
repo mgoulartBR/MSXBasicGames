@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y'])+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -104,7 +104,10 @@ proc finish {} {
  set f [open $::env(BENCH_OUT).pc w];puts $f [join $::pcs \n];close $f
  controls 0
  set dt [expr {[machine_info time]-$::start}];set n [expr {[word $::render_count]-$::rc0}]
- logline "R2=[debug read {VDP regs} 2] R23=[debug read {VDP regs} 23] R25=[debug read {VDP regs} 25] R26=[debug read {VDP regs} 26] R27=[debug read {VDP regs} 27]"
+ set sv {};for {set i 0} {$i<28} {incr i} {lappend sv [byte [expr {$::g_VDP_REGSAV+$i}]]}
+ logline "SHADOW=$sv"
+ if {[info exists ::flip_flag]} {logline "FLIP flag=[byte $::flip_flag] r2=[byte $::flip_r2] r5=[byte $::flip_r5] r6=[byte $::flip_r6] r8=[byte $::flip_r8] r11=[byte $::flip_r11] addrs=$::flip_flag,$::flip_r2,$::flip_r5,$::flip_r6,$::flip_r8,$::flip_r11"}
+ logline "R2=[debug read {VDP regs} 2] R23=[debug read {VDP regs} 23] R25=[debug read {VDP regs} 25] R26=[debug read {VDP regs} 26] R27=[debug read {VDP regs} 27] R1=[debug read {VDP regs} 1] R8=[debug read {VDP regs} 8] R5=[debug read {VDP regs} 5] R6=[debug read {VDP regs} 6] R11=[debug read {VDP regs} 11]"
  logline "cam=([word $::camera_px],[word $::camera_py]) ex_l=[word $::ring_camera_x] ex_r=[word [expr {$::ring_camera_x+2}]] ey_t=[word $::ring_camera_y] ey_b=[word [expr {$::ring_camera_y+2}]]"
  logline "defeats=[word $::defeats] lives=[byte $::game_lives]"
  logline "player: x=[word $::stable_x] y=[word $::stable_y] at_tick=[word $::stable_ticks]"
