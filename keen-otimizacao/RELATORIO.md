@@ -390,3 +390,10 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - Perfil do `RingScene`: custo próprio de desenho ≈15% (Columns 3,9, MapTileKernel 3,5, Rect 3,0, RingScene 2,3); o resto são esperas do VDP (HudFast 51%, restaurações 45%).
 - Experimento: HUD em 1 comando em vez de 18 → 24,0 fps (+5% no teto); não há retângulo 72×32 livre no atlas de Hill.
 - Conclusão: restam ganhos de 1–5% por item; 30 fps a 7,16 MHz exige reduzir trabalho do VDP/redesenho (alternativas 1 e 2 propostas).
+
+## HUD em faixas contíguas (experimento, NÃO incluído na ROM)
+
+- `hud-strips/`: `build_hud_cache.py` (ativado com `HUD_STRIPS=1`) aloca 2 faixas 72×16 livres por fase e `hud.c` aceita chunks de altura variável (asm usa `h`, laços em C também).
+- Faixas livres só existem nas fases 4–11; **Hill, Melon, Bridge e Castle não têm nenhuma janela livre de 72 px de largura** (Hill: 0 posições mesmo com 4 linhas). Hill, a fase de referência, não ganha nada.
+- Em Apple (fase 7) o HUD apareceu corrompido com as faixas (`apple_strips_corrupt.png`): provável colisão com regiões escritas em tempo de execução (`AppleBitmap`/streams) marcadas como livres. Sem verificar fase a fase, não é seguro distribuir.
+- Hill medido: 22,75 fps (sem diferença). ROM não publicada.
