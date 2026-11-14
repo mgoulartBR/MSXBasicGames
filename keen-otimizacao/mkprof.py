@@ -10,7 +10,9 @@ def local_syms():
     for a,n,mod in re.findall(r'^\s+([0-9A-F]{8})\s+(_\w+)\s+(\S+)\s*$',(out/'keen_msx.map').read_text(),re.M):gabs[(mod,n)]=int(a,16)
     res={}
     for f in glob.glob(str(out/'*.sym')):
-        mod=os.path.basename(f)[:-4];ent=[(int(m[1]),m[2],int(m[3],16)) for m in re.finditer(r'^\s+(\d+) (_\w+)\s+([0-9A-F]{8}) [A-Z]*R',open(f).read(),re.M)]
+        mod=os.path.basename(f)[:-4]
+        if os.environ.get('BENCH_MOD') and mod!=os.environ['BENCH_MOD']:continue
+        ent=[(int(m[1]),m[2],int(m[3],16)) for m in re.finditer(r'^\s+(\d+) (_\w+)\s+([0-9A-F]{8}) [A-Z]*R',open(f).read(),re.M)]
         base=None
         for ar,n,rel in ent:
             if (mod,n) in gabs and not re.search(r'_\d{4,}_\d+$',n):base=gabs[(mod,n)]-rel;break
@@ -19,7 +21,9 @@ def local_syms():
             if not re.search(r'_\d{4,}_\d+$',n):res.setdefault(n[1:],base+rel)
     return res
 _loc=local_syms()
-for _k,_v in _loc.items():d.setdefault(_k,_v)
+for _k,_v in _loc.items():
+    if os.environ.get('BENCH_MOD'):d[_k]=_v
+    else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
 s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives'])+'\n'
@@ -47,6 +51,14 @@ set ::vbusy 0.0;set ::vt0 0;set ::vcmds 0
 debug probe set_bp VDP.commandExecuting {} {
  if {[debug probe read VDP.commandExecuting]} {set ::vt0 [machine_info time];incr ::vcmds} else {set ::vbusy [expr {$::vbusy+[machine_info time]-$::vt0}]}
 }
+proc sweep {} {
+ if {$::phase<0} {return}
+ lassign $::env(BENCH_SWEEP) x0 y0 step period
+ incr ::sk
+ place [expr {$x0+($::sk*$step)%1200}] $y0
+ after time $period sweep
+}
+set ::sk 0
 proc walk {} {if {$::phase<0} {return};set ::dir [expr {1-$::dir}];controls [expr {$::dir?1:2}];after time $::env(BENCH_LEG) walk}
 set ::dir 0;set ::phase -1
 proc begin {} {
@@ -54,7 +66,7 @@ proc begin {} {
  foreach {nm a s} $::funcs {set ::s_n_$nm [set ::n_$nm];set ::s_t_$nm [set ::t_$nm]}
  if {[info exists ::env(BENCH_PLACE)]} {place {*}$::env(BENCH_PLACE)}
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
- if {![info exists ::env(BENCH_IDLE)]} {walk}
+ if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk}
  if {[info exists ::env(BENCH_PC)]} {sample}
  if {[info exists ::env(BENCH_SHOT)]} {after time 10 {screenshot $::env(BENCH_SHOT)}}
  after time $::env(BENCH_SECS) finish

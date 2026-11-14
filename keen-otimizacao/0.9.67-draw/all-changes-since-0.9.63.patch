@@ -1,0 +1,447 @@
+--- a/src/hud.c	2026-11-14 01:25:41.751362092 +0000
++++ b/src/hud.c	2026-11-14 02:17:48.629634062 +0000
+@@ -30,6 +30,106 @@
+  }
+  return n;
+ }
++
++// Z80 fast path for HudDraw's per-frame cache copies (see HudDraw). Parameters travel on the
++// caller's stack (persistent RAM is full). Returns 1 if every chunk was issued, 0 if any chunk
++// wraps the 256x256 ring (the generic loop in HudDraw then does the work).
++typedef struct {const HudChunk* p;u8 n,hx,hy,mlo,mhi,page;} HudFastArgs;
++static u8 HudFast(HudFastArgs* args) __sdcccall(1) __naked
++{
++ args;
++ __asm
++  push ix
++  push iy
++  push hl
++  pop iy
++  ld l,0 (iy)
++  ld h,1 (iy)
++  push hl
++  pop ix
++  ld b,2 (iy)
++hf_loop:
++  ld a,4 (ix)
++  cp #16
++  ld a,5 (iy)
++  jr c,hf_chk
++  ld a,6 (iy)
++hf_chk:
++  or a
++  jp z,hf_next
++  ld a,3 (iy)
++  add a,3 (ix)
++  ld e,a
++  ld a,5 (ix)
++  add a,e
++  jr nc,hf_xok
++  or a
++  jp nz,hf_fail
++hf_xok:
++  ld a,4 (iy)
++  add a,4 (ix)
++  ld d,a
++  add a,#8
++  jr nc,hf_yok
++  or a
++  jp nz,hf_fail
++hf_yok:
++  call _VDP_CommandWait
++  di
++  ld a,#32
++  out (0x99),a
++  ld a,#0x91
++  out (0x99),a
++  ld a,0 (ix)
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,1 (ix)
++  out (0x9B),a
++  ld a,2 (ix)
++  out (0x9B),a
++  ld a,e
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,d
++  out (0x9B),a
++  ld a,7 (iy)
++  out (0x9B),a
++  ld a,5 (ix)
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,#8
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  out (0x9B),a
++  out (0x9B),a
++  ld a,e
++  or 5 (ix)
++  and #1
++  ld a,#0xD0
++  jr z,hf_cmd
++  ld a,#0x90
++hf_cmd:
++  ei
++  out (0x9B),a
++hf_next:
++  ld de,#7
++  add ix,de
++  dec b
++  jp nz,hf_loop
++  ld a,#1
++  jr hf_done
++hf_fail:
++  xor a
++hf_done:
++  pop iy
++  pop ix
++  ret
++ __endasm;
++}
+ // Compose atlas pixels only on inventory changes. Per-frame redraws are VDP copies.
+ void HudDraw(u8 page) __banked
+ {
+@@ -74,6 +174,15 @@
+    }
+   }
+  }
++ // Fast path (Z80): one prepared VDP command per chunk, no clipping. Falls back to the
++ // generic loop below when any chunk wraps the 256x256 ring.
++ {
++  HudFastArgs fa;
++  fa.p=hud_chunks[LEVEL_INDEX];fa.n=count;
++  fa.hx=hardware_scroll?(u8)(camera_px+168):168;fa.hy=hardware_scroll?(u8)(camera_py+4):20;
++  fa.mlo=dirty[page]&1;fa.mhi=dirty[page]&6;fa.page=page;
++  if(HudFast(&fa)){dirty[page]=0;hud_keys[page]=HudKey();hud_ammo[page]=ammo;return;}
++ }
+  for(k=0,chunk=hud_chunks[LEVEL_INDEX];k<count;++k,++chunk){
+   sy=chunk->dy;
+   if(!(dirty[page]&(sy<16?1:6)))continue;
+--- a/src/game.c	2026-11-14 01:25:41.751218485 +0000
++++ b/src/game.c	2026-11-14 02:47:15.912557382 +0000
+@@ -211,4 +211,146 @@
+     Publish();
+ }
+ 
++
++#ifdef KEEN_STEP2
++// 35 Hz step: advances Keen two simulation ticks with one physics pass (0.9.65).
++// Exact for the plain case (not climbing, no cart, no pole start): the original applies gravity and
++// horizontal acceleration on odd ticks only, so two ticks are +3 / +-2 once, then displacement 2*v.
++// Anything special falls back to two ordinary ticks.
++void Game_Tick2(u8 input) __banked
++{
++    i8 dir=0,y,top,bottom;
++    u8 jump=(input&16)!=0,wall,headwall=0,mx,localx,shape,topoffset;
++    i16 dx,dy,move,maxmove;u8 wasground,hit=0;
++    u16 s_x,s_y,s_ticks,s_wall,s_ceil,s_slope;i16 s_vx,s_vy;u8 s_g,s_ft,s_jh,s_fl,s_pf,s_jp,s_wt;
++    u16 oldy,oldbottom,newbottom,oldtop,newtop,mid,surface;
++    if((input&32) || climbing || pole_cooldown || (input&12)==4 || (input&12)==8 || active_level==2 || active_level==7)
++    {Game_Tick(input);Game_Tick(input);return;}
++    // Snapshot: a wall/ceiling clamp inside a doubled step may embed Keen in a corner the two-tick
++    // original would have hit one tick earlier, so such steps are replayed as two ordinary ticks.
++    s_x=player_x;s_y=player_y;s_vx=player_vx;s_vy=player_vy;s_g=grounded;s_ft=floor_type;s_jh=jump_hold;
++    s_fl=facing_left;s_pf=player_frame;s_jp=jump_previous;s_wt=walk_time;s_ticks=simulation_ticks;
++    s_wall=wall_hits;s_ceil=ceiling_hits;s_slope=slope_hits;
++    simulation_ticks+=2;
++    if((input&3)==1) dir=-1;
++    if((input&3)==2) dir=1;
++    if(dir) facing_left=dir<0;
++    CartStep();
++    if(grounded)
++    {
++        player_vx=dir*24;
++        if(jump && !jump_previous)
++        {
++            player_vx=dir*16;player_vy=-40;jump_hold=16;grounded=0;SoundPlay(SFX_JUMP);
++        }
++    }
++    else
++    {
++        if(dir) player_vx+=dir*2;
++        else if(player_vx>0) --player_vx;
++        else if(player_vx<0) ++player_vx;
++        if(player_vx>24) player_vx=24;
++        if(player_vx< -24) player_vx=-24;
++    }
++    jump_previous=jump;wasground=grounded;
++    dx=player_vx*2;
++    if(grounded)
++    {
++        if(dir) dx+=slope_speed[floor_type&7]*2;
++        dy=(dx<0?-dx:dx)+16;
++    }
++    else
++    {
++        if(jump_hold)
++        {
++            jump_hold=jump_hold>2?jump_hold-2:0;
++            if(!jump) jump_hold=0;
++        }
++        else
++        {
++            if(player_vy<0 && player_vy>=-3) player_vy=0;
++            else player_vy+=3;
++            if(player_vy>80) player_vy=80;
++        }
++        dy=player_vy*2;
++    }
++    if(grounded && dir) { walk_time+=2;if(walk_time>=24)walk_time-=24; shape=walk_frame[walk_time]; }
++    else { walk_time=0;shape=grounded?0:(jump_hold?5:(player_vy<=0?6:7)); }
++    player_frame=shape+(facing_left?8:0);
++    topoffset=(shape==2 || shape==4)?48:0;
++    oldy=player_y;oldbottom=oldy+496;oldtop=oldy+topoffset;
++    player_x+=dx;
++    if(player_x+64<512 || player_x+304>(MAP_WIDTH-2U)*256){
++        u8 right=player_x+304>(MAP_WIDTH-2U)*256;
++        if(ExitBoundary(right)){level_done=1;player_vx=player_vy=0;Publish();return;}
++        player_x=right?((MAP_WIDTH-2U)*256-304):448;player_vx=0;
++    }
++    player_y+=dy;
++    newbottom=player_y+496;newtop=player_y+topoffset;
++    mid=player_x+184;mx=mid>>8;localx=(mid>>4)&15;
++    grounded=0;floor_type=0;
++    maxmove=-(dx<0?-dx:dx)-dy-16;
++    for(y=(oldbottom>>8)-1; y<=(i8)(newbottom>>8); ++y)
++    {
++        wall=Wall(mx,y,0);
++        if(!wall)continue;
++        surface=(u16)y*256+Height(wall,localx)-1;
++        move=(i16)(surface-newbottom);
++        if(move<0 && move>=maxmove)
++        {
++            player_y+=move;grounded=1;floor_type=wall;
++            player_vy=0;jump_hold=0;
++            if((wall&7)>1)++slope_hits;
++            break;
++        }
++    }
++    if(!grounded && wasground)
++    {
++        // Ledge: the original drops Keen by one tick's push-to-floor (|dx|/2+16), then he is airborne.
++        dy=(dx<0?-dx:dx)/2+16;player_y=oldy+dy;newtop=player_y+topoffset;
++    }
++    if(!grounded)
++    {
++        maxmove=(dx<0?-dx:dx)-dy+16;
++        for(y=(oldtop>>8)+1;y>=(i8)(newtop>>8);--y)
++        {
++            wall=Wall(mx,y,2);
++            if(!wall || wall==17)continue;
++            surface=((u16)y+1)*256-Height(wall,localx);
++            move=(i16)(surface-newtop);
++            if(move>0 && move<=maxmove)
++            {
++                player_y+=move;headwall=wall;player_vy=0;jump_hold=0;++ceiling_hits;hit=1;
++                break;
++            }
++        }
++    }
++    top=(player_y+topoffset)>>8;bottom=(player_y+496)>>8;
++    if(headwall>1)++top;
++    if(floor_type>1)--bottom;
++    if(dx<=0)
++    {
++        mx=(player_x+64)>>8;
++        for(y=top;y<=bottom;++y)if(Wall(mx,y,1))
++        {player_x=((u16)mx+1)*256-64;player_vx=0;++wall_hits;hit=1;break;}
++    }
++    if(dx>=0)
++    {
++        mx=(player_x+304)>>8;
++        for(y=top;y<=bottom;++y)if(Wall(mx,y,3))
++        {player_x=(u16)mx*256-305;player_vx=0;++wall_hits;hit=1;break;}
++    }
++    if(hit)
++    {
++        player_x=s_x;player_y=s_y;player_vx=s_vx;player_vy=s_vy;grounded=s_g;floor_type=s_ft;jump_hold=s_jh;
++        facing_left=s_fl;player_frame=s_pf;jump_previous=s_jp;walk_time=s_wt;simulation_ticks=s_ticks;
++        wall_hits=s_wall;ceiling_hits=s_ceil;slope_hits=s_slope;
++        Game_Tick(input);Game_Tick(input);return;
++    }
++    CartContact(oldbottom);
++    KeyDoorTick();KeyDoorTick();
++    if(player_y>=(MAP_HEIGHT-2U)*256) {++respawns;death_ticks=70;++defeats;SoundPlay(SFX_DEATH);combat_dirty=1;}
++    Publish();
++}
++#endif
+ void RapidPush(i16 dx) __banked{GamePushSide(dx);}
+--- a/src/game.h	2026-11-14 01:25:41.751228740 +0000
++++ b/src/game.h	2026-11-14 02:30:33.240641648 +0000
+@@ -13,5 +13,6 @@
+ void GamePushSide(i16 dx);
+ void Game_Reset(void) __banked;
+ void Game_Tick(u8 input) __banked;
++void Game_Tick2(u8 input) __banked;
+ void RapidPush(i16 dx) __banked;
+ #endif
+--- a/src/combat.c	2026-11-14 01:25:41.751058255 +0000
++++ b/src/combat.c	2026-11-14 03:00:30.731639290 +0000
+@@ -135,6 +135,10 @@
+ #include "campaign.h"
+ #include "inventory.c"
+ 
++// Call-site gates: Carrot/CarrotContact return immediately for inactive Hill actors, but the call and
++// its SDCC prologue cost ~0.2 ms each. Same effect, no call (Carrot sets vx=0 before returning).
++#define CARROT_STEP(a) do{ if(active_level==1 && !(a)->active)(a)->vx=0; else Carrot(a); }while(0)
++#define CARROT_CONTACT(a) do{ if((a)->active && !(a)->state)CarrotContact(a); }while(0)
+ void CombatTick(u8 input) __banked
+ {
+     u8 i,fire;
+@@ -151,8 +155,9 @@
+     }
+     if(reset){death_ticks=70;++defeats;SoundPlay(SFX_DEATH);combat_dirty=1;return;}
+     if(grounded && (floor_type&~7)==8){death_ticks=70;shots[0].active=shots[1].active=0;combat_dirty=1;++defeats;SoundPlay(SFX_DEATH);return;}
+-    InventoryTick();BonusTick();if(active_level==10)SwampObjectsTick();
+-    if(active_level<4 && !(enemy_mode&1)){enemy_probe[0]=0;Carrot(&enemy);if(active_level==1)for(i=0;i<4;++i)Carrot(hill_actors+i);enemy_probe[1]=0;}
++    if(simulation_ticks&1){InventoryTick();BonusTick();}   // pickups at 35 Hz: Keen moves < 3 px per pair
++    if(active_level==10)SwampObjectsTick();
++    if(active_level<4 && !(enemy_mode&1)){enemy_probe[0]=0;CARROT_STEP(&enemy);if(active_level==1){s=hill_actors;for(i=0;i<4;++i,++s)CARROT_STEP(s);}enemy_probe[1]=0;}
+     if(!(enemy_mode&1) && tomato_count && !(simulation_ticks&3) && tomato_budget){--tomato_budget;TomatoTick();}
+     if(active_level==3 && !(enemy_mode&1))BridgeTick();
+     if(active_level==1 && !(enemy_mode&1))HillTick();
+@@ -185,14 +190,28 @@
+         }
+     }
+     fire_previous=fire;
+-    for(i=0;i<2;++i)ShotTick(&shots[i]);
++    if(shots[0].active)ShotTick(&shots[0]);   // ShotTick returns at once for inactive shots
++    if(shots[1].active)ShotTick(&shots[1]);
+     if(active_level<4 && !(enemy_mode&1)){
+     enemy_probe[0]=0;
+-    CarrotContact(&enemy);
+-    if(active_level==1)for(i=0;i<4;++i)CarrotContact(hill_actors+i);
++    CARROT_CONTACT(&enemy);
++    if(active_level==1){s=hill_actors;for(i=0;i<4;++i,++s)CARROT_CONTACT(s);}
+     enemy_probe[1]=0;
+     }
+     hero_visible=1;hero_frame=throw_ticks?(facing_left?30:31):player_frame;
+ }
+ 
++// Per-frame actor selection, moved out of the (full) fixed bank.
++void LevelSelect(void) __banked
++{
++    TomatoSelect();if(active_level==12)CastleSelect();if(active_level==11)BoobusSelect();if(active_level==10)SwampSelect();if(active_level==9)BaySelect();if(active_level==8)GroveSelect();if(active_level==7)AppleSelect();if(active_level==6)CitySelect();if(active_level==5)PassSelect();if(active_level==4)RapidSelect();if(active_level==3)BridgeSelect();if(active_level==1)HillSelect();if(active_level==2)MinesSelect();
++}
++// One 35 Hz logic step: Keen physics once, enemies/items still see both tick parities.
++void LogicStep2(u8 input) __banked
++{
++    Game_Tick2(input);
++    if(level_done)return;
++    --simulation_ticks;CombatTick(input);++simulation_ticks;
++    if(!level_done)CombatTick(input);
++}
+ void CityCarrotTick(CombatObject* a) __banked {Carrot(a);CarrotContact(a);}
+--- a/src/main.c	2026-11-14 01:26:45.081525746 +0000
++++ b/src/main.c	2026-11-14 02:41:24.438793582 +0000
+@@ -91,6 +91,8 @@
+     if(!world)TimpConvert();
+ }
+ 
++void LogicStep2(u8 input) __banked;
++void LevelSelect(void) __banked;
+ void DrawScene(void) __banked;
+ void FollowCamera(void) __banked;
+ u8 ReadInput(void) __banked;
+@@ -177,9 +179,10 @@
+         if(credit<hz) {Halt();continue;}
+         in=ReadInput();oldx=player_x>>4;oldy=player_y>>4;oldframe=player_frame;
+         stamp=*((volatile u8*)M_JIFFY);
+-        TomatoSelect();if(active_level==12)CastleSelect();if(active_level==11)BoobusSelect();if(active_level==10)SwampSelect();if(active_level==9)BaySelect();if(active_level==8)GroveSelect();if(active_level==7)AppleSelect();if(active_level==6)CitySelect();if(active_level==5)PassSelect();if(active_level==4)RapidSelect();if(active_level==3)BridgeSelect();if(active_level==1)HillSelect();if(active_level==2)MinesSelect();
++        LevelSelect();
+         while(credit>=hz && !level_done && !restart_pending)
+         {
++            if(credit>=hz+hz && !death_ticks && !(in&32)){credit-=hz+hz;LogicStep2(in);continue;}
+             credit-=hz;
+             if(!death_ticks)Game_Tick(in);else ++simulation_ticks;
+             if(!level_done)CombatTick(in);
+--- a/src/keen_msx_s7_b1.c	2026-11-14 01:25:41.752146740 +0000
++++ b/src/keen_msx_s7_b1.c	2026-11-14 02:36:39.732057878 +0000
+@@ -1,4 +1,5 @@
+ // Banked gameplay and toroidal renderer. World data are cached in main RAM.
++#define KEEN_STEP2
+ #include "game.c"
+ 
+ 
+--- a/src/hill.c	2026-11-14 01:25:41.751323943 +0000
++++ b/src/hill.c	2026-11-14 03:00:30.732288555 +0000
+@@ -26,9 +26,9 @@
+ }
+ void HillTick(void) __banked
+ {
+- u8 i;CombatObject* a;
++ u8 i;CombatObject* a=hill_actors+4;
+  if(active_level!=1)return;
+- for(i=4;i<11;++i){a=hill_actors+i;if(!a->active)continue;
++ for(i=4;i<11;++i,++a){if(!a->active)continue;
+   combat_dirty=1;BridgeWalker(a,0);if(death_ticks)return;
+  }
+ }
+--- a/src/inventory.c	2026-11-14 01:25:41.751474156 +0000
++++ b/src/inventory.c	2026-11-14 03:05:33.132090826 +0000
+@@ -11,7 +11,6 @@
+ {
+     static u8 i,k,tx,ty;
+     static i16 delta;
+-    static u32 bit;
+     static u16 x,y;
+     tx=player_x>>8;ty=player_y>>8;
+     // Build the nearby list only when crossing a tile boundary. Far-away
+@@ -25,10 +24,10 @@
+         }
+     }
+     for(k=0;k<near_count;++k){
+-        i=near_items[k];bit=1UL<<i;if(pickup_taken&bit)continue;
++        i=near_items[k];if(((const u8*)&pickup_taken)[i>>3]&(1<<(i&7)))continue;   // byte test: no 32-bit shift
+         x=pickups[i].x*16;y=pickups[i].y*16;
+         if(Touch(player_x+64,player_y+48,16,28,x,y,pickups[i].amount==5?16:8,pickups[i].amount==5?24:8)){
+-            pickup_taken|=bit;InventoryAdd(pickups[i].amount);++pickups_collected;
++            ((u8*)&pickup_taken)[i>>3]|=(u8)(1<<(i&7));InventoryAdd(pickups[i].amount);++pickups_collected;
+         }
+     }
+ }
+--- a/src/campaign_impl.c	2026-11-14 01:25:41.750856069 +0000
++++ b/src/campaign_impl.c	2026-11-14 03:05:33.132826092 +0000
+@@ -34,7 +34,7 @@
+ }
+ void BonusTick(void) __banked
+ {
+- u8 i,k,tx=player_x>>8,ty=player_y>>8;u32 bit;const Bonus* b;
++ u8 i,k,tx=player_x>>8,ty=player_y>>8;const Bonus* b;
+  static const u8 widths[8]={16,16,16,16,16,16,8,24};
+  static const u8 heights[8]={16,15,16,16,23,16,15,16};
+  static const u16 values[6]={100,200,500,1000,2000,5000};
+@@ -47,12 +47,12 @@
+   }
+  }
+  for(k=0;k<bonus_near_count;++k){
+-  i=bonus_near[k];b=bonus_data[LEVEL_INDEX]+i;bit=i<32?1UL<<i:1UL<<(i-32);
+-  if((i<32?bonus_taken:bonus_high)&bit)continue;
++  i=bonus_near[k];b=bonus_data[LEVEL_INDEX]+i;
++  if(i<32?(((const u8*)&bonus_taken)[i>>3]&(1<<(i&7))):(bonus_high&(1<<(i-32))))continue;   // byte tests: no 32-bit shift
+   // Reject far objects before converting coordinates or doing vertical tests.
+   if((i16)((player_x>>4)+4-b->x)>=widths[b->kind] || (i16)(b->x-(player_x>>4)-4)>=16)continue;
+   if((i16)((player_y>>4)+3-b->y)>=heights[b->kind] || (i16)(b->y-(player_y>>4)-3)>=28)continue;
+-  if(i<32)bonus_taken|=bit;else bonus_high|=(u8)bit;combat_dirty=1;
++  if(i<32)((u8*)&bonus_taken)[i>>3]|=(u8)(1<<(i&7));else bonus_high|=(u8)(1<<(i-32));combat_dirty=1;
+   if(b->kind<6)GivePoints(values[b->kind]);
+   else if(b->kind==6){if(game_lives<99)++game_lives;}
+   else {game_lives=game_lives>96?99:game_lives+3;flower_ammo=flower_ammo>65527U?65535U:flower_ammo+8;GivePoints(10000);}
+--- a/src/actors_damage.c	2026-11-14 01:25:41.750507815 +0000
++++ b/src/actors_damage.c	2026-11-14 10:02:07.578661431 +0000
+@@ -247,6 +247,9 @@
+     if(preserve==2){HudDamage(page);hud_dirty=1;}
+     old=actors_old[page];ob=next;shown=actors_old[front_page];
+     for(i=0;i<ACTOR_COUNT;++i,++old,++ob,++shown){
++        // Empty slot (not drawn now, not drawn on either page): every test below falls through to
++        // `continue` without side effects. Slot 14 (HUD) keeps its own damage handling.
++        if(i!=14 && !ob->visible && !((old->visible|shown->visible)&1))continue;
+         // Unchanged on-screen records already passed clipping on this page.
+         if(ob->visible)known[i]=0;
+         if(i!=14 && ob->visible && !((old->visible&1) && old->x==ob->x && old->y==ob->y && old->frame==ob->frame)){

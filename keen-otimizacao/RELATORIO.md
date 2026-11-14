@@ -267,3 +267,33 @@ Mudar a quantidade de variáveis estáticas muda o layout de RAM; os scripts de 
 
 ### Estado e próximos passos
 Hill em 6,25 fps, ainda 5× abaixo de 30. `DrawScene` ~96 ms (60% da CPU): `RingScene` ~75, `ActorsPrepare` ~26, `HudDraw` ~16. Daqui para a frente, **o desenho** é o gargalo: faixas novas de fundo por quadro (`Columns/Rect/Rows`) e a propagação de dano de `ActorsPrepare`.
+
+---
+## 0.9.67-draw: ataque ao desenho (RingScene) — diagnóstico e resultado
+
+**ROM:** `0.9.67-draw/keen_msx_0.9.67-draw.rom` (acumulado sobre a 0.9.66; patch: `all-changes-since-0.9.63.patch`).
+
+### Onde está o tempo de um quadro (Hill, Keen andando, 3,58 MHz, média por quadro desenhado)
+| Parte | ms | natureza |
+|---|---|---|
+| `ActorsPrepare` | 26 → **24,5** | CPU (laço de 29 atores 10 ms, `ActorsCollect` 8, `HWPrepare` 2,5) |
+| `RingScene` sem atores | ~48 | CPU: restauração de fundo (`Rect`), colunas/linhas novas (`Columns`/`Rows`), `MapTile` |
+| ↳ HUD (`HudDraw`) | ~12–16 | tempo de VDP: 18 cópias pequenas seguidas |
+| `ActorsDraw` sem HUD | ~8 | CPU + VDP |
+| `HWUpload`/`HWPrepare`/`HWFlip` | ~11 | upload de sprites de hardware por quadro |
+
+### O que tentei no `RingScene` e por quê parou
+- **Içar as tabelas** `tile_x/tile_y/solid_tiles` para fora dos laços, laços de ator com ponteiro, `CleanSave` com ponteiro: **0% medido** (226,9 → 228,3 ms e 108,3 → 110,5 ms num roteiro determinístico de rolagem; dentro do ruído, até levemente pior). Revertido: `ring.c` ficou idêntico ao da 0.9.63.
+- Já estava ajustado por versões anteriores: `MapTile` é Z80 puro (≈150 ciclos), há fusão de ladrilhos iguais/sólidos em uma só cópia (`RepeatStrip`), restauração por faixas pré-calculadas, e uma rotina `RingCopy` em Z80 que **foi desligada** (`FAST_RING_COPY 0`) pelas medições de antes.
+- O custo restante do `RingScene` é estrutural: cada ladrilho 16×16 novo é um comando de VDP (≈ 36 por coluna nova, em **cada uma das duas páginas**, que ficam 1–2 quadros defasadas) mais a decodificação do mapa. Isso escala com a velocidade de rolagem, não com a taxa de quadros, e não cabe em micro-otimização.
+
+### O que entrou
+- `ActorsPrepare`: atalho exato para slots de ator vazios (nem desenhados agora nem em qualquer página; o slot 14 do HUD mantém seu tratamento): 26,3 → 24,5 ms por quadro.
+
+### O que falta para 30 fps (estimativa honesta)
+Custos **fixos por quadro** ≈ 70 ms (prepare 25 + HUD 15 + sprites de hardware 11 + atores 8 + restauração/preâmbulo ~10); para 30 fps cabem ~20 ms. Alternativas que mudam a arquitetura, em ordem de retorno:
+1. **HUD em 1–2 comandos** em vez de 18: exige 72×32 px contíguos na VRAM (hoje o cache usa buracos espalhados do atlas). Daria −12 ms por quadro. Possível se o atlas de cada fase for reempacotado liberando um bloco, ou se o painel for reduzido.
+2. **Página única com rolagem por registrador e atores só em sprites de hardware** (sem restauração de fundo nem 2ª página): elimina `Rect`/CleanSave/ActorsPrepare quase por completo, mas muda o visual (limite de 8 sprites por linha, cores por linha) e exige reescrever o desenhista.
+3. `HWUpload` incremental (enviar só o que mudou).
+
+Medições deste ciclo usam `mkprof.py`/`runp.sh` (agora com `BENCH_SWEEP`, `BENCH_IDLE`, `BENCH_MOD`) e o conversor de PC para linha de C (`pcline2.py`).
