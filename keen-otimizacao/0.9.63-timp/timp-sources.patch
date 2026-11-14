@@ -1,0 +1,158 @@
+--- a/tools/import_ega.py	2026-11-14 01:01:15.350124426 +0000
++++ b/tools/import_ega.py	2026-11-14 01:25:41.794051581 +0000
+@@ -78,6 +78,8 @@
+             result.append(dict(id=idx,width=width,height=height,name=hdr[22:38].split(b'\0')[0].decode('cp437'),planes=planes))
+         return result
+ 
++# 0.9.63: palette index 9 becomes the second black used by TIMP sprites, so light blue (rare) maps to blue.
++TIMP_LUT=[0,1,2,3,4,5,6,7,8,1,10,11,12,13,14,15]
+ def planar(data,w=16,h=16,masked=False):
+     n=w*h//8; assert len(data)==n*(5 if masked else 4)
+     base=n if masked else 0
+@@ -85,7 +87,7 @@
+     for y in range(h):
+         for x in range(w):
+             p=y*(w//8)+x//8; bit=7-x%8
+-            colors.append(sum(((data[base+k*n+p]>>bit)&1)<<k for k in range(4)))
++            colors.append(TIMP_LUT[sum(((data[base+k*n+p]>>bit)&1)<<k for k in range(4))])
+             masks.append((data[p]>>bit)&1 if masked else 0)
+     return colors,masks
+ 
+--- a/scripts/build.sh	2026-11-14 01:01:15.340408808 +0000
++++ b/scripts/build.sh	2026-11-14 01:27:11.859587853 +0000
+@@ -27,6 +27,7 @@
+ python3 "$PROJECT_ROOT/tools/build_restore_bands.py"
+ python3 "$PROJECT_ROOT/tools/build_fast_stream.py"
+ python3 "$PROJECT_ROOT/tools/build_render_choices.py"
++python3 "$PROJECT_ROOT/tools/build_timp_frames.py"
+ python3 "$PROJECT_ROOT/tools/check_fixed_textures.py"
+ python3 "$PROJECT_ROOT/tools/build_sprite_rows.py"
+ python3 "$PROJECT_ROOT/tools/build_hud_bounds.py"
+--- a/src/actors.c	2026-11-14 01:01:15.341881030 +0000
++++ b/src/actors.c	2026-11-14 01:26:45.080825144 +0000
+@@ -23,6 +23,7 @@
+ #include "campaign.h"
+ #include "opaque_sprites.h"
+ #include "fast_enemy_ids.h"
++#include "timp_frames.h"
+ void FastEnemy(u8 page,DrawObject* ob) __banked;
+ extern volatile u8 hardware_scroll;
+ extern volatile u16 camera_px,camera_py;
+@@ -37,6 +38,23 @@
+ void HudDraw(u8 page) __banked;
+ void ForegroundHero(u8 page) __banked;
+ void HeroBitmap(u8 page,DrawObject* ob) __banked;
++// Level load: turn each selected mask+colour pair into a single TIMP image, in place.
++// mask' = (~mask & 9) overlaid by the colour image: 0 transparent, colour index, or 9 (black).
++void TimpConvert(void) __banked
++{
++    const u8* list=timp_lists[LEVEL_INDEX];
++    const SpriteDef* sp0=sprites[LEVEL_INDEX];const SpriteDef* sp;u8 f;u16 my;
++    while((f=*list++)!=255){
++        sp=sp0+f;my=SPR_MY(sp);
++        g_VDP_Command.SX=sp->mx;g_VDP_Command.SY=my;g_VDP_Command.DX=sp->mx;g_VDP_Command.DY=my;
++        g_VDP_Command.NX=sp->w;g_VDP_Command.NY=sp->h;g_VDP_Command.ARG=0;
++        g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_NOT;VDP_CommandSetupR32();
++        g_VDP_Command.CLR=9;g_VDP_Command.CMD=VDP_CMD_LMMV+VDP_OP_AND;VDP_CommandSetupR32();
++        g_VDP_Command.SX=sp->cx;g_VDP_Command.SY=SPR_CY(sp);
++        g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_TIMP;VDP_CommandSetupR32();
++    }
++    VDP_CommandWait();
++}
+ void ActorDraw(u8 page,DrawObject* ob) __banked
+ {
+     static i16 x,y;
+@@ -78,6 +96,11 @@
+                 g_VDP_Command.SX=cx+px;g_VDP_Command.SY=cy+py;
+                 g_VDP_Command.CMD=((cx+px|dx|cw)&1)?VDP_CMD_LMMM+VDP_OP_IMP:VDP_CMD_HMMM;
+                 VDP_CommandSetupR32();
++            }else if(timp_bits[LEVEL_INDEX][ob->frame>>3]&(1<<(ob->frame&7))){
++                // Mask area was rewritten at load into one image: 0 = transparent, 9 = black.
++                g_VDP_Command.SX=ax+px;g_VDP_Command.SY=ay+py;
++                g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_TIMP;
++                VDP_CommandSetupR32();
+             }else{
+                 g_VDP_Command.SX=ax+px;g_VDP_Command.SY=ay+py;
+                 g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_AND;
+--- a/src/keen_msx_s113_b1.c	2026-11-14 01:01:15.343401278 +0000
++++ b/src/keen_msx_s113_b1.c	2026-11-14 01:26:45.081201451 +0000
+@@ -6,6 +6,7 @@
+ #include "combat_assets.h"
+ #include "world.h"
+ #include "fast_enemy_ids.h"
++#include "timp_frames.h"
+ #include "fast_enemy_data.h"
+ #include "fast_enemy_choices.h"
+ #include "render_cost.h"
+@@ -15,7 +16,7 @@
+ {
+  const SpriteDef* sp=sprites[LEVEL_INDEX]+ob->frame;
+  const u8* data=fast_parts[fast_ids[LEVEL_INDEX][ob->frame]];
+- u8 count=*data++,n,opaque,dx,dy,cw,ch;
++ u8 count=*data++,n,opaque,dx,dy,cw,ch,timp=timp_bits[LEVEL_INDEX][ob->frame>>3]&(1<<(ob->frame&7));
+  i16 left=ob->x+SPR_OX(sp)-camera_px,top=ob->y+SPR_OY(sp)-camera_py;
+  i16 l,t,r,b,x,y;u16 base=(u16)page*256;
+  if(left>=256 || top>=(hardware_scroll?192:176) || left+sp->w<=0 || top+sp->h<=0){ob->visible=0;return;}
+@@ -44,6 +45,10 @@
+     cw=r-x;if((u16)dx+cw>256)cw=256-dx;
+     g_VDP_Command.DX=dx;g_VDP_Command.DY=base+dy;
+     g_VDP_Command.NX=cw;g_VDP_Command.NY=ch;g_VDP_Command.ARG=0;
++    if(!opaque && timp){
++     g_VDP_Command.SX=sp->mx+x;g_VDP_Command.SY=SPR_MY(sp)+y;
++     g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_TIMP;VDP_CommandSetupR32();continue;
++    }
+     if(!opaque){
+      g_VDP_Command.SX=sp->mx+x;g_VDP_Command.SY=SPR_MY(sp)+y;
+      g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_AND;VDP_CommandSetupR32();
+--- a/src/main.c	2026-11-14 01:01:15.344102859 +0000
++++ b/src/main.c	2026-11-14 01:26:45.081525746 +0000
+@@ -51,6 +51,7 @@
+ volatile u16 drawn_x,drawn_y;
+ volatile u8 drawn_frame,drawn_cx,drawn_cy;
+ 
++void TimpConvert(void) __banked;
+ static void LoadAtlas(u8 world)
+ {
+     u8 bank;
+@@ -87,6 +88,7 @@
+     }
+     cart_cache_valid=0;
+     HWHide();HudInit();
++    if(!world)TimpConvert();
+ }
+ 
+ void DrawScene(void) __banked;
+--- a/src/hero_bitmap_draw.inc	2026-11-14 01:01:15.342943394 +0000
++++ b/src/hero_bitmap_draw.inc	2026-11-14 01:27:03.982150969 +0000
+@@ -1,6 +1,6 @@
+ void HERO_BITMAP_FUNCTION(u8 page,DrawObject* ob,u8 frame) __banked
+ {
+-    u8 row,texture_y,w,h,part,band,rows,band_end,iw=32,ih=32,view_h=hardware_scroll?192:176;
++    u8 row,texture_y,w,h,band,rows,band_end,iw=32,ih=32,view_h=hardware_scroll?192:176;
+     u16 x,y,dx,dy;
+     i16 left=ob->x-camera_px,top=ob->y-camera_py,l=0,t=0,r,b;
+     const u8* pixels=hero_bitmap[frame];
+@@ -13,19 +13,19 @@
+     dx=HWTexture(page,ob->frame,ih);texture_y=dx;
+     VDP_CommandWait();
+     if(!(dx&256)){
+-        for(row=0;row<32;++row)VDP_WriteVRAM(pixels+(u16)row*32,(u16)page*32768+(u16)(u8)(texture_y+row)*128+64,0,32);
++        for(row=0;row<32;++row)VDP_WriteVRAM(pixels+(u16)row*16,(u16)page*32768+(u16)(u8)(texture_y+row)*128+64,0,16);
+     }
+-    for(part=0;part<2;++part){
++    {
+         for(y=t;y<b;y+=h){
+             dy=hardware_scroll?(ob->y+y)&255:16+top+y;
+             h=b-y;if(hardware_scroll && dy+h>256)h=256-dy;if(((texture_y+y)&255)+h>256)h=256-((texture_y+y)&255);
+             for(x=l;x<r;x+=w){
+                 dx=hardware_scroll?(ob->x+x)&255:left+x;
+                 w=r-x;if(hardware_scroll && dx+w>256)w=256-dx;
+-                g_VDP_Command.SX=128+(part?32:0)+x;g_VDP_Command.SY=(u16)page*256+((texture_y+y)&255);
++                g_VDP_Command.SX=128+x;g_VDP_Command.SY=(u16)page*256+((texture_y+y)&255);
+                 g_VDP_Command.DX=dx;g_VDP_Command.DY=(u16)page*256+dy;
+                 g_VDP_Command.NX=w;g_VDP_Command.NY=h;g_VDP_Command.ARG=0;
+-                g_VDP_Command.CMD=VDP_CMD_LMMM+(part?VDP_OP_OR:VDP_OP_AND);VDP_CommandSetupR32();
++                g_VDP_Command.CMD=VDP_CMD_LMMM+VDP_OP_TIMP;VDP_CommandSetupR32();
+             }
+         }
+     }

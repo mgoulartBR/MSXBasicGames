@@ -1,4 +1,6 @@
-# Keen Dreams MSX 0.9.62 — otimização de desenho (sugestão do itch.io + lições do RTS)
+# Keen Dreams MSX 0.9.62 → 0.9.63-timp — otimização de desenho (sugestão do itch.io + lições do RTS)
+
+> **Atualização:** a conversão para TIMP foi implementada (parcial, ver "Resultado da conversão" abaixo). ROM e patch em `0.9.63-timp/`. As seções seguintes são o estudo original.
 
 ## Veredito sobre a mensagem recebida
 
@@ -101,3 +103,60 @@ atributos para decidir quando cair no desenho em software.
   — rode também `make_game_test.py` e `make_world_test.py` antes).
 - Build reproduzido com MSXgl 1.5.2 (commit `ab4b26f`, traz SDCC 4.6.0).
   **Não** substitua o SDCC do MSXgl pelo do sistema (4.2): o link falha.
+
+---
+## Resultado da conversão (0.9.63-timp)
+
+**ROM:** `0.9.63-timp/keen_msx_0.9.63-timp.rom` (SHA-256 `872f1792…5a52`, ASCII16 2 MiB, compilada com MSXgl 1.5.2 + SDCC 4.6.0 do próprio MSXgl, sem erros).
+Não foi testada em hardware nem em MSX real; só no openMSX 19.1 com C-BIOS (MSX2 e MSX2+).
+
+### O que mudou
+1. **Paleta:** o índice 9 (azul-claro, ~46 px por fase) virou o "segundo preto". Pixels 9 de toda a arte passam a 1 (azul): `import_ega.planar` (níveis gerados no build) e `apply_static_assets.py` (atlas de Hill/Melon/Bridge/Tuberia, sprites de hardware da cenoura).
+2. **Atlas dos atores (`TimpConvert`, em `actors.c`)**: no carregamento de cada fase o próprio VDP reescreve, no lugar, a área da máscara de cada quadro escolhido: `NOT` → `AND 9` → `TIMP` da imagem de cor. Resultado: 0 = transparente, cor, ou 9 = preto visível. Depois cada quadro é um único `LMMM+TIMP` (antes: `AND` + `OR` + `SpriteColorPass`). Custo no carregamento: 3 comandos de VDP por quadro (≈ 13–66 quadros por fase).
+3. **Herói em bitmap (`HeroBitmap0/1`)**: dados de 32×32 → imagem TIMP única; 1 comando por pedaço em vez de 2, e metade dos bytes escritos na VRAM a cada troca de pose (16 em vez de 32 por linha).
+4. **`FastEnemy`**: partes não opacas usam TIMP nos quadros convertidos.
+5. `tools/build_timp_frames.py` (novo, no `build.sh`) escolhe os quadros convertidos.
+
+### Por que só alguns quadros (a conversão **não** é total)
+O atlas compartilha/sobrepõe retângulos entre quadros (dedupe) e há quadros com a mesma máscara e cores diferentes. Converter no lugar nesses casos corromperia outro quadro. Por isso o gerador só converte quadros cujo retângulo de máscara não toca nenhum outro retângulo (máscara/cor/tile), com máscara estritamente 0/15. O resto continua em AND/OR (correto, só não acelerado). Cobertura (quadros mascarados convertidos):
+
+| Fase | Hill | Melon | Bridge | Rapids | Pass | City | Apple | Grove | Bay | Swamp | Boobus | Castle |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| convertidos / mascarados | 28/39 | 44/52 | 66/75 | 13/70 | 14/84 | 27/50 | 13/49 | 13/79 | 0/64 | 11/81 | 1/60 | 12/66 |
+
+Hill/Melon/Bridge ficam bem cobertas; as demais ficam baixas (muitos quadros "mortos" herdados de Rapids aparecem nas listas e bloqueiam os vizinhos). **Não convertidos de propósito (continuam AND/OR):** carrinhos, Mines/Tater, Brocco, City carrot/french, Apple, Boobus, Castle-squash, `FastStream`, Tuberia (mapa) — cada um tem dados próprios em ROM que precisam de um conversor específico.
+
+### Verificação feita
+- Atlas convertido na VRAM **idêntico** ao esperado (`verify2.py`: T = f(máscara, cor) do `atlas.bin` da própria build) em Hill, Melon, Bridge, Rapids, Pass, City, Apple e Swamp: 0 divergências. Grove, Boobus e Castle **não** foram verificados (o roteiro de entrada não carregou Grove; Boobus/Castle exigem progresso na campanha); Bay não tem quadros convertidos.
+- Telas: Melon no spawn **idêntica pixel a pixel** à 0.9.62; Bridge/City com pequenas diferenças só onde um inimigo anda (fase de animação diferente por tempo). Mapa-múndi idêntico. Hill/Pass/City/Apple/Swamp conferidos visualmente (contornos pretos corretos).
+- O quadro com "trapézio ciano" perto do Keen em Melon existe também na 0.9.62 (tile de primeiro plano), não é regressão.
+- **Não executei a suíte de testes do repositório** (vários scripts do pacote dependem de arquivos ausentes).
+
+### Medições (openMSX, MSX2, Melon, mesmo roteiro; tempo de chamada, ms emulados)
+| | 0.9.62 | 0.9.63-timp |
+|---|---|---|
+| `HeroBitmap` (por desenho, MSX2) | 21,7 | 13,4 (−38%) |
+| `ActorDraw` médio (MSX2) | 6,3 | 4,8 (−23%) |
+| `DrawScene` médio | 229,5 | 228,3 (≈ igual) |
+
+No MSX2+ o herói quase sempre é sprite de hardware, então o ganho vem só dos demais atores. **O `DrawScene` total quase não muda nestes roteiros: o custo dominante é rolagem/restauração de fundo, não atores.** Ressalva: as trajetórias do jogador diferem entre as ROMs (o tempo de desenho muda a sincronia da lógica), então as médias por chamada são comparáveis, mas não são um teste A/B rigoroso de FPS; nenhuma medida em hardware real.
+
+### Limites e riscos conhecidos
+- Pixel de cor 9 que escape do remapeamento (ex.: dados de outra origem que eu não encontrei) aparece preto. Auditei atlas, hero, HUD, sprites de hardware e imagens streamed (todos 0 após o remapeamento); não varri 100% da ROM.
+- As diferenças de layout de atlas em Rapids+ entre 0.9.62 e esta versão vêm do dedupe após a fusão 9→1 (esperado).
+- Grove (nível 8), Boobus e Castle: carregam código de conversão mas não foram exercitados.
+
+### Como reproduzir
+```bash
+python3 0.9.63-timp/apply_static_assets.py <development062>
+patch -p1 -d <development062> < 0.9.63-timp/timp-sources.patch
+cp 0.9.63-timp/build_timp_frames.py <development062>/tools/
+MSXGL_ROOT=/caminho/MSXgl bash <development062>/scripts/build.sh
+```
+(`timp_frames.h` é gerado pelo build.) Benchmarks/validação: `mkbench2.py`, `run2.sh`, `mkshots.py`, `shots.sh`, `alllev.sh`, `verify2.py` (ajuste os caminhos no topo dos `.sh`).
+
+### Próximos passos
+1. Cobertura nas fases 4–12: conversor com destino separado (a área de cor intacta + nova área TIMP) ou, melhor, gerar a imagem TIMP direto nos `build_*_assets.py`, onde o layout é conhecido.
+2. Mesma conversão para os dados "streamed" (carrinhos, Mines, Brocco, City, Apple, Boobus, Castle).
+3. Restauração de fundo/rolagem (o gargalo real nestes testes).
+4. Sprites de hardware para projéteis no MSX2+.
