@@ -236,3 +236,34 @@ Teste diferencial compilando a física real (`game.c`) com os dados de Hill, Bri
 
 ### Onde está o tempo agora (Hill)
 `CombatTick` 4,1 ms por tick (29% da CPU), `DrawScene` 96 ms (50%: `RingScene` 69 ms, `ActorsPrepare` 26 ms, `HudDraw` 13 ms), `Game_Tick2` 16%. Faltam ~6× para 30 fps. Próximos candidatos: inimigos a 35 Hz (exige reescrever cada inimigo com passo duplo), `CombatTick` (laço de 1,3 ms por chamada sobre uma tabela em `world_map+9600`), `ActorsPrepare`, e permitir o passo duplo com carrinhos.
+
+---
+## 0.9.66-enemy-calls: inimigos — o que os dados mostraram
+
+**ROM:** `0.9.66-enemy-calls/keen_msx_0.9.66-enemy-calls.rom`. Patch acumulado sobre a 0.9.63-timp: `all-changes-since-0.9.63.patch` (HUD Z80, passo de 35 Hz do Keen, e as mudanças abaixo).
+
+### Por que não levei os inimigos a 35 Hz
+O perfil por linha (`pcline2.py`, amostragem de PC mapeada para linhas de C) mostrou que o custo "dos inimigos" em Hill era, em grande parte, **a chamada** de `Carrot`/`CarrotContact` para inimigos **inativos**: cinco chamadas por tick, cada uma com prólogo do SDCC (~0,2 ms) só para retornar na primeira linha. Reescrever o passo dos inimigos ativos com passo duplo (máquinas de estado com contadores de ticks: Carrot, `BridgeWalker`...) mexe no comportamento e, depois de remover essas chamadas, os ativos custam ~0,2 + 0,3 ms por tick, ou seja, no máximo ~4% a ganhar. Fiz no lugar disso mudanças de **equivalência exata** (sem alterar nenhum comportamento):
+
+1. `Carrot`/`CarrotContact`: o teste de inatividade que eles já faziam na primeira linha passou para o ponto de chamada (`CARROT_STEP`, `CARROT_CONTACT`); o único efeito colateral, `a->vx=0`, é feito no lugar.
+2. `ShotTick` só é chamado para tiros ativos (ele já retornava na primeira linha).
+3. Laços sobre `hill_actors` com incremento de ponteiro em vez de `hill_actors+i` (o SDCC gerava deslocamento de 4 bits por elemento).
+4. `InventoryTick`/`BonusTick`: testes de bit por byte em vez de `1UL<<i` (32 bits).
+
+### Medição (openMSX MSX2+, 3,58 MHz; Hill com inimigos, 20 s)
+| | 0.9.63-timp | 0.9.64 HUD | 0.9.65 35 Hz | 0.9.66 |
+|---|---|---|---|---|
+| fps | 3,65 | 4,00 | 5,20 | **6,25** (6,65 numa versão intermediária; a trajetória do Keen muda de uma ROM para outra, então ±5% é ruído) |
+| `CombatTick` por tick | 4,3 ms | 4,3 ms | 4,1 ms | 2,6 ms |
+
+### Verificação
+- Mudanças de equivalência exata: Carrot/Contact/ShotTick/laços/bits, por inspeção (as condições movidas são as da primeira linha das funções).
+- Telas: Melon idêntica à 0.9.63-timp; City com a diferença habitual de fase dos inimigos; Hill carrega e anda.
+- Swamp (nível 10): o harness dá "Game Over" em ~34 s com o Keen parado **também na 0.9.63-timp** (mesmo número de mortes e mesma posição), então não é regressão.
+- Não rodei jogo com mão humana.
+
+### Aviso sobre o harness
+Mudar a quantidade de variáveis estáticas muda o layout de RAM; os scripts de teste gerados (`tests/make_*_test.py`) embutem endereços e **precisam ser regenerados** depois de cada build (`make_game_test`, `make_world_test`, `make_keydoor_test`), senão o nível nunca carrega.
+
+### Estado e próximos passos
+Hill em 6,25 fps, ainda 5× abaixo de 30. `DrawScene` ~96 ms (60% da CPU): `RingScene` ~75, `ActorsPrepare` ~26, `HudDraw` ~16. Daqui para a frente, **o desenho** é o gargalo: faixas novas de fundo por quadro (`Columns/Rect/Rows`) e a propagação de dano de `ActorsPrepare`.

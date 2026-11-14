@@ -22,7 +22,7 @@ _loc=local_syms()
 for _k,_v in _loc.items():d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks'])+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives'])+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -54,7 +54,7 @@ proc begin {} {
  foreach {nm a s} $::funcs {set ::s_n_$nm [set ::n_$nm];set ::s_t_$nm [set ::t_$nm]}
  if {[info exists ::env(BENCH_PLACE)]} {place {*}$::env(BENCH_PLACE)}
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
- walk
+ if {![info exists ::env(BENCH_IDLE)]} {walk}
  if {[info exists ::env(BENCH_PC)]} {sample}
  if {[info exists ::env(BENCH_SHOT)]} {after time 10 {screenshot $::env(BENCH_SHOT)}}
  after time $::env(BENCH_SECS) finish
@@ -70,6 +70,7 @@ proc finish {} {
  set f [open $::env(BENCH_OUT).pc w];puts $f [join $::pcs \n];close $f
  controls 0
  set dt [expr {[machine_info time]-$::start}];set n [expr {[word $::render_count]-$::rc0}]
+ logline "defeats=[word $::defeats] lives=[byte $::game_lives]"
  logline "player: x=[word $::stable_x] y=[word $::stable_y] at_tick=[word $::stable_ticks]"
  logline "window=[format %.1f $dt]s renders=$n fps=[format %.2f [expr {$n/$dt}]] vdp_busy=[format %.0f [expr {100*($::vbusy-$::vb0)/$dt}]]% vdp_cmds=[expr {$::vcmds-$::vc0}]"
  foreach {nm a s} $::funcs {
