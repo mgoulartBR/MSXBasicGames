@@ -160,3 +160,26 @@ MSXGL_ROOT=/caminho/MSXgl bash <development062>/scripts/build.sh
 2. Mesma conversão para os dados "streamed" (carrinhos, Mines, Brocco, City, Apple, Boobus, Castle).
 3. Restauração de fundo/rolagem (o gargalo real nestes testes).
 4. Sprites de hardware para projéteis no MSX2+.
+
+---
+## Por que ainda não chega a 30 fps (perfil, 0.9.63-timp, openMSX, Z80 a 3,58 MHz)
+
+Cenário: Hill, Keen andando (esq./dir.) ao lado dos Carrot Couriers, 20 s emulados (`mkprof.py`/`runp.sh`).
+
+| Onde vai o tempo | por quadro apresentado | % da janela |
+|---|---|---|
+| Lógica: `Game_Tick` (física do Keen) | 3,5 ms **por tick**, 70 ticks/s | 24% |
+| Lógica: `CombatTick` (inimigos, itens, tiros) | 4,3 ms por tick | 30% |
+| `DrawScene` | 114 ms | 41% |
+| ↳ `RingScene` (fundo/restauração/atores) | 84 ms | |
+| ↳ `ActorsPrepare` | 26 ms (CPU pura) | |
+| ↳ `HudDraw` | 20 ms (espera do VDP) | |
+| ↳ `HWUpload` | 8 ms | |
+
+Resultado: **3,65 fps**. A CPU fica saturada (VDP ocupado só 11–24% do tempo): o gargalo é CPU (C compilado pelo SDCC), não VDP nem atores.
+
+Ablações (sem recompilar):
+- Inimigos desligados (`enemy_mode=1`): só **5,6 fps**. Mesmo sem inimigos o motor não chega perto de 30.
+- Mesma ROM com o Z80 mais rápido: 3,58 MHz → 3,65 fps; **7,16 MHz → 15,8 fps; 10,7 MHz → 19,7 fps**. Os valores ficam perto de 60/4 e 60/3 porque a apresentação é sincronizada com o vblank (fps quantizado: 30, 20, 15, 12…).
+
+Para 30 fps (≤ 33 ms por quadro) a 3,58 MHz seria preciso reduzir lógica + desenho em ~6×: p.ex. lógica ≤ 1,5 ms/tick e `DrawScene` ≤ 20 ms. Isso exige reescrever em Z80 os caminhos quentes (lição do RTS: ordenação/emissão/varreduras em asm, pular o que está ocioso, taxa menor para o que não precisa de 70 Hz), medindo cada passo. Em 7 MHz+ (Turbo R no modo Z80 turbo, OCM, emulador acelerado) 30 fps fica ao alcance com ~2× de ganho.
