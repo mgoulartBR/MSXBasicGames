@@ -208,3 +208,31 @@ Estimativa: cada item restante rende 5–15%. Com a lógica a 70 Hz (55% da CPU)
 2. `RingScene` (74 ms): colunas/linhas novas por quadro (`Columns/Rows/Rect`): cada ladrilho = `MapTile` + comando; dá para pré-gerar listas de comandos por faixa.
 3. Lógica: `CombatTick` a 35 Hz (itens/bônus/inventário/dobradiças) e `Game_Tick` com cache de `Wall()` por tick.
 4. Sprites de hardware para HUD/projéteis para sair da restauração de fundo.
+
+---
+## 0.9.65-35hz: lógica a 35 Hz — resultado
+
+**ROM:** `0.9.65-35hz/keen_msx_0.9.65-35hz.rom` (SHA-256 `e3a6be91…31ab`). Patch sobre a 0.9.63-timp (inclui o kernel do HUD da 0.9.64): `35hz-and-hud.patch`.
+
+### O que muda no comportamento
+- **Keen:** `Game_Tick2` avança dois ticks de 70 Hz com **uma** passada de física. O original aplica gravidade e aceleração horizontal só nos ticks ímpares, então dois ticks equivalem a gravidade/aceleração uma vez e deslocamento 2×v; o resto (salto, `jump_hold`, animação de caminhada, borda de saída) foi escalado do mesmo jeito. Cai para dois ticks normais quando há situação especial: poste (subindo/descendo ou recém-saído), tecla R, nível com carrinhos (Melon Mines e Apple Acres), ou se o passo duplo bateria em parede/teto (a física é desfeita e refeita em dois ticks normais, para não enfiar o Keen num canto).
+- **Inimigos, tiros e demais lógica de combate:** continuam a 70 Hz (cada passo chama `CombatTick` duas vezes, com a paridade de tick correta). **Pickups e bônus** (`InventoryTick`/`BonusTick`) passam a 35 Hz: o Keen se move < 3 px entre dois ticks e os itens têm ≥ 8 px.
+- Mudança de estrutura: a seleção de atores por fase saiu do banco fixo (que estava a 17 bytes do limite) para `LevelSelect` em banco paginado.
+
+### Medição (openMSX MSX2+, 3,58 MHz; Hill, Keen andando ao lado dos inimigos, 20 s)
+| | 0.9.63-timp | 0.9.64-hud-z80 | 0.9.65-35hz |
+|---|---|---|---|
+| fps | 3,65 | 4,00 | **5,20** |
+| `Game_Tick` por tick | 3,5 ms | 3,5 ms | 2,3 ms (`Game_Tick2` 4,67 ms por passo) |
+| `DrawScene` | 114 ms | 103 ms | 96 ms |
+
+Melon Mines **não melhora** (1,70 fps nas duas): lá o caminho rápido fica desligado por causa dos carrinhos.
+
+### Verificação de equivalência (no PC, `host-step2/`)
+Teste diferencial compilando a física real (`game.c`) com os dados de Hill, Bridge, Rapids e Pass: roteiros aleatórios de entradas, comparando duas passadas de `Game_Tick` com uma de `Game_Tick2` a cada passo.
+- **Hill:** 92% dos passos idênticos; desvio máximo 4,75 px; nenhuma trajetória divergente em 180 roteiros; mesma altura de pulo e velocidade.
+- **Rapids / Pass / Bridge:** 76–90% / 78–82% / 46–55% dos passos idênticos; 4–13 em 60 roteiros terminam em trajetórias diferentes (>25 px) — diferença de fase em rampas e bordas (o Keen chega à borda 1–2 px antes ou depois), não correção errada. Estados "Keen dentro de parede" (métrica própria): iguais ao original em Rapids/Pass; ~20% a mais em Bridge (317 vs 296, 669 vs 514, 751 vs 625 por 20 mil passos).
+- Esses números são da física, no PC; **não testei a jogabilidade da ROM com mão humana**. No emulador só conferi que o Keen anda e a tela fica correta.
+
+### Onde está o tempo agora (Hill)
+`CombatTick` 4,1 ms por tick (29% da CPU), `DrawScene` 96 ms (50%: `RingScene` 69 ms, `ActorsPrepare` 26 ms, `HudDraw` 13 ms), `Game_Tick2` 16%. Faltam ~6× para 30 fps. Próximos candidatos: inimigos a 35 Hz (exige reescrever cada inimigo com passo duplo), `CombatTick` (laço de 1,3 ms por chamada sobre uma tabela em `world_map+9600`), `ActorsPrepare`, e permitir o passo duplo com carrinhos.
