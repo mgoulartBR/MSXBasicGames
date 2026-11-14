@@ -1,0 +1,125 @@
+--- a/src/hud.c	2026-11-14 01:25:41.751362092 +0000
++++ b/src/hud.c	2026-11-14 02:17:48.629634062 +0000
+@@ -30,6 +30,106 @@
+  }
+  return n;
+ }
++
++// Z80 fast path for HudDraw's per-frame cache copies (see HudDraw). Parameters travel on the
++// caller's stack (persistent RAM is full). Returns 1 if every chunk was issued, 0 if any chunk
++// wraps the 256x256 ring (the generic loop in HudDraw then does the work).
++typedef struct {const HudChunk* p;u8 n,hx,hy,mlo,mhi,page;} HudFastArgs;
++static u8 HudFast(HudFastArgs* args) __sdcccall(1) __naked
++{
++ args;
++ __asm
++  push ix
++  push iy
++  push hl
++  pop iy
++  ld l,0 (iy)
++  ld h,1 (iy)
++  push hl
++  pop ix
++  ld b,2 (iy)
++hf_loop:
++  ld a,4 (ix)
++  cp #16
++  ld a,5 (iy)
++  jr c,hf_chk
++  ld a,6 (iy)
++hf_chk:
++  or a
++  jp z,hf_next
++  ld a,3 (iy)
++  add a,3 (ix)
++  ld e,a
++  ld a,5 (ix)
++  add a,e
++  jr nc,hf_xok
++  or a
++  jp nz,hf_fail
++hf_xok:
++  ld a,4 (iy)
++  add a,4 (ix)
++  ld d,a
++  add a,#8
++  jr nc,hf_yok
++  or a
++  jp nz,hf_fail
++hf_yok:
++  call _VDP_CommandWait
++  di
++  ld a,#32
++  out (0x99),a
++  ld a,#0x91
++  out (0x99),a
++  ld a,0 (ix)
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,1 (ix)
++  out (0x9B),a
++  ld a,2 (ix)
++  out (0x9B),a
++  ld a,e
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,d
++  out (0x9B),a
++  ld a,7 (iy)
++  out (0x9B),a
++  ld a,5 (ix)
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  ld a,#8
++  out (0x9B),a
++  xor a
++  out (0x9B),a
++  out (0x9B),a
++  out (0x9B),a
++  ld a,e
++  or 5 (ix)
++  and #1
++  ld a,#0xD0
++  jr z,hf_cmd
++  ld a,#0x90
++hf_cmd:
++  ei
++  out (0x9B),a
++hf_next:
++  ld de,#7
++  add ix,de
++  dec b
++  jp nz,hf_loop
++  ld a,#1
++  jr hf_done
++hf_fail:
++  xor a
++hf_done:
++  pop iy
++  pop ix
++  ret
++ __endasm;
++}
+ // Compose atlas pixels only on inventory changes. Per-frame redraws are VDP copies.
+ void HudDraw(u8 page) __banked
+ {
+@@ -74,6 +174,15 @@
+    }
+   }
+  }
++ // Fast path (Z80): one prepared VDP command per chunk, no clipping. Falls back to the
++ // generic loop below when any chunk wraps the 256x256 ring.
++ {
++  HudFastArgs fa;
++  fa.p=hud_chunks[LEVEL_INDEX];fa.n=count;
++  fa.hx=hardware_scroll?(u8)(camera_px+168):168;fa.hy=hardware_scroll?(u8)(camera_py+4):20;
++  fa.mlo=dirty[page]&1;fa.mhi=dirty[page]&6;fa.page=page;
++  if(HudFast(&fa)){dirty[page]=0;hud_keys[page]=HudKey();hud_ammo[page]=ammo;return;}
++ }
+  for(k=0,chunk=hud_chunks[LEVEL_INDEX];k<count;++k,++chunk){
+   sy=chunk->dy;
+   if(!(dirty[page]&(sy<16?1:6)))continue;

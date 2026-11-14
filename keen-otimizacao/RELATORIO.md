@@ -183,3 +183,28 @@ Ablações (sem recompilar):
 - Mesma ROM com o Z80 mais rápido: 3,58 MHz → 3,65 fps; **7,16 MHz → 15,8 fps; 10,7 MHz → 19,7 fps**. Os valores ficam perto de 60/4 e 60/3 porque a apresentação é sincronizada com o vblank (fps quantizado: 30, 20, 15, 12…).
 
 Para 30 fps (≤ 33 ms por quadro) a 3,58 MHz seria preciso reduzir lógica + desenho em ~6×: p.ex. lógica ≤ 1,5 ms/tick e `DrawScene` ≤ 20 ms. Isso exige reescrever em Z80 os caminhos quentes (lição do RTS: ordenação/emissão/varreduras em asm, pular o que está ocioso, taxa menor para o que não precisa de 70 Hz), medindo cada passo. Em 7 MHz+ (Turbo R no modo Z80 turbo, OCM, emulador acelerado) 30 fps fica ao alcance com ~2× de ganho.
+
+---
+## 0.9.64-hud-z80: primeiro kernel Z80 (HUD) — resultado
+
+**ROM:** `0.9.64-hud-z80/keen_msx_0.9.64-hud-z80.rom` (SHA-256 `41a94b1d…0c77`), patch sobre a 0.9.63-timp: `hud-z80.patch` (só `src/hud.c`).
+
+O que foi feito: o laço por-quadro de `HudDraw` (cópias do cache em até 18 pedaços, compilado pelo SDCC com locais em IX a 19 ciclos/instrução) virou um kernel Z80 (`HudFast`) que emite um comando de VDP preparado por pedaço. Se algum pedaço cruza a borda do buffer circular 256×256, ele devolve 0 e o laço C original faz o trabalho. Parâmetros vão pela pilha porque a RAM persistente está cheia (uma primeira versão com variáveis estáticas falhou na verificação de RAM do build).
+
+Medição (Hill, Keen andando com inimigos, 20 s, openMSX MSX2+ 3,58 MHz):
+
+| | 0.9.63-timp | 0.9.64-hud-z80 |
+|---|---|---|
+| `HudDraw` | 19,7 ms | 11,4 ms (−42%) |
+| `DrawScene` | 113,7 ms | 103,5 ms |
+| fps | 3,65 | 4,00 |
+
+Os 11 ms restantes são tempo de VDP (18 cópias HMMM seguidas, cada uma esperando a anterior): CPU livre não adianta aqui. Imagem do HUD verificada: Melon idêntica pixel a pixel; em City só difere o dígito de munição (estado de jogo diferente entre execuções, o desenho em si está correto).
+
+### Honestidade sobre a meta de 30 fps
+Este foi o item mais barato e deu +10%. O perfil por amostragem de PC (`pcsym2.py`, resolve funções `static`) mostra que o resto também está pulverizado, como no RTS: `Game_Tick` 9%, `CombatTick` 9%, `MapTileKernel` 6%, `Columns`+`Rect`+`Rows` ~8%, `Carrot` 5,5%, `InventoryTick` 3%, `ActorsPrepare` 4%, `HillTick` 3%, `BonusTick` 2,4%… e boa parte já foi reescrita em Z80 em versões anteriores (`MapTile`, `MakeBounds`, `TouchCached`).
+Estimativa: cada item restante rende 5–15%. Com a lógica a 70 Hz (55% da CPU) e `DrawScene` em ~100 ms, **30 fps a 3,58 MHz não é alcançável sem mudar a arquitetura** (por exemplo, lógica dos inimigos a 35 Hz e redesenho/restauração de fundo por sprites de hardware), o que muda o comportamento do jogo. Itens candidatos, em ordem de custo/benefício:
+1. `ActorsPrepare` (26 ms/quadro): propagação de dano O(n²) entre atores; só cabe reduzir com algoritmo novo (grade/listas), não com micro-asm.
+2. `RingScene` (74 ms): colunas/linhas novas por quadro (`Columns/Rows/Rect`): cada ladrilho = `MapTile` + comando; dá para pré-gerar listas de comandos por faixa.
+3. Lógica: `CombatTick` a 35 Hz (itens/bônus/inventário/dobradiças) e `Game_Tick` com cache de `Wall()` por tick.
+4. Sprites de hardware para HUD/projéteis para sair da restauração de fundo.
