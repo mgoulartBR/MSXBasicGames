@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives'])+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y'])+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -68,8 +68,8 @@ proc begin {} {
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
  if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk}
  if {[info exists ::env(BENCH_PC)]} {sample}
- if {[info exists ::env(BENCH_SHOT)]} {after time 10 {screenshot $::env(BENCH_SHOT)}}
- after time $::env(BENCH_SECS) finish
+ if {[info exists ::env(BENCH_SHOT)]} {foreach t {3 6 9 12 15} {after time $t [list screenshot [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
+ if {[info exists ::env(REGOUT)]} {after time 1 regtest} else {after time $::env(BENCH_SECS) finish}
 }
 set ::pcs {}
 proc sample {} {
@@ -78,10 +78,34 @@ proc sample {} {
  lappend ::pcs "$pc,$seg"
  after time 0.0007 sample
 }
+proc stripes {page base} {
+ set row ""
+ for {set i 0} {$i<128} {incr i} {set c [expr {$base+(($i/16)%7)}];append row [binary format c [expr {($c<<4)|$c}]]}
+ set all ""
+ for {set y 0} {$y<256} {incr y} {append all $row}
+ debug write_block VRAM [expr {$page*32768}] $all
+}
+set ::rcfg {{a 1 0 31} {b 1 32 31} {c 1 0 63} {d 1 32 63} {e 3 0 31} {f 3 32 31} {g 3 0 63} {h 3 32 63}}
+set ::ri 0
+proc regtest {} {
+ if {$::ri>=[llength $::rcfg]} {exit}
+ lassign [lindex $::rcfg $::ri] tag r25 r26 r2extra
+ stripes 0 1;stripes 1 9
+ debug write {VDP regs} 2 $r2extra
+ debug write {VDP regs} 25 $r25
+ debug write {VDP regs} 26 $r26
+ debug write {VDP regs} 27 0
+ debug write {VDP regs} 23 0
+ after time 0.6 [list screenshot $::env(REGOUT)/cfg_$tag.png]
+ incr ::ri
+ after time 1.2 regtest
+}
 proc finish {} {
  set f [open $::env(BENCH_OUT).pc w];puts $f [join $::pcs \n];close $f
  controls 0
  set dt [expr {[machine_info time]-$::start}];set n [expr {[word $::render_count]-$::rc0}]
+ logline "R2=[debug read {VDP regs} 2] R23=[debug read {VDP regs} 23] R25=[debug read {VDP regs} 25] R26=[debug read {VDP regs} 26] R27=[debug read {VDP regs} 27]"
+ logline "cam=([word $::camera_px],[word $::camera_py]) ex_l=[word $::ring_camera_x] ex_r=[word [expr {$::ring_camera_x+2}]] ey_t=[word $::ring_camera_y] ey_b=[word [expr {$::ring_camera_y+2}]]"
  logline "defeats=[word $::defeats] lives=[byte $::game_lives]"
  logline "player: x=[word $::stable_x] y=[word $::stable_y] at_tick=[word $::stable_ticks]"
  logline "window=[format %.1f $dt]s renders=$n fps=[format %.2f [expr {$n/$dt}]] vdp_busy=[format %.0f [expr {100*($::vbusy-$::vb0)/$dt}]]% vdp_cmds=[expr {$::vcmds-$::vc0}]"

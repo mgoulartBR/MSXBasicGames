@@ -297,3 +297,32 @@ Custos **fixos por quadro** ≈ 70 ms (prepare 25 + HUD 15 + sprites de hardware
 3. `HWUpload` incremental (enviar só o que mudou).
 
 Medições deste ciclo usam `mkprof.py`/`runp.sh` (agora com `BENCH_SWEEP`, `BENCH_IDLE`, `BENCH_MOD`) e o conversor de PC para linha de C (`pcline2.py`).
+
+---
+## Protótipo de página única (Etapa 1) — resultado
+
+**ROM de teste:** `proto-single-page/keen_msx_proto-single-page.rom`; patch sobre a 0.9.67: `single-page.patch`. **Não é jogável como jogo completo**: só Hill/níveis sem Melon Mines; mostra fundo + Keen em sprite de hardware; **sem inimigos, sem itens, sem HUD, sem primeiro plano** (a lógica roda normalmente, por isso o Keen pode morrer sem ver o que o mata).
+
+### O que foi construído
+- Uma única página exibida (anel 256×256, página 0), sem segunda página, sem restauração de fundo, sem `ActorsPrepare`/`ActorsDraw`/`CleanSave`.
+- Cada quadro: colunas/linhas novas (reaproveitando `Columns`/`Rows`), `HWPrepare`/`HWUpload` do Keen, espera do vblank (`Halt`), e só então `R#23/R#26/R#27` + troca da tabela de sprites.
+- **Truque da faixa mascarada:** o `R#25 MSK` já esconde os 8 px da esquerda; as colunas que entram (≤ 8 px por quadro) são escritas exatamente nessa faixa antes de mudar o scroll, então não há quebra visível. Por isso a câmera horizontal é limitada a 8 px por quadro (a vertical, 56 px, usa as 64 linhas ocultas do anel). Em 14 fps o Keen anda ~7,5 px por quadro, dentro do limite; abaixo de ~9 fps a câmera passa a ficar atrás do Keen.
+- Tentei antes o modo de 512 px de largura do V9958 (`R#25 SP2`, que daria margem bem maior): o **openMSX 19.1 não o aplica** (mesmo com `R#25=3` e `R#26` de 6 bits ele continua em 256 de largura), então não dá para validar aqui e descartei.
+
+### Medição (openMSX MSX2+ 3,58 MHz, Hill, Keen andando 16 s)
+| | 0.9.67 (tudo desenhado) | protótipo (só fundo + Keen) |
+|---|---|---|
+| fps | ~6,3 | **13,4** |
+| `DrawScene` | ~95 ms | **30 ms** (`HWUpload` 8, `HWPrepare` 2,4, `Halt` + colunas ≈ 18) |
+
+Atenção: não é comparação equivalente — o protótipo não desenha inimigos, HUD nem itens. É o **teto** do que a arquitetura permite com a lógica atual (que ainda custa ~35% da CPU: `CombatTick` 4,8 ms/tick, `Game_Tick2` 4,8 ms/passo).
+
+### Por que não passei direto para a Etapa 2 (o que falta e o risco)
+1. **HUD.** O painel 72×32 não pode ser um sprite fiel (precisa de 3–4 cores por linha, 10 células de 16×16 → ~30 planos de sprite, e o limite é 8 por linha). Opções: (a) barra de HUD no topo em largura total com **divisão de tela por interrupção de linha** (a barra fica numa região oculta do anel, sem redesenho; custa 16 linhas de jogo, 192→176, e exige uma ISR de linha com variáveis em RAM — que está cheia); (b) redesenhar o painel todo quadro como hoje (~12–16 ms).
+2. **Inimigos e itens como sprites.** Hoje só o Keen e alguns inimigos (cenoura, tomate) têm tabelas de sprite; Brocco, Tater/batatas, Aspar, Squash, Boobus (chefe grande), pickups e bônus são bitmaps com máscara. Cada tipo precisa de conversão para sprites de 16×16 com cores por linha (várias camadas com bit CC) e cabem no máximo 8 por linha: cenas com 3+ inimigos ao lado do Keen vão perder sprites. Trabalho por tipo de inimigo e por fase (12 fases).
+3. **Primeiro plano** (túneis/pontes que passam na frente do Keen): hoje é desenhado por software por cima; com sprites a prioridade fundo/sprite é fixa (sprite sempre na frente) — exigiria truques.
+4. **Atenção ao `Halt()`**: ~8 ms por quadro estão em espera de vblank; dá para eliminar aplicando os registradores na ISR de vblank (também precisa de RAM).
+5. A **RAM persistente está cheia** (a verificação de build já barrou duas tentativas): qualquer estado novo da ISR exige liberar RAM antes.
+
+### Decisão necessária
+Ver **Etapa 2 em fatias verticais**: Hill completa (HUD por divisão de tela, cenouras/tater/pickups como sprites), medir fps real e só depois decidir pelas outras 11 fases. Estimativa honesta: não é uma tarefa de uma sessão; Hill sozinha já são vários ciclos (ISR de linha, conversão de sprites, prioridade do primeiro plano).

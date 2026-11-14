@@ -1,0 +1,77 @@
+--- a/src/render_fronts.h	2026-11-14 02:13:06.186646822 +0000
++++ b/src/render_fronts.h	2026-11-14 10:28:58.933060880 +0000
+@@ -2,3 +2,4 @@
+ #define FAST_RING_COPY 0
+ #define FIXED_MINES_TEXTURES 1
+ #define MULTI_HW_TOMATO 0
++#define SINGLE_PAGE 1   // prototype: one 512x256 ring (V9958 SP2), register scroll, hero sprite only
+--- a/src/ring.c	2026-11-14 10:02:07.559636921 +0000
++++ b/src/ring.c	2026-11-14 10:43:24.528851509 +0000
+@@ -264,6 +264,46 @@
+   Rect(page,camx[page],camy[page],(x+data[0])&~1,y+data[1],(x+data[2]+1)&~1,y+data[3]);
+  return 1;
+ }
++
++#if SINGLE_PAGE
++// ---- Single-page prototype -------------------------------------------------------------
++// One displayed 256x256 ring (page 0). The leftmost 8 px are hidden by R#25 MSK, so the d<=8 px
++// columns that enter on the right are written into the masked strip before the scroll registers
++// change; vertical entering rows land in the 64 hidden ring rows. No software actors, no
++// background restore, no second page. Camera steps are limited to 8 px/frame horizontally.
++extern volatile u8 render_commit,camera_x,camera_y,drawn_frame,drawn_cx,drawn_cy;
++extern volatile u16 render_count,drawn_x,drawn_y,drawn_camera_px,drawn_camera_py;
++void ScrollScene(void) __banked
++{
++ u8 hw_buffer[132];
++ i16 d,l,r,dx,dy;
++ if(valid[0]){
++  d=camera_px-camx[0];if(d>8)camera_px=camx[0]+8;else if(d<-8)camera_px=camx[0]-8;
++  d=camera_py-camy[0];if(d>56)camera_py=camy[0]+56;else if(d<-56)camera_py=camy[0]-56;
++  camera_x=camera_px>>4;camera_y=camera_py>>4;
++  dx=camera_px-camx[0];dy=camera_py-camy[0];
++  l=0;r=256;
++  if(dx>0){Columns(0,256-dx,256);r=256-dx;}
++  if(dx<0){Columns(0,0,-dx);l=-dx;}
++  if(dy>0)Rows(0,camera_px,camera_py,l,192-dy,r,192);
++  if(dy<0)Rows(0,camera_px,camera_py,l,0,r,-dy);
++  if(dx || dy)++scroll_copies;
++ }else{
++  VDP_RegWrite(25,2);VDP_SetPage(0);
++  Rows(0,camera_px,camera_py,0,0,256,192);++full_redraws;
++ }
++ valid[0]=1;camx[0]=camera_px;camy[0]=camera_py;
++ hw_attributes=hw_buffer;HWPrepare(0);HWUpload(0);
++ VDP_CommandWait();Halt();render_commit=1;
++ VDP_SetVerticalOffset(camera_py&255);
++ VDP_RegWrite(26,((camera_px+7)>>3)&31);
++ VDP_RegWrite(27,(8-camera_px)&7);
++ HWFlip(0);
++ ++render_count;
++ drawn_x=player_x;drawn_y=player_y;drawn_frame=hero_frame;
++ drawn_cx=camera_x;drawn_cy=camera_y;drawn_camera_px=camera_px;drawn_camera_py=camera_py;combat_dirty=0;render_commit=0;
++}
++#endif
+ void RingScene(u8 page) __banked
+ {
+     static i16 dx,dy,l,r;
+--- a/src/keen_msx_s31_b1.c	2026-11-14 02:13:06.185684787 +0000
++++ b/src/keen_msx_s31_b1.c	2026-11-14 10:28:58.933564470 +0000
+@@ -4,6 +4,8 @@
+ #include "combat.h"
+ #include "combat_assets.h"
+ #include "hw_tomato.h"
++#include "render_fronts.h"
++void ScrollScene(void) __banked;
+ extern u8 stamp,page_cy[2];
+ extern u16 page_px[2];
+ extern volatile u8 hardware_scroll,render_commit,front_page,camera_x,camera_y;
+@@ -80,6 +82,9 @@
+     static u16 base,sx,sy,dx,dy,width,height;
+     static i16 shiftx,shifty;
+     
++#if SINGLE_PAGE
++    if(hardware_scroll){ScrollScene();return;}
++#endif
+     page=front_page^1;arg=0;base=(u16)page*256;
+     shiftx=(i16)(camera_px-page_px[page]);
+     shifty=((i16)camera_y-page_cy[page])*16;
