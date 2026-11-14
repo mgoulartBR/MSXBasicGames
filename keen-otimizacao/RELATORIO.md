@@ -326,3 +326,31 @@ Atenção: não é comparação equivalente — o protótipo não desenha inimig
 
 ### Decisão necessária
 Ver **Etapa 2 em fatias verticais**: Hill completa (HUD por divisão de tela, cenouras/tater/pickups como sprites), medir fps real e só depois decidir pelas outras 11 fases. Estimativa honesta: não é uma tarefa de uma sessão; Hill sozinha já são vários ciclos (ISR de linha, conversão de sprites, prioridade do primeiro plano).
+
+---
+## Etapa 2 (página única + sprites só em Hill): inviável com a arte atual — dados
+
+Antes de escrever a conversão fiz as contas com os dados do próprio jogo, e elas fecham a porta:
+
+1. **Orçamento de sprites.** O V9958 mostra no máximo **8 sprites por linha** (32 planos). Pelas tabelas geradas (`hw_sprite_rows.h`), o Keen sozinho usa **8 sprites numa mesma linha em 54 dos 56 quadros**, e cenoura/tomate usam 7. Qualquer linha de varredura compartilhada pelo Keen e por um inimigo exigiria ≥ 15 sprites. Para caber seria preciso reduzir a fidelidade (menos cores por linha) do Keen **e** de cada inimigo, ou seja, redesenhar a arte.
+2. **Atores em software numa página única exibida.** Apagar e redesenhar na página que está sendo exibida pisca, porque o pipeline atual (restaura todos os retângulos antigos, depois desenha todos os novos) deixa os atores invisíveis por vários quadros. Evitar isso exige restaurar+desenhar cada ator de forma atômica, com ordem de pintura e sobreposição — reescrever o motor de dano, não adaptar.
+3. **HUD contíguo.** Não há retângulo 72×32 livre no atlas de Hill (o maior livre é 256×27, e essa faixa é onde ficam as tabelas de sprites de hardware), então não dá para cortar as 18 cópias do HUD num comando só.
+4. **Divisão de tela para o HUD** exigiria ISR de linha com RAM que não existe (a RAM persistente está cheia).
+
+O protótipo de 13,4 fps é, portanto, um teto que **não se realiza no jogo completo** com esta arte e esta RAM.
+
+### O dado que decide o caminho: a mesma ROM em CPU mais rápida
+0.9.67, Hill, Keen andando ao lado dos inimigos, tudo desenhado (renderizador de duas páginas, arte original):
+
+| Z80 | fps | `DrawScene` |
+|---|---|---|
+| 3,58 MHz | 6,3 | 94,6 ms |
+| 7,16 MHz | 17,9 | 42,6 ms |
+| **10,7 MHz** | **29,7** | 27,9 ms |
+
+(openMSX, `z80_freq`; não é medida de R800, mas indica a escala.) Ou seja, **o renderizador atual já entrega ~30 fps com 3× de CPU** (por exemplo OCM/Zemmix/Turbo R em modo Z80 turbo ou com clock aumentado), sem tocar na arte nem no comportamento. A 3,58 MHz o teto realista que sobra é ~8–9 fps.
+
+### Caminhos restantes (para decidir)
+- **A. Mirar CPU acelerada** (recomendado): a 0.9.67 já serve; só falta confirmar em hardware/emulador acelerado e, se quiser, ligar o modo turbo na inicialização (ex.: `CHGCPU`/porta do Turbo R) — a lógica de tempo usa o JIFFY e se adapta.
+- **B. Ficar em 3,58 MHz**: sobram ganhos de 5–10% por item (`HWUpload` incremental, `ActorsCollect`, restauração por faixas) → ~8 fps; 30 fps não é alcançável sem refazer a arte/atores.
+- **C. Redesenhar a arte para sprites** (menos cores por linha) e reescrever dano/atores: projeto de várias semanas, visual diferente do original.
