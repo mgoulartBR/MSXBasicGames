@@ -21,7 +21,7 @@ c=Counter();tot=0
 for line in open(sys.argv[2]):
     line=line.strip()
     if not line:continue
-    pc,seg=map(int,line.split(','));tot+=1
+    pc,seg=map(int,line.split(",")[:2]);tot+=1
     seg=0 if pc<0x8000 else seg
     key=(seg<<16)|pc
     i=bisect.bisect_right(addrs,key)-1

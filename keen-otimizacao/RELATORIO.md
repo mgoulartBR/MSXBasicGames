@@ -436,10 +436,12 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 | 5 | OK | 11,6 |
 | 6 | OK | 5,8 |
 | 7 | OK (HUD duplicado em alguns quadros, já existia antes das otimizações) | 15,05 |
-| 8 | **não testável**: o roteiro de entrada não carrega a fase (também não carrega com a ROM 0.9.63-timp) | – |
+| 8 | OK (roteiro corrigido: a fase leva ~27 s para carregar; HUD e cenário corretos) | 12,05 |
 | 9 | OK | 12,55 |
 | 10 | carrega e mostra HUD; o Keen morre no teste e volta ao mapa | – |
-| 11 | **não testável** (o roteiro não carrega) | – |
+| 11 | OK (roteiro corrigido: a entrada exige 12 bombas, o teste as define; HUD, cenário e chefe corretos) | 13,7 |
 | 12 | OK (HUD e cenário corretos) | 9,8 |
 
-Os fps das fases 2–12 vêm de um Keen parado/morrendo e não são comparáveis entre si nem com Hill. Nenhuma regressão visual foi vista; fases 8 e 11 seguem sem verificação.
+Os fps das fases 2–12 vêm de um Keen parado/morrendo e não são comparáveis entre si nem com Hill. Nenhuma regressão visual foi vista nas 12 fases.
+
+Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `boobus_bombs=12` ao testar a fase 11.

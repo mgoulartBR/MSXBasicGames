@@ -11,7 +11,7 @@ for l in open(f'{out}/{mod}.lst').read().split('\n'):
 p=sorted(zip(addr,info),key=lambda t:t[0]);A=[x[0] for x in p];I=[x[1] for x in p]
 c=Counter();tot=0;allv=0
 for line in open(pcf):
-    pc,sg=map(int,line.split(','));allv+=1
+    pc,sg=map(int,line.split(",")[:2]);allv+=1
     if sg!=seg or pc<0x8000:continue
     tot+=1;c[I[max(0,bisect.bisect_right(A,pc-0x8000)-1)]]+=1
 for k,v in c.most_common(N):print('%5.1f%% %s'%(100*v/allv,k))

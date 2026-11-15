@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','boobus_bombs','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -68,14 +68,14 @@ proc begin {} {
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
  if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk}
  if {[info exists ::env(BENCH_PC)]} {sample}
- if {[info exists ::env(BENCH_SHOT)]} {foreach t {3 6 9 12 15} {after time $t [list screenshot [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
+ if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list screenshot [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
  if {[info exists ::env(REGOUT)]} {after time 1 regtest} else {after time $::env(BENCH_SECS) finish}
 }
 set ::pcs {}
 proc sample {} {
  if {$::phase<0} {return}
  set pc [reg PC];set seg [debug read memory $::cur_seg_addr]
- lappend ::pcs "$pc,$seg"
+ lappend ::pcs "$pc,$seg,[expr {[debug read memory [reg SP]]+256*[debug read memory [expr {[reg SP]+1}]]}]"
  after time 0.0007 sample
 }
 proc stripes {page base} {
@@ -121,10 +121,11 @@ proc finish {} {
 proc go_level {} {
  if {[byte $::world_active]!=1} {after time 0.2 go_level;return}
  after time 1 {
-  putword $::world_x [lindex $::env(BENCH_WORLD) 0];putword $::world_y [lindex $::env(BENCH_WORLD) 1];keymatrixdown 8 1
-  after time 0.3 {keymatrixup 8 1;waitfor {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} lvl_ready}
+  if {$::env(BENCH_LEVEL)==11 && [info exists ::boobus_bombs]} {putword $::boobus_bombs 12};putword $::world_x [lindex $::env(BENCH_WORLD) 0];putword $::world_y [lindex $::env(BENCH_WORLD) 1];keymatrixdown 8 1
+  after time 0.3 {keymatrixup 8 1;poll_level}
  }
 }
+proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
 proc lvl_ready {} {after time $::env(BENCH_LOADWAIT) begin}
 proc press {} {if {[byte $::world_active]==1} {return};keymatrixdown 8 1;after time 0.3 {keymatrixup 8 1};after time 1.5 press}
 after time 6 press
