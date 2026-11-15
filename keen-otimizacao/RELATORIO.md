@@ -470,3 +470,9 @@ Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `
 - Custo a 7,16 MHz (só quando `vdp_fast`=1): Hill ≈ 26,9–28,7 fps conforme o trajeto (antes 28,7).
 - Falhas no caminho (para a memória): meu primeiro experimento usou um helper `__banked` e as imagens saíam riscadas — o helper trocava o banco em 0x8000 e escondia os dados do chamador; não era perda de bytes.
 - Não testado: máquina PAL (50 Hz) — o limiar usa `n*hz`, mas não foi medido; hardware real.
+
+## Teste visual da 0.9.75-vdpfix: fases restantes e PAL (openMSX)
+
+- NTSC, 7,16 MHz, 8 dumps/capturas por fase: fases **3, 5, 6, 9, 10 e 12** — 0 tabelas de atributo corrompidas, `vdp_fast`=1, herói/inimigos/HUD íntegros nas capturas. (Com 1, 2, 4, 7, 8 e 11 já testadas, **as 12 fases estão cobertas**.)
+- PAL (`C-BIOS_MSX2+_EU`, R#9 NT=1 confirmado; ROM EU copiada de `/usr/share/cbios/` para `~/.openMSX/share/systemroms/`): fase 8 a 3,58 / 5,37 / 7,16 MHz → `vdp_fast` = 0 / 0 / 1 e 0 tabelas corrompidas nas três; Hill a 7,16 MHz 26,85 fps e fase 11 (chefe) íntegros, 0 corrompidas.
+- Limites: openMSX (sem esperas de E/S no `z80_freq`), não hardware real; fases com o Keen parado/morrendo no roteiro, não jogadas de ponta a ponta.
