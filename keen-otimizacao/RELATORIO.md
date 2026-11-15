@@ -445,3 +445,12 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 Os fps das fases 2–12 vêm de um Keen parado/morrendo e não são comparáveis entre si nem com Hill. Nenhuma regressão visual foi vista nas 12 fases.
 
 Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `boobus_bombs=12` ao testar a fase 11.
+
+## Investigação: HUD duplicado/fantasma na fase 7 (Apple) — causa raiz NÃO encontrada
+
+Fatos estabelecidos:
+- **Já existe na ROM original 0.9.62** (mesmo roteiro, mesmas capturas): não foi introduzido pelas otimizações.
+- Aparece só quando o HUD se move (a câmera anda): pedaços do painel antigo ficam no anel, à direita da posição nova (câmera indo para a esquerda) ou à esquerda (indo para a direita), nas duas páginas. Em Hill, Melon e nas demais fases testadas não apareceu (nenhuma teve tanto movimento horizontal no roteiro).
+- **Descartado:** (a) limites do sprite 35 (a tabela já está com 72×32 por `build_hud_bounds.py`; alargar a caixa de restauração em 4 px/2 px não mudou nada); (b) corrupção do mapa (`world_map` na RAM decodificado = mapa de origem, 0 diferenças em 5922 tiles); (c) tabelas `tile_x/tile_y` na RAM = JSON (293 tiles, 0 diferenças) e gráficos dos tiles sob o HUD normais; (d) sobreposição das células do cache do HUD com tiles/sprites (nenhuma em 8 fases); (e) o movimento do HUD de 0.9.70 (o defeito existe antes).
+- Com `mkprof.py` agora há instrumentação: `BENCH_TRACE` (uma linha por `RingScene`: página, câmera, câmeras do anel, registros do HUD), `BENCH_VRAM` (dump de VRAM, registros e `world_map` por captura) e `BENCH_SHOTT` (tempos das capturas); `ghost.py` conta quadros com fantasmas.
+- Pista restante: o resto estável fica sempre no lado do painel antigo que sai da faixa restaurada; vale rastrear os comandos de VDP de `Rect`/`RectX` (argumentos e execução) durante um deslocamento à esquerda na fase 7 e comparar com a mesma sequência em Hill.

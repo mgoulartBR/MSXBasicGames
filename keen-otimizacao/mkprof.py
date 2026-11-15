@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','boobus_bombs','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -39,6 +39,11 @@ foreach {nm addr seg} $::funcs {
  debug set_bp $addr "\[debug read memory \$::cur_seg_addr\]==$seg" [list prof_enter $nm]
 }
 proc prof_enter {nm} {
+ if {$nm eq "RingScene" && [info exists ::env(BENCH_TRACE)] && $::phase>=0 && [machine_info time]>$::env(BENCH_TRACE_T0) && [machine_info time]<$::env(BENCH_TRACE_T1)} {
+  set pg [expr {1-[byte $::front_page]}];set o [open $::env(BENCH_OUT).trace a]
+  puts $o "t=[format %.3f [machine_info time]] page=$pg cam=[word $::camera_px],[word $::camera_py] ringcam=[word $::ring_camera_x]/[word [expr {$::ring_camera_x+2}]] old14p0=[word [expr {$::actors_old+14*6}]] old14p1=[word [expr {$::actors_old+174+14*6}]] vis0=[byte [expr {$::actors_old+14*6+5}]] vis1=[byte [expr {$::actors_old+174+14*6+5}]]"
+  close $o
+ }
  set sp [reg SP];set ::t0_$nm [machine_info time]
  set ::bp_$nm [debug set_bp [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}] "\[reg SP\]==$sp+2" [list prof_exit $nm]]
 }
@@ -68,7 +73,7 @@ proc begin {} {
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
  if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk}
  if {[info exists ::env(BENCH_PC)]} {sample}
- if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list screenshot [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
+ if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list shotlog $t [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
  if {[info exists ::env(REGOUT)]} {after time 1 regtest} else {after time $::env(BENCH_SECS) finish}
 }
 set ::pcs {}
@@ -125,6 +130,7 @@ proc go_level {} {
   after time 0.3 {keymatrixup 8 1;poll_level}
  }
 }
+proc shotlog {t f} {screenshot $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
 proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
 proc lvl_ready {} {after time $::env(BENCH_LOADWAIT) begin}
 proc press {} {if {[byte $::world_active]==1} {return};keymatrixdown 8 1;after time 0.3 {keymatrixup 8 1};after time 1.5 press}
