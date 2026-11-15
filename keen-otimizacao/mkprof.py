@@ -54,7 +54,7 @@ proc prof_exit {nm} {
 }
 set ::vbusy 0.0;set ::vt0 0;set ::vcmds 0
 debug probe set_bp VDP.commandExecuting {} {
- if {[debug probe read VDP.commandExecuting]} {set ::vt0 [machine_info time];incr ::vcmds} else {set ::vbusy [expr {$::vbusy+[machine_info time]-$::vt0}]}
+ if {[debug probe read VDP.commandExecuting]} {set ::vt0 [machine_info time];incr ::vcmds;if {[info exists ::env(BENCH_VDPLOG)] && [machine_info time]>$::env(BENCH_TRACE_T0) && [machine_info time]<$::env(BENCH_TRACE_T1)} {set r [debug read_block "VDP regs" 32 15];set o [open $::env(BENCH_OUT).vdp a];binary scan $r cu* bl;puts $o "[format %.4f [machine_info time]] [join $bl { }]";close $o}} else {set ::vbusy [expr {$::vbusy+[machine_info time]-$::vt0}]}
 }
 proc sweep {} {
  if {$::phase<0} {return}

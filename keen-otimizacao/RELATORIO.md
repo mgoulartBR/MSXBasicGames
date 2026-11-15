@@ -446,11 +446,11 @@ Os fps das fases 2–12 vêm de um Keen parado/morrendo e não são comparáveis
 
 Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `boobus_bombs=12` ao testar a fase 11.
 
-## Investigação: HUD duplicado/fantasma na fase 7 (Apple) — causa raiz NÃO encontrada
+## HUD fantasma na fase 7 (Apple) — CAUSA ENCONTRADA E CORRIGIDA (0.9.74-hudfix)
 
-Fatos estabelecidos:
-- **Já existe na ROM original 0.9.62** (mesmo roteiro, mesmas capturas): não foi introduzido pelas otimizações.
-- Aparece só quando o HUD se move (a câmera anda): pedaços do painel antigo ficam no anel, à direita da posição nova (câmera indo para a esquerda) ou à esquerda (indo para a direita), nas duas páginas. Em Hill, Melon e nas demais fases testadas não apareceu (nenhuma teve tanto movimento horizontal no roteiro).
-- **Descartado:** (a) limites do sprite 35 (a tabela já está com 72×32 por `build_hud_bounds.py`; alargar a caixa de restauração em 4 px/2 px não mudou nada); (b) corrupção do mapa (`world_map` na RAM decodificado = mapa de origem, 0 diferenças em 5922 tiles); (c) tabelas `tile_x/tile_y` na RAM = JSON (293 tiles, 0 diferenças) e gráficos dos tiles sob o HUD normais; (d) sobreposição das células do cache do HUD com tiles/sprites (nenhuma em 8 fases); (e) o movimento do HUD de 0.9.70 (o defeito existe antes).
-- Com `mkprof.py` agora há instrumentação: `BENCH_TRACE` (uma linha por `RingScene`: página, câmera, câmeras do anel, registros do HUD), `BENCH_VRAM` (dump de VRAM, registros e `world_map` por captura) e `BENCH_SHOTT` (tempos das capturas); `ghost.py` conta quadros com fantasmas.
-- Pista restante: o resto estável fica sempre no lado do painel antigo que sai da faixa restaurada; vale rastrear os comandos de VDP de `Rect`/`RectX` (argumentos e execução) durante um deslocamento à esquerda na fase 7 e comparar com a mesma sequência em Hill.
+- Rastreio dos comandos de VDP (`BENCH_VDPLOG`, `vdpdump.py`): a restauração do fundo do HUD antigo cobria só **48×16 px** (caixa do sprite 35), não 72×32; sobravam o terço direito e a metade de baixo do painel antigo (os "pedaços" que apareciam à direita/esquerda/embaixo).
+- Causa: `build_hud_bounds.py` corrigia 48×16 → 72×32 em `assets/apple/load_data.bin`, mas a ROM empacota as definições de sprite da fase 7 a partir de `map_part0..4.bin` (fatias de 2048 bytes geradas ANTES da correção). A RAM em tempo de execução mostrava `48,16` em `world_map[6700+35*8+4]`. As demais fases usam `load_data.bin` direto (ou são verificadas por `build.sh`) e já estavam em 72×32.
+- Correção: `build_hud_bounds.py` regera `map_part0..4.bin` a partir do `load_data.bin` corrigido; `build.sh` ganhou uma asserção (partes == `load_data.bin` e 72×32 em Apple).
+- Verificação: 36 capturas da fase 7 sem fantasmas (antes: fantasmas na maioria dos quadros); fases 5, 6 e 9 com HUD normal; Hill 28,7 fps (sem mudança).
+- O defeito vinha da ROM original 0.9.62 (o patch parcial era do build original).
+- Hipóteses descartadas no caminho (mapa, tabelas de tiles, sobreposição do cache, movimento do HUD de 0.9.70) estão no histórico do git.
