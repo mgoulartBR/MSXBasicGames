@@ -454,3 +454,10 @@ Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `
 - Verificação: 36 capturas da fase 7 sem fantasmas (antes: fantasmas na maioria dos quadros); fases 5, 6 e 9 com HUD normal; Hill 28,7 fps (sem mudança).
 - O defeito vinha da ROM original 0.9.62 (o patch parcial era do build original).
 - Hipóteses descartadas no caminho (mapa, tabelas de tiles, sobreposição do cache, movimento do HUD de 0.9.70) estão no histórico do git.
+
+## Fases 8 e 11 com a 0.9.74-hudfix (openMSX, 7,16 MHz, 14 capturas por fase)
+
+- ROM testada = ROM publicada (SHA256 `4ebe86da…`).
+- Fase 8: carrega; HUD presente e íntegro em todas as capturas após a carga (12 de 12), sem pedaços fantasma. 12,05 fps (Keen parado/idle).
+- Fase 11 (12 bombas definidas pelo roteiro): carrega; HUD presente e íntegro em 12 de 12; o chefe aparece. 13,7 fps (o Keen morre durante o teste).
+- Observação (não investigada): sprites de inimigos aparecem com ruído/fragmentos em alguns quadros (fase 8) e o chefe da 11 tem bordas ruidosas; o mesmo aspecto já aparecia nas capturas da 0.9.73.
