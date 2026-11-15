@@ -424,3 +424,22 @@ Imagem verificada nos dois clocks e também em MSX2 (sem rolagem por registrador
 - `SlotScan` virou `slotscan.inc` (compartilhado) e `RingScene` o usa para visitar só os atores com algum bit visível; o laço de `CleanSave` anda por ponteiro. Hill 7,16 MHz: 29,05 fps (sem mudança); 5,37 MHz: 18,85; 3,58 MHz: 8,75 → 8,90.
 - **Achado:** o quadro agora cabe em 2 vblanks (33 ms) na maior parte do tempo, e o desenho espera o flip do quadro anterior (`while(flip_flag)Halt()`). O ritmo fica travado perto de 30 fps (NTSC); 29,05 = ~97% dos quadros em 2 vblanks. Ganhos adicionais de CPU a 7,16 MHz só reduzem os quadros lentos (teto 30,0); por isso o fps não mudou apesar de menos CPU.
 - O `Columns` não foi alterado: o tempo dele é espera do VDP (≈12 comandos HMMM pequenos em série por quadro de scroll), sem cópia equivalente mais barata (copiar da página da frente carregaria atores).
+
+## Teste das demais fases com a 0.9.73-ring (openMSX, 7,16 MHz, 20 s por fase, Keen parado/idle)
+
+| Fase | Resultado | fps medido |
+|---|---|---|
+| 1 | HUD, bônus e inimigos corretos | 33,5 (cenário sem movimento) |
+| 2 | OK | 16,75 |
+| 3 | OK | 22,0 |
+| 4 | OK (Keen morre no teste e a fase termina; HUD correto antes disso) | 6,05 |
+| 5 | OK | 11,6 |
+| 6 | OK | 5,8 |
+| 7 | OK (HUD duplicado em alguns quadros, já existia antes das otimizações) | 15,05 |
+| 8 | **não testável**: o roteiro de entrada não carrega a fase (também não carrega com a ROM 0.9.63-timp) | – |
+| 9 | OK | 12,55 |
+| 10 | carrega e mostra HUD; o Keen morre no teste e volta ao mapa | – |
+| 11 | **não testável** (o roteiro não carrega) | – |
+| 12 | OK (HUD e cenário corretos) | 9,8 |
+
+Os fps das fases 2–12 vêm de um Keen parado/morrendo e não são comparáveis entre si nem com Hill. Nenhuma regressão visual foi vista; fases 8 e 11 seguem sem verificação.
