@@ -8,7 +8,7 @@
 #include "hw_compact_hero.h"
 #include "hw_tomato_data.h"
 #include "hw_sprite_rows.h"
-void VP(const u8* src,u16 dst,u8 page,u16 n) __banked;
+void VPF(const u8* src,u16 destLow,u8 destHigh,u16 count);
 u8 hw_tomato_second[2],hw_tomato_second_cached[2];
 extern volatile u16 camera_px,camera_py;
 extern volatile u8 hardware_scroll;
@@ -87,8 +87,8 @@ void HWMinesUpload(u8 page) __banked
    t=tomatoes+id;k=t->frame-90;tag=k|(count<<2);
    if((which?hw_tomato_second_cached[table]:hw_tomato_cached[table])!=tag){
     VDP_CommandWait();
-    VP(hw_patterns[k],patterns+768+(u16)which*448,1,448);
-    VP(hw_colors[k],base+1024+(u16)count*16,1,(u16)hw_count[k]*16);
+    VPF(hw_patterns[k],patterns+768+(u16)which*448,1,448);
+    VPF(hw_colors[k],base+1024+(u16)count*16,1,(u16)hw_count[k]*16);
     if(which)hw_tomato_second_cached[table]=tag;else hw_tomato_cached[table]=tag;
     if(!hw->visible[page])hw->cached[table]=255;
    }
@@ -103,7 +103,7 @@ void HWMinesUpload(u8 page) __banked
  }
  hw_attributes[count*4]=216;
  VDP_CommandWait();
- VP(hw_attributes,base+0x600,1,(u16)count*4+1);
+ VPF(hw_attributes,base+0x600,1,(u16)count*4+1);
 }
 
 #else
@@ -164,8 +164,8 @@ void HWMinesUpload(u8 page) __banked
   t=tomatoes+id;k=t->frame-90;
   if(hw_tomato_cached[table]!=(k|(count<<2))){
    VDP_CommandWait();
-   VP(hw_patterns[k],patterns+768,1,448);
-   VP(hw_colors[k],base+1024+(u16)count*16,1,(u16)hw_count[k]*16);
+   VPF(hw_patterns[k],patterns+768,1,448);
+   VPF(hw_colors[k],base+1024+(u16)count*16,1,(u16)hw_count[k]*16);
    hw_tomato_cached[table]=k|(count<<2);
    if(!hw->visible[page])hw->cached[table]=255;
   }
@@ -181,7 +181,7 @@ void HWMinesUpload(u8 page) __banked
  }
  hw_attributes[count*4]=216;
  VDP_CommandWait();
- VP(hw_attributes,base+0x600,1,(u16)count*4+1);
+ VPF(hw_attributes,base+0x600,1,(u16)count*4+1);
 }
 
 #endif

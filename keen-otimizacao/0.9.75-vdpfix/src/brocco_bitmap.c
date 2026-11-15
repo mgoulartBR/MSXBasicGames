@@ -4,7 +4,7 @@
 #include "combat_assets.h"
 #include "hw_tomato.h"
 #include "world.h"
-void VP(const u8* src,u16 dst,u8 page,u16 n) __banked;
+void VPF(const u8* src,u16 destLow,u8 destHigh,u16 count);
 void BroccoDecode(u8 frame) __banked;
 extern volatile u8 hardware_scroll;
 extern volatile u16 camera_px,camera_py;
@@ -19,7 +19,7 @@ void BroccoBitmap(u8 page,DrawObject* ob) __banked
  dx=HWTexture(page,ob->frame,ih);texture_y=dx;VDP_CommandWait();
  if(!(dx&256)){
   BroccoDecode(ob->frame);
-  for(row=0;row<ih;++row)VP(world_map+(active_level==8?8640:active_level>=9?3600:4000)+(u16)row*iw,(u16)page*32768+(u16)(u8)(texture_y+row)*128+64,0,iw);
+  for(row=0;row<ih;++row)VPF(world_map+(active_level==8?8640:active_level>=9?3600:4000)+(u16)row*iw,(u16)page*32768+(u16)(u8)(texture_y+row)*128+64,0,iw);
  }
  for(part=0;part<2;++part)for(y=t;y<b;y+=h){
   dy=hardware_scroll?(ob->y+SPR_OY(sp)+y)&255:16+top+y;h=b-y;if(hardware_scroll && dy+h>256)h=256-dy;if(((texture_y+y)&255)+h>256)h=256-((texture_y+y)&255);if(((texture_y+y)&255)+h>256)h=256-((texture_y+y)&255);

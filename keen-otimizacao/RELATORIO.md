@@ -462,12 +462,11 @@ Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `
 - Fase 11 (12 bombas definidas pelo roteiro): carrega; HUD presente e íntegro em 12 de 12; o chefe aparece. 13,7 fps (o Keen morre durante o teste).
 - Observação (não investigada): sprites de inimigos aparecem com ruído/fragmentos em alguns quadros (fase 8) e o chefe da 11 tem bordas ruidosas; o mesmo aspecto já aparecia nas capturas da 0.9.73.
 
-## Ruído em sprites (fase 8 / chefe da 11) — é artefato de clock a 7,16 MHz (investigado)
+## Ruído em sprites — CAUSA E CORREÇÃO (0.9.75-vdpfix)
 
-- Também aparece na ROM original 0.9.62 (comparação lado a lado) — não é regressão.
-- Nos dumps de VRAM (`BENCH_VRAM`): a tabela de atributos de sprite exibida tem bytes **perdidos** (ex.: `15,73,136, 15,73,132,0…` — falta um `0`). Atlas, mapa, tabelas de tiles e paleta estão corretos.
-- `attrcheck.py` (8 dumps por velocidade): **3,58 MHz: 0 corrompidas; 5,37 MHz: 0; 7,16 MHz: 7 de 8** (fases 8 e 1). Ou seja, escritas OTIR/OUTI de dados no VDP a 7,16 MHz excedem o ritmo que o VDP aceita (openMSX descarta bytes; o `z80_freq` não coloca esperas de E/S).
-- Teste de causa: com `VP` (32 T/byte) nos atributos do herói, 0/8 corrompidas a 7,16 MHz (fase 8 e Hill); screenshots a 3,58 MHz da fase 8: herói e inimigos corretos.
-- Limitações: (1) com todas as escritas do herói/bitmaps em ritmo ainda restaram artefatos listrados em alguns quadros a 7,16 MHz (não localizei o resto); (2) o custo é alto: Hill 28,7 → 25,6 fps. Por isso **não foi incluído nas ROMs**.
-- Hardware real a 7,16 MHz (aceleradores/FPGA): normalmente inserem esperas de E/S para o VDP; se o seu MSX não inserir, o ruído pode aparecer. Se aparecer, o código de `vdp-paced/` serve de base.
-- Consequência para as medições: os fps a 7,16 MHz deste relatório foram medidos num emulador que não impõe esse limite; a 5,37 MHz a imagem é íntegra.
+- Também aparece na ROM original 0.9.62. Causa: **perda de bytes nas escritas de dados no VDP a 7,16 MHz** (OTIR = 21 T/byte; o VDP não aceita esse ritmo e descarta bytes). `attrcheck.py` (tabelas de atributos de sprite íntegras?): 3,58 MHz 0/8 corrompidas; 5,37 MHz 0/8; 7,16 MHz 7/8, em Hill e na fase 8.
+- Correção: `VPF` (em `main.c`, banco fixo — o banco 0x8000 do chamador precisa continuar mapeado), mesma assinatura de `VDP_WriteVRAM_128K`, usa `outi+nop` (32 T/byte) quando `vdp_fast`=1 e `otir` caso contrário. `DetectClock` (em `keen_msx_s21_b1.c`) conta um laço de 35 T durante um tick do BIOS (JIFFY): `n*hz > 160000` ⇒ rápido (medido: 3,58 MHz ≈ 81k, 5,37 MHz ≈ 135k, 7,16 MHz ≈ 181k, ISR incluída). Todas as escritas de VRAM do jogo (herói, bitmaps de textura/chefes, HUD, carga de atlas, mapa-múndi) passam por `VPF`. Para liberar bytes no banco fixo foi desligado `PRINT_USE_GRAPH` (caixas do Print, sem uso).
+- Verificação a 7,16 MHz: 0 tabelas corrompidas em 8 dumps por fase (1, 2, 4, 7, 8, 11); capturas do herói e dos inimigos íntegras na fase 8 e do chefe da fase 11. A 3,58 e 5,37 MHz `vdp_fast`=0 (sem custo): Hill 3,58 MHz 8,8 fps (antes 8,9).
+- Custo a 7,16 MHz (só quando `vdp_fast`=1): Hill ≈ 26,9–28,7 fps conforme o trajeto (antes 28,7).
+- Falhas no caminho (para a memória): meu primeiro experimento usou um helper `__banked` e as imagens saíam riscadas — o helper trocava o banco em 0x8000 e escondia os dados do chamador; não era perda de bytes.
+- Não testado: máquina PAL (50 Hz) — o limiar usa `n*hz`, mas não foi medido; hardware real.

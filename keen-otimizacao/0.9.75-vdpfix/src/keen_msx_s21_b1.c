@@ -8,6 +8,7 @@
 #include "combat_assets.h"
 #include "hw_tomato.h"
 #include "hw_hero_resident.h"
+void VPF(const u8* src,u16 destLow,u8 destHigh,u16 count);
 extern volatile u8 hardware_scroll;
 extern volatile u8 flip_flag,flip_r5,flip_r6,flip_r8,flip_r11;
 extern volatile u16 camera_px,camera_py;
@@ -69,61 +70,34 @@ void HWPrepare(u8 page) __banked
  // Hardware hero patterns/attributes live in atlas VRAM, not the offscreen
  // bitmap texture. Keep the enemy cache until its frame or texture Y changes.
 }
-// VDP data-port pacing. Plain OTIR (21 T) overruns the V9938/V9958 data port above ~5.4 MHz
-// (bytes are silently dropped: corrupted sprite attributes/patterns/bitmaps at 7.16 MHz).
-// outi + nop + jr = 32 T per byte is safe at 7.16 MHz and costs ~50% more than OTIR at 3.58 MHz.
-typedef struct {const u8* src;u16 dst;u16 n;u8 page;} VramArgs;
-static void VramPacedAsm(VramArgs* a) __sdcccall(1) __naked
+u8 vdp_fast;
+// Counts a 35 T loop over one BIOS jiffy (measured n*hz: 3.58 MHz ~81k, 5.37 MHz ~135k, 7.16 MHz ~181k;
+// ISR time included). Above ~5.6 MHz the VDP data port
+// needs paced writes (see vram_paced.inc).
+static u16 ClockLoop(void) __sdcccall(1) __naked
 {
- a;
  __asm
-  push ix
-  push hl
-  pop ix
-  ld e,4 (ix)
-  ld d,5 (ix)
-  ld a,d
-  or e
-  jr z,vp_done
-  ld a,6 (ix)
-  add a,a
-  add a,a
-  ld c,a
-  ld a,3 (ix)
-  rlca
-  rlca
-  and #3
-  add a,c
-  di
-  out (0x99),a
-  ld a,#0x8E
-  out (0x99),a
-  ld a,2 (ix)
-  out (0x99),a
-  ld a,3 (ix)
-  and #0x3F
-  or #0x40
-  ei
-  out (0x99),a
-  ld l,0 (ix)
-  ld h,1 (ix)
-  ld c,#0x98
-vp_loop:
-  outi
-  nop
-  dec de
-  ld a,d
-  or e
-  jr nz,vp_loop
-vp_done:
-  pop ix
+  ld hl,#0
+  ld a,(0xFC9E)
+  ld b,a
+cl_sync:
+  ld a,(0xFC9E)
+  cp b
+  jr z,cl_sync
+  ld b,a
+cl_count:
+  inc hl
+  ld a,(0xFC9E)
+  cp b
+  jr z,cl_count
+  ex de,hl
   ret
  __endasm;
 }
-void VP(const u8* src,u16 dst,u8 page,u16 n) __banked
+void DetectClock(u8 hz) __banked
 {
- VramArgs a;a.src=src;a.dst=dst;a.n=n;a.page=page;
- VramPacedAsm(&a);
+ u16 n=ClockLoop();
+ vdp_fast=((u32)n*hz>160000UL)?1:0;
 }
 void HWUpload(u8 page) __banked
 {
@@ -159,7 +133,7 @@ void HWUpload(u8 page) __banked
  }
  hw_attributes[count*4]=216;
  VDP_CommandWait();
- VP(hw_attributes,base+0x600,1,count*4+1);
+ VPF(hw_attributes,base+0x600,1,count*4+1);
 }
 // Prepares the sprite half of the vblank flip (R#5/R#6/R#11/R#8); the ISR writes it.
 void HWFlip(u8 page) __banked
