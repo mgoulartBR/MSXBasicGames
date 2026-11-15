@@ -476,3 +476,24 @@ Roteiro (`mkprof.py`): espera a carga com polling (sem timeout curto) e define `
 - NTSC, 7,16 MHz, 8 dumps/capturas por fase: fases **3, 5, 6, 9, 10 e 12** — 0 tabelas de atributo corrompidas, `vdp_fast`=1, herói/inimigos/HUD íntegros nas capturas. (Com 1, 2, 4, 7, 8 e 11 já testadas, **as 12 fases estão cobertas**.)
 - PAL (`C-BIOS_MSX2+_EU`, R#9 NT=1 confirmado; ROM EU copiada de `/usr/share/cbios/` para `~/.openMSX/share/systemroms/`): fase 8 a 3,58 / 5,37 / 7,16 MHz → `vdp_fast` = 0 / 0 / 1 e 0 tabelas corrompidas nas três; Hill a 7,16 MHz 26,85 fps e fase 11 (chefe) íntegros, 0 corrompidas.
 - Limites: openMSX (sem esperas de E/S no `z80_freq`), não hardware real; fases com o Keen parado/morrendo no roteiro, não jogadas de ponta a ponta.
+
+## Teto a 3,58 MHz (ablação; medição, nada disto entra em ROM)
+
+Hill, `BENCH_Z80=3579545`, 30 s, mesmo trajeto, ROM 0.9.75 com chaves de desligamento (`teto-358/ablate.h`, `ablrun.sh`). fps = quadros desenhados por segundo.
+
+| Variante | fps | vs base |
+|---|---|---|
+| Base | 9,13 | – |
+| Sem inimigos de Hill | 9,83 | +8% |
+| Sem HUD (não desenha nem restaura) | 12,33 | **+35%** |
+| Viewport redesenhada com 160 linhas / 128 linhas | 9,30 / 9,77 | +2% / +7% |
+| Lógica de combate a metade da taxa (1 `CombatTick` por par) | 10,77 | +18% |
+| Sem lógica de combate | 11,97 | +31% |
+| Desenhar só a cada 2ª iteração | 8,37 | −8% |
+| Sem HUD + combate a metade | 13,93 | +53% |
+| Sem HUD + sem combate + sem inimigos + viewport 128 (teto) | 18,67 | +104% |
+
+- Perfil a 3,58 MHz (base): `CombatTick` 8,9%, `Game_Tick2` 7,8%, `Columns` 7,0%, espera do VDP 5,2%, `MapTileKernel` 5,0%, `ActorsPrepare` 4,4%… A lógica (combate, física, Hill/Bonus/Inventory) passa de ~27% e custa o mesmo por segundo qualquer que seja o fps (rodar menos quadros não a reduz).
+- Mesmo removendo tudo isso, 18,7 fps: **30 fps a 3,58 MHz não é alcançável** por essas mudanças. Resto no perfil do teto: `ActorsPrepare` 8,4%, `ActorsDraw` 7,7%, `Game_Tick2` 7,3%, `Columns` 7,0%, `HWUpload` 6,5%.
+- Maior item isolado: **HUD (+35%)** — é custo de projeto (painel flutuante redesenhado no anel a cada deslocamento), não só de jogabilidade.
+- Limites: um trajeto de Hill, ablações não aditivas, "desenhar a cada 2ª iteração" é uma aproximação grosseira.
