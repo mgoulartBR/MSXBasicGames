@@ -510,3 +510,18 @@ Implementação (`hud-anchor/`): o painel fica ancorado no anel e só é re-anco
 | assimétrica 32 esq / 12 dir / 4 cima / 8 baixo (mantém o painel visível) | 9,33 | +2% | pequeno balanço, sempre inteiro |
 
 Motivo: a 3,58 MHz a câmera anda ~10 px ou mais entre quadros desenhados; qualquer tolerância pequena obriga a re-ancorar quase todo quadro. Os ganhos só aparecem com tolerâncias que estragam o visual. O teto "sem HUD" (+35%) não é atingível por esse caminho. ROM de referência continua a 0.9.75-vdpfix.
+
+## Barra de HUD fixa no topo — protótipo de viabilidade (`hud-bar-proto/`, NÃO incluído em ROM)
+
+Mecanismo: o HUD vira um bitmap de 8 linhas em linhas livres da VRAM (atlas); no início de cada quadro (hook H.TIMI) o VDP é configurado para mostrar essas linhas (R#2 = página do atlas, R#23 = linha da barra, R#26/27 = 0) e uma interrupção de linha (hook H.KEYI, `LineISR`) logo depois da 8ª linha restaura página/scroll do jogo (`cur_r2/r23/r26/r27`, copiados no flip do vblank). A faixa de 8 linhas do topo do cenário fica coberta pela barra; o resto do código de anel não muda. O HUD antigo deixa de ser desenhado (slot 14 invisível).
+
+Achados no openMSX: (1) R#19 é comparado com o contador de linha **já com R#23 somado** (linha da interrupção = R#23_da_barra + 7); (2) sprites do herói e scroll corretos abaixo da barra (Hill e Swamp); (3) a interrupção de linha chega via H.KEYI, que precisa ler S#1 (R#15 = 1) para limpar FH.
+
+Medição (Hill, barra de teste com conteúdo placeholder, sem HUD desenhado no anel; faixa de teste nas linhas 94+ do atlas, que em Hill não estão livres — só o custo importa aqui):
+
+| Clock | Base 0.9.75 | Com barra | |
+|---|---|---|---|
+| 3,58 MHz | 9,13 fps | **11,77 fps** | +29% |
+| 7,16 MHz | 26,9–28,7 fps | **30,4 fps** | no teto do vblank (30) |
+
+Falta para uma versão utilizável (não feito): (a) 8 linhas livres por fase (Hill, Melon, Bridge, Rapids, Pass, Grove, Apple e Castle não têm: exige recompactar as tabelas de sprite de hardware ou o atlas); (b) arte e desenho do novo HUD de 8 linhas (placar, vidas, chaves, munição), desenhado só quando muda; (c) desligar a barra em título/mapa-múndi/telas de fim e na troca de fase; (d) PAL; (e) tolerância a interrupções adiadas (DI) — borda de guarda de 1 linha; (f) conferir em hardware real (mudança de R#2/R#23 no meio do quadro).
