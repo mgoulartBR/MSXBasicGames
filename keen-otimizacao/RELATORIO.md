@@ -497,3 +497,16 @@ Hill, `BENCH_Z80=3579545`, 30 s, mesmo trajeto, ROM 0.9.75 com chaves de desliga
 - Mesmo removendo tudo isso, 18,7 fps: **30 fps a 3,58 MHz não é alcançável** por essas mudanças. Resto no perfil do teto: `ActorsPrepare` 8,4%, `ActorsDraw` 7,7%, `Game_Tick2` 7,3%, `Columns` 7,0%, `HWUpload` 6,5%.
 - Maior item isolado: **HUD (+35%)** — é custo de projeto (painel flutuante redesenhado no anel a cada deslocamento), não só de jogabilidade.
 - Limites: um trajeto de Hill, ablações não aditivas, "desenhar a cada 2ª iteração" é uma aproximação grosseira.
+
+## HUD só quando muda (ancorado) — medição a 3,58 MHz, NÃO incluído em ROM
+
+Implementação (`hud-anchor/`): o painel fica ancorado no anel e só é re-ancorado quando se afasta mais que uma tolerância da posição nominal na tela (ou ao iniciar a fase); sem movimento, nada é copiado/restaurado. Hill, 3,58 MHz, 30 s, mesmo trajeto (base 9,13 fps; "sem HUD" 12,33).
+
+| Tolerância (esq/dir × cima/baixo) | fps | vs base | aspecto |
+|---|---|---|---|
+| ±24 × ±8 px | 9,97 | +9% | HUD "balança" até 24 px; pode ficar 8 px cortado à direita |
+| ±48 × ±16 px | 11,23 | +23% | HUD vaga até 48 px e fica **cortado na borda direita** em vários quadros |
+| ±96 × ±32 px | 11,37 | +25% | HUD quase sai da tela |
+| assimétrica 32 esq / 12 dir / 4 cima / 8 baixo (mantém o painel visível) | 9,33 | +2% | pequeno balanço, sempre inteiro |
+
+Motivo: a 3,58 MHz a câmera anda ~10 px ou mais entre quadros desenhados; qualquer tolerância pequena obriga a re-ancorar quase todo quadro. Os ganhos só aparecem com tolerâncias que estragam o visual. O teto "sem HUD" (+35%) não é atingível por esse caminho. ROM de referência continua a 0.9.75-vdpfix.
