@@ -583,3 +583,16 @@ Medição (Hill, mesmo cenário; `resid2.py` = pixels diferentes nas linhas 185�
 | PAL 7,16 MHz | 31,1 | 0 em todas | 0 |
 | NTSC 3,58 MHz | 8,4 (HUD no anel, sem barra) | – | 0 |
 Fases 2–12 a 5,37 MHz: barra correta e 0 tabelas corrompidas; a fase 6 chegou à tela de "GAME OVER" no roteiro (Keen morto) sem restos da barra. Limites: openMSX (sem esperas de E/S de hardware real); a margem de sincronismo em hardware real a 5,37 MHz pode ser menor.
+
+### 0.9.77-barra2 — volta ao mapa saindo de uma fase completa (openMSX, `retmap.py`)
+
+Roteiro: título → mapa → entra em Horseradish Hill → teletransporta o Keen para perto da saída (a saída da fase 1 é à ESQUERDA, linha 31) e anda até completá-la → tela "LEVEL COMPLETE" → volta ao mapa → anda no mapa. Registradores lidos em cada etapa.
+
+| Etapa | 5,37 MHz (barra) | 3,58 MHz (HUD no anel) |
+|---|---|---|
+| na fase | `bar_on`=1, R#0=0x16 (int. de linha), R#19=31, R#23=112 | `bar_on`=0, R#0=0x06 |
+| fim da fase (`level_done`=2) | `bar_on`=0, R#0=0x06, R#8=42, R#23/26/27=0 | idem |
+| mapa (`world_active`=1, `completed`=1) | R#0=0x06, R#23=16, R#2 normal, sem restos da barra | idem |
+
+Capturas (`screenshot -raw`): fase com a barra → "LEVEL COMPLETE" limpo → mapa com a placa DONE e o Keen no caminho, sem restos da barra; idêntico a 3,58 MHz com o HUD no anel. Nota de método: com `set throttle off` o `screenshot` devolve quadros velhos/pretos; as capturas só valem com o acelerador padrão.
+Não coberto: retorno após **morte** (já visto: tela de GAME OVER limpa na fase 6) e saídas das fases 2–12.
