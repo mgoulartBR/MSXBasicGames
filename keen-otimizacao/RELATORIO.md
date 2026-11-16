@@ -535,3 +535,24 @@ Medição em Hill (openMSX, com a barra rodando): 3,58 MHz 9,5–9,7 fps (base 9
 **Bloqueio (por isso não é utilizável):** a troca de segmentos precisa de sincronia exata de linha, mas a interrupção de linha chega com atraso de **~3 linhas** no openMSX/C-BIOS a 3,58 MHz (medido com linhas-marcador; o atraso cai com o clock e depende da BIOS). A primeira troca é exigida na linha 2 — antes de a ISR sequer começar — então as linhas 2–3 mostram a tabela de cores do herói (ruído) e os segmentos seguintes ficam deslocados. Medições também mostram que o FH só dispara em linhas de exibição (nada na área de vblank), então não dá para disparar antes da linha 0.
 
 Alternativas avaliadas: (1) 8 linhas contíguas livres — impossível sem refazer a ligação `base+1024` das 10 rotinas `HeroData*` (bancos sem espaço: s26 com 15 bytes livres); (2) barra no RODAPÉ (linhas 184–191): a ISR dispara com folga (~8 linhas) e sincroniza com o próprio flag FH (S#1 bit 0), sem depender do atraso — robusto, mas muda o pedido (topo → rodapé); (3) tomar o vetor de interrupção (IM2) para latência ~0: robusto no emulador, risco em hardware real; (4) barra com 4 linhas de preenchimento no topo.
+
+## 0.9.76-barra — barra de HUD fixa no RODAPÉ (incluída em ROM)
+
+SHA256 `7aa30a61e82250624cbe58e1a9a375b049da03140d39b88fb0603d8a9b4619cb`. Só nos modos de scroll por hardware (MSX2+); MSX2 comum segue com o HUD desenhado no anel.
+
+Mecanismo: bitmap de **7 linhas** (linhas de tela 185–191) montado de 7 linhas livres da página 2 (71, 75, 77–79, 86–87). A interrupção de linha (R#19 = linha 183, IE1 em R#0) é usada só como gatilho: a rotina `LineISR` espera o FH por *polling* de S#1 e então segue o flag HR (retrace horizontal, S#2 bit 5) de forma síncrona, trocando R#23 nas bordas de linha (e R#2/R#26/R#27/R#8 na primeira). O handler de vblank restaura os registros do jogo. Registradores alternativos são salvos/restaurados.
+
+O que fez funcionar (depois da tentativa do topo, que falhou): (1) a rotina do FH chega no *fim* da linha 183, então o 1º HR já é a fronteira 184/185 — a contagem de bordas estava deslocada em uma linha; (2) código reto, valores pré-carregados em registradores (`out (c),reg`), 10 `out` no 1º bloco (≈130 T) — com despacho por `cp` a troca caía no meio da linha seguinte (rasgo horizontal visível); (3) o bitmap da barra usa as 7 linhas de fonte do HUD (sem linha em branco).
+
+Teste (marcadores coloridos por linha, `screenshot -raw`, `tear.py`): linhas 185–191 exatas a 7,16 MHz; a 3,58 MHz exatas com um pequeno rasgo (≈5 colunas à esquerda) só na linha 190.
+
+Fps (Hill, mesmo cenário, 30 s emulados, mesma métrica de renders/s):
+
+| Clock | 0.9.75 | 0.9.76 |
+|---|---|---|
+| 3,58 MHz | 9,13 | 8,73 (−4%: custo da ISR de linha ≈ 9% da CPU) |
+| 5,37 MHz | 19,70 | 23,43 (+19%) |
+| 7,16 MHz | 26,47 | 33,07 (+25%; >30 porque há quadros só de herói) |
+
+Verificação: 10 fases (1–10) com a barra correta (placar, vidas, munição), `attrcheck` 0 tabelas de atributo corrompidas a 3,58 e 7,16 MHz. Não verificados nesta rodada: fases 11/12, PAL, transições mapa↔fase com barra ativa (BarOff é chamado em HWHide).
+Observação: a 3,58 MHz (alvo principal) a barra *não* ajuda — o ganho aparece de 5,37 MHz em diante.
