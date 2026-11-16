@@ -563,3 +563,23 @@ Observação: a 3,58 MHz (alvo principal) a barra *não* ajuda — o ganho apare
 - **PAL** (`C-BIOS_MSX2+_EU`, R#9 NT=1 confirmado), Hill: 5,37 MHz 23,7 fps e 7,16 MHz 31,1 fps, 0 tabelas corrompidas, barra no lugar (8/8 capturas a 7,16 MHz limpas). 3,58 MHz: ver abaixo.
 - **Defeitos remanescentes da barra** (8 capturas por configuração, linhas 185–191): 7,16 MHz NTSC/PAL limpa; **5,37 MHz** tem em cerca de metade das capturas pequenos resíduos (um segmento preto de ~15 px à esquerda na 1ª linha e 1–2 pixels soltos perto do placar, sprites/rasgo do 1º bloco de escritas); **3,58 MHz** (NTSC e PAL) a barra fica **corrompida em parte dos quadros** (trocas de R#23 fora de linha, faixas coloridas/pretas) — o teste de marcadores a 3,58 MHz tinha dado certo por acaso de fase. Com o alvo ≥ 5,37 MHz isso fica fora do escopo, mas a 3,58 MHz a 0.9.76 não deve ser usada.
 - **Volta ao mapa**: `BarOff` (em `HWHide`) é chamado em toda troca de mapa/título e não foi exercitado de ponta a ponta — o roteiro `world.sh` produz tela preta também na 0.9.75, então não vale como evidência.
+
+## 0.9.77-barra2 — resíduo da barra corrigido (alvo ≥ 5,37 MHz)
+
+SHA256 `7d414e302b47845f3358d1a7a8fd14e221a2c7dcd330daa9f089f17175421c7e`.
+
+Diagnóstico (diferença pixel a pixel contra um quadro limpo, `resid2.py`): todo o resíduo estava na 1ª linha da barra (185). O 1º bloco de escritas (R#23, R#2, R#26, R#27) levava ~0,3 linha a 5,37 MHz e as escritas de rolagem R#26/R#27 caíam **dentro** da linha 185: o trecho inicial saía com a rolagem do jogo (dígito do placar duplicado/deslocado, segmento preto à esquerda).
+
+Correção: (1) a barra voltou a ter **8 linhas (184–191)**, com a linha 184 como espaçador liso (cor de fundo); o bloco de escritas agora cai no retrace da linha 183 e qualquer rasgo cai na linha lisa, invisível; para isso o gatilho FH passou a R#19 = linha 182 e as contagens de bordas HR foram deslocadas (+1); (2) ordem das escritas: R#26/R#27 primeiro, depois R#23/R#2; (3) R#8 (sprites off) escrito logo após o sincronismo, fora do bloco; (4) em `hud.c` a fonte de 7 linhas fica nas linhas 185–191.
+
+Fallback: `DetectClock` agora também define `bar_ok` (n·hz > 110000, ≈ ≥ 5 MHz; 3,58 MHz ≈ 81k, 5,37 MHz ≈ 135k) e é chamado antes da 1ª cena. Abaixo disso a barra não liga e o HUD volta a ser desenhado no anel como na 0.9.75 (a 3,58 MHz a barra era corrompida). `bar_ok`/`vdp_fast` são zerados no boot (a RAM não é limpa).
+
+Medição (Hill, mesmo cenário; `resid2.py` = pixels diferentes nas linhas 185–191 em relação ao quadro de referência):
+| Máquina / clock | fps | pixels ≠ (4–12 capturas) | attrcheck |
+|---|---|---|---|
+| NTSC 5,37 MHz | 23,3 | 0 em todas | 0 corrompidas |
+| NTSC 7,16 MHz | 31,7 | 0 em todas | 0 |
+| PAL 5,37 MHz | 23,6 | 0 em todas | 0 |
+| PAL 7,16 MHz | 31,1 | 0 em todas | 0 |
+| NTSC 3,58 MHz | 8,4 (HUD no anel, sem barra) | – | 0 |
+Fases 2–12 a 5,37 MHz: barra correta e 0 tabelas corrompidas; a fase 6 chegou à tela de "GAME OVER" no roteiro (Keen morto) sem restos da barra. Limites: openMSX (sem esperas de E/S de hardware real); a margem de sincronismo em hardware real a 5,37 MHz pode ser menor.
