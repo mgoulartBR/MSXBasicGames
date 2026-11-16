@@ -596,3 +596,11 @@ Roteiro: título → mapa → entra em Horseradish Hill → teletransporta o Kee
 
 Capturas (`screenshot -raw`): fase com a barra → "LEVEL COMPLETE" limpo → mapa com a placa DONE e o Keen no caminho, sem restos da barra; idêntico a 3,58 MHz com o HUD no anel. Nota de método: com `set throttle off` o `screenshot` devolve quadros velhos/pretos; as capturas só valem com o acelerador padrão.
 Não coberto: retorno após **morte** (já visto: tela de GAME OVER limpa na fase 6) e saídas das fases 2–12.
+
+## Perfil da 0.9.77 a 5,37 MHz (Hill, 30 s emulados, 42778 amostras de PC; 23,3 fps)
+
+Inclusivo por função (`mkprof.py`): `DrawScene` 65,5% da janela (28,1 ms/quadro), dentro dela `ActorsPrepare` 25,8% (11 ms), `RingScene` 24,9% (17,5 ms, em 428 de 699 quadros), `ActorsDraw` 4,6%; fora dela `CombatTick` 12,2% (3 chamadas/quadro, 1,74 ms cada), `Game_Tick` 2,9%, `ReadInput` 0,9%.
+
+Amostragem de PC (perfil plano, nada passa de 7,3%): `Columns` 7,3 · `CombatTick` 5,8 · **`LineISR` 5,8** · **`HWUpload` 5,6** · `ActorsPrepare` 5,2 · `Game_Tick2` 4,7 · `MapTileKernel` 4,2 · `ActorsCollect` 4,1 · `ActorsDraw` 3,9 · `HillSelect` 3,9 · `VPF` 3,2 · **`HWPrepare` 3,0** · **`Keyboard_Read` 2,9** · `SlotScan` 2,7 · restantes ≤1,8 cada.
+Agrupado: atores/inimigos ≈27%, lógica (combate+física+bônus+mapa) ≈23%, anel/VDP (Columns, VPF, esperas) ≈15%, sprites de hardware do herói (HWUpload+HWPrepare) 8,6%, rotina de linha da barra 5,8%, teclado 2,9%.
+Para ir de 23,3 a 30 fps é preciso cortar ≈22% do tempo de quadro.
