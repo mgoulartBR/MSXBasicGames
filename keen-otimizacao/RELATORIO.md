@@ -556,3 +556,10 @@ Fps (Hill, mesmo cenário, 30 s emulados, mesma métrica de renders/s):
 
 Verificação: 10 fases (1–10) com a barra correta (placar, vidas, munição), `attrcheck` 0 tabelas de atributo corrompidas a 3,58 e 7,16 MHz. Não verificados nesta rodada: fases 11/12, PAL, transições mapa↔fase com barra ativa (BarOff é chamado em HWHide).
 Observação: a 3,58 MHz (alvo principal) a barra *não* ajuda — o ganho aparece de 5,37 MHz em diante.
+
+### 0.9.76-barra — testes das fases 11 e 12, PAL e mapa (openMSX)
+
+- **Fases 11 e 12** (7,16 e 5,37 MHz, 3 capturas e dumps por rodada): barra correta (fase 11 mostra as 12 bombas), herói/chefe/cenário íntegros, `attrcheck` 0 tabelas corrompidas nas 4 rodadas.
+- **PAL** (`C-BIOS_MSX2+_EU`, R#9 NT=1 confirmado), Hill: 5,37 MHz 23,7 fps e 7,16 MHz 31,1 fps, 0 tabelas corrompidas, barra no lugar (8/8 capturas a 7,16 MHz limpas). 3,58 MHz: ver abaixo.
+- **Defeitos remanescentes da barra** (8 capturas por configuração, linhas 185–191): 7,16 MHz NTSC/PAL limpa; **5,37 MHz** tem em cerca de metade das capturas pequenos resíduos (um segmento preto de ~15 px à esquerda na 1ª linha e 1–2 pixels soltos perto do placar, sprites/rasgo do 1º bloco de escritas); **3,58 MHz** (NTSC e PAL) a barra fica **corrompida em parte dos quadros** (trocas de R#23 fora de linha, faixas coloridas/pretas) — o teste de marcadores a 3,58 MHz tinha dado certo por acaso de fase. Com o alvo ≥ 5,37 MHz isso fica fora do escopo, mas a 3,58 MHz a 0.9.76 não deve ser usada.
+- **Volta ao mapa**: `BarOff` (em `HWHide`) é chamado em toda troca de mapa/título e não foi exercitado de ponta a ponta — o roteiro `world.sh` produz tela preta também na 0.9.75, então não vale como evidência.
