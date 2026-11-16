@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','bar_on','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -117,6 +117,8 @@ proc finish {} {
  logline "defeats=[word $::defeats] lives=[byte $::game_lives]"
  logline "player: x=[word $::stable_x] y=[word $::stable_y] at_tick=[word $::stable_ticks]"
  logline "window=[format %.1f $dt]s renders=$n fps=[format %.2f [expr {$n/$dt}]] vdp_busy=[format %.0f [expr {100*($::vbusy-$::vb0)/$dt}]]% vdp_cmds=[expr {$::vcmds-$::vc0}]"
+ logline "FH ms-after-vblank: $::dl"
+ if {$::ln>0} {logline [format "  LineISR calls=%d mean=%.3f ms max=%.3f ms total=%.0f ms fh_runs=%d"  $::ln [expr {1000*$::ldur/$::ln}] [expr {1000*$::lmax}] [expr {1000*$::ldur}] $::b2cnt]}
  foreach {nm a s} $::funcs {
   set c [expr {[set ::n_$nm]-[set ::s_n_$nm]}];set t [expr {[set ::t_$nm]-[set ::s_t_$nm]}]
   logline [format "  %-14s calls=%-5d total=%6.0f ms (%4.1f%% of window)  mean=%6.2f ms" $nm $c [expr {1000*$t}] [expr {100*$t/$dt}] [expr {$c?1000*$t/$c:0}]]
@@ -131,8 +133,20 @@ proc go_level {} {
  }
 }
 set ::lcnt 0;set ::kcnt 0
-if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt};debug set_bp 0xFD9A {} {incr ::kcnt}}
-proc shotlog {t f} {screenshot $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {for {set k 0} {$k<29} {incr k} {set b [expr {$::actors_old+$p*174+$k*6}];if {[byte [expr {$b+5}]]&1} {puts $q "act p$p slot$k x=[word $b] y=[word [expr {$b+2}]] frame=[byte [expr {$b+4}]]"}};set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};binary scan [debug read_block "VDP palette" 0 32] cu* pl;puts $q "palette [join $pl { }]";binary scan [debug read_block "VDP regs" 0 32] cu* rg;puts $q "regs [join $rg { }]";puts $q "vdp_fast=[expr {[info exists ::vdp_fast]?[byte $::vdp_fast]:-1}]";puts $q "bar=[expr {[info exists ::bar_on]?[byte $::bar_on]:-1}] cur=[expr {[info exists ::cur_r2]?"[byte $::cur_r2],[byte $::cur_r23],[byte $::cur_r26],[byte $::cur_r27]":"-"}]";puts $q "lisr=$::lcnt keyi=$::kcnt";puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py] player=[expr {[word $::player_x]>>4}],[expr {[word $::player_y]>>4}] hero_frame=[byte $::hero_frame]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
+set ::b2cnt 0;set ::vbt 0;set ::dl {}
+if {[info exists ::env(BENCH_VB)]} {debug set_bp $::env(BENCH_VB) {} {set ::vbt [machine_info time]}}
+if {[info exists ::env(BENCH_BP2)]} {debug set_bp $::env(BENCH_BP2) {} {incr ::b2cnt;if {[llength $::dl]<60} {lappend ::dl [format %.2f [expr {1000*([machine_info time]-$::vbt)}]]}}}
+set ::ldur 0.0;set ::lmax 0.0;set ::ln 0
+proc lisr_enter {} {
+ set sp [reg SP];set ::lt0 [machine_info time]
+ set ::lbp [debug set_bp [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}] "\[reg SP\]==$sp+2" lisr_exit]
+}
+proc lisr_exit {} {
+ catch {debug remove_bp $::lbp}
+ set d [expr {[machine_info time]-$::lt0}];set ::ldur [expr {$::ldur+$d}];incr ::ln;if {$d>$::lmax} {set ::lmax $d}
+}
+if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
+proc shotlog {t f} {screenshot -raw $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {for {set k 0} {$k<29} {incr k} {set b [expr {$::actors_old+$p*174+$k*6}];if {[byte [expr {$b+5}]]&1} {puts $q "act p$p slot$k x=[word $b] y=[word [expr {$b+2}]] frame=[byte [expr {$b+4}]]"}};set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};binary scan [debug read_block "VDP palette" 0 32] cu* pl;puts $q "palette [join $pl { }]";binary scan [debug read_block "VDP regs" 0 32] cu* rg;puts $q "regs [join $rg { }]";puts $q "vdp_fast=[expr {[info exists ::vdp_fast]?[byte $::vdp_fast]:-1}]";puts $q "ph=[expr {[info exists ::bar_ph]?[byte $::bar_ph]:-1}]";puts $q "bar=[expr {[info exists ::bar_on]?[byte $::bar_on]:-1}] cur=[expr {[info exists ::cur_r2]?"[byte $::cur_r2],[byte $::cur_r23],[byte $::cur_r26],[byte $::cur_r27]":"-"}]";puts $q "lisr=$::lcnt keyi=$::kcnt";puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py] player=[expr {[word $::player_x]>>4}],[expr {[word $::player_y]>>4}] hero_frame=[byte $::hero_frame]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
 proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
 proc lvl_ready {} {after time $::env(BENCH_LOADWAIT) begin}
 proc press {} {if {[byte $::world_active]==1} {return};keymatrixdown 8 1;after time 0.3 {keymatrixup 8 1};after time 1.5 press}

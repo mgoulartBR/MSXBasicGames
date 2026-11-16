@@ -525,3 +525,13 @@ Medição (Hill, barra de teste com conteúdo placeholder, sem HUD desenhado no 
 | 7,16 MHz | 26,9–28,7 fps | **30,4 fps** | no teto do vblank (30) |
 
 Falta para uma versão utilizável (não feito): (a) 8 linhas livres por fase (Hill, Melon, Bridge, Rapids, Pass, Grove, Apple e Castle não têm: exige recompactar as tabelas de sprite de hardware ou o atlas); (b) arte e desenho do novo HUD de 8 linhas (placar, vidas, chaves, munição), desenhado só quando muda; (c) desligar a barra em título/mapa-múndi/telas de fim e na troca de fase; (d) PAL; (e) tolerância a interrupções adiadas (DI) — borda de guarda de 1 linha; (f) conferir em hardware real (mudança de R#2/R#23 no meio do quadro).
+
+## Barra de HUD fixa no topo — versão com 4 segmentos (`hud-bar-full/`, NÃO incluída em ROM)
+
+Implementado: faixa de 8 linhas montada de 4 trechos de linhas livres da página 2 (linhas 70–71, 75, 77–79, 86–87, que sobram entre as tabelas de sprites do herói em todas as fases com 64–90 livres), `LineISR` (hook H.KEYI) que troca R#23/R#2/R#26/R#27 seguindo o flag de retraço horizontal (S#2 bit 5), `BarDraw` (placar, vidas, munição; só redesenha o campo que mudou), HUD do anel desligado em MSX2+, desligamento em `HWHide`.
+
+Medição em Hill (openMSX, com a barra rodando): 3,58 MHz 9,5–9,7 fps (base 9,13); 5,37 MHz 23,97 (base ~18,85); 7,16 MHz 34,3 (base 26,9–28,7). Sem o mecanismo da barra mas com o HUD oculto: 12,87 fps a 3,58 MHz — o `LineISR` ocupado (≈4–7% do tempo) e a quantização por vblank comem a maior parte do ganho a 3,58 MHz.
+
+**Bloqueio (por isso não é utilizável):** a troca de segmentos precisa de sincronia exata de linha, mas a interrupção de linha chega com atraso de **~3 linhas** no openMSX/C-BIOS a 3,58 MHz (medido com linhas-marcador; o atraso cai com o clock e depende da BIOS). A primeira troca é exigida na linha 2 — antes de a ISR sequer começar — então as linhas 2–3 mostram a tabela de cores do herói (ruído) e os segmentos seguintes ficam deslocados. Medições também mostram que o FH só dispara em linhas de exibição (nada na área de vblank), então não dá para disparar antes da linha 0.
+
+Alternativas avaliadas: (1) 8 linhas contíguas livres — impossível sem refazer a ligação `base+1024` das 10 rotinas `HeroData*` (bancos sem espaço: s26 com 15 bytes livres); (2) barra no RODAPÉ (linhas 184–191): a ISR dispara com folga (~8 linhas) e sincroniza com o próprio flag FH (S#1 bit 0), sem depender do atraso — robusto, mas muda o pedido (topo → rodapé); (3) tomar o vetor de interrupção (IM2) para latência ~0: robusto no emulador, risco em hardware real; (4) barra com 4 linhas de preenchimento no topo.
