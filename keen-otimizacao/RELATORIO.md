@@ -681,3 +681,21 @@ Perfil linha a linha dos blocos de atores (0.9.82, 5,37 MHz): o "`ActorsCollect`
 Verificação por oráculo no emulador (`BENCH_HSDIAG`/`BENCH_HCDIAG` em `mkprof.py`: o Tcl guarda a entrada no ponto de entrada da rotina e recalcula o resultado pela regra original ao retornar): `HillSelect` 42 300 registros / 63 mudanças de estado / 0 divergências (varredura da câmera) e 29 904 em caminhada; `HillCollect` 24 112 + 20 878 registros (334 visíveis) / 0 divergências.
 Medição (Hill, 30 s): 5,37 MHz **28,00 → 30,37 fps**; 7,16 MHz 37,10 → 37,50; 3,58 MHz 11,13 → 12,93; PAL 5,37 MHz 31,1. `attrcheck` 0 corrompidas (Hill nos 3 clocks, PAL, fases 2–12 a 5,37 MHz); barra com 0 pixels diferentes (8 capturas NTSC e PAL); volta ao mapa OK.
 Observação: a métrica conta renders por segundo e passa de 30 porque há quadros só de herói; o teto real de quadros completos é o vblank (30 fps NTSC).
+
+## Outras fases a 5,37 MHz — medição andando (0.9.75 × 0.9.83, `walkall.sh`)
+
+Roteiro: o Keen vai e volta a cada 1,5 s a partir do ponto de entrada de cada fase, 30 s (fps = renders/s). Só valem as fases em que o Keen sobrevive à janela:
+
+| Fase | 0.9.75 | 0.9.83 | Observação |
+|---|---|---|---|
+| 1 Hill | 28,4 | 37,8 | sobrevive nas duas |
+| 2 Mines | 8,5 | 10,7 | sobrevive |
+| 3 Bridge | 10,0 | 13,9 | sobrevive |
+| 7 Apple | 9,4 | 9,3 | sobrevive; sem ganho |
+| 8 Grove | 6,9 | 5,0 | andando, o Keen quase não sai do início e os trajetos divergem; parado no ponto de entrada (repetível): 7,00 → 6,87 |
+| 9 Bay | 8,0 (parado) | 8,0 | morre andando nas duas |
+| 12 Castle | 9,2 | 12,8 | a 0.9.75 morre 3 vezes na janela: não comparável |
+| 4, 5, 6, 10, 11 | – | – | o Keen morre em 2–3 s no roteiro (e parado), nas duas ROMs: sem medição válida (fase 10: 0 renders) |
+
+Conclusão: o piso de 30 fps a 5,37 MHz **só vale no Hill**. Nas demais fases o desenho de atores/cenário domina e o jogo roda a 5–14 fps; os ganhos desta série (ActorsDraw, trampolina de banco, Columns) rendem +25–40% nas fases 2, 3 e 12, e nada nas 7, 8 e 9. Fase 8 (Grove) parada: ≈7 fps com 9% do VDP ocupado — o gargalo é CPU, não VDP.
+Limite do método: parado/andando em janelas curtas e sem rota de jogo real; fases com mortes súbitas precisam de roteiro que evite os inimigos.
