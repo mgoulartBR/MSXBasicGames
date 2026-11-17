@@ -721,3 +721,19 @@ Roteiro: o Keen vai e volta a cada 1,5 s e segura/solta o pulo a cada 0,5 s (`BE
 
 Nota fase 8: os trajetos divergem (0.9.75 fica junto à parede esquerda, x≈40 px; 0.9.81/0.9.83 chegam a x≈160 px, com mais cenário e inimigos na tela), então a queda não prova regressão. Medição repetível com o Keen parado no ponto de entrada: 7,00 (0.9.75) → 6,77 (0.9.81) → 6,87 (0.9.83) fps, mesma posição final (x=768, y=8463) nas três ROMs.
 Conclusão: a série dá +30–60% na maioria das fases, mas só o Hill passa de 30 fps; as fases 4, 5, 6 e 10 ficam em 24–27 fps, as 3 e 9 em 14–18, e as fases 2, 7, 8 e 12 continuam abaixo de 10 fps.
+
+## Perfil da fase 8 (Grove) a 5,37 MHz — Keen parado no ponto de entrada (0.9.83)
+
+Cenário repetível (resultado idêntico em duas execuções): 6,87 fps, `DrawScene` 66 ms por chamada (45% da janela), `ActorsPrepare` 48 ms, `CombatTick` 3,9 ms × 2099 chamadas (27%), VDP só 4% ocupado: o gargalo é CPU. Amostragem de PC (42 785 amostras):
+| % | função / linha |
+|---|---|
+| 17,2 | `LineISR` — 13,6 pontos no laço de espera do FH (timeout) |
+| 19,8 | `GroveStatic` — 18,0 na linha `for(i=0;i<34;++i){bit=i<32?1UL<<i:…}` (34 bônus, deslocamentos de 32 bits e dois testes por volta) |
+| 13,4 | `GroveTick` — 12,8 no laço de 39 atores só para testar `a->active` |
+| 6,8 | `GroveStaticPut` (teste de visibilidade por pickup/bônus) |
+| 5,5 | `GroveSelect` — laço de 39 atores com `>>4` e subtrações de 16 bits |
+| 5,2 | `Game_Tick2` |
+| 2,8 | `GroveCollect` |
+| 2,6 | `VDP_CommandWait` |
+Só os 3 laços de Grove (`GroveStatic` 18%, `GroveTick` 12,8%, `GroveSelect` 5,5%) somam ≈36% do tempo; todos são varreduras de listas de itens que quase nunca mudam.
+Achado extra: a `LineISR` gastava 17% porque, com o quadro lento, a interrupção de linha chegava atrasada e a rotina entrava (na verdade no vblank, com FH ainda marcado) e girava até 256 voltas esperando um FH que não viria mais. 0.9.84-lineisr2: no caminho com FH marcado lê-se VR (S#2 bit 6) e abandona se estiver no vblank, e o limite do laço caiu de 256 para 120 voltas (≥2× a espera legítima a 5,37 MHz). `LineISR` 17,2% → 4,6% na fase 8; `DrawScene` 66 → 53 ms por chamada; fps medido 6,87 → 6,97 (a métrica só conta quadros apresentados; com o quadro lento ela é limitada pelo que muda na cena). Hill, PAL e 7,16 MHz inalterados (30,42 / 31,08 / 37,73 fps; barra com 0 pixels diferentes em 16 capturas cada; `attrcheck` 0 corrompidas). SHA256 `1e6ef503128db5ff9230f0264e11686400e667c47320c3c55e0dd0c4aa7fe07a`.
