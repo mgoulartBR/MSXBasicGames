@@ -117,7 +117,7 @@ proc bcall_hit {} {
 }
 proc cd_io {} {set pc [reg PC];if {$pc>=$::env(BENCH_ISRLO) && $pc<=$::env(BENCH_ISRHI)} {return};if {$::cdph ne ""} {lappend ::cdlog($::cdn,$::cdph) "[expr {$::wp_last_value}]"}}
 proc cd_enter {ph} {if {[debug read memory 0xC004]!=114} {return};if {$ph eq "C"} {incr ::cdn};set ::cdph $ph}
-proc cd_exit {} {if {[debug read memory 0xC004]!=114} {return};if {([reg F]&1)==0} {set ::cdph ""}}
+proc cd_exit {} {if {[debug read memory 0xC004]!=114} {return};if {[info exists ::env(BENCH_COLEXITALWAYS)] || ([reg F]&1)==0} {set ::cdph ""}}
 proc w16 {a} {return [expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}]}
 proc hs_snap {} {
  set ::hs_s {}
