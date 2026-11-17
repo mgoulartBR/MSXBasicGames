@@ -618,3 +618,11 @@ Folga de RAM: 0xEFFD de 0xF000 (3 bytes).
 
 `ReadInput` custa 0,6% do quadro (0,23 ms, `mkprof.py`), não 2,9%. O "2,9% em `Keyboard_Read`" da amostragem de PC era atribuição errada: a tabela de símbolos agrupava no último símbolo anterior o código seguinte (a trampolina de chamada entre bancos, `___sdcc_bcall_ehl`, em 0x7CE8, e `set_bank`). Um `ReadInput` com 4 leituras de linha em vez de 11 foi testado: 25,30 → 25,43 fps (dentro do ruído); revertido, a 0.9.78 continua a mais recente.
 Achado útil da correção: custo real de **chamadas entre bancos** ≈ 4,2% do quadro (`___sdcc_bcall_ehl` 2,26% + `set_bank` 1,47% + `get_bank` 0,43%), mais `MapTileKernel` 4,3% e `LineISR` 5,7% (ambos reais).
+
+## 0.9.79-combat — laço dos atores de Hill desenrolado em `CombatTick`
+
+SHA256 `c36d7345984d36b322ed3df94f2f9a967bd195fe8245200ca5a23395c2a30025`.
+
+Perfil por linha: 3,7% do quadro estava nas duas linhas que percorrem os 4 `hill_actors` (passo e contato). O laço usava um ponteiro `static` em RAM e re-lia `active_level` a cada volta. Como `hill_actors` fica em endereço fixo (`world_map+9600`), os dois laços viraram 4 expansões de macro (`HSTEP(n)`/`HCONTACT(n)`) com endereçamento absoluto; a lógica é a mesma (inativo ⇒ `vx=0`, senão `Carrot()`; contato só se ativo e `state==0`).
+
+Medição (Hill, mesmo cenário, 30 s): `CombatTick` 1,74 → 1,25 ms por chamada. 5,37 MHz **25,3 → 26,3 fps (+3,8%)**; 7,16 MHz 34,6 → 35,7; 3,58 MHz 8,6 → 10,9 (ali o combate pesa mais). `attrcheck` 0 corrompidas (fases 1, 2, 3); capturas das fases 1–3 normais. Não comparei o estado do jogo tick a tick com a ROM anterior (a posição final do Keen no roteiro difere em 2 unidades, esperado: o roteiro depende de tempo).
