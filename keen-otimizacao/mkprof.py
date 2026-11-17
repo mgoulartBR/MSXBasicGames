@@ -180,18 +180,17 @@ proc gvn_check {} {
  incr ::gvn_n;if {[reg A]!=$e} {incr ::gvn_bad}
 }
 proc gvb_enter {} {
- if {[debug read memory 0xC004]!=45} {return}
- set ::gvb_out [reg HL];set pc [reg PC];set tab [w16 [expr {$pc+11}]]
- set ::gvb_taken [expr {[w16 $::bonus_taken_a]+65536*[w16 [expr {$::bonus_taken_a+2}]]}];set ::gvb_hi [debug read memory [expr {$::world_collision+1151}]]
+ set ::gvb_out [reg HL];set tab [w16 $::gv_cax];set ::gvb_n34 [w16 $::gv_car]
+ set tp [w16 $::gv_cwy];set ::gvb_stride [debug read memory $::gv_cwx];set ::gvb_taken [expr {[w16 $tp]+65536*[w16 [expr {$tp+2}]]}];set ::gvb_hi [debug read memory [expr {$::world_collision+1151}]]
  set ::gvb_cx [w16 $::camera_px];set ::gvb_cy [w16 $::camera_py];set ::gvb_tab $tab
  gv_ret gvb_check
 }
 proc gvb_check {} {
  set exp {}
- for {set i 0} {$i<34} {incr i} {
+ for {set i 0} {$i<$::gvb_n34} {incr i} {
   set tk [expr {$i<32 ? ($::gvb_taken>>$i)&1 : ($::gvb_hi>>($i-32))&1}]
   if {$tk} {continue}
-  set a [expr {$::gvb_tab+5*$i}];set x [w16 $a];set y [w16 [expr {$a+2}]]
+  set a [expr {$::gvb_tab+$::gvb_stride*$i}];set x [w16 $a];set y [w16 [expr {$a+2}]]
   set dx [expr {($x-$::gvb_cx)&0xFFFF}];set dy [expr {($y-$::gvb_cy)&0xFFFF}]
   if {(($dx+382)&0xFFFF)<638 && (($dy+382)&0xFFFF)<574} {lappend exp $i}
  }
@@ -250,7 +249,7 @@ if {[info exists ::env(BENCH_BC)]} {array set ::bcn {};debug set_bp $::env(BENCH
 if {[info exists ::env(BENCH_COLDIAG)]} {lassign $::env(BENCH_COLDIAG) aC aA aX;set ::cdn 0;set ::cdph "";debug set_watchpoint write_io 0x9B {} {cd_io};debug set_watchpoint write_io 0x99 {} {cd_io};debug set_bp $aC {} {cd_enter C};debug set_bp $aA {} {cd_enter A};debug set_bp $aX {} {cd_exit}}
 if {[info exists ::env(BENCH_HSDIAG)]} {lassign $::env(BENCH_HSDIAG) hsa hse;set ::hs_enemy $hse;set ::hs_n 0;set ::hs_bad 0;set ::hs_tr 0;debug set_bp $hsa {} {hs_enter}}
 if {[info exists ::env(BENCH_HCDIAG)]} {set ::hc_n 0;set ::hc_bad 0;set ::hc_vis 0;debug set_bp $::env(BENCH_HCDIAG) {} {hc_enter}}
-if {[info exists ::env(BENCH_GVDIAG)]} {lassign $::env(BENCH_GVDIAG) gva gvn gvb bta;set ::bonus_taken_a $bta;foreach v {gvs_n gvs_tr gvs_bad gvn_n gvn_bad gvb_n gvb_items gvb_bad} {set ::$v 0};debug set_bp $gva {} {gvs_enter};debug set_bp $gvn {} {gvn_enter};debug set_bp $gvb {} {gvb_enter}}
+if {[info exists ::env(BENCH_GVDIAG)]} {lassign $::env(BENCH_GVDIAG) gva gvn gvb bta cax car cwx cwy;set ::gv_cwx $cwx;set ::gv_cwy $cwy;set ::gv_cax $cax;set ::gv_car $car;set ::bonus_taken_a $bta;foreach v {gvs_n gvs_tr gvs_bad gvn_n gvn_bad gvb_n gvb_items gvb_bad} {set ::$v 0};debug set_bp $gva {} {gvs_enter};debug set_bp $gvn {} {gvn_enter};debug set_bp $gvb {} {gvb_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
 proc shotlog {t f} {screenshot -raw $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {for {set k 0} {$k<29} {incr k} {set b [expr {$::actors_old+$p*174+$k*6}];if {[byte [expr {$b+5}]]&1} {puts $q "act p$p slot$k x=[word $b] y=[word [expr {$b+2}]] frame=[byte [expr {$b+4}]]"}};set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};binary scan [debug read_block "VDP palette" 0 32] cu* pl;puts $q "palette [join $pl { }]";binary scan [debug read_block "VDP regs" 0 32] cu* rg;puts $q "regs [join $rg { }]";puts $q "vdp_fast=[expr {[info exists ::vdp_fast]?[byte $::vdp_fast]:-1}]";puts $q "ph=[expr {[info exists ::bar_ph]?[byte $::bar_ph]:-1}]";puts $q "bar=[expr {[info exists ::bar_on]?[byte $::bar_on]:-1}] cur=[expr {[info exists ::cur_r2]?"[byte $::cur_r2],[byte $::cur_r23],[byte $::cur_r26],[byte $::cur_r27]":"-"}]";puts $q "lisr=$::lcnt keyi=$::kcnt";puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py] player=[expr {[word $::player_x]>>4}],[expr {[word $::player_y]>>4}] hero_frame=[byte $::hero_frame]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
 proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
