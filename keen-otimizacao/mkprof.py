@@ -113,7 +113,58 @@ proc bcall_hit {} {
 proc cd_io {} {set pc [reg PC];if {$pc>=$::env(BENCH_ISRLO) && $pc<=$::env(BENCH_ISRHI)} {return};if {$::cdph ne ""} {lappend ::cdlog($::cdn,$::cdph) "[expr {$::wp_last_value}]"}}
 proc cd_enter {ph} {if {[debug read memory 0xC004]!=114} {return};if {$ph eq "C"} {incr ::cdn};set ::cdph $ph}
 proc cd_exit {} {if {[debug read memory 0xC004]!=114} {return};if {([reg F]&1)==0} {set ::cdph ""}}
+proc w16 {a} {return [expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}]}
+proc hs_snap {} {
+ set ::hs_s {}
+ foreach base [list {*}[lmap i {0 1 2 3 4 5 6 7 8 9 10} {expr {$::world_map+9600+16*$i}}] $::hs_enemy] {lappend ::hs_s [list $base [w16 $base] [w16 [expr {$base+2}]] [debug read memory [expr {$base+10}]]]}
+ set ::hs_cx [w16 $::camera_px];set ::hs_cy [w16 $::camera_py]
+}
+proc hs_check {} {
+ set lx [expr {(($::hs_cx-96)<<4)&0xFFFF}];set ly [expr {(($::hs_cy-96)<<4)&0xFFFF}]
+ foreach r $::hs_s {
+  lassign $r base x y act
+  set dx [expr {($x-$lx)&0xFFFF}];set dy [expr {($y-$ly)&0xFFFF}]
+  if {$act} {if {$dx>7183 || $dy>6159} {set act 0}} else {if {(($dx-768)&0xFFFF)<=5647 && (($dy-768)&0xFFFF)<=4623} {set act 1}}
+  incr ::hs_n;if {$act!=[lindex $r 3]} {incr ::hs_tr}
+  if {[debug read memory [expr {$base+10}]]!=$act} {incr ::hs_bad}
+ }
+}
+proc hs_enter {} {
+ if {[debug read memory 0xC004]!=15} {return}
+ hs_snap
+ set ra [w16 [reg SP]]
+ set ::hs_bp [debug set_bp $ra {} {hs_check;catch {debug remove_bp $::hs_bp}}]
+}
+proc s16 {v} {return [expr {$v>=32768?$v-65536:$v}]}
+proc hc_enter {} {
+ if {[debug read memory 0xC004]!=15} {return}
+ set ::hc_out [reg HL]
+ set ::hc_s {}
+ foreach i {0 1 2 3 4 5 6 7 8 9 10} {set b [expr {$::world_map+9600+16*$i}];lappend ::hc_s [list $i [w16 $b] [w16 [expr {$b+2}]] [debug read memory [expr {$b+10}]] [debug read memory [expr {$b+11}]] [debug read memory [expr {$b+13}]]]}
+ set ::hc_cx [w16 $::camera_px];set ::hc_cy [w16 $::camera_py];set ::hc_em [debug read memory $::enemy_mode]
+ set ra [w16 [reg SP]]
+ set ::hc_bp [debug set_bp $ra {} {hc_check;catch {debug remove_bp $::hc_bp}}]
+}
+proc hc_check {} {
+ foreach r $::hc_s {
+  lassign $r i x y act fr st
+  set o [expr {$::hc_out+6*$i}];incr ::hc_n
+  set vis 0;set ex 0;set ey 0
+  if {$act && !($::hc_em&2)} {
+   set dx [expr {($x>>4)-$::hc_cx}];set dy [expr {($y>>4)-$::hc_cy}]
+   if {!($dx<-64 || $dx>=280 || $dy<-32 || $dy>=192)} {
+    set vis 1;set off [expr {$i>=4 && $st!=1}]
+    set ex [expr {(($x>>4)-($off?24:0))&0xFFFF}];set ey [expr {(($y>>4)-($off?4:0))&0xFFFF}]
+   }
+  }
+  set got [debug read memory [expr {$o+5}]]
+  if {$got!=$vis} {incr ::hc_bad;continue}
+  if {$vis} {incr ::hc_vis;if {[w16 $o]!=$ex || [w16 [expr {$o+2}]]!=$ey || [debug read memory [expr {$o+4}]]!=$fr} {incr ::hc_bad}}
+ }
+}
 proc finish {} {
+ if {[info exists ::env(BENCH_HCDIAG)]} {set f [open $::env(BENCH_OUT).hc w];puts $f "records=$::hc_n visible=$::hc_vis mismatches=$::hc_bad";close $f}
+ if {[info exists ::env(BENCH_HSDIAG)]} {set f [open $::env(BENCH_OUT).hs w];puts $f "actor_checks=$::hs_n state_changes=$::hs_tr mismatches=$::hs_bad";close $f}
  if {[info exists ::env(BENCH_COLDIAG)]} {set f [open $::env(BENCH_OUT).cd w];foreach k [lsort -dictionary [array names ::cdlog]] {puts $f "$k $::cdlog($k)"};close $f}
  if {[info exists ::env(BENCH_BC)]} {set f [open $::env(BENCH_OUT).bc w];foreach k [array names ::bcn] {puts $f "$k $::bcn($k)"};close $f}
  set f [open $::env(BENCH_OUT).pc w];puts $f [join $::pcs \n];close $f
@@ -159,6 +210,8 @@ proc lisr_exit {} {
 }
 if {[info exists ::env(BENCH_BC)]} {array set ::bcn {};debug set_bp $::env(BENCH_BC) {} {bcall_hit}}
 if {[info exists ::env(BENCH_COLDIAG)]} {lassign $::env(BENCH_COLDIAG) aC aA aX;set ::cdn 0;set ::cdph "";debug set_watchpoint write_io 0x9B {} {cd_io};debug set_watchpoint write_io 0x99 {} {cd_io};debug set_bp $aC {} {cd_enter C};debug set_bp $aA {} {cd_enter A};debug set_bp $aX {} {cd_exit}}
+if {[info exists ::env(BENCH_HSDIAG)]} {lassign $::env(BENCH_HSDIAG) hsa hse;set ::hs_enemy $hse;set ::hs_n 0;set ::hs_bad 0;set ::hs_tr 0;debug set_bp $hsa {} {hs_enter}}
+if {[info exists ::env(BENCH_HCDIAG)]} {set ::hc_n 0;set ::hc_bad 0;set ::hc_vis 0;debug set_bp $::env(BENCH_HCDIAG) {} {hc_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
 proc shotlog {t f} {screenshot -raw $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {for {set k 0} {$k<29} {incr k} {set b [expr {$::actors_old+$p*174+$k*6}];if {[byte [expr {$b+5}]]&1} {puts $q "act p$p slot$k x=[word $b] y=[word [expr {$b+2}]] frame=[byte [expr {$b+4}]]"}};set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};binary scan [debug read_block "VDP palette" 0 32] cu* pl;puts $q "palette [join $pl { }]";binary scan [debug read_block "VDP regs" 0 32] cu* rg;puts $q "regs [join $rg { }]";puts $q "vdp_fast=[expr {[info exists ::vdp_fast]?[byte $::vdp_fast]:-1}]";puts $q "ph=[expr {[info exists ::bar_ph]?[byte $::bar_ph]:-1}]";puts $q "bar=[expr {[info exists ::bar_on]?[byte $::bar_on]:-1}] cur=[expr {[info exists ::cur_r2]?"[byte $::cur_r2],[byte $::cur_r23],[byte $::cur_r26],[byte $::cur_r27]":"-"}]";puts $q "lisr=$::lcnt keyi=$::kcnt";puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py] player=[expr {[word $::player_x]>>4}],[expr {[word $::player_y]>>4}] hero_frame=[byte $::hero_frame]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
 proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
