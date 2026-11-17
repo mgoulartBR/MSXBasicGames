@@ -792,3 +792,17 @@ Observação de método: as verificações `attrcheck`/capturas feitas com a 0.9
 | 11 Boobus | 4,6 | 4,7 | +2% |
 | 12 Castle | 6,3 | 10,3 | +65% |
 (Fase 3: o último ponto não renderiza em nenhuma ROM — posição inválida; fase 10: o primeiro ponto também.) As fases com pouco ganho são justamente as que ainda não receberam a varredura em Z80: **2 (Mines), 3 (Bridge), 4 (Rapids), 6 (City) e 11 (Boobus)**.
+
+## Perfil das fases 2, 3, 4, 6 e 11 (posição controlada) e 0.9.89-lists
+
+SHA256 `b5471117440a1b82aa9e6d797f02d22ac3aefa0bdd28ff2fa7cc339e7a3b0c9f`.
+
+Perfil a 5,37 MHz nos pontos de parada (`pq*`; janela total / chamadas):
+- **Fase 2 Mines** (7,6 fps): `RingScene` 24,9% da janela (50 ms por chamada, VDP 12% ocupado), `DrawScene` 43%; `CombatTick` 16%; por amostra: `Game_Tick` 6,5, `CartStep` 5,4, `MapTileKernel` 5,0, `Rows` 4,9, `cart_cache_valid` 4,1, `MinesTick` 3,4, `CartContact` 2,8, `KeyDoorTick` 2,7.
+- **Fase 3 Bridge**: o ponto de parada da saída acaba a fase (`LevelComplete`/`WorldMap` aparecem no perfil); `VDP_CommandWait` 12,5%, `BridgeTick` 2,3.
+- **Fase 4 Rapids** (7,3 fps): `RapidObjectsTick` 9,8%, `RapidTick` 4,1, `RapidObjectTouch` 3,5, `VDP_CommandWait` 8,2.
+- **Fase 6 City** (5,7 fps): `CombatTick` 31,8% da janela (4,6 ms × 3 051), `RingScene` 28%; `CityTick` 6,7, `DictionaryMapTile` 6,1, `CityObjectsTick` 4,5.
+- **Fase 11 Boobus** (4,6 fps): `RingScene` 56,5% (141 ms por chamada), `VDP_CommandWait` 26,8%, `BoobusTick` 12,4, `VPF` 10,3, `BoobusTexture` 4,7; VDP 37% ocupado.
+
+Mudanças (0.9.89): `ActorNext` (Z80, cópia por módulo em `actornext.inc`) nos laços de atores de Mines, Bridge, City e Rapids; `ObjTouch` (Z80, `objtouch.inc`) nos testes de chaves/portas/bombas de Rapids, Pass, Castle (e nas bombas de Grove/Swamp). A fase 6 (`s50`, banco com 87 bytes livres) ficou sem `ObjTouch` nem Apple: o banco estourava em 91 bytes; o banco fixo tem 12 bytes livres (por isso as rotinas são cópias por módulo, não compartilhadas). Oráculos: `ActorNext` 3 796 / 2 654 / 10 608 / 6 039 chamadas (Mines/Bridge/City/Rapids), 0 divergências; `ObjTouch` 13 266 (8 verdadeiros) / 7 043 (6) / 3 811 (1) chamadas em Rapids/Castle/Pass com o Keen posto sobre os objetos, 0 divergências.
+Medição com posição controlada, agora com regime estável (renders/s depois de 1,5 s de cada teletransporte, 0.9.75 → 0.9.89): fase 1 10,2 → 17,5; fase 2 7,0 → 8,2; fase 3 3,6 → 5,1; fase 4 6,7 → 7,5; fase 6 4,9 → 5,1; fase 11 4,0 → 3,9. Os ganhos de lógica são pequenos nessas fases porque o quadro é dominado pelo anel (`RingScene` 25–56%, VDP 12–37%) e, na 6, pelo `CombatTick`. Regressão: Hill 30,42 / PAL 31,04 fps; barra 0 pixels diferentes; `attrcheck` 0 corrompidas com quadros em todas as fases (renders > 0); volta ao mapa OK; fases 5 e 12 sem congelar em 50 s invulnerável.
