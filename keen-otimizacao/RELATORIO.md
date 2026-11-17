@@ -639,3 +639,10 @@ Duas mudanças:
 
 Medição (Hill, mesmo cenário, 30 s): 5,37 MHz **26,3 → 27,3 fps (+4%)**; 7,16 MHz 35,7 → 36,9; 3,58 MHz 10,9 → 10,9; PAL 5,37 MHz 28,0. `attrcheck` 0 corrompidas (Hill nos 3 clocks e PAL; fases 2–12 a 5,37 MHz); barra com 0 pixels diferentes (PAL 5,37 MHz, 4 capturas); volta ao mapa (`retmap.py`) igual à 0.9.77.
 Limite: a trampolina nova assume o mesmo mapeamento ASCII16 (registrador em 0x77FF, cópia do banco em 0xC004) que `set_bank` do crt0; mudar o crt0 exige rever as duas.
+
+## Análise de `Columns` e `MapTileKernel` (0.9.80, 5,37 MHz; sem alteração de código)
+
+Chamadas a `MapTile` em 30 s de Hill (`BENCH_BC`+`BENCH_RA` em `mkprof.py`, chave = endereço de retorno): ≈41 mil no total, das quais ≈8,7 mil vêm de `HotInit` (verificação única na carga do nível, fora do laço do jogo). No jogo: física (`Wall`, uma chamada em `game.c`) 15,3 mil ≈ 500/s ≈ 14 por tick de 35 Hz; `Columns` 12,1 mil (3 pontos de chamada: avanço vertical, laço de fusão sólida, laço de fusão de cópia); `HWPrepare` 3,5 mil (cache de colisão do herói); `Rows` ≈0,8 mil.
+`MapTile` é um desvio `ld de,(hot_entry); push de; ret` (≈41 T) para o núcleo (`MapTileKernel`, cópia em RAM): ≈120 T, dos quais ≈75 T são o laço `srl d/rr e` (deslocamento de 0–7 bits, média 3,5 voltas × 29 T). Total ≈210 T por consulta ≈ 4,9% do quadro (4,2% núcleo + 0,7% desvio).
+`Columns`: 7,4% do quadro só no próprio código (≈1000 T por tile: aritmética de 16 bits com variáveis `static` + montagem do comando de VDP), espalhado por 20 linhas, nenhuma passa de 0,8%.
+Opções avaliadas (ganho estimado em fps, risco): (a) chamar o núcleo direto nos 4 pontos quentes e trocar o laço de deslocamento por salto calculado: +1 a +1,5%, baixo; (b) cache da coluna de tiles entre quadros em `Columns`: tira ≈1,2% de `MapTile`, mas a RAM do build está a 3 bytes do limite e o cache usa ≈28; (c) reescrever o laço interno de `Columns` em Z80: até +3 a +4%, alto esforço (montagem de comandos de VDP e três variantes de cópia).

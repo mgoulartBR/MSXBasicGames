@@ -107,7 +107,7 @@ proc regtest {} {
 }
 proc bcall_hit {} {
  set ra [expr {[debug read memory [reg SP]]+256*[debug read memory [expr {[reg SP]+1}]]}]
- set k [format "%04X:%d:ret%04X" [reg HL] [reg E] $ra]
+ if {[info exists ::env(BENCH_RA)]} {set k [format "ret%04X:%d" $ra [debug read memory 0xC004]]} else {set k [format "%04X:%d:ret%04X" [reg HL] [reg E] $ra]}
  if {[info exists ::bcn($k)]} {incr ::bcn($k)} else {set ::bcn($k) 1}
 }
 proc finish {} {
