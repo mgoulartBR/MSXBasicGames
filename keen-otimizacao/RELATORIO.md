@@ -613,3 +613,8 @@ O perfil mostrou que o custo de `HWUpload` (5,5%) estava nas linhas que montam a
 
 Medição (Hill, mesmo cenário, 30 s): 5,37 MHz **23,4 → 25,3 fps (+8%)**; 7,16 MHz 31,7 → 34,6 (acima do teto de 30 pela métrica); 3,58 MHz 8,4 → 8,6; PAL 5,37 MHz 25,3. `attrcheck`: 0 tabelas corrompidas em fases 1, 3, 4, 7, 8, 9, 11, 12 (5,37 MHz) e 1 (7,16 MHz, PAL); barra sem diferença (8/8 igual a antes); herói correto em 8 capturas de caminhada.
 Folga de RAM: 0xEFFD de 0xF000 (3 bytes).
+
+## Teclado (item 4 do perfil) — premissa errada, nada alterado
+
+`ReadInput` custa 0,6% do quadro (0,23 ms, `mkprof.py`), não 2,9%. O "2,9% em `Keyboard_Read`" da amostragem de PC era atribuição errada: a tabela de símbolos agrupava no último símbolo anterior o código seguinte (a trampolina de chamada entre bancos, `___sdcc_bcall_ehl`, em 0x7CE8, e `set_bank`). Um `ReadInput` com 4 leituras de linha em vez de 11 foi testado: 25,30 → 25,43 fps (dentro do ruído); revertido, a 0.9.78 continua a mais recente.
+Achado útil da correção: custo real de **chamadas entre bancos** ≈ 4,2% do quadro (`___sdcc_bcall_ehl` 2,26% + `set_bank` 1,47% + `get_bank` 0,43%), mais `MapTileKernel` 4,3% e `LineISR` 5,7% (ambos reais).
