@@ -626,3 +626,16 @@ SHA256 `c36d7345984d36b322ed3df94f2f9a967bd195fe8245200ca5a23395c2a30025`.
 Perfil por linha: 3,7% do quadro estava nas duas linhas que percorrem os 4 `hill_actors` (passo e contato). O laço usava um ponteiro `static` em RAM e re-lia `active_level` a cada volta. Como `hill_actors` fica em endereço fixo (`world_map+9600`), os dois laços viraram 4 expansões de macro (`HSTEP(n)`/`HCONTACT(n)`) com endereçamento absoluto; a lógica é a mesma (inativo ⇒ `vx=0`, senão `Carrot()`; contato só se ativo e `state==0`).
 
 Medição (Hill, mesmo cenário, 30 s): `CombatTick` 1,74 → 1,25 ms por chamada. 5,37 MHz **25,3 → 26,3 fps (+3,8%)**; 7,16 MHz 34,6 → 35,7; 3,58 MHz 8,6 → 10,9 (ali o combate pesa mais). `attrcheck` 0 corrompidas (fases 1, 2, 3); capturas das fases 1–3 normais. Não comparei o estado do jogo tick a tick com a ROM anterior (a posição final do Keen no roteiro difere em 2 unidades, esperado: o roteiro depende de tempo).
+
+## 0.9.80-banks — menos travessias de banco
+
+SHA256 `89e7ea16160f4be4c5d813d98328afd568163122655909d906d5fc434e1032ab`.
+
+Contagem das chamadas entre bancos (`BENCH_BC` em `mkprof.py`: ponto de parada na trampolina, alvo = HL/E): 37 318 chamadas em 30 s de Hill a 5,37 MHz (≈47 por quadro desenhado), ≈180 T cada ⇒ 4,2% do tempo. Mais frequentes: `KeyDoorTick` 3522, `CombatTick` 3521, `HillTick` 3521, `LevelSelect`/`HillSelect`/`TomatoSelect`/`ReadInput`/`FollowCamera` 2001 cada, `BonusTick` 1760, `HudDirty` 1103, `HudDamage` 783, `BarDraw` 790.
+
+Duas mudanças:
+1. **Portões no chamador** (mesmo efeito, sem a chamada): `KeyDoorTick` não roda nas fases 1, 3, 9, 10, 11 (não faz nada nelas); `BarDraw` só quando placar/vidas/munição mudaram (variáveis de cache exportadas); `HudDirty`/`HudDamage` pulados com a barra fixa (`hardware_scroll && bar_ok`); `TomatoSelect` só nas fases 2, 4, 12 (nas outras só zera `tomato_count`/`tomato_budget`, como antes). 26,27 → 26,70 fps.
+2. **Trampolina própria** `___sdcc_bcall_ehl` (em `main.c`, banco fixo) no lugar da da biblioteca do SDCC: mesmo contrato (e = banco, hl = função; preserva A/F, usa BC depois do retorno), mas com `get_bank`/`set_bank` embutidos (3 pares call/ret a menos por chamada). 26,70 → 27,33 fps.
+
+Medição (Hill, mesmo cenário, 30 s): 5,37 MHz **26,3 → 27,3 fps (+4%)**; 7,16 MHz 35,7 → 36,9; 3,58 MHz 10,9 → 10,9; PAL 5,37 MHz 28,0. `attrcheck` 0 corrompidas (Hill nos 3 clocks e PAL; fases 2–12 a 5,37 MHz); barra com 0 pixels diferentes (PAL 5,37 MHz, 4 capturas); volta ao mapa (`retmap.py`) igual à 0.9.77.
+Limite: a trampolina nova assume o mesmo mapeamento ASCII16 (registrador em 0x77FF, cópia do banco em 0xC004) que `set_bank` do crt0; mudar o crt0 exige rever as duas.
