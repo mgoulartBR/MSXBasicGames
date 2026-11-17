@@ -767,3 +767,28 @@ SHA256 `ffe98cc1e13112440d9bcd7d84df9aa34aea2c56f4bb71d6aae92dc3166fb205`.
 3. **`BonusList`** (8,4% do tempo na fase 7): o teste de `x` passou a vir primeiro (um `sbc` contra `camera_px−382` e comparação por bytes), depois o de `y`, e só os poucos candidatos pagam o teste do bit `taken`. Oráculo: fases 7/8/9/12 a 7,16 MHz, 2 624 / 3 272 / 1 958 / 2 682 chamadas, 0 divergências; fase 7 a 7,16 MHz 20,2 → 22,3 fps.
 Medição (andando e pulando, 25 s, 5,37 MHz; 0.9.75 → 0.9.87): fase 7 **8,0 → 16,4**; fase 8 **6,3 → 18,4**; fase 9 11,0 → 15,4; fase 12 5,8 → 9,5 (o Keen perde as vidas na janela). Hill 30,42 / PAL 31,08 fps; `attrcheck` 0 corrompidas nas fases 2–12; barra 0 pixels diferentes em 20 capturas (uma captura isolada de 8 mostrou 19 pixels diferentes numa varredura e não se repetiu em duas varreduras de 10); volta ao mapa OK.
 Fase 3 (Bridge): os trajetos divergem entre ROMs (a partir da 0.9.81 o Keen cai para outra região) e o fps andando varia entre 11,8 e 18,3 sem relação com as mudanças; a medição repetível dessa fase precisa de roteiro com posição controlada.
+
+## 0.9.88-fix — defeito de congelamento na barra (0.9.76–0.9.87) e roteiro de posição controlada
+
+SHA256 `8f6877e7d4a8ec51a6838c611791527595b62bc8b10704486355c1b1111b26bb`.
+
+**Defeito corrigido (grave).** O novo roteiro (abaixo) travou a fase 5 com a 0.9.87: a máquina entrava em tempestade de interrupções (PC preso na ISR da BIOS e no gancho H.KEYI; o jogo parava de andar). Causa: corrida na barra. `BarOn` escrevia R#0 (IE1) **antes** de `bar_on=1`; se o FH estivesse marcado de quadros anteriores (o R#19 continua casando linhas mesmo com IE1 desligado), a interrupção de linha chegava com `bar_on==0`, a `LineISR` saía sem ler S#1, o FH ficava marcado, a linha de interrupção continuava ativa e o processador só executava a ISR. Era uma janela de poucos ciclos que dependia da fase do quadro (a troca de `simulation_ticks%20` por `Mod40` em `pass.c` mudou o tempo e a expôs na fase 5), mas existe desde a 0.9.76 e podia congelar o jogo em hardware real.
+Correção: (1) `BarOn` grava `bar_on=1` e só depois R#0; `BarOff` desliga R#0 e só depois zera `bar_on`; (2) a `LineISR`, com a barra desligada, passa a ler S#1 (reconhece o FH) antes de sair; R#15 volta a 0 como nos outros caminhos. Verificação: fase 5 em modo invulnerável 70 s sem travar (antes: travava em 15–30 s com `Mod40` em `pass.c`); todas as fases passam a produzir quadros (renders > 0) no teste de capturas; Hill 30,42 / PAL 31,04 / 7,16 MHz 37,73 fps; barra com 0 pixels diferentes (8 capturas × 3 configurações); `attrcheck` 0 corrompidas; volta ao mapa OK.
+Observação de método: as verificações `attrcheck`/capturas feitas com a 0.9.86–0.9.87 na fase 5 usaram arquivos de execuções anteriores (a execução não produzia quadros e não sobrescrevia as capturas); agora cada execução é conferida por `renders`.
+
+**Roteiro de posição controlada** (`BENCH_GOD`, `BENCH_TRACK`, `BENCH_CKPT`/`BENCH_SEG` em `mkprof.py`; `trackall.sh`, `ckall.sh`, `ckpts.json`): o Keen é invulnerável (escrita em `death_ticks` é desfeita por um watchpoint), uma corrida de 90 s na 0.9.75 grava a posição a cada 2 s, e dessas posições saem 4–14 pontos de parada por fase (`ckpts.json`). Cada medição teleporta o Keen a cada ponto (velocidade zero) e o faz andar e pular por 3 s; o fps é renders/s por segmento e o total é renders ÷ tempo. A teletransporte refaz o anel a cada ponto, então os valores absolutos são menores que andando de verdade, mas a comparação entre ROMs é repetível. Resultado a 5,37 MHz (0.9.75 → 0.9.88):
+| Fase | 0.9.75 | 0.9.88 | |
+|---|---|---|---|
+| 1 Hill | 9,1 | 14,9 | +63% |
+| 2 Mines | 6,8 | 7,4 | +9% |
+| 3 Bridge | 5,1 | 6,1 | +21% |
+| 4 Rapids | 6,8 | 7,2 | +6% |
+| 5 Pass | 10,1 | 12,0 | +18% |
+| 6 City | 4,6 | 5,9 | +29% |
+| 7 Apple | 6,7 | 10,9 | +63% |
+| 8 Grove | 3,7 | 8,5 | +129% |
+| 9 Bay | 8,7 | 11,2 | +29% |
+| 10 Swamp | 7,0 | 11,0 | +57% |
+| 11 Boobus | 4,6 | 4,7 | +2% |
+| 12 Castle | 6,3 | 10,3 | +65% |
+(Fase 3: o último ponto não renderiza em nenhuma ROM — posição inválida; fase 10: o primeiro ponto também.) As fases com pouco ganho são justamente as que ainda não receberam a varredura em Z80: **2 (Mines), 3 (Bridge), 4 (Rapids), 6 (City) e 11 (Boobus)**.

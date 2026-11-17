@@ -74,6 +74,9 @@ proc begin {} {
  if {[info exists ::env(BENCH_PLACE)]} {place {*}$::env(BENCH_PLACE)}
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
  if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk;if {[info exists ::env(BENCH_JUMPT)]} {jumper}}
+ if {[info exists ::env(BENCH_GOD)]} {debug set_watchpoint write_mem $::death_ticks {} {if {[debug read memory $::death_ticks]!=0} {debug write memory $::death_ticks 0;incr ::god_hits}}}
+ if {[info exists ::env(BENCH_TRACK)]} {track}
+ if {[info exists ::env(BENCH_CKPT)]} {set ::ck_list $::env(BENCH_CKPT);set ::ck_k 0;set ::ck_log {};ckpt}
  if {[info exists ::env(BENCH_PC)]} {sample}
  if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list shotlog $t [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
  if {[info exists ::env(REGOUT)]} {after time 1 regtest} else {after time $::env(BENCH_SECS) finish}
@@ -199,6 +202,26 @@ proc gvb_check {} {
  if {$got ne $exp} {incr ::gvb_bad}
 }
 proc m40_enter {} {set ::m40_t [reg HL];set ra [w16 [reg SP]];set ::m40_bp [debug set_bp $ra {} {incr ::m40_n;if {[reg A]!=($::m40_t%40)} {incr ::m40_bad};catch {debug remove_bp $::m40_bp}}]}
+set ::god_hits 0
+proc track {} {
+ if {$::phase<0} {return}
+ set o [open $::env(BENCH_OUT).trk a];puts $o "[expr {[word $::raw_player_x]/16}] [expr {[word $::raw_player_y]/16}]";close $o
+ after time $::env(BENCH_TRACK) track
+}
+proc ckpt {} {
+ if {$::phase<0} {return}
+ set n [expr {[llength $::ck_list]/2}]
+ set rc [word $::render_count];set t [machine_info time]
+ if {$::ck_k>0} {lappend ::ck_log [list [expr {$::ck_k-1}] [expr {$rc-$::ck_rc}] [expr {$t-$::ck_t}]]}
+ if {$::ck_k>=$n} {
+  set o [open $::env(BENCH_OUT).ck w]
+  foreach r $::ck_log {puts $o "seg [lindex $r 0] renders [lindex $r 1] secs [format %.2f [lindex $r 2]] fps [format %.2f [expr {[lindex $r 1]/[lindex $r 2]}]]"}
+  close $o;return}
+ set ::ck_rc $rc;set ::ck_t $t
+ place [lindex $::ck_list [expr {2*$::ck_k}]] [lindex $::ck_list [expr {2*$::ck_k+1}]]
+ incr ::ck_k
+ after time $::env(BENCH_SEG) ckpt
+}
 proc finish {} {
  if {[info exists ::env(BENCH_M40)]} {set f [open $::env(BENCH_OUT).m4 w];puts $f "mod40 calls=$::m40_n mismatches=$::m40_bad";close $f}
  if {[info exists ::env(BENCH_GVDIAG)]} {set f [open $::env(BENCH_OUT).gv w];puts $f "select: actor_checks=$::gvs_n state_changes=$::gvs_tr mismatches=$::gvs_bad | next: calls=$::gvn_n mismatches=$::gvn_bad | bonuslist: calls=$::gvb_n listed_items=$::gvb_items mismatches=$::gvb_bad";close $f}
