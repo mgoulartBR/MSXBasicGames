@@ -651,3 +651,12 @@ Opções avaliadas (ganho estimado em fps, risco): (a) chamar o núcleo direto n
 
 `MapTile` virou 3 bytes de RAM com `jp nn` (opcode gravado no boot, operando = `hot_entry`), eliminando o desvio `ld de,(hot_entry); push de; ret` (≈31 T por consulta). Medição (Hill, 30 s): 5,37 MHz 27,33 → 27,43 fps (+0,4%); 7,16 MHz 36,87 → 36,97 (+0,3%); 3,58 MHz 10,87 → 10,83. Menos de 0,5%: não vale o risco de código auto-modificável nem 1 byte de RAM (a folga do build é de 3). Trocar o laço de deslocamento do núcleo por salto calculado não rende: deslocar 4 bits por troca de nibble custa ≈85 T contra ≈116 T do laço, e só para 4 ≤ s ≤ 7. Código revertido; a ROM mais recente continua a 0.9.80-banks.
 Erro de método encontrado: `tests/make_*_test.py` precisam do argumento `.` para regenerar `build/*-test.tcl`; sem ele os scripts de teste ficam com endereços de símbolos antigos (isso só trava o harness quando o layout da RAM muda, como aqui; as medições anteriores usaram endereços válidos).
+
+## 0.9.81-lineisr — interrupção de linha armada mais tarde
+
+SHA256 `f5ce7f2001b4a300be2069dbe91f6c3dfe3c6412f561c955c0fe70c3fe23dc58`.
+
+A `LineISR` custa ≈5,7% porque fica em espera ocupada do disparo (linha 175 + latência) até a linha 190, a cada vblank (60 Hz): ≈15 linhas ≈ 0,95 ms. O trecho da barra (linhas 183–189) não encurta (as trocas de R#23 exigem sincronismo por HR), então a única folga é **começar mais tarde**: a linha em que `SoundISR` arma o R#19 passou de 175 para 178 (`sound_irq.c`).
+Varredura do ponto de armamento (16 capturas, linhas 185–191 contra a referência): 179 e 180 funcionam; **181 falha** a 5,37 MHz (a interrupção chega depois da linha 182 e a barra some; a 7,16 MHz falha em parte dos quadros) — o penhasco está em 181 (latência ≈ 3 linhas). Adotado **178** (3 linhas de margem ≈ 190 µs; 179/180 deixam 1–2 linhas).
+Medição (Hill, 30 s): 5,37 MHz **27,33 → 27,57 fps (+0,9%)**; 7,16 MHz 36,87 → 37,03; PAL 5,37 MHz 28,69. Barra com 0 pixels diferentes em 16 capturas (NTSC 5,37 e 7,16 MHz, PAL 5,37 MHz, PAL 7,16 MHz 14 capturas), `attrcheck` 0 corrompidas; retorno ao mapa OK.
+Limite: a margem de 3 linhas foi medida no C-BIOS do openMSX; num MSX real, a latência até `H.KEYI` depende da BIOS e do clock. Se a barra piscar, voltar a 175 (uma constante em `sound_irq.c`, linha do `add a,#178`).
