@@ -604,3 +604,12 @@ Inclusivo por função (`mkprof.py`): `DrawScene` 65,5% da janela (28,1 ms/quadr
 Amostragem de PC (perfil plano, nada passa de 7,3%): `Columns` 7,3 · `CombatTick` 5,8 · **`LineISR` 5,8** · **`HWUpload` 5,6** · `ActorsPrepare` 5,2 · `Game_Tick2` 4,7 · `MapTileKernel` 4,2 · `ActorsCollect` 4,1 · `ActorsDraw` 3,9 · `HillSelect` 3,9 · `VPF` 3,2 · **`HWPrepare` 3,0** · **`Keyboard_Read` 2,9** · `SlotScan` 2,7 · restantes ≤1,8 cada.
 Agrupado: atores/inimigos ≈27%, lógica (combate+física+bônus+mapa) ≈23%, anel/VDP (Columns, VPF, esperas) ≈15%, sprites de hardware do herói (HWUpload+HWPrepare) 8,6%, rotina de linha da barra 5,8%, teclado 2,9%.
 Para ir de 23,3 a 30 fps é preciso cortar ≈22% do tempo de quadro.
+
+## 0.9.78-heroattr — atributos de sprite do herói em Z80 (item 1 do perfil)
+
+SHA256 `82996e31f70773379c11d0f562bc0b00dc3203170c6d15a83a2952a9cf782ff6`.
+
+O perfil mostrou que o custo de `HWUpload` (5,5%) estava nas linhas que montam as entradas de atributos (4,2% do total), não no envio de padrões (já em cache por tabela). `HWAttr` (Z80, em `keen_msx_s21_b1.c`) monta as 16/24 entradas (y, x, padrão, 0) com ponteiros e sem cálculo por entrada (índices de `hero_indices[]` ou sequência de passo 4). Um cache "atributos inalterados" foi tentado e descartado: o herói quase nunca repete (frame, x, y) e a RAM está a 10 bytes do limite do build (`< 0xF000`).
+
+Medição (Hill, mesmo cenário, 30 s): 5,37 MHz **23,4 → 25,3 fps (+8%)**; 7,16 MHz 31,7 → 34,6 (acima do teto de 30 pela métrica); 3,58 MHz 8,4 → 8,6; PAL 5,37 MHz 25,3. `attrcheck`: 0 tabelas corrompidas em fases 1, 3, 4, 7, 8, 9, 11, 12 (5,37 MHz) e 1 (7,16 MHz, PAL); barra sem diferença (8/8 igual a antes); herói correto em 8 capturas de caminhada.
+Folga de RAM: 0xEFFD de 0xF000 (3 bytes).
