@@ -64,14 +64,16 @@ proc sweep {} {
  after time $period sweep
 }
 set ::sk 0
-proc walk {} {if {$::phase<0} {return};set ::dir [expr {1-$::dir}];controls [expr {$::dir?1:2}];after time $::env(BENCH_LEG) walk}
+set ::jp 0
+proc walk {} {if {$::phase<0} {return};set ::dir [expr {1-$::dir}];controls [expr {($::dir?1:2)|($::jp?16:0)}];after time $::env(BENCH_LEG) walk}
+proc jumper {} {if {$::phase<0} {return};set ::jp [expr {1-$::jp}];controls [expr {($::dir?1:2)|($::jp?16:0)}];after time $::env(BENCH_JUMPT) jumper}
 set ::dir 0;set ::phase -1
 proc begin {} {
  set ::phase 0;set ::start [machine_info time];set ::rc0 [word $::render_count];set ::vb0 $::vbusy;set ::vc0 $::vcmds
  foreach {nm a s} $::funcs {set ::s_n_$nm [set ::n_$nm];set ::s_t_$nm [set ::t_$nm]}
  if {[info exists ::env(BENCH_PLACE)]} {place {*}$::env(BENCH_PLACE)}
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
- if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk}
+ if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk;if {[info exists ::env(BENCH_JUMPT)]} {jumper}}
  if {[info exists ::env(BENCH_PC)]} {sample}
  if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list shotlog $t [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
  if {[info exists ::env(REGOUT)]} {after time 1 regtest} else {after time $::env(BENCH_SECS) finish}

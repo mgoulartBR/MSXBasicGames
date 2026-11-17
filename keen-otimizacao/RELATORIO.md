@@ -699,3 +699,25 @@ Roteiro: o Keen vai e volta a cada 1,5 s a partir do ponto de entrada de cada fa
 
 Conclusão: o piso de 30 fps a 5,37 MHz **só vale no Hill**. Nas demais fases o desenho de atores/cenário domina e o jogo roda a 5–14 fps; os ganhos desta série (ActorsDraw, trampolina de banco, Columns) rendem +25–40% nas fases 2, 3 e 12, e nada nas 7, 8 e 9. Fase 8 (Grove) parada: ≈7 fps com 9% do VDP ocupado — o gargalo é CPU, não VDP.
 Limite do método: parado/andando em janelas curtas e sem rota de jogo real; fases com mortes súbitas precisam de roteiro que evite os inimigos.
+
+## Outras fases a 5,37 MHz — andando e pulando (0.9.75 × 0.9.83, `jumpall.sh`)
+
+Roteiro: o Keen vai e volta a cada 1,5 s e segura/solta o pulo a cada 0,5 s (`BENCH_JUMPT=0.5` em `mkprof.py`), janela de 25 s, fps = renders/s. Com os pulos o Keen sobrevive na maioria das fases (nas 4, 5, 6, 9, 10 e 11 o contador `defeats` do roteiro marca 4–6 mas `lives`=3 e o Keen termina perto do ponto de entrada: ele morre e reaparece; só a fase 12 termina com 0/255 vidas).
+
+| Fase | 0.9.75 | 0.9.83 | ganho |
+|---|---|---|---|
+| 1 Hill | 22,4 | 32,6 | +45% |
+| 2 Mines | 7,5 | 9,6 | +28% |
+| 3 Bridge | 12,9 | 18,3 | +42% |
+| 4 Rapids | 15,8 | 23,8 | +51% |
+| 5 Pass | 16,4 | 24,0 | +46% |
+| 6 City | 16,2 | 26,5 | +63% |
+| 7 Apple | 8,0 | 8,5 | +5% |
+| 8 Grove | 6,3 | 5,0 | −21% (ver nota) |
+| 9 Bay | 11,0 | 14,4 | +30% |
+| 10 Swamp | 19,4 | 26,6 | +37% |
+| 11 Boobus | 16,8 | 18,6 | +11% |
+| 12 Castle | 5,8 | 6,6 | +14% (o Keen perde as vidas na janela; não confiável) |
+
+Nota fase 8: os trajetos divergem (0.9.75 fica junto à parede esquerda, x≈40 px; 0.9.81/0.9.83 chegam a x≈160 px, com mais cenário e inimigos na tela), então a queda não prova regressão. Medição repetível com o Keen parado no ponto de entrada: 7,00 (0.9.75) → 6,77 (0.9.81) → 6,87 (0.9.83) fps, mesma posição final (x=768, y=8463) nas três ROMs.
+Conclusão: a série dá +30–60% na maioria das fases, mas só o Hill passa de 30 fps; as fases 4, 5, 6 e 10 ficam em 24–27 fps, as 3 e 9 em 14–18, e as fases 2, 7, 8 e 12 continuam abaixo de 10 fps.
