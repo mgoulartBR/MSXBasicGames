@@ -140,7 +140,7 @@ Soldado parado sem HOLD persegue inimigos visíveis a até 5 células (`AGGRO`),
 
 ### 10.5 Desempenho com a IA
 
-Dois defeitos foram achados na medição e corrigidos: `init_world` não zerava `training`/`time` dos prédios (com a IA, `building_count` sobe até 12 e `sim_flags` lia lixo, ligando `production()` em todo tick: 6% da CPU) e `sim_flags` contava canteiros inimigos como trabalho. Depois disso, numa onda de dois soldados (cavaleiro e arqueiro) contra 8 unidades humanas grandes com defesa automática: marcha até o contato por volta de 26 quadros/s; primeiros 6 s de contato 13,5 quadros/s (mediana 69 ms, p90 103 ms); depois cerca de 22,5. Perfil do contato: sprites ~35%, combate ~15%, simulação ~8%, HUD ~3%.
+Dois defeitos foram achados na medição e corrigidos: `init_world` não zerava `training`/`time` dos prédios (com a IA, `building_count` sobe até 12 e `sim_flags` lia lixo, ligando `production()` em todo tick: 6% da CPU) e `sim_flags` contava canteiros inimigos como trabalho. Depois disso, numa onda de dois soldados (cavaleiro e arqueiro) contra 8 unidades humanas grandes com defesa automática: marcha até o contato por volta de 26 quadros/s; primeiros 6 s de contato 13,5 quadros/s (mediana 69 ms, p90 103 ms; depois dos cortes da seção 10.9, 15,1 quadros/s, mediana 60 ms, p90 93 ms); depois cerca de 22,8. Perfil do contato: sprites ~35%, combate ~15%, simulação ~8%, HUD ~3%.
 
 ### 10.6 Testes
 
@@ -152,7 +152,11 @@ Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os te
 - Soldados humanos sem HOLD agora se defendem sozinhos, mas operários não; a IA ataca a unidade ou prédio mais próximo, sem preferir operários.
 - O reinício por `jp 0`, a varredura de teclado desligada e a cópia de tiles da linha 3072 só foram testados no openMSX com C-BIOS.
 - O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados (60,0 s com o canteiro humano). O canteiro humano também ganhou arte própria (136 tiles no pool, bancos 22 e 24); a carga inicial chegou a 60,0 s emulados e depois foi reduzida a 31,5 s (seção 10.8).
-- O pior caso de desempenho (contato com muitas unidades grandes) continua em 13,5 quadros/s por cerca de 6 s.
+- O pior caso de desempenho (contato com muitas unidades grandes) ficou em 15,1 quadros/s por cerca de 6 s (era 13,5).
+
+### 10.9 Custo da luta
+
+O pior caso medido (8 unidades humanas grandes contra cavaleiro e arqueiro inimigos, primeiros 6 s de contato) passou de 74,1 para 66,2 ms por quadro (13,5 → 15,1 quadros/s). Quatro cortes sem mudar regras: HUD sujo só quando o alvo atingido aparece nele, teste de alcance reaproveitado durante a recarga, `sim_flags` a cada 4 ticks e `ae_occ` sem consulta ao pool para prédios humanos prontos. Os demais cenários ficaram iguais dentro do ruído (4 unidades 30,1 quadros/s). O que sobra no contato é desenho de sprites (~40%), combate (~14%) e simulação (~8%); ganhar mais exigiria redesenhar só os atores que mudaram, uma mudança estrutural.
 
 ### 10.8 Tempo de carga
 

@@ -712,7 +712,7 @@ void ae_occ(u8 i) {
     t=fog_art(cx,cy);if(t<64)continue;
     {u8 tt=terrain[((u16)cy<<5)+cx];
      u8 e=255;
-     if(t<201 && tt>=10)e=enemy_tile_of(tt-10,cx,cy);
+     if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
      s2=e!=255?occ_get((u16)OCC_ENEMY+e):occ_get(tile_source[t]-50);}
     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);

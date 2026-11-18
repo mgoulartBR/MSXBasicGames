@@ -320,8 +320,8 @@ Symbol Table
     _mine_turn                                                      ******** GX
   7 _mine_waiter                                                    00000130 R
     _mode                                                           ******** GX
-  7 _move_remainder                                                 000019EC GR
-  7 _move_speed                                                     000019DF GR
+  7 _move_remainder                                                 00001A03 GR
+  7 _move_speed                                                     000019F6 GR
   1 _nav_arg                                                        0000002B R
     _nav_base_dirty                                                 ******** GX
   7 _nav_begin                                                      000003E9 GR
@@ -381,6 +381,7 @@ Symbol Table
   7 _sim_scan                                                       000013DB R
     _sim_ticks                                                      ******** GX
   7 _simulate                                                       00001481 GR
+  1 _simulate_pf_20000_1827                                         00000031 R
     _sprites_dirty                                                  ******** GX
   1 _ss_i                                                           0000002F R
   1 _ss_stage                                                       00000030 R
@@ -417,12 +418,12 @@ Symbol Table
     b_object_size                                                   ******** GX
     b_production                                                    ******** GX
     b_projectile_tick                                               ******** GX
-    b_repair_tick                                                   ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_repair_tick                                                   ******** GX
     b_resource_empty                                            =   0000001F G
     b_simulate                                                  =   0000001F G
     b_tower_tick                                                    ******** GX
@@ -477,13 +478,12 @@ Symbol Table
   7 ss_nr                                                           00001418 R
   7 ss_r                                                            0000143A R
   7 ss_ret0                                                         00001467 R
-  7 ss_ret1                                                         00001471 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-
+  7 ss_ret1                                                         00001471 R
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 10
 Hexadecimal [32-Bits]
@@ -491,13 +491,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       31   flags    0
+   1 _DATA                                      size       32   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG31                                     size     19F9   flags    0
+   7 _SEG31                                     size     1A10   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

@@ -1,5 +1,6 @@
 #include "../shared.h"
 #define LEASH 8 /* an auto-defending soldier gives up a chase this many cells (either axis) from its post and walks back */
+static u16 cc_a[RN],cc_b[RN];static u8 cc_r[RN]; /* last range/line test per attacker: positions and result */
 #define AGGRO 5 /* idle soldiers defend themselves against visible enemies this many cells away (both axes) */
 /* Military roles share the budgeted multi-goal navigator. */
 static u8 target_box(u8 t,u8* x,u8* y,u8* n) {
@@ -59,7 +60,8 @@ void combat_impact(u8 t,u8 damage,u8 owner) __banked {
   hurt_flash[t]=8;if(unit_hp[t]>damage)unit_hp[t]-=damage;else die(t);
  }
  if(t&128)structure_dirty(t&127);
- ++combat_hits;hud_dirty=3;sprites_dirty=3;
+ ++combat_hits;sprites_dirty=3;
+ if(t==enemy_selected || t==selected || ((t&128) && building_selected==(t&127)+1))hud_dirty=3;
 }
 static void strike(u8 i,u8 t) {
  u8 kind=unit_kind[i],damage=military_damage(kind,units[i].owner);
@@ -73,7 +75,7 @@ static void strike(u8 i,u8 t) {
   shot_dx[i]=(i16)x-units[i].x;shot_dy[i]=(i16)y-units[i].y;
   shot_target[i]=t;shot_owner[i]=units[i].owner;shot_damage[i]=damage;shot_time[i]=16;shot_active|=((u16)1<<i);++combat_shots;
  } else combat_impact(t,damage,units[i].owner);
- hud_dirty=3;sprites_dirty=3;
+ sprites_dirty=3; /* the HUD only shows the selected unit/building: combat_impact marks it dirty when that one is hit */
 }
 void combat_init(void) __banked {
  u8 i,x,y;
@@ -87,6 +89,7 @@ void combat_init(void) __banked {
  building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
  for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;
  for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=i==N?3:8;u->y=u->ty=u->ny=23;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
+ {u8 q;for(q=0;q<RN;++q)cc_a[q]=cc_b[q]=0xFFFF;}
  game_over=0;end_enabled=1;auto_defend=1;ai_init();
 }
 u8 combat_hit_test(u16 wx,u16 wy) __banked {
@@ -307,7 +310,7 @@ ct_none:
  __endasm;
 }
 void combat_tick(void) __banked {
- u8 i,j,x,y,n,t,tbv;combat_active=0;
+ u8 i,j,x,y,n,t,tbv,inr,hit;combat_active=0;
  for(i=ct_scan(0);i!=255;i=ct_scan(i+1)) {
   t=combat_target[i];tbv=0;if(t!=NONE)combat_active=1;
   if(t!=NONE) {
@@ -336,9 +339,16 @@ void combat_tick(void) __banked {
    else {order_one(i,auto_hx[i],auto_hy[i]);retry_wait[i]=15;}
   }
   if(t==NONE || (!tbv && !target_box(t,&x,&y,&n)) || units[i].progress)continue;
-  if(unit_range[unit_kind[i]] && !(unit_kind[i]==5 && !(t&128)) && cp_core(i,units[i].x,units[i].y,x,y,n)) {
+  /* While the weapon recharges nothing can strike: reuse the last range/line test until either position changes. */
+  inr=hit=0;
+  if(unit_range[unit_kind[i]] && !(unit_kind[i]==5 && !(t&128))) {
+   u16 sa=((u16)units[i].x<<8)|units[i].y,sb=((u16)x<<8)|y;
+   if(attack_cooldown[i] && cc_a[i]==sa && cc_b[i]==sb){inr=cc_r[i];hit=1;}
+   else {inr=cp_core(i,units[i].x,units[i].y,x,y,n);cc_a[i]=sa;cc_b[i]=sb;cc_r[i]=inr;}
+  }
+  if(inr) {
    if(i<N && (requested[i] || units[i].state==MOVING || job_unit==i))work_stop(i);
-   face(i,x,y);
+   if(!hit)face(i,x,y); /* the facing only changes with the positions: a cache hit means nothing moved */
    if(!attack_cooldown[i] && !shot_time[i])strike(i,t);
   } else if(i<N && !stance[i] && !requested[i] && job_unit!=i && units[i].state!=MOVING && !retry_wait[i]) {
    order_one(i,x,y);retry_wait[i]=15;
