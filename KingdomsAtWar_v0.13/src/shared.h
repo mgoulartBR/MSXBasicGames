@@ -6,7 +6,7 @@
 #include "bios_hook.h"
 #include "v9990.h"
 #define N 8
-#define RN 10
+#define RN 12 /* render/combat actors: 8 human (0..7), 4 enemy (8..11); 10 and 11 are light 32 px soldiers with a single pose block */
 #define PS 16
 extern u8 unit_count;
 #define NONE 255
@@ -96,7 +96,7 @@ extern u8 building_hp[BMAX],building_owner[BMAX],enemy_selected,command_last,com
 extern u16 combat_hits,combat_kills,combat_buildings;
 extern u8 auto_hx[N],auto_hy[N],auto_try[N],game_over,end_enabled; /* 0 playing, 1 victory, 2 defeat */
 void end_check(void) __banked;
-extern u16 ai_wood,ai_gold,ai_launch;extern u8 auto_defend,ai_enabled,ai_step,ai_wave,ai_site,ai_left,ai_state[2],ai_timer[2],ai_stuck[2],ai_dir[2],ai_kind[2];
+extern u16 ai_wood,ai_gold,ai_launch;extern u8 auto_defend,ai_enabled,ai_step,ai_wave,ai_site,ai_left,ai_state[4],ai_timer[4],ai_stuck[4],ai_dir[4],ai_kind[4];
 void ai_init(void) __banked;void ai_second(void) __banked;void ai_move(void) __banked;
 
 u8 building_size(u8 type);

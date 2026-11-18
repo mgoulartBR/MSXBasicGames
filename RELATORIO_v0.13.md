@@ -110,7 +110,6 @@ cd KingdomsAtWar_v0.13 && bash tests/suite012.sh V9990P1
 
 - Jogar partidas reais e ajustar o equilíbrio da IA (a calibração atual é por modelo).
 - Reduzir o custo da luta com muitas unidades grandes: o pior caso medido (13,5 quadros/s por cerca de 6 s) é espalhado entre desenho de sprites (~35%), combate (~15%), simulação (~8%) e HUD (~3%), sem ponto único.
-- Mais de dois soldados inimigos ao mesmo tempo (exige rever o layout de memória de sprites).
 - Testar a P1 em BIOS real, GFX9000 físico e outros emuladores, em especial a varredura de teclado desligada (`SCNCNT`), o reinício por `jp 0` e a cópia de tiles da linha 3072 da VRAM.
 
 ---
@@ -148,11 +147,15 @@ Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os te
 
 ### 10.7 Limites e riscos
 
-- A IA só tem dois soldados por vez: a pressão vem do ritmo e da qualidade. Um jogador competente com 8 unidades e torres deve vencer sempre; um jogador lento ou passivo toma uma onda a cada cerca de 1:20 com cavaleiros a partir dos 5 minutos. O equilíbrio é um chute informado por simulação, não por partidas.
+- A IA tem até quatro soldados por vez (dois pesados e dois reforços leves de 32 px); mais que isso exigiria rever de novo o layout das células de sprite. Um jogador competente com 8 unidades e torres deve vencer sempre; um jogador lento ou passivo toma uma onda a cada cerca de 1:20 com cavaleiros a partir dos 5 minutos. O equilíbrio é um chute informado por simulação, não por partidas.
 - Soldados humanos sem HOLD agora se defendem sozinhos, mas operários não; a IA ataca a unidade ou prédio mais próximo, sem preferir operários.
 - O reinício por `jp 0`, a varredura de teclado desligada e a cópia de tiles da linha 3072 só foram testados no openMSX com C-BIOS.
 - O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados (60,0 s com o canteiro humano). O canteiro humano também ganhou arte própria (136 tiles no pool, bancos 22 e 24); a carga inicial chegou a 60,0 s emulados e depois foi reduzida a 31,5 s (seção 10.8).
 - O pior caso de desempenho (contato com muitas unidades grandes) ficou em 15,1 quadros/s por cerca de 6 s (era 13,5).
+
+### 10.10 Quatro soldados inimigos
+
+`RN` passou de 10 para 12: dois atores novos, reforços leves que só usam poses de 32 px e dividem um bloco 2×2 de buffer único, porque a folha de sprites tem 240 células úteis e os 10 atores com dois blocos 3×3 mais as barras, setas, oclusores, ponteiro e anel já as esgotavam. Foi preciso remanejar as células (barras, setas, cruz, ponteiro, anel) e passar os oclusores a uma tabela. A IA treina os reforços depois dos pesados, só com quartel, e os leva na onda quando prontos. **Custo:** no contato, 2 inimigos pesados com `RN=12` 69,1 ms (14,5 quadros/s), 4 inimigos 99,2 ms (10,1 quadros/s). A chave `AI_EXTRAS` em `art_s23_b3.c` desliga os reforços. Um descompasso entre duas definições de `RN` (`shared.h` e `main.c`) travou a ordenação dos atores na primeira tentativa e foi achado pelo PC do emulador; o `kernel012` precisou de outro endereço para o código injetado porque a RAM do jogo passou de 0xF000.
 
 ### 10.9 Custo da luta
 

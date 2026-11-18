@@ -89,6 +89,8 @@ void combat_init(void) __banked {
  building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
  for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;
  for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=i==N?3:8;u->y=u->ty=u->ny=23;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
+ /* actors 10 and 11 are light reinforcements the AI trains later: dead (and 32 px sized) until then */
+ for(i=10;i<RN;++i){unit_hp[i]=0;unit_kind[i]=1;units[i].state=IDLE;units[i].x=units[i].tx=units[i].nx=i-5;units[i].y=units[i].ty=units[i].ny=23;units[i].px=(u16)units[i].x*16;units[i].py=23*16;}
  {u8 q;for(q=0;q<RN;++q)cc_a[q]=cc_b[q]=0xFFFF;}
  game_over=0;end_enabled=1;auto_defend=1;ai_init();
 }
@@ -136,7 +138,7 @@ static u8 cand_scan(void) __naked {
  ld b,#0
 cs_loop:
  ld a,c
- cp a,#10
+ cp a,#12
  jr nc,cs_none
  ld hl,#_unit_hp
  add hl,bc
@@ -206,7 +208,7 @@ static u8 ct_scan(u8 start) __naked {
  ld (_ct_i),a
 ct_lp:
  ld a,(_ct_i)
- cp a,#10
+ cp a,#12
  jp nc,ct_none
  ld e,a
  ld d,#0

@@ -20,7 +20,7 @@ proc prepare_kernel {} {
   lappend expected(fog_seen) [expr {$seen|$v|$trail}];lappend expected(fog_visible) $v;lappend expected(fog_trail) 0;lappend expected(fog_need) [expr {($v&(~$old))|$fresh}];lappend expected(fog_delta) $d
   set expected_result [expr {$expected_result|$d}]
  }
- reg SP 62192;reg IX 4660;reg IY 22136;reg PC 61440
+ reg SP 62192;reg IX 4660;reg IY 22136;reg PC 62080
 }
 proc check_kernel {} {
  global S expected kernel_case expected_result
@@ -34,8 +34,9 @@ proc start_kernel {} {
  delay 45
  set name [dict get {V9990 KAW9990 V9990P1 KAW9990P1 PREVIEW KAW68PV V9968 KAW9968} $::env(KAW_VARIANT)];set f [open ../build/$::env(KAW_VARIANT)/$name.map];set text [read $f];close $f
  if {![regexp {([0-9A-F]{8})\s+_fog_merge\s} $text whole address]} {error "kernel missing"};scan $address %x address;set address [expr {$address&65535}]
- debug write_block memory 61440 [binary format c* [list 62 12 50 0 120 50 6 192 205 [expr {$address&255}] [expr {$address>>8}] 195 11 240]]
- debug set_bp 61451 {} {check_kernel};prepare_kernel
+ # codigo injetado em 0xF280 (RAM livre entre o fim das variaveis, ~0xF15B, e a pilha): 0xF000 passou a ser RAM do jogo
+ debug write_block memory 62080 [binary format c* [list 62 12 50 0 120 50 6 192 205 [expr {$address&255}] [expr {$address>>8}] 195 139 242]]
+ debug set_bp 62091 {} {check_kernel};prepare_kernel
 }
 coroutine kernel012_case guard start_kernel
 after realtime 180 {puts stderr "FAIL kernel watchdog";exit}

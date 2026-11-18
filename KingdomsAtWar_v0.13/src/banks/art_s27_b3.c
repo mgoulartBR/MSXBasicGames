@@ -332,7 +332,7 @@ static void units_prep_asm(void) __naked {
  ld (_upa_i),a
 upa_lp:
  ld a,(_upa_i)
- cp a,#10
+ cp a,#12
  ret nc
  ld hl,#_sc_cull
  cp a,#8

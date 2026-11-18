@@ -8,8 +8,8 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        00001A92 R
-  7 ___str_1                                                        00001A9D R
+  7 ___str_0                                                        00001B2F R
+  7 ___str_1                                                        00001B3A R
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
     _ai_init                                                        ******** GX
@@ -30,42 +30,42 @@ Symbol Table
     _buildings                                                      ******** GX
     _cam_x                                                          ******** GX
     _cam_y                                                          ******** GX
-  7 _cand_scan                                                      00000F3D R
+  7 _cand_scan                                                      00000FDA R
     _cargo                                                          ******** GX
     _cargo_kind                                                     ******** GX
   1 _cc_a                                                           00000000 R
-  1 _cc_b                                                           00000014 R
-  1 _cc_r                                                           00000028 R
+  1 _cc_b                                                           00000018 R
+  1 _cc_r                                                           00000030 R
   7 _cheb                                                           000000AE R
     _combat_active                                                  ******** GX
     _combat_alive                                                   ******** GX
     _combat_buildings                                               ******** GX
-  7 _combat_click                                                   00000D7A GR
-  7 _combat_context                                                 00001864 GR
-  7 _combat_hit_test                                                00000BC3 GR
+  7 _combat_click                                                   00000E17 GR
+  7 _combat_context                                                 00001901 GR
+  7 _combat_hit_test                                                00000C60 GR
     _combat_hits                                                    ******** GX
   7 _combat_impact                                                  000004F9 GR
   7 _combat_init                                                    000008BF GR
     _combat_kills                                                   ******** GX
   7 _combat_position                                                000002BA GR
     _combat_shots                                                   ******** GX
-  7 _combat_stop                                                    00000E40 GR
+  7 _combat_stop                                                    00000EDD GR
     _combat_target                                                  ******** GX
-  7 _combat_tick                                                    00001069 GR
+  7 _combat_tick                                                    00001106 GR
     _command_last                                                   ******** GX
   7 _cp_core                                                        00000176 R
-  1 _cs_j                                                           00000036 R
-  1 _cs_own                                                         00000034 R
-  1 _cs_rng                                                         00000035 R
-  1 _cs_xi                                                          00000032 R
+  1 _cs_j                                                           00000040 R
+  1 _cs_own                                                         0000003E R
+  1 _cs_rng                                                         0000003F R
+  1 _cs_xi                                                          0000003C R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _cs_yi                                                          00000033 R
-  1 _ct_i                                                           00000037 R
-  7 _ct_scan                                                        00000FB6 R
+  1 _cs_yi                                                          0000003D R
+  1 _ct_i                                                           00000041 R
+  7 _ct_scan                                                        00001053 R
   7 _die                                                            000003D7 R
   7 _distance                                                       000000E8 R
     _end_enabled                                                    ******** GX
@@ -353,8 +353,8 @@ Symbol Table
   7 _military_selected                                              00000318 GR
     _mine_phase                                                     ******** GX
     _nav_base_dirty                                                 ******** GX
-  7 _near_box                                                       00000EBF R
-  7 _number                                                         00001815 R
+  7 _near_box                                                       00000F5C R
+  7 _number                                                         000018B2 R
     _order_one                                                      ******** GX
     _pose_base                                                      ******** GX
     _pose_bounds                                                    ******** GX
@@ -433,26 +433,26 @@ Symbol Table
     b_structure_dirty                                               ******** GX
     b_unit_position                                                 ******** GX
     b_work_stop                                                     ******** GX
-  7 cs_dx                                                           00000F6B R
-  7 cs_dxok                                                         00000F73 R
-  7 cs_dy                                                           00000F7E R
-  7 cs_dyok                                                         00000F86 R
-  7 cs_loop                                                         00000F53 R
-  7 cs_next                                                         00000FA7 R
-  7 cs_none                                                         00000FB1 R
-  7 cs_ok                                                           00000FA3 R
-  7 ct_a                                                            00000FF0 R
-  7 ct_a1                                                           00000FD4 R
-  7 ct_ad                                                           00000FEB R
-  7 ct_c                                                            00001031 R
-  7 ct_c1                                                           0000102B R
-  7 ct_h                                                            0000101C R
-  7 ct_h1                                                           00001000 R
-  7 ct_hd                                                           00001017 R
-  7 ct_lp                                                           00000FB9 R
-  7 ct_next                                                         0000105F R
-  7 ct_none                                                         00001066 R
-  7 ct_ret                                                          0000105B R
+  7 cs_dx                                                           00001008 R
+  7 cs_dxok                                                         00001010 R
+  7 cs_dy                                                           0000101B R
+  7 cs_dyok                                                         00001023 R
+  7 cs_loop                                                         00000FF0 R
+  7 cs_next                                                         00001044 R
+  7 cs_none                                                         0000104E R
+  7 cs_ok                                                           00001040 R
+  7 ct_a                                                            0000108D R
+  7 ct_a1                                                           00001071 R
+  7 ct_ad                                                           00001088 R
+  7 ct_c                                                            000010CE R
+  7 ct_c1                                                           000010C8 R
+  7 ct_h                                                            000010B9 R
+  7 ct_h1                                                           0000109D R
+  7 ct_hd                                                           000010B4 R
+  7 ct_lp                                                           00001056 R
+  7 ct_next                                                         000010FC R
+  7 ct_none                                                         00001103 R
+  7 ct_ret                                                          000010F8 R
 
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
@@ -461,13 +461,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       38   flags    0
+   1 _DATA                                      size       42   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG26                                     size     1AA9   flags    0
+   7 _SEG26                                     size     1B46   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

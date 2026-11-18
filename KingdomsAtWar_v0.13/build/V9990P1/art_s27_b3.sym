@@ -373,12 +373,12 @@ Symbol Table
   7 _units_prep_reset                                               00001169 GR
   1 _up_d                                                           00000002 R
   1 _up_f                                                           00000003 R
-  1 _up_fe                                                          0000001D R
+  1 _up_fe                                                          00000021 R
   1 _up_fl                                                          00000004 R
   1 _up_i                                                           00000001 R
   1 _up_idle                                                        00000008 R
-  1 _up_kind                                                        00000013 R
-  1 _up_par                                                         00000012 R
+  1 _up_kind                                                        00000015 R
+  1 _up_par                                                         00000014 R
   7 _up_plain                                                       000009F1 R
   7 _up_slow                                                        00000F0A GR
   1 _up_sz                                                          00000005 R
@@ -444,7 +444,7 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       1F   flags    0
+   1 _DATA                                      size       23   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0

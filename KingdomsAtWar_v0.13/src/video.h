@@ -14,9 +14,10 @@
  *   lines  640..1599  pose bank, 48 px poses (5 per row)
  *   lines 1600..1743  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
  *   lines 1792..2047  sprite pattern table (R#25 = 0x38000): 256 cells of 16x16
- *        cells   0..191   pose blocks, two 3x3 blocks per actor (double buffer)
- *        cells 192..209   unit health bars (9 widths x 2 colours), 210..213 arrows, 214..222 white bars,
- *        cell  223        damage cross, 224..237 occluder slots, 238 pointer, 239 selection ring
+ *        cells   0..191   pose blocks, two 3x3 blocks per actor 0..9 (double buffer), column 15 free (occluders)
+ *        cells 192..207   ally health bars 192..200, arrows 201..204, damage cross 205, pointer 206, ring 207
+ *        cells 208..211 + 224..227   the two 2x2 blocks of actors 10 and 11; 212..220 enemy bars, 228..236 white bars;
+ *        221..223 and 237..239 plus column 15 of the pose rows: the 14 occluder slots (occ_cell[])
  *        (cell row 15 shares lines 252..255 with the attribute table: do not use)
  *   0x3FE00           sprite attribute table (SPAT)
  *   0x40000           layer B pattern table
@@ -39,7 +40,7 @@
 #define PA_SOLID 641U
 #define PA_FONT 672U
 #define PA_HUDTOP 660U
-const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512};
+const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512,1024,2048};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
 i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
@@ -275,17 +276,20 @@ static void rl_add(i16 x,i16 y,u8 w,u8 h,u8 c) {
  rw_x[rw_n]=x;rw_y[rw_n]=y;rw_w[rw_n]=(x1-x>255)?255:(u8)(x1-x);rw_h[rw_n]=(u8)(y1-y);rw_c[rw_n]=c;++rw_n;
 }
 #define SPAT 0x3FE00UL
-static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108},{48,51,54,57,60,144,147,150,153,156}};
+/* Top-left sprite cell of each actor's pose blocks: 3x3 blocks for actors 0..9 (two per actor, double buffered); actors
+ * 10 and 11 (enemy swordsmen/archers, 32 px only) share one 2x2 block between both entries (single buffered). */
+static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108,208,210},{48,51,54,57,60,144,147,150,153,156,208,210}};
 #define CELL_POSE(i,b) cell_tab[b][i]
-#define CELL_PTR 238
-#define CELL_RING 239
-#define CELL_BAR_ALLY 192
-#define CELL_BAR_ENEMY 201
-#define CELL_ARROW 210
-#define CELL_BAR_WHITE 214
-#define CELL_CROSS 223
-#define CELL_OCC 224
+#define CELL_BAR_ALLY 192   /* 192..200 */
+#define CELL_ARROW 201      /* 201..204 */
+#define CELL_CROSS 205
+#define CELL_PTR 206
+#define CELL_RING 207
+#define CELL_BAR_ENEMY 212  /* 212..220 */
+#define CELL_BAR_WHITE 228  /* 228..236 */
 #define OCC_N 14
+/* occluder slots: leftovers of rows 13/14 and the free right-hand column of the pose rows */
+static const u8 occ_cell[OCC_N]={221,222,223,237,238,239,15,31,47,63,79,95,111,127};
 #define OV_Y 1600U
 /* Pose key -> position in the pose bank (key_slot[] = slot inside the 32 px or the 48 px bank). */
 static void pose_pos(u8 key,u8 sz,u16* x,u16* y) {
@@ -471,7 +475,7 @@ cl_next:
  ld (_sc_bitw),hl
  inc c
  ld a,c
- cp a,#10
+ cp a,#12
  jp nz,cl_loop
  pop ix
  ret
@@ -486,7 +490,7 @@ static u8 occ_get(u16 idx) {
  for(s=0;s<OCC_N;++s)if(occ_key[s]==idx) {occ_stamp[s]=cache_tick;return occ_pend[s]?255:s;}
  for(s=0;s<OCC_N;++s)if(occ_stamp[s]!=cache_tick) {u8 a=(u8)(cache_tick-occ_stamp[s]);if(best==255 || a>age){best=s;age=a;}}
  if(best==255)return 255;
- {u8 c=CELL_OCC+best;
+ {u8 c=occ_cell[best];
   if(idx>OCC_ENEMY){u8 e=(u8)(idx-OCC_ENEMY);p1_copy((u16)(e&15)<<4,EOV_Y+((u16)(e>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
   else p1_copy((u16)(idx&15)<<4,OV_Y+((u16)(idx>>4)<<4),(u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),16,16);}
  occ_key[best]=idx;occ_pend[best]=1;occ_stamp[best]=cache_tick;return 255;
@@ -538,7 +542,7 @@ os_p2:
  ld (_os_j),a
 os_l2:
  ld a,(_os_j)
- cp a,#10
+ cp a,#12
  jp nc,os_sort
  ld e,a
  ld d,#0
@@ -674,7 +678,7 @@ os_done:
  ldir
 os_fix:
  ld hl,#_actor_visible
- ld b,#10
+ ld b,#12
 os_fl:
  ld a,(hl)
  cp a,#2
@@ -715,7 +719,7 @@ void ae_occ(u8 i) {
      if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
      s2=e!=255?occ_get((u16)OCC_ENEMY+e):occ_get(tile_source[t]-50);}
-    if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,CELL_OCC+s2,0x20);
+    if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
    }
   }
  }
@@ -936,7 +940,7 @@ ae_noup:
  ld hl,#_cell_tab
  or a,a
  jp z,ae_c0
- ld bc,#10
+ ld bc,#12
  add hl,bc
 ae_c0:
  add hl,de

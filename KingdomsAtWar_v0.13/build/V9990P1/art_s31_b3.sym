@@ -322,12 +322,12 @@ Symbol Table
     _mode                                                           ******** GX
   7 _move_remainder                                                 00001A03 GR
   7 _move_speed                                                     000019F6 GR
-  1 _nav_arg                                                        0000002B R
+  1 _nav_arg                                                        00000033 R
     _nav_base_dirty                                                 ******** GX
   7 _nav_begin                                                      000003E9 GR
   7 _nav_bfs_run                                                    00000D69 R
   7 _nav_border                                                     000002A9 R
-  1 _nav_budget                                                     0000002A R
+  1 _nav_budget                                                     00000032 R
   1 _nav_clean                                                      00000000 R
     _nav_cursor                                                     ******** GX
   7 _nav_expand_bc                                                  00000CDE R
@@ -335,7 +335,7 @@ Symbol Table
     _nav_expansions                                                 ******** GX
   7 _nav_finish                                                     0000099D GR
   7 _nav_goal_free                                                  000000B8 R
-  1 _nav_mark_n                                                     00000029 R
+  1 _nav_mark_n                                                     00000031 R
   1 _nav_marks                                                      00000001 R
   7 _nav_prepare                                                    00000350 GR
   7 _nav_reset                                                      000003A2 R
@@ -373,18 +373,18 @@ Symbol Table
     _retry_wait                                                     ******** GX
     _routes                                                         ******** GX
     _second_phase                                                   ******** GX
-  1 _sf_i                                                           0000002D R
-  1 _sf_rate                                                        0000002E R
+  1 _sf_i                                                           00000035 R
+  1 _sf_rate                                                        00000036 R
     _shot_active                                                    ******** GX
   7 _sim_fast                                                       000012C3 R
   7 _sim_flags                                                      0000137D R
   7 _sim_scan                                                       000013DB R
     _sim_ticks                                                      ******** GX
   7 _simulate                                                       00001481 GR
-  1 _simulate_pf_20000_1827                                         00000031 R
+  1 _simulate_pf_20000_1827                                         00000039 R
     _sprites_dirty                                                  ******** GX
-  1 _ss_i                                                           0000002F R
-  1 _ss_stage                                                       00000030 R
+  1 _ss_i                                                           00000037 R
+  1 _ss_stage                                                       00000038 R
     _terrain                                                        ******** GX
     _tile                                                           ******** GX
     _tower_tick                                                     ******** GX
@@ -491,7 +491,7 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size       32   flags    0
+   1 _DATA                                      size       3A   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0

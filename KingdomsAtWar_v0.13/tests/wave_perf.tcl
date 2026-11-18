@@ -25,9 +25,12 @@ proc wave_perf {} {
  debug write memory $::S(sprites_dirty) 3;debug write memory $::S(fog_refresh) 1
  view_y 60;delay 2
  perf_start;delay 2;perf_end idle
- # onda forte: cavaleiro e arqueiro saem agora
+ # onda forte: cavaleiro, arqueiro e dois reforcos leves saem agora
   debug write memory [expr {$::S(unit_kind)+8}] 4;debug write memory [expr {$::S(unit_hp)+8}] 72
  debug write memory [expr {$::S(unit_kind)+9}] 3;debug write memory [expr {$::S(unit_hp)+9}] 32
+ # os dois reforcos leves tambem saem na onda (quatro soldados inimigos)
+ foreach {i kind hp} [expr {[info exists ::env(KAW_NOEXTRAS)]?{}:{10 1 48 11 3 32}}] {debug write memory [expr {$::S(unit_kind)+$i}] $kind;debug write memory [expr {$::S(unit_hp)+$i}] $hp;debug write memory [expr {$::S(ai_state)+$i-8}] 0}
+ debug write memory $::S(sprites_dirty) 3
  poke16 ai_launch 0
  # marcha sem medir ate o primeiro contato (inimigo a menos de 16 linhas)
  for {set n 0} {$n<40 && [unit 8 y]>=14} {incr n} {delay 1}
