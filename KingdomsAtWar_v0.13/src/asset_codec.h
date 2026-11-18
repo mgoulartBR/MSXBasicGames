@@ -2,14 +2,16 @@
  * before returning to game code. BIOS page 0 is never unmapped. */
 const u8* packed_src;
 /* The 256 byte LZ window is only needed while loading; the sprite attribute buffer reuses the same RAM afterwards. */
-u8 p1_shared[500];
+u8 p1_shared[756]; /* 500 bytes of sprite attributes + 256 to find a page-aligned LZ window inside */
 #define packed_window p1_shared
 u8 packed_write,packed_flags,packed_bits,packed_copy,packed_left;
+u16 lz_dst,lz_win;u8 lz_cnt;
 static void asset_begin(const Asset* a) {
- asset_bank=a->bank;packed_src=(const u8*)a->ptr;packed_write=packed_bits=packed_left=0;
+ asset_bank=a->bank;packed_src=(const u8*)a->ptr;packed_write=packed_bits=packed_left=0;lz_win=((u16)p1_shared+255u)&0xFF00u;
 }
-/* Z80 LZ decoder (same format and state as the C loop below): the load screen is dominated by this. */
-u16 lz_dst;u8 lz_cnt;
+/* Z80 LZ decoder (state kept between calls in packed_*): the load screen is dominated by this. The 256 byte window is
+ * aligned to a page inside p1_shared (lz_win), so one register holds its high byte; copies run with the destination
+ * in IY and the length in E (about 75 cycles per byte instead of 190). */
 static void lz_decode(void) __naked {
  __asm
  push ix
@@ -39,33 +41,23 @@ lz_run_ok:
  ld a,(_packed_left)
  sub a,l
  ld (_packed_left),a
+ push de
+ pop iy
+ ld e,l
+ ld hl,(_lz_win)
 lz_run:
- push hl
- ld hl,#_p1_shared
- ld a,c
- add a,l
- ld l,a
- jr nc,lz_r1
- inc h
-lz_r1:
+ ld l,c
  ld a,(hl)
  inc c
- push af
- ld hl,#_p1_shared
- ld a,b
- add a,l
- ld l,a
- jr nc,lz_r2
- inc h
-lz_r2:
- pop af
+ ld l,b
  ld (hl),a
  inc b
- ld (de),a
- inc de
- pop hl
- dec l
+ ld 0(iy),a
+ inc iy
+ dec e
  jr nz,lz_run
+ push iy
+ pop de
  jp lz_loop
 lz_flag:
  ld a,(_packed_bits)
@@ -82,15 +74,8 @@ lz_have:
  jr z,lz_match
  ld a,0(ix)
  inc ix
- push af
- ld hl,#_p1_shared
- ld a,b
- add a,l
- ld l,a
- jr nc,lz_l1
- inc h
-lz_l1:
- pop af
+ ld hl,(_lz_win)
+ ld l,b
  ld (hl),a
  inc b
  ld (de),a

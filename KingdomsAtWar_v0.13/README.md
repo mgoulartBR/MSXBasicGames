@@ -87,7 +87,7 @@ Esta versão não inclui animações definitivas de ataque, cadáveres nem ruín
 |---|---|---|
 | KAW9968.ROM (congelada) | V9968 principal/secundário | Compilação e recusa de V9958; congelada; script `v9968_shim.tcl` no kit; execução positiva no hardware pendente |
 | KAW9990.ROM (congelada) | MSX2 + V9990/GFX9000, modo bitmap | Executada no openMSX pela saída GFX9000 |
-| KAW9990P1.ROM | MSX2 + V9990/GFX9000, modo P1 (tiles e sprites) | Executada no openMSX pela saída GFX9000; mais rápida, carregamento inicial mais longo |
+| KAW9990P1.ROM | MSX2 + V9990/GFX9000, modo P1 (tiles e sprites) | Executada no openMSX pela saída GFX9000; mais rápida; a carga inicial leva cerca de 31 s emulados |
 
 As três ROMs têm **256 KiB, mapper ASCII8**. Use um carregador compatível com esse mapper. Código e gráficos usam bancos separados; não há requisito de RAM Mapper. A leitura dos assets preserva o BIOS e restaura o banco de código.
 

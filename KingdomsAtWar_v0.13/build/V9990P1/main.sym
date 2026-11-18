@@ -29,130 +29,128 @@ Symbol Table
     _VDP_RegWriteBakMask                                            ******** GX
     _VDP_SetMode                                                    ******** GX
     ___sdcc_bcall_ehl                                               ******** GX
-  0 ___str_0                                                        000042C2 R
-  0 ___str_1                                                        000042C8 R
-  0 ___str_10                                                       000047C0 R
-  0 ___str_11                                                       000047C6 R
-  0 ___str_12                                                       000047CC R
-  0 ___str_13                                                       000047D4 R
-  0 ___str_14                                                       000047DA R
-  0 ___str_15                                                       000047E0 R
-  0 ___str_16                                                       000047E7 R
-  0 ___str_17                                                       000047EE R
-  0 ___str_2                                                        000042CE R
-  0 ___str_3                                                        000042D4 R
-  0 ___str_4                                                        00004795 R
-  0 ___str_5                                                        0000479C R
-  0 ___str_6                                                        000047A2 R
-  0 ___str_7                                                        000047AB R
-  0 ___str_8                                                        000047B3 R
-  0 ___str_9                                                        000047B9 R
-    __divuchar                                                      ******** GX
+  0 ___str_0                                                        00004164 R
+  0 ___str_1                                                        0000416A R
+  0 ___str_10                                                       00004662 R
+  0 ___str_11                                                       00004668 R
+  0 ___str_12                                                       0000466E R
+  0 ___str_13                                                       00004676 R
+  0 ___str_14                                                       0000467C R
+  0 ___str_15                                                       00004682 R
+  0 ___str_16                                                       00004689 R
+  0 ___str_17                                                       00004690 R
+  0 ___str_2                                                        00004170 R
+  0 ___str_3                                                        00004176 R
+  0 ___str_4                                                        00004637 R
+  0 ___str_5                                                        0000463E R
+  0 ___str_6                                                        00004644 R
+  0 ___str_7                                                        0000464D R
+  0 ___str_8                                                        00004655 R
+  0 ___str_9                                                        0000465B R
     __divuint                                                       ******** GX
-    __moduchar                                                      ******** GX
   7 __xinit__build_names                                            00000000 R
   7 __xinit__fog_dest                                               00000025 R
   7 __xinit__kbrow                                                  0000001C R
   7 __xinit__recruit_names                                          00000010 R
-  1 _ab_i                                                           00002E40 R
-  1 _ab_w                                                           00002E41 R
-  1 _ab_x                                                           00002E43 R
-  1 _ab_y                                                           00002E42 R
+  1 _ab_i                                                           00002F4A R
+  1 _ab_w                                                           00002F4B R
+  1 _ab_x                                                           00002F4D R
+  1 _ab_y                                                           00002F4C R
+  1 _accumulator                                                    00001E5E GR
+  1 _act_blk                                                        00002CC8 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _accumulator                                                    00001E5E GR
-  1 _act_blk                                                        00002BBE R
-  1 _actor_crop                                                     00002B92 GR
-  1 _actor_key                                                      00002B88 GR
-  1 _actor_visible                                                  00002B7E GR
-  1 _actor_x                                                        00002B56 GR
-  1 _actor_y                                                        00002B6A GR
-  0 _ae_bar                                                         000027C5 R
-  1 _ae_i                                                           00002E3E R
-  1 _ae_j                                                           00002E3D R
-  1 _ae_nb                                                          00002E3C R
-  0 _ae_occ                                                         0000237D GR
-  0 _ae_ring                                                        00002885 GR
-  0 _ae_run                                                         000028F5 R
-  1 _ae_sz                                                          00002E3F R
-  0 _ae_up                                                          0000226E GR
-  1 _ai_dir                                                         00002246 GR
-  1 _ai_enabled                                                     0000223B GR
-  1 _ai_gold                                                        00002236 GR
-  1 _ai_kind                                                        00002248 GR
-  1 _ai_launch                                                      00002238 GR
-  1 _ai_left                                                        0000223F GR
-  1 _ai_site                                                        0000223E GR
-  1 _ai_state                                                       00002240 GR
-  1 _ai_step                                                        0000223C GR
-  1 _ai_stuck                                                       00002244 GR
-  1 _ai_timer                                                       00002242 GR
-  1 _ai_wave                                                        0000223D GR
-  1 _ai_wood                                                        00002234 GR
+  1 _actor_crop                                                     00002C94 GR
+  1 _actor_key                                                      00002C8A GR
+  1 _actor_visible                                                  00002C80 GR
+  1 _actor_x                                                        00002C58 GR
+  1 _actor_y                                                        00002C6C GR
+  0 _ae_bar                                                         00002802 R
+  1 _ae_i                                                           00002F48 R
+  1 _ae_j                                                           00002F47 R
+  1 _ae_nb                                                          00002F46 R
+  0 _ae_occ                                                         000023BA GR
+  0 _ae_ring                                                        000028C2 GR
+  0 _ae_run                                                         00002932 R
+  1 _ae_sz                                                          00002F49 R
+  0 _ae_up                                                          000022AB GR
+  1 _ai_dir                                                         00002348 GR
+  1 _ai_enabled                                                     0000233D GR
+  1 _ai_gold                                                        00002338 GR
+  1 _ai_kind                                                        0000234A GR
+  1 _ai_launch                                                      0000233A GR
+  1 _ai_left                                                        00002341 GR
+  1 _ai_site                                                        00002340 GR
+  1 _ai_state                                                       00002342 GR
+  1 _ai_step                                                        0000233E GR
+  1 _ai_stuck                                                       00002346 GR
+  1 _ai_timer                                                       00002344 GR
+  1 _ai_wave                                                        0000233F GR
+  1 _ai_wood                                                        00002336 GR
   1 _alternate_approaches                                           00001240 GR
   1 _art_map                                                        0000099D GR
-  0 _art_tile                                                       00000F2B GR
+  0 _art_tile                                                       00000F27 GR
   1 _asset_bank                                                     00001FB0 GR
   0 _asset_begin                                                    00000000 R
-  0 _asset_read                                                     00000C48 GR
-  1 _attack_cooldown                                                000021D3 GR
-  1 _attack_flash                                                   000021DD GR
-  1 _auto_defend                                                    0000223A GR
-  1 _auto_hx                                                        0000221A GR
-  1 _auto_hy                                                        00002222 GR
-  1 _auto_try                                                       0000222A GR
-  0 _bank_support                                                   00000F10 GR
-  0 _bar_calc                                                       0000274B GR
-  1 _bar_sig                                                        00002E02 R
-  1 _bar_w                                                          00002E16 R
-  1 _bb_off                                                         00002CC0 R
+  0 _asset_read                                                     00000C44 GR
+  1 _attack_cooldown                                                000022D5 GR
+  1 _attack_flash                                                   000022DF GR
+  1 _auto_defend                                                    0000233C GR
+  1 _auto_hx                                                        0000231C GR
+  1 _auto_hy                                                        00002324 GR
+  1 _auto_try                                                       0000232C GR
+  0 _bank_support                                                   00000F0C GR
+  0 _bar_calc                                                       00002788 GR
+  1 _bar_sig                                                        00002F0C R
+  1 _bar_w                                                          00002F20 R
+  1 _bb_off                                                         00002DCA R
   1 _bios_slot                                                      00001FAF GR
-  1 _bl_bc                                                          00002DF9 R
-  1 _bl_c                                                           00002DE1 R
-  1 _bl_cx                                                          00002DFA R
-  1 _bl_cy                                                          00002DFC R
-  1 _bl_do                                                          00002DF8 R
-  1 _bl_ep                                                          00002DFE R
-  1 _bl_h                                                           00002DCD R
-  1 _bl_hs                                                          00002E00 R
+  1 _bl_bc                                                          00002F03 R
+  1 _bl_c                                                           00002EEB R
+  1 _bl_cx                                                          00002F04 R
+  1 _bl_cy                                                          00002F06 R
+  1 _bl_do                                                          00002F02 R
+  1 _bl_ep                                                          00002F08 R
+  1 _bl_h                                                           00002ED7 R
+  1 _bl_hs                                                          00002F0A R
+  1 _bl_n                                                           00002EFF R
+  1 _bl_ok                                                          00002F00 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _bl_n                                                           00002DF5 R
-  1 _bl_ok                                                          00002DF6 R
-  1 _bl_r0                                                          00002DF7 R
-  1 _bl_w                                                           00002DB9 R
-  1 _bl_x                                                           00002D91 R
-  1 _bl_y                                                           00002DA5 R
-  0 _bld_visible                                                    00002011 R
+  1 _bl_r0                                                          00002F01 R
+  1 _bl_w                                                           00002EC3 R
+  1 _bl_x                                                           00002E9B R
+  1 _bl_y                                                           00002EAF R
+  0 _bld_visible                                                    0000204E R
   1 _blit_ticks                                                     00001E6F GR
-  1 _boot_poses                                                     00002B50 GR
-  0 _build_base                                                     000002D4 GR
-  0 _build_gold                                                     00000024 GR
+  1 _boot_poses                                                     00002C52 GR
+  0 _build_base                                                     000002DE GR
+  0 _build_gold                                                     0000002E GR
   1 _build_kind                                                     00001F16 GR
   2 _build_names                                                    00000000 GR
-  0 _build_sizes                                                    000002DC GR
-  0 _build_wood                                                     0000001C GR
+  0 _build_sizes                                                    000002E6 GR
+  0 _build_wood                                                     00000026 GR
   1 _builder_working                                                00001F1C GR
   1 _building_count                                                 00001F14 GR
-  1 _building_hp                                                    000021F9 GR
-  1 _building_owner                                                 00002205 GR
+  1 _building_hp                                                    000022FB GR
+  1 _building_owner                                                 00002307 GR
   1 _building_selected                                              00001F15 GR
-  0 _building_size                                                  00000F1B GR
+  0 _building_size                                                  00000F17 GR
   1 _buildings                                                      00001E84 GR
-  1 _bv_epoch                                                       00002D47 R
-  1 _bv_state                                                       00002D49 R
-  1 _bv_x                                                           00002D55 R
-  1 _bv_y                                                           00002D61 R
-  1 _bw_hp                                                          00002D6D R
-  1 _bw_mx                                                          00002D85 R
-  1 _bw_w                                                           00002D79 R
-  1 _cache_tick                                                     00002B51 GR
+  1 _bv_epoch                                                       00002E51 R
+  1 _bv_state                                                       00002E53 R
+  1 _bv_x                                                           00002E5F R
+  1 _bv_y                                                           00002E6B R
+  1 _bw_hp                                                          00002E77 R
+  1 _bw_mx                                                          00002E8F R
+  1 _bw_w                                                           00002E83 R
+  1 _cache_tick                                                     00002C53 GR
   1 _cam_keys                                                       00001E53 GR
   1 _cam_x                                                          00001E4A GR
   1 _cam_y                                                          00001E4C GR
@@ -161,98 +159,98 @@ Symbol Table
     _camera_update                                                  ******** GX
   1 _cargo                                                          0000003B GR
   1 _cargo_kind                                                     00000043 GR
-  0 _cba                                                            000028F3 R
-  0 _cbe                                                            000028F4 R
-  0 _cbw                                                            000028F1 R
-  0 _ccross                                                         000028F2 R
-  0 _cell_ring_v                                                    0000237C R
-  0 _cell_tab                                                       000019BF R
-  0 _cell_write                                                     00001A11 R
-  1 _combat_active                                                  00002213 GR
-  0 _combat_alive                                                   00004329 GR
-  1 _combat_buildings                                               00002218 GR
-  1 _combat_hits                                                    00002214 GR
-  1 _combat_kills                                                   00002216 GR
-  1 _combat_shots                                                   00002A6E GR
-  1 _combat_target                                                  000021C9 GR
-  1 _command_last                                                   00002212 GR
-  0 _cursor                                                         00000038 GR
+  0 _cba                                                            00002930 R
+  0 _cbe                                                            00002931 R
+  0 _cbw                                                            0000292E R
+  0 _ccross                                                         0000292F R
+  0 _cell_ring_v                                                    000023B9 R
+  0 _cell_tab                                                       000019FC R
+  0 _cell_write                                                     00001A4E R
+  1 _combat_active                                                  00002315 GR
+  0 _combat_alive                                                   000041CB GR
+  1 _combat_buildings                                               0000231A GR
+  1 _combat_hits                                                    00002316 GR
+  1 _combat_kills                                                   00002318 GR
+  1 _combat_shots                                                   00002B70 GR
+  1 _combat_target                                                  000022CB GR
+  1 _command_last                                                   00002314 GR
+  0 _cursor                                                         00000042 GR
   1 _deposit_id                                                     00000013 GR
+  1 _deposits                                                       00000475 GR
+  1 _disp_crop                                                      00002CD3 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _deposits                                                       00000475 GR
-  1 _disp_crop                                                      00002BC9 R
-  1 _disp_key                                                       00002BAA R
-  1 _drag_add                                                       000021B1 GR
-  1 _drag_anchor_x                                                  000021B3 GR
-  1 _drag_anchor_y                                                  000021B5 GR
-  1 _drag_b                                                         000021BD GR
-  1 _drag_down                                                      000021AF GR
-  1 _drag_l                                                         000021B7 GR
-  1 _drag_moved                                                     000021B0 GR
-  1 _drag_prior                                                     000021B2 GR
-  1 _drag_r                                                         000021BB GR
-  1 _drag_t                                                         000021B9 GR
-  1 _draw_opt                                                       00002E3B GR
-  1 _e_bc                                                           00002CBD R
-  1 _e_bx                                                           00002CB6 R
-  1 _e_by                                                           00002CB8 R
-  1 _e_c                                                            00002CBF R
-  1 _e_cell                                                         00002CBA R
-  1 _e_n                                                            00002CBB R
-  1 _e_o                                                            00002CB0 R
-  1 _e_r                                                            00002CBE R
-  1 _e_rows                                                         00002CBC R
-  1 _e_x                                                            00002CB2 R
-  1 _e_y                                                            00002CB4 R
+  1 _disp_key                                                       00002CB4 R
+  1 _drag_add                                                       000022B3 GR
+  1 _drag_anchor_x                                                  000022B5 GR
+  1 _drag_anchor_y                                                  000022B7 GR
+  1 _drag_b                                                         000022BF GR
+  1 _drag_down                                                      000022B1 GR
+  1 _drag_l                                                         000022B9 GR
+  1 _drag_moved                                                     000022B2 GR
+  1 _drag_prior                                                     000022B4 GR
+  1 _drag_r                                                         000022BD GR
+  1 _drag_t                                                         000022BB GR
+  1 _draw_opt                                                       00002F45 GR
+  1 _e_bc                                                           00002DC7 R
+  1 _e_bx                                                           00002DC0 R
+  1 _e_by                                                           00002DC2 R
+  1 _e_c                                                            00002DC9 R
+  1 _e_cell                                                         00002DC4 R
+  1 _e_n                                                            00002DC5 R
+  1 _e_o                                                            00002DBA R
+  1 _e_r                                                            00002DC8 R
+  1 _e_rows                                                         00002DC6 R
+  1 _e_x                                                            00002DBC R
+  1 _e_y                                                            00002DBE R
   1 _economy_retries                                                0000123E GR
   1 _edge_hold                                                      00001E7C GR
   1 _edge_keys                                                      00001E7B GR
   1 _edge_ticks                                                     00001E71 GR
-  0 _emit_block                                                     00001DA7 R
-  1 _end_enabled                                                    00002233 GR
-  0 _enemy_palette                                                  000008D0 GR
-  1 _enemy_selected                                                 00002211 GR
-  0 _enemy_tile_map                                                 00000AC5 GR
-  0 _enemy_tile_of                                                  0000130E R
-  0 _enemy_tiles_asset                                              00000ABF GR
-  0 _enemy_tiles_asset2                                             00000AC2 GR
-  1 _fa_who                                                         00002E47 GR
-  1 _fa_x                                                           00002E45 GR
-  1 _fa_y                                                           00002E46 GR
+  0 _emit_block                                                     00001DE4 R
+  1 _end_enabled                                                    00002335 GR
+  0 _enemy_palette                                                  000008DA GR
+  1 _enemy_selected                                                 00002313 GR
+  0 _enemy_tile_map                                                 00000ACF GR
+  0 _enemy_tile_of                                                  0000134B R
+  0 _enemy_tiles_asset                                              00000AC9 GR
+  0 _enemy_tiles_asset2                                             00000ACC GR
+  1 _fa_who                                                         00002F51 GR
+  1 _fa_x                                                           00002F4F GR
+  1 _fa_y                                                           00002F50 GR
     _fog_apply                                                      ******** GX
-  0 _fog_art                                                        00000F75 GR
-  0 _fog_at                                                         00000F3C GR
-  0 _fog_bit_table                                                  00001000 GR
-  1 _fog_build_dirty                                                00002873 GR
-  1 _fog_delta                                                      000028F4 GR
+  0 _fog_art                                                        00000F71 GR
+  0 _fog_at                                                         00000F38 GR
+  0 _fog_bit_table                                                  00000FFC GR
+  1 _fog_build_dirty                                                00002975 GR
+  1 _fog_delta                                                      000029F6 GR
   2 _fog_dest                                                       00000025 GR
-  1 _fog_epoch                                                      00002A04 GR
+  1 _fog_epoch                                                      00002B06 GR
     _fog_init                                                       ******** GX
   1 _fog_last                                                       00001E60 GR
-  1 _fog_memory                                                     000023F2 GR
-  1 _fog_need                                                       00002874 GR
-  1 _fog_next                                                       00002372 GR
+  1 _fog_memory                                                     000024F4 GR
+  1 _fog_need                                                       00002976 GR
+  1 _fog_next                                                       00002474 GR
   1 _fog_pending                                                    00001E62 GR
-  1 _fog_refresh                                                    000027F2 GR
+  1 _fog_refresh                                                    000028F4 GR
+  1 _fog_seen                                                       00002374 GR
+  1 _fog_sources                                                    00002A76 GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _fog_seen                                                       00002272 GR
-  1 _fog_sources                                                    00002974 GR
-  1 _fog_static                                                     000027F3 GR
-  1 _fog_trail                                                      00002984 GR
+  1 _fog_static                                                     000028F5 GR
+  1 _fog_trail                                                      00002A86 GR
     _fog_update                                                     ******** GX
-  1 _fog_updates                                                    00002A2A GR
-  1 _fog_visible                                                    000022F2 GR
-  0 _font_asset                                                     00000061 GR
-  1 _frame_uploads                                                  00002B52 GR
-  0 _free_at                                                        000043A9 GR
+  1 _fog_updates                                                    00002B2C GR
+  1 _fog_visible                                                    000023F4 GR
+  0 _font_asset                                                     0000006B GR
+  1 _frame_uploads                                                  00002C54 GR
+  0 _free_at                                                        0000424B GR
   1 _full_redraws                                                   00001E67 GR
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
@@ -298,13 +296,13 @@ Symbol Table
     _g_DRWFLG                                                   =   0000FCBB G
     _g_DRWSCL                                                   =   0000FCBC G
     _g_ENSTOP                                                   =   0000FBB0 G
+    _g_ERRORS                                                   =   0000FB1A G
+    _g_ESCCNT                                                   =   0000FCA7 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_ERRORS                                                   =   0000FB1A G
-    _g_ESCCNT                                                   =   0000FCA7 G
     _g_ESTBLS                                                   =   0000FB1C G
     _g_EXBRSA                                                   =   0000FAF8 G
     _g_EXPTBL                                                   =   0000FCC1 G
@@ -358,13 +356,13 @@ Symbol Table
     _g_MCLLEN                                                   =   0000FB3B G
     _g_MCLPTR                                                   =   0000FB3C G
     _g_MEXBIh                                                   =   0000FB07 G
+    _g_MINROM                                                   =   0000FFF7 G
+    _g_MINUPD                                                   =   0000F3EF G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_MINROM                                                   =   0000FFF7 G
-    _g_MINUPD                                                   =   0000F3EF G
     _g_MLTATR                                                   =   0000F3D7 G
     _g_MLTCGP                                                   =   0000F3D5 G
     _g_MLTCOL                                                   =   0000F3D3 G
@@ -418,13 +416,13 @@ Symbol Table
     _g_RDPRIM                                                   =   0000F380 G
     _g_REPCNT                                                   =   0000F3F7 G
     _g_RG08SAV                                                  =   0000FFE7 G
+    _g_RG09SAV                                                  =   0000FFE8 G
+    _g_RG0SAV                                                   =   0000F3DF G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_RG09SAV                                                  =   0000FFE8 G
-    _g_RG0SAV                                                   =   0000F3DF G
     _g_RG10SAV                                                  =   0000FFE9 G
     _g_RG11SAV                                                  =   0000FFEA G
     _g_RG12SAV                                                  =   0000FFEB G
@@ -478,13 +476,13 @@ Symbol Table
     _g_T32PAT                                                   =   0000F3C5 G
     _g_TOCNT                                                    =   0000FB03 G
     _g_TRGFLG                                                   =   0000F3E8 G
+    _g_TRPTBL                                                   =   0000FC4C G
+    _g_TXTATR                                                   =   0000F3B9 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_TRPTBL                                                   =   0000FC4C G
-    _g_TXTATR                                                   =   0000F3B9 G
     _g_TXTCGP                                                   =   0000F3B7 G
     _g_TXTCOL                                                   =   0000F3B5 G
     _g_TXTNAM                                                   =   0000F3B3 G
@@ -526,11 +524,11 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  1 _game_over                                                      00002232 GR
-  0 _game_restart                                                   00001D96 GR
+  1 _game_over                                                      00002334 GR
+  0 _game_restart                                                   00001DD3 GR
   1 _game_seconds                                                   00000477 GR
   1 _gold                                                           00000471 GR
-  0 _gpu_wait                                                       00000FC5 R
+  0 _gpu_wait                                                       00000FC1 R
   1 _graphics_slot                                                  00001FAE GR
   1 _group_orders                                                   000011B8 GR
     _hud                                                            ******** GX
@@ -538,19 +536,19 @@ Symbol Table
   1 _hud_cache                                                      0000047F GR
   1 _hud_char_writes                                                000004CF GR
   1 _hud_context                                                    00001F1E GR
+  1 _hud_dirty                                                      0000047E GR
+  1 _hud_draw                                                       0000047D GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 10
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _hud_dirty                                                      0000047E GR
-  1 _hud_draw                                                       0000047D GR
   1 _hud_erase_count                                                000004D1 GR
     _hud_init                                                       ******** GX
   1 _hud_live                                                       0000047A GR
   1 _hud_markers                                                    00001F96 GR
   1 _hud_mode                                                       00001E54 GR
-  0 _hud_name                                                       000015CD R
+  0 _hud_name                                                       0000160A R
   1 _hud_pending                                                    0000047C GR
   1 _hud_progress                                                   00001F9A GR
   1 _hud_ready                                                      0000047B GR
@@ -558,23 +556,23 @@ Symbol Table
   1 _hud_state                                                      00001E56 GR
   1 _hud_swaps                                                      000004D3 GR
   1 _hud_values                                                     000004BF GR
-  1 _hurt_flash                                                     000021E7 GR
+  1 _hurt_flash                                                     000022E9 GR
     _init_world                                                     ******** GX
     _input                                                          ******** GX
     _io_int                                                     =   00000066 
-  0 _io_lmmv                                                        00001754 R
+  0 _io_lmmv                                                        00001791 R
     _io_reg                                                     =   00000063 
-  0 _io_rw                                                          000012B9 R
+  0 _io_rw                                                          000012F6 R
     _io_sel                                                     =   00000064 
     _io_stat                                                    =   00000065 
     _io_vram                                                    =   00000060 
-  0 _io_vset                                                        000012AB R
-  0 _irq_p1                                                         00001AE3 R
+  0 _io_vset                                                        000012E8 R
+  0 _irq_p1                                                         00001B20 R
   1 _job_goal                                                       00001E47 GR
   1 _job_unit                                                       00001E49 GR
   2 _kbrow                                                          0000001C GR
-  0 _key_slot                                                       00000900 GR
-  0 _kind_sizes                                                     000002E4 GR
+  0 _key_slot                                                       0000090A GR
+  0 _kind_sizes                                                     000002EE GR
   1 _last_keys                                                      00001E52 GR
   1 _last_time                                                      00001E5C GR
   1 _left_edges                                                     000004D6 GR
@@ -583,12 +581,13 @@ Symbol Table
   1 _left_wy                                                        000004F1 GR
   1 _left_x                                                         000004ED GR
   1 _left_y                                                         000004EE GR
-  0 _load_progress                                                  00003654 R
+  0 _load_progress                                                  00003691 R
   1 _loops                                                          00001E5A GR
-  1 _lz_cnt                                                         000021AE GR
-  0 _lz_decode                                                      00000B85 R
-  1 _lz_dst                                                         000021AC GR
-  0 _main                                                           000044E1 GR
+  1 _lz_cnt                                                         000022B0 GR
+  0 _lz_decode                                                      00000B8F R
+  1 _lz_dst                                                         000022AC GR
+  1 _lz_win                                                         000022AE GR
+  0 _main                                                           00004383 GR
   1 _max_camera_step                                                00001E73 GR
   1 _mine_phase                                                     0000005B GR
   1 _mine_step                                                      00000063 GR
@@ -598,19 +597,19 @@ Symbol Table
   1 _mouse_active                                                   00001E7A GR
   1 _mouse_connections                                              00001E7F GR
   1 _mouse_port                                                     00001E79 GR
+  1 _mouse_present                                                  00001E78 GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 11
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _mouse_present                                                  00001E78 GR
   1 _mouse_probe_port                                               00001E81 GR
   1 _mouse_probe_tick                                               00001E7D GR
   1 _mouse_rescan_down                                              00001E83 GR
   1 _mouse_warmup                                                   00001E82 GR
   1 _mouse_x                                                        00001E4E GR
   1 _mouse_y                                                        00001E4F GR
-  0 _names_put                                                      000012BF R
+  0 _names_put                                                      000012FC R
   1 _nav_base_dirty                                                 00001642 GR
   1 _nav_cursor                                                     000011B7 GR
   1 _nav_expansions                                                 00001E69 GR
@@ -618,71 +617,71 @@ Symbol Table
   1 _nav_work_mode                                                  0000123C GR
   1 _node_x                                                         00000023 GR
   1 _node_y                                                         0000002B GR
-  1 _ob_b                                                           00002D2F R
-  1 _ob_l                                                           00002CFF R
-  1 _ob_r                                                           00002D1F R
-  1 _ob_t                                                           00002D0F R
-  0 _occ_get                                                        00001E7E R
-  1 _occ_key                                                        00002CC7 R
-  1 _occ_pend                                                       00002CF1 R
-  0 _occ_scan                                                       00004349 R
-  1 _occ_stamp                                                      00002CE3 R
-  1 _ord_cur                                                        00002E2B R
-  1 _ord_n                                                          00002E2A R
-  1 _ord_prev                                                       00002E20 R
-  0 _ord_sort                                                       00002123 R
-  0 _order_one                                                      000043DC GR
-  1 _os_cnt                                                         00002E35 R
-  1 _os_i                                                           00002E37 R
-  1 _os_j                                                           00002E36 R
-  1 _os_ko                                                          00002E38 R
-  1 _os_kv                                                          00002E39 R
-  0 _otir_vram                                                      00001AD7 R
-  1 _p1_bx                                                          00002BDD R
-  1 _p1_by                                                          00002BDF R
-  0 _p1_cell                                                        0000142A R
-  0 _p1_copy                                                        0000101C R
-  0 _p1_fill0                                                       000017AC R
-  1 _p1_n                                                           00002BE2 R
-  1 _p1_ready                                                       00002BE1 R
+  1 _ob_b                                                           00002E39 R
+  1 _ob_l                                                           00002E09 R
+  1 _ob_r                                                           00002E29 R
+  1 _ob_t                                                           00002E19 R
+  0 _occ_get                                                        00001EBB R
+  1 _occ_key                                                        00002DD1 R
+  1 _occ_pend                                                       00002DFB R
+  0 _occ_scan                                                       000041EB R
+  1 _occ_stamp                                                      00002DED R
+  1 _ord_cur                                                        00002F35 R
+  1 _ord_n                                                          00002F34 R
+  1 _ord_prev                                                       00002F2A R
+  0 _ord_sort                                                       00002160 R
+  0 _order_one                                                      0000427E GR
+  1 _os_cnt                                                         00002F3F R
+  1 _os_i                                                           00002F41 R
+  1 _os_j                                                           00002F40 R
+  1 _os_ko                                                          00002F42 R
+  1 _os_kv                                                          00002F43 R
+  0 _otir_vram                                                      00001B14 R
+  1 _p1_bx                                                          00002CE7 R
+  1 _p1_by                                                          00002CE9 R
+  0 _p1_cell                                                        00001467 R
+  0 _p1_copy                                                        00001018 R
+  0 _p1_fill0                                                       000017E9 R
+  1 _p1_n                                                           00002CEC R
+  1 _p1_ready                                                       00002CEB R
   1 _p1_shared                                                      00001FB3 GR
-  1 _packed_bits                                                    000021A9 GR
-  1 _packed_copy                                                    000021AA GR
-  1 _packed_flags                                                   000021A8 GR
-  1 _packed_left                                                    000021AB GR
+  1 _packed_bits                                                    000022A9 GR
+  1 _packed_copy                                                    000022AA GR
+  1 _packed_flags                                                   000022A8 GR
+  1 _packed_left                                                    000022AB GR
   1 _packed_src                                                     00001FB1 GR
-  1 _packed_write                                                   000021A7 GR
-  1 _pal_o                                                          00002CC1 R
-  0 _palette68                                                      000009EF GR
-  0 _palette9                                                       00000A0F GR
+  1 _packed_write                                                   000022A7 GR
+  1 _pal_o                                                          00002DCB R
+  0 _palette68                                                      000009F9 GR
+  0 _palette9                                                       00000A19 GR
   1 _parent                                                         00001242 GR
-  0 _passable                                                       0000430D GR
-  0 _pat_write                                                      000010C7 R
+  0 _passable                                                       000041AF GR
+  0 _pat_write                                                      00001179 R
+  1 _pend_crop                                                      00002CDD R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 12
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _pend_crop                                                      00002BD3 R
-  1 _pend_key                                                       00002BB4 R
+  1 _pend_key                                                       00002CBE R
   1 _pickups                                                        00000473 GR
   1 _place_valid                                                    00001F1B GR
   1 _place_worker                                                   00001F18 GR
   1 _place_x                                                        00001F19 GR
   1 _place_y                                                        00001F1A GR
   1 _placement_mode                                                 00001F17 GR
-  0 _poll_input                                                     00000C86 GR
-  0 _pose_base                                                      000009D0 GR
-  0 _pose_bounds                                                    000003F0 GR
-  0 _pose_cells                                                     00000730 GR
-  0 _pose_count                                                     000009DC GR
-  0 _pose_pos                                                       00001919 R
-  0 _poses                                                          00000064 GR
-  0 _px4                                                            000019D3 R
+  0 _poll_input                                                     00000C82 GR
+  0 _pose_base                                                      000009DA GR
+  0 _pose_bounds                                                    000003FA GR
+  0 _pose_cells                                                     0000073A GR
+  0 _pose_count                                                     000009E6 GR
+  0 _pose_pos                                                       00001956 R
+  0 _poses                                                          0000006E GR
+  0 _px4                                                            00001A10 R
   1 _qhead                                                          00001E43 GR
   1 _qtail                                                          00001E45 GR
   1 _queue                                                          00001643 GR
-  1 _r22                                                            00002BE3 R
+  1 _r22                                                            00002CED R
   1 _raw_command_down                                               000004F3 GR
   1 _raw_command_latched                                            000004F4 GR
   1 _raw_down                                                       000004F5 GR
@@ -690,164 +689,174 @@ Symbol Table
   1 _raw_dy                                                         000004FB GR
   1 _raw_latched                                                    000004F6 GR
   1 _raw_tick                                                       000004F7 GR
-  1 _rc_c                                                           00002C9B R
-  1 _rc_h                                                           00002C87 R
-  1 _rc_n                                                           00002CAF R
-  1 _rc_w                                                           00002C73 R
-  1 _rc_x                                                           00002C4B R
-  1 _rc_y                                                           00002C5F R
-  0 _recruit_gold                                                   00000032 GR
+  1 _rc_c                                                           00002DA5 R
+  1 _rc_h                                                           00002D91 R
+  1 _rc_n                                                           00002DB9 R
+  1 _rc_w                                                           00002D7D R
+  1 _rc_x                                                           00002D55 R
+  1 _rc_y                                                           00002D69 R
+  0 _recruit_gold                                                   0000003C GR
   2 _recruit_names                                                  00000010 GR
-  0 _recruit_wood                                                   0000002C GR
-  0 _render_bit                                                     00001008 GR
-  1 _rendered_frames                                                00002B54 GR
-  1 _repair_active                                                  00002A16 GR
-  1 _repair_healed                                                  00002A28 GR
-  1 _repair_pending                                                 00002A17 GR
-  1 _repair_spent                                                   00002A26 GR
-  1 _repair_target                                                  00002A06 GR
-  1 _repair_timer                                                   00002A0E GR
+  0 _recruit_wood                                                   00000036 GR
+  0 _render_bit                                                     00001004 GR
+  1 _rendered_frames                                                00002C56 GR
+  1 _repair_active                                                  00002B18 GR
+  1 _repair_healed                                                  00002B2A GR
+  1 _repair_pending                                                 00002B19 GR
+  1 _repair_spent                                                   00002B28 GR
+  1 _repair_target                                                  00002B08 GR
+  1 _repair_timer                                                   00002B10 GR
   1 _replans                                                        000011BA GR
   1 _requested                                                      0000119D GR
   1 _research_level                                                 00001F1D GR
   1 _retry_left                                                     000011AD GR
   1 _retry_wait                                                     000011A5 GR
-  0 _ring_pixels                                                    00000A3F GR
-  0 _rl_add                                                         00001807 R
+  0 _ring_pixels                                                    00000A49 GR
+  0 _rl_add                                                         00001844 R
   1 _routes                                                         00000D9D GR
-  1 _rw_c                                                           00002C34 R
-  1 _rw_dirty                                                       00002C4A R
-  1 _rw_h                                                           00002C20 R
+  1 _rw_c                                                           00002D3E R
+  1 _rw_dirty                                                       00002D54 R
+  1 _rw_h                                                           00002D2A R
+  1 _rw_lock                                                        00002D53 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 13
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  1 _rw_lock                                                        00002C49 R
-  1 _rw_n                                                           00002C48 R
-  1 _rw_w                                                           00002C0C R
-  1 _rw_x                                                           00002BE4 R
-  1 _rw_y                                                           00002BF8 R
-  1 _sc_bitw                                                        00002CC5 R
-  1 _sc_cull                                                        00002CC3 GR
+  1 _rw_n                                                           00002D52 R
+  1 _rw_w                                                           00002D16 R
+  1 _rw_x                                                           00002CEE R
+  1 _rw_y                                                           00002D02 R
+  1 _sc_bitw                                                        00002DCF R
+  1 _sc_cull                                                        00002DCD GR
   1 _scroll_copies                                                  00001E65 GR
   1 _second_phase                                                   00000479 GR
   1 _selected                                                       00001E51 GR
   1 _selection_count                                                000011B6 GR
   1 _selection_mask                                                 000011B5 GR
-  1 _shot_active                                                    00002A6C GR
-  1 _shot_damage                                                    00002AB0 GR
-  1 _shot_dx                                                        00002A70 GR
-  1 _shot_dy                                                        00002A80 GR
-  1 _shot_owner                                                     00002AC0 GR
-  1 _shot_target                                                    00002AA0 GR
-  1 _shot_time                                                      00002A90 GR
-  1 _shot_x                                                         00002A2C GR
-  1 _shot_y                                                         00002A4C GR
+  1 _shot_active                                                    00002B6E GR
+  1 _shot_damage                                                    00002BB2 GR
+  1 _shot_dx                                                        00002B72 GR
+  1 _shot_dy                                                        00002B82 GR
+  1 _shot_owner                                                     00002BC2 GR
+  1 _shot_target                                                    00002BA2 GR
+  1 _shot_time                                                      00002B92 GR
+  1 _shot_x                                                         00002B2E GR
+  1 _shot_y                                                         00002B4E GR
   1 _sim_ticks                                                      00001E58 GR
     _simulate                                                       ******** GX
-  0 _site_tiles                                                     00000018 GR
-  0 _skin_map                                                       000009E8 GR
-  0 _sp_cull                                                        00001DF5 R
+  0 _site_tiles                                                     00000022 GR
+  0 _skin_map                                                       000009F2 GR
+  0 _sp_cull                                                        00001E32 R
   1 _sprite_colors                                                  00001F9E GR
   1 _sprites_dirty                                                  00001E57 GR
-  1 _stance                                                         000021F1 GR
-  0 _static_assets                                                  00000058 GR
+  1 _stance                                                         000022F3 GR
+  0 _static_assets                                                  00000062 GR
   1 _stock                                                          0000006F GR
-  1 _sused                                                          00002BC8 R
+  1 _sused                                                          00002CD2 R
   1 _terrain                                                        0000059D GR
   1 _terrain_copies                                                 00001E63 GR
-  0 _tile                                                           000042FC GR
-  1 _tile_buffer                                                    00002AD0 GR
-  0 _tile_patterns                                                  000011B1 R
-  0 _tile_source                                                    000002F0 GR
-  1 _tower_cooldown                                                 00002A18 GR
-  1 _tower_shots                                                    00002A24 GR
-  1 _ub_b                                                           00002D45 R
-  1 _ub_l                                                           00002D3F R
-  1 _ub_r                                                           00002D43 R
-  1 _ub_t                                                           00002D41 R
+  0 _tile                                                           0000419E GR
+  1 _tile_buffer                                                    00002BD2 GR
+  0 _tile_dither                                                    0000115A R
+  0 _tile_fix                                                       0000113D R
+  0 _tile_patterns                                                  0000120A R
+  0 _tile_source                                                    000002FA GR
+  1 _tower_cooldown                                                 00002B1A GR
+  1 _tower_shots                                                    00002B26 GR
+  1 _ub_b                                                           00002E4F R
+  1 _ub_l                                                           00002E49 R
+  1 _ub_r                                                           00002E4D R
+  1 _ub_t                                                           00002E4B R
   1 _unit_build                                                     0000000B GR
-  0 _unit_cooldown                                                  00000FF9 GR
+  0 _unit_cooldown                                                  00000FF5 GR
   1 _unit_count                                                     00000000 GR
-  0 _unit_damage                                                    00000FF2 GR
+  0 _unit_damage                                                    00000FEE GR
   1 _unit_draw_x                                                    0000006B GR
   1 _unit_draw_y                                                    0000006D GR
-  1 _unit_facing                                                    0000224A GR
-  1 _unit_frame                                                     00002254 GR
-  1 _unit_hp                                                        000021BF GR
+  1 _unit_facing                                                    0000234C GR
+  1 _unit_frame                                                     00002356 GR
+  1 _unit_hp                                                        000022C1 GR
   1 _unit_kind                                                      00000001 GR
-  0 _unit_max_hp                                                    00000F24 GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 14
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 _unit_range                                                     00000FEB GR
-  1 _unit_walk_dist                                                 0000225E GR
-  1 _unit_walk_phase                                                00002268 GR
+  0 _unit_max_hp                                                    00000F20 GR
+  0 _unit_range                                                     00000FE7 GR
+  1 _unit_walk_dist                                                 00002360 GR
+  1 _unit_walk_phase                                                0000236A GR
   1 _units                                                          000004FD GR
     _units_prep                                                     ******** GX
     _units_prep_reset                                               ******** GX
-  0 _v9990_check                                                    0000447D R
-  0 _v9_busy                                                        00000FA9 R
-  0 _v9_lmmm                                                        00000FAE R
-  1 _v9c                                                            00002B9C GR
-  0 _video_camera                                                   000010BB GR
-  0 _video_camera_ready                                             000010C3 GR
-  0 _video_char                                                     00001625 GR
-  0 _video_clock                                                    00001071 GR
-  0 _video_cursor                                                   00001DA6 GR
-  0 _video_enable                                                   000042DA GR
+  0 _v9990_check                                                    0000431F R
+  0 _v9_busy                                                        00000FA5 R
+  0 _v9_lmmm                                                        00000FAA R
+  1 _v9c                                                            00002C9E GR
+  0 _video_camera                                                   000010B7 GR
+  0 _video_camera_ready                                             000010BF GR
+  0 _video_char                                                     00001662 GR
+  0 _video_clock                                                    0000106D GR
+  0 _video_cursor                                                   00001DE3 GR
+  0 _video_enable                                                   0000417C GR
   1 _video_enabled                                                  000004D5 GR
-  0 _video_fill                                                     0000168A GR
-  0 _video_hud_begin                                                000010B6 GR
-  0 _video_hud_end                                                  000010B7 GR
-  0 _video_hud_flush                                                000010B8 GR
-  0 _video_hud_swap                                                 00001078 GR
-  0 _video_init                                                     00003673 GR
-  0 _video_irq_install                                              00001D76 GR
-  0 _video_known_tile                                               0000158D GR
-  0 _video_sprites                                                  00002B53 GR
-  0 _video_stream                                                   000010C6 GR
-  0 _video_text                                                     00001658 GR
-  0 _video_tile                                                     00001598 GR
-  0 _video_wait                                                     00001096 GR
-  0 _video_world_tile                                               0000158A GR
+  0 _video_fill                                                     000016C7 GR
+  0 _video_hud_begin                                                000010B2 GR
+  0 _video_hud_end                                                  000010B3 GR
+  0 _video_hud_flush                                                000010B4 GR
+  0 _video_hud_swap                                                 00001074 GR
+  0 _video_init                                                     000036B0 GR
+  0 _video_irq_install                                              00001DB3 GR
+  0 _video_known_tile                                               000015CA GR
+  0 _video_sprites                                                  00002B90 GR
+  0 _video_stream                                                   000010C2 GR
+  0 _video_text                                                     00001695 GR
+  0 _video_tile                                                     000015D5 GR
+  0 _video_wait                                                     00001092 GR
+  0 _video_world_tile                                               000015C7 GR
+  1 _vr_hi                                                          00002CAE R
+  1 _vr_lo                                                          00002CAC R
+  1 _vr_rows                                                        00002CB1 R
+  1 _vr_s                                                           00002CB0 R
+  1 _vr_src                                                         00002CB2 R
+  1 _vr_w                                                           00002CAF R
+  0 _vram_rows                                                      00001105 R
+  0 _vram_rows_run                                                  000010C3 R
   1 _wood                                                           0000046F GR
   1 _work_timer                                                     0000004B GR
   1 _work_tries                                                     00000053 GR
   1 _worker_kind                                                    00000033 GR
   1 _worker_task                                                    0000001B GR
-  0 ab_norm                                                         0000284B R
-  0 ab_ok                                                           000027F8 R
-  0 ab_pa                                                           00002864 R
-  0 ab_put                                                          00002868 R
-  0 ab_re                                                           000027F2 R
-  0 ae_bs                                                           00002A15 R
-  0 ae_bsd                                                          00002A1D R
-  0 ae_c0                                                           00002992 R
-  0 ae_dobar                                                        00002A3D R
-  0 ae_emit                                                         00002AB8 R
-  0 ae_emit1                                                        00002AE5 R
-  0 ae_end                                                          00002B52 R
-  0 ae_hpchk                                                        00002A24 R
-  0 ae_lp                                                           000028F9 R
-  0 ae_mul                                                          00002AA0 R
-  0 ae_next                                                         00002B4B R
-  0 ae_nobar                                                        00002A43 R
-  0 ae_noocc                                                        000029FA R
-  0 ae_noup                                                         00002949 R
+  0 ab_norm                                                         00002888 R
+  0 ab_ok                                                           00002835 R
+  0 ab_pa                                                           000028A1 R
+  0 ab_put                                                          000028A5 R
+  0 ab_re                                                           0000282F R
+  0 ae_bs                                                           00002A52 R
+  0 ae_bsd                                                          00002A5A R
+  0 ae_c0                                                           000029CF R
+  0 ae_dobar                                                        00002A7A R
+  0 ae_emit                                                         00002AF5 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 15
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 ae_pal                                                          00002AD3 R
-  0 ae_ring                                                         00002AE8 R
-  0 ae_sh                                                           00002AFC R
-  0 ae_shd                                                          00002B04 R
-  0 ae_upk                                                          0000293A R
+  0 ae_emit1                                                        00002B22 R
+  0 ae_end                                                          00002B8F R
+  0 ae_hpchk                                                        00002A61 R
+  0 ae_lp                                                           00002936 R
+  0 ae_mul                                                          00002ADD R
+  0 ae_next                                                         00002B88 R
+  0 ae_nobar                                                        00002A80 R
+  0 ae_noocc                                                        00002A37 R
+  0 ae_noup                                                         00002986 R
+  0 ae_pal                                                          00002B10 R
+  0 ae_ring                                                         00002B25 R
+  0 ae_sh                                                           00002B39 R
+  0 ae_shd                                                          00002B41 R
+  0 ae_upk                                                          00002977 R
     b_camera_update                                                 ******** GX
     b_fog_apply                                                     ******** GX
     b_fog_init                                                      ******** GX
@@ -859,70 +868,76 @@ Symbol Table
     b_simulate                                                      ******** GX
     b_units_prep                                                    ******** GX
     b_units_prep_reset                                              ******** GX
-  0 cl_alive                                                        00001E21 R
-  0 cl_cull                                                         00001E58 R
-  0 cl_loop                                                         00001E07 R
-  0 cl_next                                                         00001E68 R
-  0 eb_cd                                                           00001DDE R
-  0 eb_col                                                          00001DC2 R
-  0 eb_nc                                                           00001DD7 R
-  0 eb_row                                                          00001DB9 R
-  0 fog_art_pick                                                    00000FA6 R
-  0 fog_at_notvis                                                   00000F69 R
-  0 fog_at_zero                                                     00000F73 R
-  0 get_bank                                                        00000F17 GR
-  0 lz_done                                                         00000C39 R
-  0 lz_flag                                                         00000BDE R
-  0 lz_have                                                         00000BF1 R
-  0 lz_l1                                                           00000C07 R
-  0 lz_loop                                                         00000B97 R
-  0 lz_match                                                        00000C15 R
-  0 lz_r1                                                           00000BC6 R
-  0 lz_r2                                                           00000BD2 R
-  0 lz_run                                                          00000BBC R
-  0 lz_run_ok                                                       00000BAD R
-  0 lz_shift                                                        00000C27 R
-  0 oc_alive                                                        0000436D R
-  0 oc_hit                                                          000043A4 R
-  0 oc_loop                                                         00004357 R
-  0 oc_next                                                         00004393 R
-  0 oc_prog                                                         0000437D R
-  0 os_append                                                       00002177 R
-  0 os_ck                                                           000021AD R
-  0 os_done                                                         00002245 R
-  0 os_fix                                                          0000225A R
-  0 os_fl                                                           0000225F R
-  0 os_fn                                                           00002267 R
-  0 os_full                                                         000021D8 R
-  0 os_l1                                                           0000212A R
-  0 os_l2                                                           00002156 R
-  0 os_n1                                                           0000214B R
-  0 os_n2                                                           00002170 R
+  0 cl_alive                                                        00001E5E R
+  0 cl_cull                                                         00001E95 R
+  0 cl_loop                                                         00001E44 R
+  0 cl_next                                                         00001EA5 R
+  0 eb_cd                                                           00001E1B R
+  0 eb_col                                                          00001DFF R
+  0 eb_nc                                                           00001E14 R
+  0 eb_row                                                          00001DF6 R
+  0 fog_art_pick                                                    00000FA2 R
+  0 fog_at_notvis                                                   00000F65 R
+  0 fog_at_zero                                                     00000F6F R
+  0 get_bank                                                        00000F13 GR
+  0 lz_done                                                         00000C35 R
+  0 lz_flag                                                         00000BE1 R
+  0 lz_have                                                         00000BF4 R
+  0 lz_loop                                                         00000BA1 R
+  0 lz_match                                                        00000C11 R
+  0 lz_run                                                          00000BCD R
+  0 lz_run_ok                                                       00000BB7 R
+  0 lz_shift                                                        00000C23 R
+  0 oc_alive                                                        0000420F R
+  0 oc_hit                                                          00004246 R
+  0 oc_loop                                                         000041F9 R
+  0 oc_next                                                         00004235 R
+  0 oc_prog                                                         0000421F R
+  0 os_append                                                       000021B4 R
+  0 os_ck                                                           000021EA R
+  0 os_done                                                         00002282 R
+  0 os_fix                                                          00002297 R
+  0 os_fl                                                           0000229C R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 16
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 os_p2                                                           00002152 R
-  0 os_place                                                        00002230 R
-  0 os_py                                                           00002187 R
-  0 os_si                                                           000021DD R
-  0 os_sj                                                           000021FE R
-  0 os_sort                                                         00002197 R
-  0 otv_loop                                                        00001ADC R
-  0 set_bank                                                        00000F10 GR
-  0 vm_end                                                          00004496 R
-  0 vm_halt                                                         00004497 R
-  0 vm_lp                                                           00004488 R
-  0 vm_text                                                         0000449A R
+  0 os_fn                                                           000022A4 R
+  0 os_full                                                         00002215 R
+  0 os_l1                                                           00002167 R
+  0 os_l2                                                           00002193 R
+  0 os_n1                                                           00002188 R
+  0 os_n2                                                           000021AD R
+  0 os_p2                                                           0000218F R
+  0 os_place                                                        0000226D R
+  0 os_py                                                           000021C4 R
+  0 os_si                                                           0000221A R
+  0 os_sj                                                           0000223B R
+  0 os_sort                                                         000021D4 R
+  0 otv_loop                                                        00001B19 R
+  0 set_bank                                                        00000F0C GR
+  0 td_even                                                         00001161 R
+  0 td_odd                                                          0000116C R
+  0 td_pair                                                         0000115F R
+  0 tf_1                                                            0000114C R
+  0 tf_2                                                            00001155 R
+  0 tf_lp                                                           00001142 R
+  0 vm_end                                                          00004338 R
+  0 vm_halt                                                         00004339 R
+  0 vm_lp                                                           0000432A R
+  0 vm_text                                                         0000433C R
+  0 vr_loop                                                         000010C4 R
+  0 vr_nc                                                           000010FD R
+
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                                Page 17
 Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size     47F2   flags    0
-   1 _DATA                                      size     2E48   flags    0
+   0 _CODE                                      size     4694   flags    0
+   1 _DATA                                      size     2F52   flags    0
    2 _INITIALIZED                               size       27   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0

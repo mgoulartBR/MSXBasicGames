@@ -76,16 +76,113 @@ void video_camera(void) {sprites_dirty|=1;}
 u8 video_camera_ready(u16 y) {y;return 1;}
 void video_stream(void) {}
 /* ---- pattern memory ---- */
+/* Loader helper (the load screen is dominated by VRAM writes): vr_rows rows of vr_w bytes go to the V9990 at address
+ * vr_hi:vr_lo, 128 bytes apart (one row of the 256 px wide bitmap view); the source advances vr_s bytes per row.
+ * One call replaces vr_rows V9_WriteVRAM calls and their 32-bit address arithmetic. Runs with interrupts off. */
+static u16 vr_lo;static u8 vr_hi,vr_w,vr_s,vr_rows;static const u8* vr_src;
+static void vram_rows_run(void) __naked {
+ __asm
+ di
+vr_loop:
+ xor a,a
+ out (#0x64),a
+ ld a,(_vr_lo)
+ out (#0x63),a
+ ld a,(_vr_lo+1)
+ out (#0x63),a
+ ld a,(_vr_hi)
+ out (#0x63),a
+ ld hl,(_vr_src)
+ push hl
+ ld a,(_vr_w)
+ ld b,a
+ ld c,#0x60
+ otir
+ pop hl
+ ld a,(_vr_s)
+ ld e,a
+ ld d,#0
+ add hl,de
+ ld (_vr_src),hl
+ ld hl,(_vr_lo)
+ ld de,#128
+ add hl,de
+ ld (_vr_lo),hl
+ jr nc,vr_nc
+ ld hl,#_vr_hi
+ inc (hl)
+vr_nc:
+ ld hl,#_vr_rows
+ dec (hl)
+ jr nz,vr_loop
+ ei
+ ret
+ __endasm;
+}
+static void vram_rows(u32 a,const u8* src,u8 w,u8 s,u8 rows) {vr_lo=(u16)a;vr_hi=(u8)(a>>16);vr_src=src;vr_w=w;vr_s=s;vr_rows=rows;vram_rows_run();}
+/* tile_buffer fix-ups for the loader (Z80): transparent nibbles become the grass colour 3 for the opaque-tile patterns;
+ * tile_dither() overlays the remembered-fog checker (colour 1 on alternate pixels, per row parity). */
+static void tile_fix(void) __naked {
+ __asm
+ ld hl,#_tile_buffer
+ ld b,#128
+tf_lp:
+ ld a,(hl)
+ ld c,a
+ and a,#0xF0
+ jr nz,tf_1
+ ld a,c
+ or a,#0x30
+ ld c,a
+tf_1:
+ ld a,c
+ and a,#0x0F
+ jr nz,tf_2
+ ld a,c
+ or a,#0x03
+ ld c,a
+tf_2:
+ ld (hl),c
+ inc hl
+ djnz tf_lp
+ ret
+ __endasm;
+}
+static void tile_dither(void) __naked {
+ __asm
+ ld hl,#_tile_buffer
+ ld c,#8
+td_pair:
+ ld b,#8
+td_even:
+ ld a,(hl)
+ and a,#0x0F
+ or a,#0x10
+ ld (hl),a
+ inc hl
+ djnz td_even
+ ld b,#8
+td_odd:
+ ld a,(hl)
+ and a,#0xF0
+ or a,#0x01
+ ld (hl),a
+ inc hl
+ djnz td_odd
+ dec c
+ jr nz,td_pair
+ ret
+ __endasm;
+}
 static void pat_write(u32 base,u16 n,const u8* src) {
- u8 k;
- for(k=0;k<8;++k)V9_WriteVRAM(base+((u32)(n>>5)<<10)+((u16)k<<7)+((n&31)<<2),src+(k<<2),4);
+ vram_rows(base+((u32)(n>>5)<<10)+((n&31)<<2),src,4,4,8);
 }
 /* A 16x16 tile (16 rows of 8 bytes) as four 8x8 patterns: TL, TR, BL, BR. */
 static void tile_patterns(u32 base,u16 n,const u8* t) {
- u8 pat[32],q,k;
+ u8 q;
  for(q=0;q<4;++q) {
-  for(k=0;k<8;++k) {const u8* r=t+(u16)(((q>>1)<<3)+k)*8+((q&1)<<2);pat[k*4]=r[0];pat[k*4+1]=r[1];pat[k*4+2]=r[2];pat[k*4+3]=r[3];}
-  pat_write(base,n+q,pat);
+  u16 pn=n+q;
+  vram_rows(base+((u32)(pn>>5)<<10)+((pn&31)<<2),t+(u16)((q>>1)<<6)+((q&1)<<2),4,8,8);
  }
 }
 /* ---- names ---- */
@@ -1228,11 +1325,11 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
    asset_read(tile_buffer,128);
    if(phy>=50) {
     u16 ov=phy-50,bx=(ov&15)<<4,by=OV_Y+((ov>>4)<<4);u8 k;
-    for(k=0;k<16;++k)V9_WriteVRAM((u32)(by+k)*128+(bx>>1),tile_buffer+(k<<3),8);
+    vram_rows((u32)by*128+(bx>>1),tile_buffer,8,8,16);
    }
-   if(phy>=50)for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x30;if(!(v&0x0F))v|=0x03;tile_buffer[b]=v;}
+   if(phy>=50)tile_fix();
    tile_patterns(P1_PGT_B_BASE,PB_PLAIN+phy*4,tile_buffer);
-   for(b=0;b<128;++b){u8 row=b>>3,v=tile_buffer[b];if(row&1)v=(v&0xF0)|0x01;else v=(v&0x0F)|0x10;tile_buffer[b]=v;}
+   tile_dither();
    tile_patterns(P1_PGT_B_BASE,PB_DITH+phy*4,tile_buffer);
   }
  }
@@ -1244,10 +1341,10 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
    for(i=0;i<cnt;++i,++e) {
     u8 b;
     asset_read(tile_buffer,128);
-    {u16 bx=(u16)(e&15)<<4,by=EOV_Y+((u16)(e>>4)<<4);u8 k;for(k=0;k<16;++k)V9_WriteVRAM((u32)(by+k)*128+(bx>>1),tile_buffer+(k<<3),8);}
-    for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x30;if(!(v&0x0F))v|=0x03;tile_buffer[b]=v;}
+    {u16 bx=(u16)(e&15)<<4,by=EOV_Y+((u16)(e>>4)<<4);vram_rows((u32)by*128+(bx>>1),tile_buffer,8,8,16);}
+    tile_fix();
     tile_patterns(P1_PGT_B_BASE,ENEMY_PAT+(u16)e*4,tile_buffer);
-    for(b=0;b<128;++b){u8 row=b>>3,v=tile_buffer[b];if(row&1)v=(v&0xF0)|0x01;else v=(v&0x0F)|0x10;tile_buffer[b]=v;}
+    tile_dither();
     tile_patterns(P1_PGT_B_BASE,ENEMY_DITH+(u16)e*4,tile_buffer);
    }
   }
@@ -1258,11 +1355,12 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
    u8 key=pose_base[i]+f;
    if(!poses[key].bank)continue;
    asset_begin(poses+key);
-   for(q=0;q<n*n;++q) {
-    u16 x,yy,px,py;u8 k;pose_pos(key,kind_sizes[i],&px,&py);x=px+(q%n)*16;yy=py+(q/n)*16;
+   {u16 px,py;u8 qx=0,qy=0,nn=n*n;pose_pos(key,kind_sizes[i],&px,&py);
+   for(q=0;q<nn;++q) {
+    u16 x,yy;x=px+((u16)qx<<4);yy=py+((u16)qy<<4);if(++qx==n){qx=0;++qy;}
     asset_read(tile_buffer,128);
-    for(k=0;k<16;++k)V9_WriteVRAM((u32)(yy+k)*128+(x>>1),tile_buffer+k*8,8);
-   }
+    vram_rows((u32)yy*128+(x>>1),tile_buffer,8,8,16);
+   }}
    ++boot_poses;load_progress((u8)((u16)boot_poses*16/208));
   }
  }

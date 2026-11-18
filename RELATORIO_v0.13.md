@@ -151,8 +151,12 @@ Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os te
 - A IA só tem dois soldados por vez: a pressão vem do ritmo e da qualidade. Um jogador competente com 8 unidades e torres deve vencer sempre; um jogador lento ou passivo toma uma onda a cada cerca de 1:20 com cavaleiros a partir dos 5 minutos. O equilíbrio é um chute informado por simulação, não por partidas.
 - Soldados humanos sem HOLD agora se defendem sozinhos, mas operários não; a IA ataca a unidade ou prédio mais próximo, sem preferir operários.
 - O reinício por `jp 0`, a varredura de teclado desligada e a cópia de tiles da linha 3072 só foram testados no openMSX com C-BIOS.
-- O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados (60,0 s com o canteiro humano). O canteiro humano também ganhou arte própria (136 tiles no pool, bancos 22 e 24); a carga inicial chegou a 60,0 s emulados.
+- O canteiro de obras dos mortos tem arte própria (113 tiles inimigos em dois bancos); a carga inicial subiu de 54,5 para 58,0 s emulados (60,0 s com o canteiro humano). O canteiro humano também ganhou arte própria (136 tiles no pool, bancos 22 e 24); a carga inicial chegou a 60,0 s emulados e depois foi reduzida a 31,5 s (seção 10.8).
 - O pior caso de desempenho (contato com muitas unidades grandes) continua em 13,5 quadros/s por cerca de 6 s.
+
+### 10.8 Tempo de carga
+
+A carga inicial (BIOS até o jogo começar a simular) era de 54,5 s emulados antes dos canteiros e chegou a 60,0 s com eles. O perfil de PC do boot mostrou três custos: escritas na VRAM por `V9_WriteVRAM` (uma chamada com aritmética de 32 bits por linha, ~47 mil linhas, ~29%), descompressão LZ (~19%; 74% dos bytes das poses vêm de cópias) e divisões/laços em C por tile. Uma rotina Z80 de escrita em várias linhas, um decodificador com a janela alinhada a página (cópias de ~75 ciclos por byte) e laços de ajuste em Z80 levaram a carga a **31,5 s** (−47% sobre 60,0 s; −42% sobre os 54,5 s originais). A prova de equivalência é a impressão digital da VRAM: os bancos de poses e oclusão, os padrões da camada B e os tiles inimigos crus têm o mesmo MD5 antes e depois (`tests/vram_dump.tcl`). Um erro no meio do caminho (o ponteiro de registrador do V9990 avança a cada byte de endereço, então é preciso reselecionar o registrador 0 a cada linha) corrompeu a tela e foi pego pela captura de tela e pelo MD5. Custo: 258 bytes de RAM (a janela alinhada).
 
 ---
 

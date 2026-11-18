@@ -163,19 +163,19 @@ Area                                    Addr        Size        Decimal Bytes (A
      00001FD2  l__SEG19                        
      00001FD5  l__SEG17                        
      00001FE8  l__SEG16                        
-     00002F80  l__DATA                         
+     0000308A  l__DATA                         
      00004000  s__CODE                         
-     000059C5  l__CODE                         
-     000099C5  s__HOME                         
-     000099C5  s__INITIALIZER                  
-     000099C5  s__RODATA                       
-     000099ED  s__GSFINAL                      
-     000099ED  s__GSINIT                       
+     00005867  l__CODE                         
+     00009867  s__HOME                         
+     00009867  s__INITIALIZER                  
+     00009867  s__RODATA                       
+     0000988F  s__GSFINAL                      
+     0000988F  s__GSINIT                       
      0000C000  s__DATA                         
-     0000EF80  s__INITIALIZED                  
-     0000EFA8  s__BSEG                         
-     0000EFA8  s__BSS                          
-     0000EFA8  s__HEAP                         
+     0000F08A  s__INITIALIZED                  
+     0000F0B2  s__BSEG                         
+     0000F0B2  s__BSS                          
+     0000F0B2  s__HEAP                         
      0000F30F  _g_KANJTABLE                       art_s31_b3
 ASxxxx Linker V05.50.4-SDLD,  page 4.
 Hexadecimal  [32-Bits]
@@ -447,7 +447,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    000059C5 =       22981. bytes (REL,CON)
+_CODE                               00004000    00005867 =       22631. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -457,228 +457,228 @@ _CODE                               00004000    000059C5 =       22981. bytes (R
      0000401F  crt0_p1_to_p2                      crt0
      0000403D  ctr0_init_mapper                   crt0
      00004059  crt0_init_globals                  crt0
-     00004086  _site_tiles                        main
-     0000408A  _build_wood                        main
-     00004092  _build_gold                        main
-     0000409A  _recruit_wood                      main
-     000040A0  _recruit_gold                      main
-     000040A6  _cursor                            main
-     000040C6  _static_assets                     main
-     000040CF  _font_asset                        main
-     000040D2  _poses                             main
-     00004342  _build_base                        main
-     0000434A  _build_sizes                       main
-     00004352  _kind_sizes                        main
-     0000435E  _tile_source                       main
-     0000445E  _pose_bounds                       main
-     0000479E  _pose_cells                        main
-     0000493E  _enemy_palette                     main
-     0000496E  _key_slot                          main
-     00004A3E  _pose_base                         main
-     00004A4A  _pose_count                        main
-     00004A56  _skin_map                          main
-     00004A5D  _palette68                         main
-     00004A7D  _palette9                          main
-     00004AAD  _ring_pixels                       main
-     00004B2D  _enemy_tiles_asset                 main
-     00004B30  _enemy_tiles_asset2                main
-     00004B33  _enemy_tile_map                    main
-     00004CB6  _asset_read                        main
-     00004CF4  _poll_input                        main
-     00004F7E  _bank_support                      main
-     00004F7E  set_bank                           main
-     00004F85  get_bank                           main
-     00004F89  _building_size                     main
-     00004F92  _unit_max_hp                       main
-     00004F99  _art_tile                          main
-     00004FAA  _fog_at                            main
-     00004FE3  _fog_art                           main
-     00005059  _unit_range                        main
-     00005060  _unit_damage                       main
-     00005067  _unit_cooldown                     main
-     0000506E  _fog_bit_table                     main
-     00005076  _render_bit                        main
-     000050DF  _video_clock                       main
-     000050E6  _video_hud_swap                    main
-     00005104  _video_wait                        main
+     00004090  _site_tiles                        main
+     00004094  _build_wood                        main
+     0000409C  _build_gold                        main
+     000040A4  _recruit_wood                      main
+     000040AA  _recruit_gold                      main
+     000040B0  _cursor                            main
+     000040D0  _static_assets                     main
+     000040D9  _font_asset                        main
+     000040DC  _poses                             main
+     0000434C  _build_base                        main
+     00004354  _build_sizes                       main
+     0000435C  _kind_sizes                        main
+     00004368  _tile_source                       main
+     00004468  _pose_bounds                       main
+     000047A8  _pose_cells                        main
+     00004948  _enemy_palette                     main
+     00004978  _key_slot                          main
+     00004A48  _pose_base                         main
+     00004A54  _pose_count                        main
+     00004A60  _skin_map                          main
+     00004A67  _palette68                         main
+     00004A87  _palette9                          main
+     00004AB7  _ring_pixels                       main
+     00004B37  _enemy_tiles_asset                 main
+     00004B3A  _enemy_tiles_asset2                main
+     00004B3D  _enemy_tile_map                    main
+     00004CB2  _asset_read                        main
+     00004CF0  _poll_input                        main
+     00004F7A  _bank_support                      main
+     00004F7A  set_bank                           main
+     00004F81  get_bank                           main
+     00004F85  _building_size                     main
+     00004F8E  _unit_max_hp                       main
+     00004F95  _art_tile                          main
+     00004FA6  _fog_at                            main
+     00004FDF  _fog_art                           main
+     00005055  _unit_range                        main
+     0000505C  _unit_damage                       main
+     00005063  _unit_cooldown                     main
+     0000506A  _fog_bit_table                     main
+     00005072  _render_bit                        main
+     000050DB  _video_clock                       main
+     000050E2  _video_hud_swap                    main
+     00005100  _video_wait                        main
 ASxxxx Linker V05.50.4-SDLD,  page 10.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    000059C5 =       22981. bytes (REL,CON)
+_CODE                               00004000    00005867 =       22631. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00005124  _video_hud_begin                   main
-     00005125  _video_hud_end                     main
-     00005126  _video_hud_flush                   main
-     00005129  _video_camera                      main
-     00005131  _video_camera_ready                main
-     00005134  _video_stream                      main
-     000055F8  _video_world_tile                  main
-     000055FB  _video_known_tile                  main
-     00005606  _video_tile                        main
-     00005693  _video_char                        main
-     000056C6  _video_text                        main
-     000056F8  _video_fill                        main
-     00005DE4  _video_irq_install                 main
-     00005E04  _game_restart                      main
-     00005E14  _video_cursor                      main
-     000062DC  _ae_up                             main
-     000063EB  _ae_occ                            main
-     000067B9  _bar_calc                          main
-     000068F3  _ae_ring                           main
-     00006BC1  _video_sprites                     main
-     000076E1  _video_init                        main
-     00008348  _video_enable                      main
-     0000836A  _tile                              main
-     0000837B  _passable                          main
-     00008397  _combat_alive                      main
-     00008417  _free_at                           main
-     0000844A  _order_one                         main
-     0000854F  _main                              main
-     00008860  _V9_SetPort                        v9990
-     00008864  _V9_GetPort                        v9990
-     00008868  _V9_SetRegister                    v9990
-     00008870  _V9_SetRegister16                  v9990
-     0000887C  _V9_GetRegister                    v9990
-     00008883  _V9_Detect                         v9990
-     00008899  _V9_SetScreenMode                  v9990
-     000088CA  _g_V9_ModeConfig                   v9990
-     000088E8  _g_V9_ColorConfig                  v9990
-     000088FA  _V9_SetColorMode                   v9990
-     0000891C  _V9_SetScrollingY                  v9990
-     00008935  _V9_SetScrollingX                  v9990
-     00008953  _V9_SetScrollingBY                 v9990
-     0000896C  _V9_SetScrollingBX                 v9990
-     0000898A  _V9_ClearVRAM                      v9990
-     000089AE  _V9_SetWriteAddress                v9990
-     000089BB  _V9_SetReadAddress                 v9990
-     000089C9  _V9_Peek_CurrentAddr               v9990
-     000089CD  _V9_Peek16_CurrentAddr             v9990
-     000089D5  _V9_Poke_CurrentAddr               v9990
-     000089D9  _V9_Poke16_CurrentAddr             v9990
-     000089E1  _V9_FillVRAM_CurrentAddr           v9990
-     000089EE  _V9_FillVRAM16_CurrentAddr         v9990
+     00005120  _video_hud_begin                   main
+     00005121  _video_hud_end                     main
+     00005122  _video_hud_flush                   main
+     00005125  _video_camera                      main
+     0000512D  _video_camera_ready                main
+     00005130  _video_stream                      main
+     00005635  _video_world_tile                  main
+     00005638  _video_known_tile                  main
+     00005643  _video_tile                        main
+     000056D0  _video_char                        main
+     00005703  _video_text                        main
+     00005735  _video_fill                        main
+     00005E21  _video_irq_install                 main
+     00005E41  _game_restart                      main
+     00005E51  _video_cursor                      main
+     00006319  _ae_up                             main
+     00006428  _ae_occ                            main
+     000067F6  _bar_calc                          main
+     00006930  _ae_ring                           main
+     00006BFE  _video_sprites                     main
+     0000771E  _video_init                        main
+     000081EA  _video_enable                      main
+     0000820C  _tile                              main
+     0000821D  _passable                          main
+     00008239  _combat_alive                      main
+     000082B9  _free_at                           main
+     000082EC  _order_one                         main
+     000083F1  _main                              main
+     00008702  _V9_SetPort                        v9990
+     00008706  _V9_GetPort                        v9990
+     0000870A  _V9_SetRegister                    v9990
+     00008712  _V9_SetRegister16                  v9990
+     0000871E  _V9_GetRegister                    v9990
+     00008725  _V9_Detect                         v9990
+     0000873B  _V9_SetScreenMode                  v9990
+     0000876C  _g_V9_ModeConfig                   v9990
+     0000878A  _g_V9_ColorConfig                  v9990
+     0000879C  _V9_SetColorMode                   v9990
+     000087BE  _V9_SetScrollingY                  v9990
+     000087D7  _V9_SetScrollingX                  v9990
+     000087F5  _V9_SetScrollingBY                 v9990
+     0000880E  _V9_SetScrollingBX                 v9990
+     0000882C  _V9_ClearVRAM                      v9990
+     00008850  _V9_SetWriteAddress                v9990
+     0000885D  _V9_SetReadAddress                 v9990
+     0000886B  _V9_Peek_CurrentAddr               v9990
+     0000886F  _V9_Peek16_CurrentAddr             v9990
+     00008877  _V9_Poke_CurrentAddr               v9990
+     0000887B  _V9_Poke16_CurrentAddr             v9990
+     00008883  _V9_FillVRAM_CurrentAddr           v9990
+     00008890  _V9_FillVRAM16_CurrentAddr         v9990
 ASxxxx Linker V05.50.4-SDLD,  page 11.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    000059C5 =       22981. bytes (REL,CON)
+_CODE                               00004000    00005867 =       22631. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     000089FF  _V9_WriteVRAM_CurrentAddr          v9990
-     00008A0C  _V9_ReadVRAM_CurrentAddr           v9990
-     00008A19  _V9_SetPaletteEntry                v9990
-     00008A33  _V9_SetCursorAttribute             v9990
-     00008AB5  _V9_SetCursorDisplay               v9990
-     00008AE0  __divuchar                         divunsigned
-     00008AE2  __divu8                            divunsigned
-     00008AE5  __divu16                           divunsigned
-     00008AE5  __divuint                          divunsigned
-     00008B14  _Input_Detect                      input
-     00008B31  _Joystick_Read                     input
-     00008B42  _Mouse_Read                        input
-     00008BA9  _Keyboard_Read                     input
-     00008BB4  __moduchar                         modunsigned
-     00008BBB  __moduint                          modunsigned
-     00008BC0  _VDP_SetModeFlag                   vdp
-     00008BE9  _VDP_SetModeText1                  vdp
-     00008BFF  _VDP_SetModeMultiColor             vdp
-     00008C27  _VDP_SetModeGraphic1               vdp
-     00008C57  _VDP_SetModeGraphic2               vdp
-     00008C88  _VDP_ClearVRAM                     vdp
-     00008CC4  _VDP_WriteVRAM_16K                 vdp
-     00008D05  _VDP_FillVRAM_16K                  vdp
-     00008D2A  _VDP_ReadVRAM_16K                  vdp
-     00008D6A  _VDP_Peek_16K                      vdp
-     00008D7F  _VDP_Poke_16K                      vdp
-     00008D97  _VDP_SetModeText2                  vdp
-     00008DB6  _VDP_SetModeGraphic3               vdp
-     00008DE7  _VDP_SetModeGraphic4               vdp
-     00008E06  _VDP_SetModeGraphic5               vdp
-     00008E25  _VDP_SetModeGraphic6               vdp
-     00008E44  _VDP_SetModeGraphic7               vdp
-     00008E63  _VDP_ReadStatus                    vdp
-     00008E77  _VDP_SetAdjustOffset               vdp
-     00008E80  _VDP_SetPalette                    vdp
-     00008E91  _VDP_SetPaletteEntry               vdp
-     00008EA0  _VDP_WriteVRAM_128K                vdp
-     00008EED  _VDP_FillVRAM_128K                 vdp
-     00008F32  _VDP_ReadVRAM_128K                 vdp
-     00008F84  _VDP_Poke_128K                     vdp
-     00008FB9  _VDP_Peek_128K                     vdp
-     00008FDC  _VDP_CommandWait                   vdp
-     00008FF5  _VDP_CommandSetupR32               vdp
-     00009028  _VDP_CommandSetupR36               vdp
-     00009053  _VDP_CommandWriteLoop              vdp
-     0000907B  _VDP_Initialize                    vdp
-     00009097  _VDP_SetMode                       vdp
-     00009182  _VDP_GetVersion                    vdp
-     000091D1  _VDP_RegWrite                      vdp
-     000091DD  _VDP_RegWriteBak                   vdp
-     000091F0  _VDP_RegWriteBakMask               vdp
+     000088A1  _V9_WriteVRAM_CurrentAddr          v9990
+     000088AE  _V9_ReadVRAM_CurrentAddr           v9990
+     000088BB  _V9_SetPaletteEntry                v9990
+     000088D5  _V9_SetCursorAttribute             v9990
+     00008957  _V9_SetCursorDisplay               v9990
+     00008982  __divuchar                         divunsigned
+     00008984  __divu8                            divunsigned
+     00008987  __divu16                           divunsigned
+     00008987  __divuint                          divunsigned
+     000089B6  _Input_Detect                      input
+     000089D3  _Joystick_Read                     input
+     000089E4  _Mouse_Read                        input
+     00008A4B  _Keyboard_Read                     input
+     00008A56  __moduchar                         modunsigned
+     00008A5D  __moduint                          modunsigned
+     00008A62  _VDP_SetModeFlag                   vdp
+     00008A8B  _VDP_SetModeText1                  vdp
+     00008AA1  _VDP_SetModeMultiColor             vdp
+     00008AC9  _VDP_SetModeGraphic1               vdp
+     00008AF9  _VDP_SetModeGraphic2               vdp
+     00008B2A  _VDP_ClearVRAM                     vdp
+     00008B66  _VDP_WriteVRAM_16K                 vdp
+     00008BA7  _VDP_FillVRAM_16K                  vdp
+     00008BCC  _VDP_ReadVRAM_16K                  vdp
+     00008C0C  _VDP_Peek_16K                      vdp
+     00008C21  _VDP_Poke_16K                      vdp
+     00008C39  _VDP_SetModeText2                  vdp
+     00008C58  _VDP_SetModeGraphic3               vdp
+     00008C89  _VDP_SetModeGraphic4               vdp
+     00008CA8  _VDP_SetModeGraphic5               vdp
+     00008CC7  _VDP_SetModeGraphic6               vdp
+     00008CE6  _VDP_SetModeGraphic7               vdp
+     00008D05  _VDP_ReadStatus                    vdp
+     00008D19  _VDP_SetAdjustOffset               vdp
+     00008D22  _VDP_SetPalette                    vdp
+     00008D33  _VDP_SetPaletteEntry               vdp
+     00008D42  _VDP_WriteVRAM_128K                vdp
+     00008D8F  _VDP_FillVRAM_128K                 vdp
+     00008DD4  _VDP_ReadVRAM_128K                 vdp
+     00008E26  _VDP_Poke_128K                     vdp
+     00008E5B  _VDP_Peek_128K                     vdp
+     00008E7E  _VDP_CommandWait                   vdp
+     00008E97  _VDP_CommandSetupR32               vdp
+     00008ECA  _VDP_CommandSetupR36               vdp
+     00008EF5  _VDP_CommandWriteLoop              vdp
+     00008F1D  _VDP_Initialize                    vdp
+     00008F39  _VDP_SetMode                       vdp
+     00009024  _VDP_GetVersion                    vdp
+     00009073  _VDP_RegWrite                      vdp
+     0000907F  _VDP_RegWriteBak                   vdp
+     00009092  _VDP_RegWriteBakMask               vdp
 ASxxxx Linker V05.50.4-SDLD,  page 12.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    000059C5 =       22981. bytes (REL,CON)
+_CODE                               00004000    00005867 =       22631. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000920F  _VDP_ReadDefaultStatus             vdp
-     00009212  _VDP_SetPage                       vdp
-     0000921F  _VDP_SetLayoutTable                vdp
-     00009287  _VDP_SetColorTable                 vdp
-     00009310  _VDP_SetPatternTable               vdp
-     00009375  _VDP_SetSpriteAttributeTable       vdp
-     00009403  _VDP_SetSpritePatternTable         vdp
-     0000941C  _VDP_LoadSpritePattern             vdp
-     0000944D  _VDP_SetSpriteSM1                  vdp
-     0000948A  _VDP_SetSprite                     vdp
-     000094C4  _VDP_SetSpriteExMultiColor         vdp
-     00009529  _VDP_SetSpriteExUniColor           vdp
-     0000958B  _VDP_SetSpritePosition             vdp
-     000095BD  _VDP_SetSpritePositionX            vdp
-     000095D5  _VDP_SetSpritePositionY            vdp
-     000095EC  _VDP_SetSpritePattern              vdp
-     00009604  _VDP_SetSpriteColorSM1             vdp
-     0000961E  _VDP_SetSpriteUniColor             vdp
-     0000963B  _VDP_SetSpriteMultiColor           vdp
-     00009659  _VDP_SetSpriteData                 vdp
-     00009675  _VDP_DisableSpritesFrom            vdp
-     00009686  _VDP_SetBlinkTile                  vdp
-     000096D0  _g_VDPBitValue                     vdp
-     000096D8  _VDP_LoadPattern_GM2               vdp
-     0000974C  _VDP_LoadColor_GM2                 vdp
-     000097C0  _VDP_WriteLayout_GM2               vdp
-     0000981B  _VDP_FillLayout_GM2                vdp
-     00009863  ___sdcc_bcall                      
-     0000986C  ___sdcc_bcall_abc                  
-     00009882  ___sdcc_bcall_ehl                  
-     00009898  __modschar                         modsigned
-     000098A0  __modsint                          modsigned
-     000098A6  _Sys_GetPageSlot                   system
-     000098F4  _Sys_SetPageSlot                   system
-     000098F5  _Sys_SetPage0Slot                  system
-     0000993A  _Sys_CheckSlot                     system
-     0000998A  __divschar                         divsigned
-     0000998C  __div8                             divsigned
-     00009990  __div_signexte                     divsigned
-     00009994  __div16                            divsigned
-     00009994  __divsint                          divsigned
-     000099BA  __get_remainder                    divsigned
-     000099C4  ___sdcc_call_hl                    
+     000090B1  _VDP_ReadDefaultStatus             vdp
+     000090B4  _VDP_SetPage                       vdp
+     000090C1  _VDP_SetLayoutTable                vdp
+     00009129  _VDP_SetColorTable                 vdp
+     000091B2  _VDP_SetPatternTable               vdp
+     00009217  _VDP_SetSpriteAttributeTable       vdp
+     000092A5  _VDP_SetSpritePatternTable         vdp
+     000092BE  _VDP_LoadSpritePattern             vdp
+     000092EF  _VDP_SetSpriteSM1                  vdp
+     0000932C  _VDP_SetSprite                     vdp
+     00009366  _VDP_SetSpriteExMultiColor         vdp
+     000093CB  _VDP_SetSpriteExUniColor           vdp
+     0000942D  _VDP_SetSpritePosition             vdp
+     0000945F  _VDP_SetSpritePositionX            vdp
+     00009477  _VDP_SetSpritePositionY            vdp
+     0000948E  _VDP_SetSpritePattern              vdp
+     000094A6  _VDP_SetSpriteColorSM1             vdp
+     000094C0  _VDP_SetSpriteUniColor             vdp
+     000094DD  _VDP_SetSpriteMultiColor           vdp
+     000094FB  _VDP_SetSpriteData                 vdp
+     00009517  _VDP_DisableSpritesFrom            vdp
+     00009528  _VDP_SetBlinkTile                  vdp
+     00009572  _g_VDPBitValue                     vdp
+     0000957A  _VDP_LoadPattern_GM2               vdp
+     000095EE  _VDP_LoadColor_GM2                 vdp
+     00009662  _VDP_WriteLayout_GM2               vdp
+     000096BD  _VDP_FillLayout_GM2                vdp
+     00009705  ___sdcc_bcall                      
+     0000970E  ___sdcc_bcall_abc                  
+     00009724  ___sdcc_bcall_ehl                  
+     0000973A  __modschar                         modsigned
+     00009742  __modsint                          modsigned
+     00009748  _Sys_GetPageSlot                   system
+     00009796  _Sys_SetPageSlot                   system
+     00009797  _Sys_SetPage0Slot                  system
+     000097DC  _Sys_CheckSlot                     system
+     0000982C  __divschar                         divsigned
+     0000982E  __div8                             divsigned
+     00009832  __div_signexte                     divsigned
+     00009836  __div16                            divsigned
+     00009836  __divsint                          divsigned
+     0000985C  __get_remainder                    divsigned
+     00009866  ___sdcc_call_hl                    
 ASxxxx Linker V05.50.4-SDLD,  page 13.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZER                        000099C5    00000028 =          40. bytes (REL,CON)
+_INITIALIZER                        00009867    00000028 =          40. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -687,18 +687,18 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_GSFINAL                            000099ED    00000000 =           0. bytes (REL,CON)
+_GSFINAL                            0000988F    00000000 =           0. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     000099ED  _g_LastAddr                        crt0
+     0000988F  _g_LastAddr                        crt0
 
 ASxxxx Linker V05.50.4-SDLD,  page 15.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -757,7 +757,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -817,7 +817,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -857,168 +857,170 @@ _DATA                               0000C000    00002F80 =       12160. bytes (R
      0000DFB7  _asset_bank                        main
      0000DFB8  _packed_src                        main
      0000DFBA  _p1_shared                         main
-     0000E1AE  _packed_write                      main
-     0000E1AF  _packed_flags                      main
-     0000E1B0  _packed_bits                       main
-     0000E1B1  _packed_copy                       main
-     0000E1B2  _packed_left                       main
-     0000E1B3  _lz_dst                            main
-     0000E1B5  _lz_cnt                            main
-     0000E1B6  _drag_down                         main
-     0000E1B7  _drag_moved                        main
-     0000E1B8  _drag_add                          main
-     0000E1B9  _drag_prior                        main
-     0000E1BA  _drag_anchor_x                     main
-     0000E1BC  _drag_anchor_y                     main
-     0000E1BE  _drag_l                            main
-     0000E1C0  _drag_t                            main
+     0000E2AE  _packed_write                      main
+     0000E2AF  _packed_flags                      main
+     0000E2B0  _packed_bits                       main
+     0000E2B1  _packed_copy                       main
+     0000E2B2  _packed_left                       main
+     0000E2B3  _lz_dst                            main
+     0000E2B5  _lz_win                            main
+     0000E2B7  _lz_cnt                            main
+     0000E2B8  _drag_down                         main
+     0000E2B9  _drag_moved                        main
+     0000E2BA  _drag_add                          main
+     0000E2BB  _drag_prior                        main
+     0000E2BC  _drag_anchor_x                     main
+     0000E2BE  _drag_anchor_y                     main
+     0000E2C0  _drag_l                            main
 ASxxxx Linker V05.50.4-SDLD,  page 18.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000E1C2  _drag_r                            main
-     0000E1C4  _drag_b                            main
-     0000E1C6  _unit_hp                           main
-     0000E1D0  _combat_target                     main
-     0000E1DA  _attack_cooldown                   main
-     0000E1E4  _attack_flash                      main
-     0000E1EE  _hurt_flash                        main
-     0000E1F8  _stance                            main
-     0000E200  _building_hp                       main
-     0000E20C  _building_owner                    main
-     0000E218  _enemy_selected                    main
-     0000E219  _command_last                      main
-     0000E21A  _combat_active                     main
-     0000E21B  _combat_hits                       main
-     0000E21D  _combat_kills                      main
-     0000E21F  _combat_buildings                  main
-     0000E221  _auto_hx                           main
-     0000E229  _auto_hy                           main
-     0000E231  _auto_try                          main
-     0000E239  _game_over                         main
-     0000E23A  _end_enabled                       main
-     0000E23B  _ai_wood                           main
-     0000E23D  _ai_gold                           main
-     0000E23F  _ai_launch                         main
-     0000E241  _auto_defend                       main
-     0000E242  _ai_enabled                        main
-     0000E243  _ai_step                           main
-     0000E244  _ai_wave                           main
-     0000E245  _ai_site                           main
-     0000E246  _ai_left                           main
-     0000E247  _ai_state                          main
-     0000E249  _ai_timer                          main
-     0000E24B  _ai_stuck                          main
-     0000E24D  _ai_dir                            main
-     0000E24F  _ai_kind                           main
-     0000E251  _unit_facing                       main
-     0000E25B  _unit_frame                        main
-     0000E265  _unit_walk_dist                    main
-     0000E26F  _unit_walk_phase                   main
-     0000E279  _fog_seen                          main
-     0000E2F9  _fog_visible                       main
-     0000E379  _fog_next                          main
-     0000E3F9  _fog_memory                        main
-     0000E7F9  _fog_refresh                       main
-     0000E7FA  _fog_static                        main
-     0000E87A  _fog_build_dirty                   main
-     0000E87B  _fog_need                          main
-     0000E8FB  _fog_delta                         main
-     0000E97B  _fog_sources                       main
-     0000E98B  _fog_trail                         main
-     0000EA0B  _fog_epoch                         main
+     0000E2C2  _drag_t                            main
+     0000E2C4  _drag_r                            main
+     0000E2C6  _drag_b                            main
+     0000E2C8  _unit_hp                           main
+     0000E2D2  _combat_target                     main
+     0000E2DC  _attack_cooldown                   main
+     0000E2E6  _attack_flash                      main
+     0000E2F0  _hurt_flash                        main
+     0000E2FA  _stance                            main
+     0000E302  _building_hp                       main
+     0000E30E  _building_owner                    main
+     0000E31A  _enemy_selected                    main
+     0000E31B  _command_last                      main
+     0000E31C  _combat_active                     main
+     0000E31D  _combat_hits                       main
+     0000E31F  _combat_kills                      main
+     0000E321  _combat_buildings                  main
+     0000E323  _auto_hx                           main
+     0000E32B  _auto_hy                           main
+     0000E333  _auto_try                          main
+     0000E33B  _game_over                         main
+     0000E33C  _end_enabled                       main
+     0000E33D  _ai_wood                           main
+     0000E33F  _ai_gold                           main
+     0000E341  _ai_launch                         main
+     0000E343  _auto_defend                       main
+     0000E344  _ai_enabled                        main
+     0000E345  _ai_step                           main
+     0000E346  _ai_wave                           main
+     0000E347  _ai_site                           main
+     0000E348  _ai_left                           main
+     0000E349  _ai_state                          main
+     0000E34B  _ai_timer                          main
+     0000E34D  _ai_stuck                          main
+     0000E34F  _ai_dir                            main
+     0000E351  _ai_kind                           main
+     0000E353  _unit_facing                       main
+     0000E35D  _unit_frame                        main
+     0000E367  _unit_walk_dist                    main
+     0000E371  _unit_walk_phase                   main
+     0000E37B  _fog_seen                          main
+     0000E3FB  _fog_visible                       main
+     0000E47B  _fog_next                          main
+     0000E4FB  _fog_memory                        main
+     0000E8FB  _fog_refresh                       main
+     0000E8FC  _fog_static                        main
+     0000E97C  _fog_build_dirty                   main
+     0000E97D  _fog_need                          main
+     0000E9FD  _fog_delta                         main
+     0000EA7D  _fog_sources                       main
+     0000EA8D  _fog_trail                         main
 ASxxxx Linker V05.50.4-SDLD,  page 19.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000EA0D  _repair_target                     main
-     0000EA15  _repair_timer                      main
-     0000EA1D  _repair_active                     main
-     0000EA1E  _repair_pending                    main
-     0000EA1F  _tower_cooldown                    main
-     0000EA2B  _tower_shots                       main
-     0000EA2D  _repair_spent                      main
-     0000EA2F  _repair_healed                     main
-     0000EA31  _fog_updates                       main
-     0000EA33  _shot_x                            main
-     0000EA53  _shot_y                            main
-     0000EA73  _shot_active                       main
-     0000EA75  _combat_shots                      main
-     0000EA77  _shot_dx                           main
-     0000EA87  _shot_dy                           main
-     0000EA97  _shot_time                         main
-     0000EAA7  _shot_target                       main
-     0000EAB7  _shot_damage                       main
-     0000EAC7  _shot_owner                        main
-     0000EAD7  _tile_buffer                       main
-     0000EB57  _boot_poses                        main
-     0000EB58  _cache_tick                        main
-     0000EB59  _frame_uploads                     main
-     0000EB5B  _rendered_frames                   main
-     0000EB5D  _actor_x                           main
-     0000EB71  _actor_y                           main
-     0000EB85  _actor_visible                     main
-     0000EB8F  _actor_key                         main
-     0000EB99  _actor_crop                        main
-     0000EBA3  _v9c                               main
-     0000ECCA  _sc_cull                           main
-     0000EE42  _draw_opt                          main
-     0000EE4C  _fa_x                              main
-     0000EE4D  _fa_y                              main
-     0000EE4E  _fa_who                            main
-     0000EEE8  _unit_prep_f                       art_s27_b3
-     0000EF3A  _g_Mouse_OffsetX                   input
-     0000EF3B  _g_Mouse_OffsetY                   input
-     0000EF3C  _g_Mouse_Buttons                   input
-     0000EF3D  _g_VDP_REGSAV                      vdp
-     0000EF59  _g_VDP_Data                        vdp
-     0000EF5B  _g_VDP_Command                     vdp
-     0000EF6A  _g_VDP_Sprite                      vdp
-     0000EF6E  _g_ScreenLayoutLow                 vdp
-     0000EF70  _g_ScreenColorLow                  vdp
-     0000EF72  _g_ScreenPatternLow                vdp
-     0000EF74  _g_SpriteAttributeLow              vdp
-     0000EF76  _g_SpritePatternLow                vdp
-     0000EF78  _g_SpriteColorLow                  vdp
-     0000EF7A  _g_ScreenLayoutHigh                vdp
-     0000EF7B  _g_ScreenColorHigh                 vdp
+     0000EB0D  _fog_epoch                         main
+     0000EB0F  _repair_target                     main
+     0000EB17  _repair_timer                      main
+     0000EB1F  _repair_active                     main
+     0000EB20  _repair_pending                    main
+     0000EB21  _tower_cooldown                    main
+     0000EB2D  _tower_shots                       main
+     0000EB2F  _repair_spent                      main
+     0000EB31  _repair_healed                     main
+     0000EB33  _fog_updates                       main
+     0000EB35  _shot_x                            main
+     0000EB55  _shot_y                            main
+     0000EB75  _shot_active                       main
+     0000EB77  _combat_shots                      main
+     0000EB79  _shot_dx                           main
+     0000EB89  _shot_dy                           main
+     0000EB99  _shot_time                         main
+     0000EBA9  _shot_target                       main
+     0000EBB9  _shot_damage                       main
+     0000EBC9  _shot_owner                        main
+     0000EBD9  _tile_buffer                       main
+     0000EC59  _boot_poses                        main
+     0000EC5A  _cache_tick                        main
+     0000EC5B  _frame_uploads                     main
+     0000EC5D  _rendered_frames                   main
+     0000EC5F  _actor_x                           main
+     0000EC73  _actor_y                           main
+     0000EC87  _actor_visible                     main
+     0000EC91  _actor_key                         main
+     0000EC9B  _actor_crop                        main
+     0000ECA5  _v9c                               main
+     0000EDD4  _sc_cull                           main
+     0000EF4C  _draw_opt                          main
+     0000EF56  _fa_x                              main
+     0000EF57  _fa_y                              main
+     0000EF58  _fa_who                            main
+     0000EFF2  _unit_prep_f                       art_s27_b3
+     0000F044  _g_Mouse_OffsetX                   input
+     0000F045  _g_Mouse_OffsetY                   input
+     0000F046  _g_Mouse_Buttons                   input
+     0000F047  _g_VDP_REGSAV                      vdp
+     0000F063  _g_VDP_Data                        vdp
+     0000F065  _g_VDP_Command                     vdp
+     0000F074  _g_VDP_Sprite                      vdp
+     0000F078  _g_ScreenLayoutLow                 vdp
+     0000F07A  _g_ScreenColorLow                  vdp
+     0000F07C  _g_ScreenPatternLow                vdp
+     0000F07E  _g_SpriteAttributeLow              vdp
+     0000F080  _g_SpritePatternLow                vdp
+     0000F082  _g_SpriteColorLow                  vdp
+     0000F084  _g_ScreenLayoutHigh                vdp
 ASxxxx Linker V05.50.4-SDLD,  page 20.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_DATA                               0000C000    00002F80 =       12160. bytes (REL,CON)
+_DATA                               0000C000    0000308A =       12426. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000EF7C  _g_ScreenPatternHigh               vdp
-     0000EF7D  _g_SpriteAttributeHigh             vdp
-     0000EF7E  _g_SpritePatternHigh               vdp
-     0000EF7F  _g_SpriteColorHigh                 vdp
+     0000F085  _g_ScreenColorHigh                 vdp
+     0000F086  _g_ScreenPatternHigh               vdp
+     0000F087  _g_SpriteAttributeHigh             vdp
+     0000F088  _g_SpritePatternHigh               vdp
+     0000F089  _g_SpriteColorHigh                 vdp
+
 ASxxxx Linker V05.50.4-SDLD,  page 21.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZED                        0000EF80    00000028 =          40. bytes (REL,CON)
+_INITIALIZED                        0000F08A    00000028 =          40. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     0000EF80  _build_names                       main
-     0000EF90  _recruit_names                     main
-     0000EF9C  _kbrow                             main
-     0000EFA5  _fog_dest                          main
-     0000EFA7  _g_VDPInitilized                   vdp
+     0000F08A  _build_names                       main
+     0000F09A  _recruit_names                     main
+     0000F0A6  _kbrow                             main
+     0000F0AF  _fog_dest                          main
+     0000F0B1  _g_VDPInitilized                   vdp
 
 ASxxxx Linker V05.50.4-SDLD,  page 22.
 Hexadecimal  [32-Bits]
