@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -75,6 +75,7 @@ proc begin {} {
  if {[info exists ::env(BENCH_ENEMY)]} {debug write memory $::enemy_mode $::env(BENCH_ENEMY)}
  if {[info exists ::env(BENCH_SWEEP)]} {sweep} elseif {![info exists ::env(BENCH_IDLE)]} {walk;if {[info exists ::env(BENCH_JUMPT)]} {jumper}}
  if {[info exists ::env(BENCH_GOD)]} {debug set_watchpoint write_mem $::death_ticks {} {if {[debug read memory $::death_ticks]!=0} {debug write memory $::death_ticks 0;incr ::god_hits}}}
+ if {[info exists ::env(BENCH_GOD)] && $::env(BENCH_GOD)==2} {debug set_watchpoint write_mem $::restart_pending {} {if {[debug read memory $::restart_pending]!=0} {debug write memory $::restart_pending 0;debug write memory $::game_lives 3;incr ::god_hits}}}
  if {[info exists ::env(BENCH_TRACK)]} {track}
  if {[info exists ::env(BENCH_CKPT)]} {set ::ck_list $::env(BENCH_CKPT);set ::ck_k 0;set ::ck_log {};ckpt}
  if {[info exists ::env(BENCH_PC)]} {sample}
@@ -238,7 +239,29 @@ proc ot_enter {} {
  set ::ot_e [expr {$d1<$w && $d2<256 && $e1<$h && $e2<448}]
  set ra [w16 [reg SP]];set ::ot_bp [debug set_bp $ra {} {incr ::ot_n;if {[reg A]!=$::ot_e} {incr ::ot_bad};if {$::ot_e} {incr ::ot_true};catch {debug remove_bp $::ot_bp}}]
 }
+proc bt_enter {} {
+ if {[debug read memory 0xC004]!=$::bt_bank} {return}
+ set ::bt_old [debug read memory $::bt_bombs];set ::bt_rise {};for {set i 0} {$i<6} {incr i} {lappend ::bt_rise [debug read memory [expr {$::bt_rise_a+$i}]]}
+ set ::bt_bb [w16 0xEF15];set ::bt_px [w16 $::raw_player_x];set ::bt_py [w16 $::raw_player_y]
+ set ra [w16 [reg SP]];set ::bt_bp [debug set_bp $ra {} {bt_check;catch {debug remove_bp $::bt_bp}}]
+}
+proc bt_check {} {
+ set exp $::bt_old;set nb 0;set er {}
+ for {set i 0} {$i<6} {incr i} {
+  set r [lindex $::bt_rise $i];if {$r>0} {incr r -1}
+  if {!(($::bt_old>>$i)&1)} {
+   lassign [lindex $::bt_sp $i] tx ty;set x [expr {$tx*256}];set y [expr {$ty*256}]
+   set d [s16 [expr {($::bt_px+64-$x)&0xFFFF}]];set d2 [s16 [expr {($x-$::bt_px-64)&0xFFFF}]];set e [s16 [expr {($::bt_py+48-$y)&0xFFFF}]];set e2 [s16 [expr {($y-$::bt_py-48)&0xFFFF}]]
+   if {$d<256 && $d2<256 && $e<256 && $e2<448} {set exp [expr {$exp|(1<<$i)}];incr nb;set r 40}
+  }
+  lappend er $r
+ }
+ incr ::bt_n;set got {};for {set i 0} {$i<6} {incr i} {lappend got [debug read memory [expr {$::bt_rise_a+$i}]]}
+ if {[debug read memory $::bt_bombs]!=$exp || $got ne $er || [w16 0xEF15]!=(($::bt_bb+$nb)&0xFFFF)} {incr ::bt_bad;if {$::bt_bad<4} {set o [open $::env(BENCH_OUT).btd a];puts $o "old=$::bt_old exp=$exp gotb=[debug read memory $::bt_bombs] rise_old=$::bt_rise er=$er got=$got bb=$::bt_bb now=[w16 0xEF15] nb=$nb px=$::bt_px py=$::bt_py";close $o}}
+ if {$nb} {incr ::bt_hits $nb}
+}
 proc finish {} {
+ if {[info exists ::env(BENCH_BTDIAG)]} {set f [open $::env(BENCH_OUT).bt w];puts $f "bombtick calls=$::bt_n pickups=$::bt_hits mismatches=$::bt_bad";close $f}
  if {[info exists ::env(BENCH_ANDIAG)] || [info exists ::env(BENCH_OTDIAG)]} {set f [open $::env(BENCH_OUT).ao w];puts $f "actornext calls=$::an_n mismatches=$::an_bad | objtouch calls=$::ot_n true=$::ot_true mismatches=$::ot_bad";close $f}
  if {[info exists ::env(BENCH_M40)]} {set f [open $::env(BENCH_OUT).m4 w];puts $f "mod40 calls=$::m40_n mismatches=$::m40_bad";close $f}
  if {[info exists ::env(BENCH_GVDIAG)]} {set f [open $::env(BENCH_OUT).gv w];puts $f "select: actor_checks=$::gvs_n state_changes=$::gvs_tr mismatches=$::gvs_bad | next: calls=$::gvn_n mismatches=$::gvn_bad | bonuslist: calls=$::gvb_n listed_items=$::gvb_items mismatches=$::gvb_bad";close $f}
@@ -296,6 +319,7 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_BTDIAG)]} {set bl $::env(BENCH_BTDIAG);lassign $bl bta btb btbombs btrise;set btsp {};foreach {tx ty} [lrange $bl 4 end] {lappend btsp [list $tx $ty]};set ::bt_bank $btb;set ::bt_bombs [expr {$::world_map+$btbombs}];set ::bt_rise_a [expr {$::world_map+$btrise}];set ::bt_sp $btsp;set ::bt_n 0;set ::bt_bad 0;set ::bt_hits 0;debug set_bp $bta {} {bt_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
 proc shotlog {t f} {screenshot -raw $f;if {[info exists ::env(BENCH_VRAM)]} {set v [open [string map {.png .vram} $f] wb];puts -nonewline $v [debug read_block VRAM 0 131072];close $v;if {[info exists ::world_map]} {set w [open [string map {.png .wmap} $f] wb];puts -nonewline $w [debug read_block memory $::world_map 9835];close $w};set q [open [string map {.png .rec} $f] w];foreach p {0 1} {for {set k 0} {$k<29} {incr k} {set b [expr {$::actors_old+$p*174+$k*6}];if {[byte [expr {$b+5}]]&1} {puts $q "act p$p slot$k x=[word $b] y=[word [expr {$b+2}]] frame=[byte [expr {$b+4}]]"}};set a [expr {$::actors_old+$p*174+14*6}];puts $q "page$p hud x=[word $a] y=[word [expr {$a+2}]] frame=[byte [expr {$a+4}]] vis=[byte [expr {$a+5}]] ring_cam=[word [expr {$::ring_camera_x+2*$p}]]/[word [expr {$::ring_camera_x+4+2*$p}]]"};binary scan [debug read_block "VDP palette" 0 32] cu* pl;puts $q "palette [join $pl { }]";binary scan [debug read_block "VDP regs" 0 32] cu* rg;puts $q "regs [join $rg { }]";puts $q "vdp_fast=[expr {[info exists ::vdp_fast]?[byte $::vdp_fast]:-1}]";puts $q "ph=[expr {[info exists ::bar_ph]?[byte $::bar_ph]:-1}]";puts $q "bar=[expr {[info exists ::bar_on]?[byte $::bar_on]:-1}] cur=[expr {[info exists ::cur_r2]?"[byte $::cur_r2],[byte $::cur_r23],[byte $::cur_r26],[byte $::cur_r27]":"-"}]";puts $q "lisr=$::lcnt keyi=$::kcnt";puts $q "front=[byte $::front_page] cam=[word $::camera_px],[word $::camera_py] player=[expr {[word $::player_x]>>4}],[expr {[word $::player_y]>>4}] hero_frame=[byte $::hero_frame]";close $q};if {[info exists ::camera_px]} {set l [open $::env(BENCH_OUT).cam a];puts $l "$t [word $::camera_px] [word $::camera_py]";close $l}}
 proc poll_level {} {if {[byte $::active_level]==$::env(BENCH_LEVEL) && [byte $::scene_ready]==165 && ![byte $::world_active]} {lvl_ready} else {after time 0.5 poll_level}}
