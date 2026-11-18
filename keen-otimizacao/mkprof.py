@@ -261,6 +261,7 @@ proc bt_check {} {
  if {$nb} {incr ::bt_hits $nb}
 }
 proc finish {} {
+ if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
  if {[info exists ::env(BENCH_BTDIAG)]} {set f [open $::env(BENCH_OUT).bt w];puts $f "bombtick calls=$::bt_n pickups=$::bt_hits mismatches=$::bt_bad";close $f}
  if {[info exists ::env(BENCH_ANDIAG)] || [info exists ::env(BENCH_OTDIAG)]} {set f [open $::env(BENCH_OUT).ao w];puts $f "actornext calls=$::an_n mismatches=$::an_bad | objtouch calls=$::ot_n true=$::ot_true mismatches=$::ot_bad";close $f}
@@ -320,6 +321,14 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_MTORC)]} {lassign $::env(BENCH_MTORC) mta mtbase;set ::mt_base $mtbase;set ::mt_n 0;set ::mt_bad 0;set ::mt_info {}
+ proc mt_enter {} {set ::mt_i [expr {[reg HL]}];set sp [reg SP];set ::mt_ret [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}];set ::mt_hlr [reg HL];if {[info exists ::mt_bp]} {catch {debug remove_bp $::mt_bp}};set ::mt_bp [debug set_bp $::mt_ret {} {mt_exit}]}
+ proc mt_word {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc mt_raw {base i} {set n [expr {$i+($i>>3)}];expr {([mt_word [expr {$::world_map+$base+$n}]]>>($i&7))&511}}
+ proc mt_exit {} {if {![info exists ::mt_bp]} {return};catch {debug remove_bp $::mt_bp};unset ::mt_bp;incr ::mt_n;set got [expr {[reg DE]}];set i $::mt_i
+  if {$::mt_base==0} {set exp [mt_raw 0 $i]} else {set j [expr {[mt_raw 0 [expr {$i>>3}]]*8+($i&7)}];set exp [mt_raw $::mt_base $j]}
+  if {$got!=$exp} {incr ::mt_bad;if {$::mt_bad<5} {append ::mt_info " i=$i exp=$exp got=$got"}}}
+ debug set_bp $mta {} {mt_enter}}
 if {[info exists ::env(BENCH_FLIPCHK)]} {set ::fl_n 0;set ::fl_busy 0;proc fl_chk {} {incr ::fl_n;binary scan [debug read_block "VDP status regs" 2 1] cu st;if {$st&1} {incr ::fl_busy}};debug set_bp $::env(BENCH_FLIPCHK) {} {fl_chk}}
 if {[info exists ::env(BENCH_BTDIAG)]} {set bl $::env(BENCH_BTDIAG);lassign $bl bta btb btbombs btrise;set btsp {};foreach {tx ty} [lrange $bl 4 end] {lappend btsp [list $tx $ty]};set ::bt_bank $btb;set ::bt_bombs [expr {$::world_map+$btbombs}];set ::bt_rise_a [expr {$::world_map+$btrise}];set ::bt_sp $btsp;set ::bt_n 0;set ::bt_bad 0;set ::bt_hits 0;debug set_bp $bta {} {bt_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
