@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -262,6 +262,7 @@ proc bt_check {} {
 }
 proc finish {} {
  if {[info exists ::env(BENCH_VRAMDUMP)]} {set f [open $::env(BENCH_OUT).vram wb];puts -nonewline $f [debug read_block "VRAM" 0 131072];close $f}
+ if {[info exists ::env(BENCH_OLORC)]} {set f [open $::env(BENCH_OUT).ol w];puts $f "calls=$::ol_n hits=$::ol_hit bad=$::ol_bad $::ol_info";close $f}
  if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
  if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
@@ -331,6 +332,27 @@ if {[info exists ::env(BENCH_SNAP)]} {lassign $::env(BENCH_SNAP) sna snseg snoff
   binary scan [debug read_block "memory" [expr {$::world_map+$::sn_off}] $::sn_len] H* h;set f [open $::env(BENCH_OUT).sn a];puts $f "$t $h";close $f}
  set ::sn_off $snoff;set ::sn_len $snlen;set ::sn_mod $snmod
  debug set_bp $sna "\[debug read memory \$::g_CurrentSegment\]==$snseg" {sn_hit}}
+if {[info exists ::env(BENCH_OLORC)]} {set ::ol_n 0;set ::ol_hit 0;set ::ol_bad 0;set ::ol_info {}
+ proc ol_w {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc ol_s16 {v} {set v [expr {$v&65535}];if {$v>=32768} {expr {$v-65536}} else {set v}}
+ proc ol_enter {} {set sp [reg SP];set ::ol_ret [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}]
+  set ::ol_sp [ol_w $::ca_x];set ::ol_rp [ol_w $::ca_map];set ::ol_tp [ol_w $::ca_tile];set ::ol_cnt [debug read memory $::ca_w];set ::ol_mode [debug read memory $::ca_h]
+  set ::ol_wx [ol_w $::ca_wx];set ::ol_wy [ol_w $::ca_wy];set ::ol_px [ol_w $::player_x];set ::ol_py [ol_w $::player_y]
+  set ::ol_rise {};set ::ol_spx {};set ::ol_spy {}
+  for {set i 0} {$i<$::ol_cnt} {incr i} {lappend ::ol_rise [debug read memory [expr {$::ol_rp+$i}]];lappend ::ol_spx [debug read memory [expr {$::ol_sp+3*$i}]];lappend ::ol_spy [debug read memory [expr {$::ol_sp+3*$i+1}]]}
+  set ::ol_mask [debug read memory $::ol_tp];set ::ol_bb [ol_w $::boobus_bombs];set ::ol_ko [debug read memory $::key_owned]
+  if {[info exists ::ol_bp]} {catch {debug remove_bp $::ol_bp}};set ::ol_bp [debug set_bp $::ol_ret {} {ol_exit}]}
+ proc ol_exit {} {if {![info exists ::ol_bp]} {return};catch {debug remove_bp $::ol_bp};unset ::ol_bp;incr ::ol_n
+  set mask $::ol_mask;set bb $::ol_bb;set ko $::ol_ko;set rise {};set hit 0
+  for {set i 0} {$i<$::ol_cnt} {incr i} {set r [lindex $::ol_rise $i];if {$r} {incr r -1};set bit [expr {1<<$i}]
+   if {!($mask&$bit)} {set x [expr {[lindex $::ol_spx $i]*256}];set y [expr {[lindex $::ol_spy $i]*256}]
+    if {[ol_s16 [expr {$::ol_px+64-$x}]]<$::ol_wx && [ol_s16 [expr {$x-$::ol_px-64}]]<256 && [ol_s16 [expr {$::ol_py+48-$y}]]<$::ol_wy && [ol_s16 [expr {$y-$::ol_py-48}]]<448} {
+     set mask [expr {$mask|$bit}];set r 40;incr hit;if {$::ol_mode} {set ko [expr {($ko+1)&255}]} else {set bb [expr {($bb+1)&65535}]}}}
+   lappend rise $r}
+  incr ::ol_hit $hit
+  set arise {};for {set i 0} {$i<$::ol_cnt} {incr i} {lappend arise [debug read memory [expr {$::ol_rp+$i}]]}
+  if {$rise ne $arise || $mask!=[debug read memory $::ol_tp] || $bb!=[ol_w $::boobus_bombs] || $ko!=[debug read memory $::key_owned]} {incr ::ol_bad;if {$::ol_bad<4} {append ::ol_info " exp=($rise m$mask b$bb k$ko) got=($arise m[debug read memory $::ol_tp] b[ol_w $::boobus_bombs] k[debug read memory $::key_owned]) px=$::ol_px py=$::ol_py"}}}
+ debug set_bp $::env(BENCH_OLORC) {} {ol_enter}}
 if {[info exists ::env(BENCH_FRAMESTAT)]} {lassign $::env(BENCH_FRAMESTAT) fra frs
  proc fr_hit {} {set sp [reg SP];set ob [expr {[debug read memory [expr {$sp+6}]]+256*[debug read memory [expr {$sp+7}]]}];set f [debug read memory [expr {$ob+4}]];if {![info exists ::fr_n($f)]} {set ::fr_n($f) 0};incr ::fr_n($f)}
  debug set_bp $fra "\[debug read memory \$::g_CurrentSegment\]==$frs" {fr_hit}}
