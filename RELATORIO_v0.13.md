@@ -80,7 +80,8 @@ Cada item foi medido e **revertido**:
 | `damage_mask` em Z80 (modo bitmap) | 28 contra 28 quadros |
 | Mouse a meia taxa | cerca de 1% de ganho, quebrava os testes de mouse |
 | Não esperar o blitter ao copiar poses (P1) | sem mudança |
-| Atualizar só os sprites que mudaram (P1) | não implementada: a cópia de atributos custa cerca de 2,5% do tempo |
+| Atualizar só os sprites que mudaram (P1), versão inicial | não implementada: a cópia de atributos custa cerca de 2,5% do tempo |
+| Lista de sprites incremental: pular a emissão do ator cuja assinatura e deslocamento no buffer não mudaram (P1, v0.13 final) | tabela de atributos idêntica à reconstrução completa, mas só 24% de acertos na luta (53% depois) e o custo de checar cada ator deu prejuízo: contato com 2 inimigos 69,1 → 76,5 ms, com 4 inimigos 99,2 → 111,3 ms, 4 unidades 29,7 → 26,8 quadros/s. Revertida |
 
 ## 6. Riscos e lições
 
@@ -159,7 +160,7 @@ Chaves em RAM (`ai_enabled`, `auto_defend`, `end_enabled`) permitem manter os te
 
 ### 10.9 Custo da luta
 
-O pior caso medido (8 unidades humanas grandes contra cavaleiro e arqueiro inimigos, primeiros 6 s de contato) passou de 74,1 para 66,2 ms por quadro (13,5 → 15,1 quadros/s). Quatro cortes sem mudar regras: HUD sujo só quando o alvo atingido aparece nele, teste de alcance reaproveitado durante a recarga, `sim_flags` a cada 4 ticks e `ae_occ` sem consulta ao pool para prédios humanos prontos. Os demais cenários ficaram iguais dentro do ruído (4 unidades 30,1 quadros/s). O que sobra no contato é desenho de sprites (~40%), combate (~14%) e simulação (~8%); ganhar mais exigiria redesenhar só os atores que mudaram, uma mudança estrutural.
+O pior caso medido (8 unidades humanas grandes contra cavaleiro e arqueiro inimigos, primeiros 6 s de contato) passou de 74,1 para 66,2 ms por quadro (13,5 → 15,1 quadros/s). Quatro cortes sem mudar regras: HUD sujo só quando o alvo atingido aparece nele, teste de alcance reaproveitado durante a recarga, `sim_flags` a cada 4 ticks e `ae_occ` sem consulta ao pool para prédios humanos prontos. Os demais cenários ficaram iguais dentro do ruído (4 unidades 30,1 quadros/s). O que sobra no contato é desenho de sprites (~40%), combate (~14%) e simulação (~8%). Redesenhar só os atores que mudaram foi tentado e descartado (seção 5): na luta quase todo ator muda a cada quadro, então só 24% das emissões podiam ser puladas e o custo da checagem foi maior que o ganho; o que resta é reduzir o custo fixo por ator da emissão.
 
 ### 10.8 Tempo de carga
 
