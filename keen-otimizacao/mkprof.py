@@ -261,6 +261,9 @@ proc bt_check {} {
  if {$nb} {incr ::bt_hits $nb}
 }
 proc finish {} {
+ if {[info exists ::env(BENCH_VRAMDUMP)]} {set f [open $::env(BENCH_OUT).vram wb];puts -nonewline $f [debug read_block "VRAM" 0 131072];close $f}
+ if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
+ if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
  if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
  if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
@@ -322,6 +325,21 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_FRAMESTAT)]} {lassign $::env(BENCH_FRAMESTAT) fra frs
+ proc fr_hit {} {set sp [reg SP];set ob [expr {[debug read memory [expr {$sp+6}]]+256*[debug read memory [expr {$sp+7}]]}];set f [debug read memory [expr {$ob+4}]];if {![info exists ::fr_n($f)]} {set ::fr_n($f) 0};incr ::fr_n($f)}
+ debug set_bp $fra "\[debug read memory \$::g_CurrentSegment\]==$frs" {fr_hit}}
+if {[info exists ::env(BENCH_CMDSTAT)]} {lassign $::env(BENCH_CMDSTAT) csa csb csg;set ::cs_g $csg;set ::cs_last {};set ::cs_last2 {};set ::cs_lt 0
+ proc cs_hit {} {binary scan [debug read_block "memory" $::cs_g 15] cu* c;set t [machine_info time]
+  if {$::cs_last ne {}} {set k $::cs_last;if {![info exists ::cs_n($k)]} {set ::cs_n($k) 0;set ::cs_px($k) 0;set ::cs_t($k) 0.0};}
+  if {$::cs_last ne {} && ($t-$::cs_lt)<0.2} {set ::cs_t($::cs_last) [expr {$::cs_t($::cs_last)+$t-$::cs_lt}]}
+  set sp [reg SP];set ret [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}];set seg [debug read memory $::g_CurrentSegment]
+  if {$::cs_last2 ne {} && ($t-$::cs_lt)<0.2} {if {![info exists ::c2_t($::cs_last2)]} {set ::c2_t($::cs_last2) 0.0;set ::c2_n($::cs_last2) 0};set ::c2_t($::cs_last2) [expr {$::c2_t($::cs_last2)+$t-$::cs_lt}]}
+  set k2 "[format %02x [lindex $c 14]] $ret $seg";if {![info exists ::c2_n($k2)]} {set ::c2_n($k2) 0;set ::c2_t($k2) 0.0};incr ::c2_n($k2);set ::cs_last2 $k2
+  set cmd [lindex $c 14];set nx [expr {[lindex $c 8]+256*[lindex $c 9]}];set ny [expr {[lindex $c 10]+256*[lindex $c 11]}]
+  set k [format "%02x" $cmd]
+  if {![info exists ::cs_n($k)]} {set ::cs_n($k) 0;set ::cs_px($k) 0;set ::cs_t($k) 0.0}
+  incr ::cs_n($k);incr ::cs_px($k) [expr {$nx*$ny}];set ::cs_last $k;set ::cs_lt $t}
+ debug set_bp $csa {} {cs_hit};debug set_bp $csb {} {cs_hit}}
 if {[info exists ::env(BENCH_BBORC)]} {lassign $::env(BENCH_BBORC) bba bbr bbs bbg bbo;set ::bb_set $bbs;set ::bb_g $bbg;set ::bb_old $bbo;set ::bb_n 0;set ::bb_act 0
  proc bb_log {} {if {!$::bb_act} {return};binary scan [debug read_block "memory" $::bb_g 15] cu* c;lappend c [machine_info time];lappend ::bb_cmds $c}
  proc bb_enter {} {set ::bb_sp [reg SP];set ::bb_ent [reg PC];set ::bb_pass 0;set ::bb_act 1;set ::bb_cmds {};debug write memory $::bb_old 1
