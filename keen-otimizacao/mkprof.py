@@ -261,6 +261,7 @@ proc bt_check {} {
  if {$nb} {incr ::bt_hits $nb}
 }
 proc finish {} {
+ if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
  if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
  if {[info exists ::env(BENCH_BTDIAG)]} {set f [open $::env(BENCH_OUT).bt w];puts $f "bombtick calls=$::bt_n pickups=$::bt_hits mismatches=$::bt_bad";close $f}
@@ -321,6 +322,14 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_BBORC)]} {lassign $::env(BENCH_BBORC) bba bbr bbs bbg bbo;set ::bb_set $bbs;set ::bb_g $bbg;set ::bb_old $bbo;set ::bb_n 0;set ::bb_act 0
+ proc bb_log {} {if {!$::bb_act} {return};binary scan [debug read_block "memory" $::bb_g 15] cu* c;lappend c [machine_info time];lappend ::bb_cmds $c}
+ proc bb_enter {} {set ::bb_sp [reg SP];set ::bb_ent [reg PC];set ::bb_pass 0;set ::bb_act 1;set ::bb_cmds {};debug write memory $::bb_old 1
+  set pg [debug read memory [expr {$::bb_sp+4}]];set ob [expr {[debug read memory [expr {$::bb_sp+6}]]+256*[debug read memory [expr {$::bb_sp+7}]]}]
+  binary scan [debug read_block "memory" $ob 6] cu* d;set ::bb_hdr "$pg $d [word $::camera_py]"}
+ proc bb_ret {} {if {!$::bb_act} {return};if {$::bb_pass==0} {set ::bb_c0 $::bb_cmds;set ::bb_cmds {};set ::bb_pass 1;debug write memory $::bb_old 0;reg SP $::bb_sp;reg PC $::bb_ent;return}
+  incr ::bb_n;set ::bb_act 0;set f [open $::env(BENCH_OUT).bb a];puts $f "CALL $::bb_hdr";puts $f "OLD $::bb_c0";puts $f "NEW $::bb_cmds";close $f}
+ debug set_bp $bba {} {bb_enter};debug set_bp $bbr {} {bb_ret};debug set_bp $bbs {} {bb_log}}
 if {[info exists ::env(BENCH_MTORC)]} {lassign $::env(BENCH_MTORC) mta mtbase;set ::mt_base $mtbase;set ::mt_n 0;set ::mt_bad 0;set ::mt_info {}
  proc mt_enter {} {set ::mt_i [expr {[reg HL]}];set sp [reg SP];set ::mt_ret [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}];set ::mt_hlr [reg HL];if {[info exists ::mt_bp]} {catch {debug remove_bp $::mt_bp}};set ::mt_bp [debug set_bp $::mt_ret {} {mt_exit}]}
  proc mt_word {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
