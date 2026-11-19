@@ -325,6 +325,12 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_SNAP)]} {lassign $::env(BENCH_SNAP) sna snseg snoff snlen snmod
+ proc sn_hit {} {set t [expr {[debug read memory $::simulation_ticks]+256*[debug read memory [expr {$::simulation_ticks+1}]]}]
+  if {$t%$::sn_mod!=0 || [info exists ::sn_seen($t)]} {return};set ::sn_seen($t) 1
+  binary scan [debug read_block "memory" [expr {$::world_map+$::sn_off}] $::sn_len] H* h;set f [open $::env(BENCH_OUT).sn a];puts $f "$t $h";close $f}
+ set ::sn_off $snoff;set ::sn_len $snlen;set ::sn_mod $snmod
+ debug set_bp $sna "\[debug read memory \$::g_CurrentSegment\]==$snseg" {sn_hit}}
 if {[info exists ::env(BENCH_FRAMESTAT)]} {lassign $::env(BENCH_FRAMESTAT) fra frs
  proc fr_hit {} {set sp [reg SP];set ob [expr {[debug read memory [expr {$sp+6}]]+256*[debug read memory [expr {$sp+7}]]}];set f [debug read memory [expr {$ob+4}]];if {![info exists ::fr_n($f)]} {set ::fr_n($f) 0};incr ::fr_n($f)}
  debug set_bp $fra "\[debug read memory \$::g_CurrentSegment\]==$frs" {fr_hit}}
