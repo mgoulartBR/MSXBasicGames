@@ -370,10 +370,10 @@ if {[info exists ::env(BENCH_CMDSTAT)]} {lassign $::env(BENCH_CMDSTAT) csa csb c
  debug set_bp $csa {} {cs_hit};debug set_bp $csb {} {cs_hit}}
 if {[info exists ::env(BENCH_BBORC)]} {lassign $::env(BENCH_BBORC) bba bbr bbs bbg bbo;set ::bb_set $bbs;set ::bb_g $bbg;set ::bb_old $bbo;set ::bb_n 0;set ::bb_act 0
  proc bb_log {} {if {!$::bb_act} {return};binary scan [debug read_block "memory" $::bb_g 15] cu* c;lappend c [machine_info time];lappend ::bb_cmds $c}
- proc bb_enter {} {set ::bb_sp [reg SP];set ::bb_ent [reg PC];set ::bb_pass 0;set ::bb_act 1;set ::bb_cmds {};debug write memory $::bb_old 1
+ proc bb_enter {} {set ::bb_sp [reg SP];set ::bb_ent [reg PC];set ::bb_pass 0;set ::bb_act 1;set ::bb_cmds {};set ::bb_c0 {};if {$::bb_old} {debug write memory $::bb_old 1}
   set pg [debug read memory [expr {$::bb_sp+4}]];set ob [expr {[debug read memory [expr {$::bb_sp+6}]]+256*[debug read memory [expr {$::bb_sp+7}]]}]
-  binary scan [debug read_block "memory" $ob 6] cu* d;set ::bb_hdr "$pg $d [word $::camera_py]"}
- proc bb_ret {} {if {!$::bb_act} {return};if {$::bb_pass==0} {set ::bb_c0 $::bb_cmds;set ::bb_cmds {};set ::bb_pass 1;debug write memory $::bb_old 0;reg SP $::bb_sp;reg PC $::bb_ent;return}
+  if {[info exists ::env(BENCH_FORCEFRAME)]} {debug write memory [expr {$ob+4}] $::env(BENCH_FORCEFRAME)};binary scan [debug read_block "memory" $ob 6] cu* d;set ::bb_hdr "$pg $d [word $::camera_py]"}
+ proc bb_ret {} {if {!$::bb_act} {return};if {$::bb_pass==0 && $::bb_old} {set ::bb_c0 $::bb_cmds;set ::bb_cmds {};set ::bb_pass 1;debug write memory $::bb_old 0;reg SP $::bb_sp;reg PC $::bb_ent;return}
   incr ::bb_n;set ::bb_act 0;set f [open $::env(BENCH_OUT).bb a];puts $f "CALL $::bb_hdr";puts $f "OLD $::bb_c0";puts $f "NEW $::bb_cmds";close $f}
  debug set_bp $bba {} {bb_enter};debug set_bp $bbr {} {bb_ret};debug set_bp $bbs {} {bb_log}}
 if {[info exists ::env(BENCH_MTORC)]} {lassign $::env(BENCH_MTORC) mta mtbase;set ::mt_base $mtbase;set ::mt_n 0;set ::mt_bad 0;set ::mt_info {}
