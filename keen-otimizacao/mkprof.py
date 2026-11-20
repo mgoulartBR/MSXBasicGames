@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['carts','cart_riding','cart_cache_valid','climbing','world_collision','camera_px','camera_py','ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 s+=''.join(f'set ::vv_{n} {d[n]}\n' for n in os.environ.get('BENCH_VARS','').split() if n in d)
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
@@ -264,6 +264,7 @@ proc bt_check {} {
 proc finish {} {
  if {[info exists ::env(BENCH_VRAMDUMP)]} {set f [open $::env(BENCH_OUT).vram wb];puts -nonewline $f [debug read_block "VRAM" 0 131072];close $f}
  if {[info exists ::env(BENCH_VARS)]} {set f [open $::env(BENCH_OUT).vv w];foreach n $::env(BENCH_VARS) {binary scan [debug read_block "memory" [set ::vv_$n] 4] H* h;puts $f "$n $h"};close $f}
+ if {[info exists ::env(BENCH_CSORC)]} {set f [open $::env(BENCH_OUT).cs2 w];puts $f "calls=$::cso_n fast=$::cso_fast bad=$::cso_bad $::cso_info";close $f}
  if {[info exists ::env(BENCH_OLORC)]} {set f [open $::env(BENCH_OUT).ol w];puts $f "calls=$::ol_n hits=$::ol_hit bad=$::ol_bad $::ol_info";close $f}
  if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
@@ -328,6 +329,45 @@ if {[info exists ::env(BENCH_M40)]} {set ::m40_n 0;set ::m40_bad 0;debug set_bp 
 foreach v {an_n an_bad ot_n ot_bad ot_true} {set ::$v 0}
 if {[info exists ::env(BENCH_ANDIAG)]} {lassign $::env(BENCH_ANDIAG) aaddr abank acax acar;set ::an_bank $abank;set ::an_cax $acax;set ::an_car $acar;debug set_bp $aaddr {} {an_enter}}
 if {[info exists ::env(BENCH_OTDIAG)]} {lassign $::env(BENCH_OTDIAG) oaddr obank ocwx ocwy;set ::ot_bank $obank;set ::ot_cwx $ocwx;set ::ot_cwy $ocwy;debug set_bp $oaddr {} {ot_enter}}
+if {[info exists ::env(BENCH_CSORC)]} {set ::cso_n 0;set ::cso_fast 0;set ::cso_bad 0;set ::cso_info {}
+ proc cs_b {a n} {binary scan [debug read_block "memory" $a $n] cu* l;return $l}
+ proc cs_w {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc cso_enter {} {set sp [reg SP];set ::cso_ret [expr {[debug read memory $sp]+256*[debug read memory [expr {$sp+1}]]}]
+  set ::cso_lvl [debug read memory $::active_level];set ::cso_carts [cs_b $::carts 18];set ::cso_cache [cs_b [expr {$::world_collision+1152}] 12]
+  set ::cso_valid [debug read memory $::cart_cache_valid];set ::cso_rid [debug read memory $::cart_riding];set ::cso_clb [debug read memory $::climbing];set ::cso_px [cs_w $::player_x]
+  set ::cso_cpx [cs_w $::camera_px];set ::cso_cpy [cs_w $::camera_py];set ::cso_cd [debug read memory $::combat_dirty]
+  if {[info exists ::cso_bp]} {catch {debug remove_bp $::cso_bp}};set ::cso_bp [debug set_bp $::cso_ret {} {cso_exit}]}
+ proc cso_exit {} {if {![info exists ::cso_bp]} {return};catch {debug remove_bp $::cso_bp};unset ::cso_bp;incr ::cso_n
+  if {$::cso_lvl!=2 && $::cso_lvl!=7} {return}
+  set n [expr {$::cso_lvl==7?1:3}];set carts $::cso_carts;set allhit 1
+  for {set i 0} {$i<$n} {incr i} {
+   set o [expr {$i*6}];set x [expr {[lindex $carts $o]+256*[lindex $carts [expr {$o+1}]]}];set y [expr {[lindex $carts [expr {$o+2}]]+256*[lindex $carts [expr {$o+3}]]}];set d [lindex $carts [expr {$o+4}]];if {$d>127} {set d [expr {$d-256}]}
+   if {!($::cso_valid&(1<<$i))} {set allhit 0;break}
+   if {$d>0} {set nx [expr {($x+32)&65535}];set lead [expr {(($nx+752)&65535)>>8}]} else {set nx [expr {($x-32)&65535}];set lead [expr {$nx>>8}]}
+   set row [expr {(($y+288)&65535)>>8}];set c [expr {$i*4}]
+   if {[lindex $::cso_cache $c]!=$lead || [lindex $::cso_cache [expr {$c+1}]]!=$row || [lindex $::cso_cache [expr {$c+2}]]!=($d&255)} {set allhit 0;break}}
+  if {!$allhit} {return};incr ::cso_fast
+  set exp {};set px $::cso_px
+  for {set i 0} {$i<$n} {incr i} {
+   set o [expr {$i*6}];set x [expr {[lindex $carts $o]+256*[lindex $carts [expr {$o+1}]]}];set y [expr {[lindex $carts [expr {$o+2}]]+256*[lindex $carts [expr {$o+3}]]}];set d [lindex $carts [expr {$o+4}]];if {$d>127} {set d [expr {$d-256}]};set dl 0
+   if {[lindex $::cso_cache [expr {$i*4+3}]]} {set d [expr {-$d}];set dl 0} else {set x [expr {($x+32*$d)&65535}];set dl [expr {32*$d}]}
+   lappend exp [expr {$x&255}] [expr {$x>>8}] [expr {$y&255}] [expr {$y>>8}] [expr {$d&255}] [expr {$dl&255}]}
+  for {set i $n} {$i<3} {incr i} {for {set k 0} {$k<6} {incr k} {lappend exp [lindex $carts [expr {$i*6+$k}]]}}
+  set rid $::cso_rid
+  if {$rid<3 && !$::cso_clb} {set dl [lindex $exp [expr {$rid*6+5}]];if {$dl>127} {set dl [expr {$dl-256}]};set px [expr {($px+$dl)&65535}]}
+  if {$::cso_clb} {set rid 255}
+  set cd $::cso_cd
+  for {set i 0} {$i<$n} {incr i} {set x [expr {[lindex $exp [expr {$i*6}]]+256*[lindex $exp [expr {$i*6+1}]]}];set y [expr {[lindex $exp [expr {$i*6+2}]]+256*[lindex $exp [expr {$i*6+3}]]}]
+   if {(((($x>>4)-$::cso_cpx+63)&65535)<335) && (((($y>>4)-$::cso_cpy+31)&65535)<223)} {set cd 1;break}}
+  set got [cs_b $::carts 18]
+  if {$got ne $exp || [cs_w $::player_x]!=$px || [debug read memory $::cart_riding]!=$rid || [debug read memory $::combat_dirty]!=$cd} {incr ::cso_bad;if {$::cso_bad<4} {append ::cso_info " exp=$exp got=$got px=$px/[cs_w $::player_x] rid=$rid/[debug read memory $::cart_riding] cd=$cd/[debug read memory $::combat_dirty]"}}}
+ debug set_bp $::env(BENCH_CSORC) "\[debug read memory \$::g_CurrentSegment\]==7" {cso_enter}}
+if {[info exists ::env(BENCH_SNAPA)]} {set ::sa_l [lassign $::env(BENCH_SNAPA) saa sasg samod];set ::sa_mod $samod
+ proc sa_hit {} {set t [expr {[debug read memory $::simulation_ticks]+256*[debug read memory [expr {$::simulation_ticks+1}]]}]
+  if {$t%$::sa_mod!=0 || [info exists ::sa_seen($t)]} {return};set ::sa_seen($t) 1;set out ""
+  foreach {a n} $::sa_l {binary scan [debug read_block "memory" $a $n] H* h;append out $h "-"}
+  set f [open $::env(BENCH_OUT).sa a];puts $f "$t $out";close $f}
+ debug set_bp $saa "\[debug read memory \$::g_CurrentSegment\]==$sasg" {sa_hit}}
 if {[info exists ::env(BENCH_SNAP)]} {lassign $::env(BENCH_SNAP) sna snseg snoff snlen snmod
  proc sn_hit {} {set t [expr {[debug read memory $::simulation_ticks]+256*[debug read memory [expr {$::simulation_ticks+1}]]}]
   if {$t%$::sn_mod!=0 || [info exists ::sn_seen($t)]} {return};set ::sn_seen($t) 1
