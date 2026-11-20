@@ -33,6 +33,8 @@ s+='set ::funcs {%s}\n'%spec
 s+=r'''
 set ::bench_out $::env(BENCH_OUT)
 if {[info exists ::env(BENCH_Z80)]} {set z80_freq_locked false;set z80_freq $::env(BENCH_Z80)}
+if {[info exists ::env(BENCH_R800)]} {set r800_freq_locked false;set r800_freq $::env(BENCH_R800)}
+if {[info exists ::env(BENCH_S1990)]} {debug write "S1990 regs" 6 $::env(BENCH_S1990)}
 proc logline {t} {set f [open $::bench_out a];puts $f $t;close $f}
 set ::cur_seg_addr $::g_CurrentSegment
 foreach {nm addr seg} $::funcs {

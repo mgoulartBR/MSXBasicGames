@@ -10,7 +10,7 @@
 
 **Cover image:** `cover-16x9.png` (recorte 16:9 da captura do chefe; 1280×720)
 
-**Attachments:** manter `KEEN-0.9.98.ROM` e `KEEN-0.9.98-fontes.zip`; adicionar `fps-chart.png` como imagem no corpo.
+**Attachments:** manter `KEEN-0.9.98.ROM` e `KEEN-0.9.98-fontes.zip`; adicionar como imagens no corpo: `fps-chart.png`, `fps-z80-1x-3.58MHz.png`, `fps-z80-1.5x-5.37MHz.png`, `fps-z80-2x-7.16MHz.png`, `fps-z80-3x-10.74MHz.png`, `fps-r800-7.16MHz.png`.
 
 **Comments:** Enabled · **Visibility:** Published
 
@@ -53,6 +53,23 @@ A few days ago **byturn** left a comment pointing out that the sprites were draw
 
 These are renders per second from a script that teleports Keen to fixed points and makes him walk and jump, so they are lower than real play (the scroll ring is rebuilt at each point) — use them to compare versions, not as absolute values. Walking normally, Hill reaches ~40 fps at 5.37 MHz and ~44 fps at 7.16 MHz, and Grove ~36 fps at 5.37 MHz. At 3.58 MHz it runs, but slowly (Hill ~22 fps, the other stages between 3.5 and 17), and the HUD bar stays off.
 
+## Other clocks
+
+The same script at every clock (0.9.75 vs 0.9.98, renders per second):
+
+![Z80 3.58 MHz](fps-z80-1x-3.58MHz.png)
+![Z80 5.37 MHz](fps-z80-1.5x-5.37MHz.png)
+![Z80 7.16 MHz](fps-z80-2x-7.16MHz.png)
+![Z80 10.74 MHz](fps-z80-3x-10.74MHz.png)
+
+The biggest relative gains are in the stages that were most CPU-bound (Grove, Pass, Apple, Boobus, Castle). At 10.74 MHz the stages that were already VDP-limited barely move (Pass is within noise: 27.1 vs 25.7).
+
+**R800 (turbo R CPU).** I also ran it on openMSX's R800 core at 7.16 MHz. There is no turbo R BIOS in my test setup, so this is a C-BIOS MSX2+ machine with an S1990 added to switch the CPU — an approximation, not a real turbo R:
+
+![R800](fps-r800-7.16MHz.png)
+
+Two things to know: (1) on a real turbo R, a cartridge normally starts in Z80 mode unless something switches the CPU, and this ROM does not switch it; (2) **in R800 mode the HUD bar comes out garbled** in my tests — its line-exact timing was tuned for the Z80. The rest of the screen renders fine. I plan to make the clock detection turn the bar off on R800.
+
 ## Honest caveats
 
 - **Everything was measured in openMSX.** I have not tested on real hardware, and I would really appreciate reports from a real MSX2+ or turbo R — VDP I/O waits can differ from the emulator.
@@ -60,6 +77,7 @@ These are renders per second from a script that teleports Keen to fixed points a
 - In isolated screenshots the HUD bar sometimes shows a one-frame glitch. I saw it in older versions too and have not found the cause.
 - TIMP coverage is still partial (Rapids, Pass, Grove, Bay, Swamp and Castle still use AND/OR on many frames). The profile says those stages are CPU-bound, so the remaining gain would be small.
 - Stage 10 (Swamp) numbers come from the controlled script only.
+- R800 mode: HUD bar garbled (see above); measured only on the openMSX R800 core.
 
 ## Download
 
