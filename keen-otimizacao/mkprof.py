@@ -27,6 +27,7 @@ for _k,_v in _loc.items():
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
 s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+=''.join(f'set ::vv_{n} {d[n]}\n' for n in os.environ.get('BENCH_VARS','').split() if n in d)
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
 s+=r'''
@@ -262,6 +263,7 @@ proc bt_check {} {
 }
 proc finish {} {
  if {[info exists ::env(BENCH_VRAMDUMP)]} {set f [open $::env(BENCH_OUT).vram wb];puts -nonewline $f [debug read_block "VRAM" 0 131072];close $f}
+ if {[info exists ::env(BENCH_VARS)]} {set f [open $::env(BENCH_OUT).vv w];foreach n $::env(BENCH_VARS) {binary scan [debug read_block "memory" [set ::vv_$n] 4] H* h;puts $f "$n $h"};close $f}
  if {[info exists ::env(BENCH_OLORC)]} {set f [open $::env(BENCH_OUT).ol w];puts $f "calls=$::ol_n hits=$::ol_hit bad=$::ol_bad $::ol_info";close $f}
  if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
