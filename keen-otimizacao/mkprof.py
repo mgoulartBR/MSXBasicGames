@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['carts','cart_riding','cart_cache_valid','climbing','world_collision','camera_px','camera_py','hardware_scroll','ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['carts','cart_riding','cart_cache_valid','climbing','world_collision','camera_px','camera_py','hardware_scroll','ca_x','ca_r','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 s+=''.join(f'set ::vv_{n} {d[n]}\n' for n in os.environ.get('BENCH_VARS','').split() if n in d)
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
@@ -276,6 +276,7 @@ proc finish {} {
  if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
  if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
+ if {[info exists ::env(BENCH_APORC)]} {set f [open $::env(BENCH_OUT).ap w];puts $f "collect=$::ap_cn bad=$::ap_cb static=$::ap_sn bad=$::ap_sb collect_recs=$::ap_cv rise_calls=$::ap_rn actor_calls=$::ap_an state1=$::ap_st1 ovf=$::ap_ovn collect_recs=$::ap_cv static_recs=$::ap_sv $::ap_info";close $f}
  if {[info exists ::env(BENCH_PCORC)]} {set f [open $::env(BENCH_OUT).pc2 w];puts $f "calls=$::pc_n visible=$::pc_vis bad=$::pc_bad $::pc_info";close $f}
  if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
@@ -446,6 +447,57 @@ if {[info exists ::env(BENCH_PCORC)]} {set ::pc_n 0;set ::pc_bad 0;set ::pc_vis 
   if {$exp} {incr ::pc_vis}
   if {$got!=$exp} {incr ::pc_bad;if {$::pc_bad<6} {append ::pc_info " dx=$dx dy=$dy w=$w h=$h lim=$lim exp=$exp got=$got"}}}
  foreach {a sg} $::env(BENCH_PCORC) {set ::pc_seg($a) $sg;debug set_bp $a {} {pc_enter}}}
+if {[info exists ::env(BENCH_APORC)]} {lassign $::env(BENCH_APORC) ::ap_ca ::ap_cs ::ap_sa ::ap_ss ::ap_bl ::ap_spr ::ap_bon
+ set ::ap_cn 0;set ::ap_cb 0;set ::ap_sn 0;set ::ap_sb 0;set ::ap_info {};set ::ap_in 0;set ::ap_lists {};set ::ap_cv 0;set ::ap_sv 0;set ::ap_ovn 0;set ::ap_rn 0;set ::ap_an 0;set ::ap_st1 0
+ set ::ap_spawn {{6 5} {7 5} {8 5} {6 37} {7 37} {8 37}}
+ proc ap_w {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc ap_s16 {v} {expr {$v>=32768?$v-65536:$v}}
+ proc ap_snap {} {set ::ap_cx [ap_w $::camera_px];set ::ap_cy [ap_w $::camera_py];set ::ap_hs [debug read memory $::hardware_scroll]}
+ proc ap_clip {x y f} {set sp [expr {[ap_w [expr {$::ap_spr+12}]]+$f*8}];set w [debug read memory [expr {$sp+4}]];set h [debug read memory [expr {$sp+5}]];set ox [expr {[debug read memory [expr {$sp+6}]]&127}];set oy [expr {[debug read memory [expr {$sp+7}]]&127}]
+  set dx [ap_s16 [expr {($x+$ox-$::ap_cx)&65535}]];set dy [ap_s16 [expr {($y+$oy-$::ap_cy)&65535}]];set lim [expr {$::ap_hs?192:176}]
+  expr {($dx<=-$w || $dx>=256 || $dy<=-$h || $dy>=$lim)?0:1}}
+ proc ap_put {x y f} {if {![ap_clip $x $y $f]} {return};if {$::ap_n>=$::ap_lim} {set ::ap_ovf $::ap_ovfv;return};set ::ap_rec($::ap_n) [list [expr {$x&65535}] [expr {$y&65535}] $f];incr ::ap_n}
+ proc ap_cmp {name idxs} {set bad 0;set info {}
+  foreach {k idx} $idxs {set b [expr {$::ap_out+$idx*6}];set vis [debug read memory [expr {$b+5}]];set ev [expr {[info exists ::ap_rec($k)]?1:0}]
+   if {($vis&1)!=$ev} {incr bad;append info " $name rec$idx vis=$vis exp=$ev"} elseif {$ev} {set a [list [ap_w $b] [ap_w [expr {$b+2}]] [debug read memory [expr {$b+4}]]];if {$a ne $::ap_rec($k)} {incr bad;append info " $name rec$idx got=$a exp=$::ap_rec($k)"}}}
+  set ov [debug read memory [expr {$::world_map+9189}]];if {$ov!=$::ap_ovf} {incr bad;append info " $name ovf=$ov exp=$::ap_ovf"}
+  list $bad $info}
+ proc ap_center {} {if {[debug read memory $::g_CurrentSegment]!=$::ap_cs} {return};ap_snap;set ::ap_out [ap_w $::ca_x];set ::ap_fr [ap_w $::ca_r]
+  if {[info exists ::env(BENCH_APFUZZ)]} {set ::ap_save [list [debug read_block memory [expr {$::world_map+9000}] 190] [debug read_block memory $::carts 4] [debug read memory $::enemy_mode]]
+   proc ap_rw {a v} {debug write memory $a [expr {$v&255}];debug write memory [expr {$a+1}] [expr {($v>>8)&255}]}
+   foreach b {0 16 32 48 64 88 104 120 136} {set a [expr {$::world_map+9000+$b}];ap_rw $a [expr {($::ap_cx+int(rand()*300)-20)*16}];ap_rw [expr {$a+2}] [expr {($::ap_cy+int(rand()*200)-10)*16}];debug write memory [expr {$a+10}] [expr {rand()<0.9?1:0}];debug write memory [expr {$a+11}] [expr {int(rand()*120)}];debug write memory [expr {$a+13}] [expr {int(rand()*3)}]}
+   debug write memory [expr {$::world_map+9161}] [expr {int(rand()*64)}];for {set j 0} {$j<6} {incr j} {debug write memory [expr {$::world_map+9162+$j}] [expr {rand()<0.4?int(rand()*41):0}]}
+   ap_rw $::carts [expr {($::ap_cx+int(rand()*300)-20)*16}];ap_rw [expr {$::carts+2}] [expr {($::ap_cy+int(rand()*200)-10)*16}];debug write memory $::enemy_mode [expr {int(rand()*4)}]
+   set ::ap_fr [expr {(84+int(rand()*2))|((102+int(rand()*3))<<8)}];ap_rw $::ca_r $::ap_fr}
+  set ::ap_wm [debug read_block memory [expr {$::world_map+9000}] 190];set ::ap_en [debug read memory $::enemy_mode];set ::ap_cart [debug read_block memory $::carts 4]
+  set r [ap_w [reg SP]];if {[info exists ::ap_bp]} {catch {debug remove_bp $::ap_bp}};set ::ap_bp [debug set_bp $r {} {ap_cexit}]}
+ proc ap_byte {s i} {scan [string index $s $i] %c v;return $v}
+ proc ap_cexit {} {if {![info exists ::ap_bp]} {return};catch {debug remove_bp $::ap_bp};unset ::ap_bp;incr ::ap_cn
+  binary scan $::ap_wm cu* wm;binary scan $::ap_cart cu* cr
+  catch {unset ::ap_rec};set ::ap_n 0;set ::ap_lim 13;set ::ap_ovfv 1;set ::ap_ovf 0
+  if {!($::ap_en&2)} {for {set i 0} {$i<9} {incr i} {set b [expr {$i<5?$i*16:88+($i-5)*16}];if {[lindex $wm [expr {$b+10}]]} {set x [expr {([lindex $wm $b]+256*[lindex $wm [expr {$b+1}]])>>4}];set y [expr {([lindex $wm [expr {$b+2}]]+256*[lindex $wm [expr {$b+3}]])>>4}];if {[lindex $wm [expr {$b+13}]]!=1} {incr x -24;incr y -4};ap_put [expr {$x&65535}] [expr {$y&65535}] [lindex $wm [expr {$b+11}]]}}}
+  ap_put [expr {([lindex $cr 0]+256*[lindex $cr 1])>>4}] [expr {([lindex $cr 2]+256*[lindex $cr 3])>>4}] [expr {$::ap_fr&255}]
+  set mask [lindex $wm 161];foreach j {162 163 164 165 166 167} {if {[lindex $wm $j]} {incr ::ap_rn;break}};foreach b {0 16 32 48 64 88 104 120 136} {if {[lindex $wm [expr {$b+10}]]} {incr ::ap_an;if {[lindex $wm [expr {$b+13}]]==1} {incr ::ap_st1};break}};if {$::ap_ovf} {incr ::ap_ovn}
+  for {set i 0} {$i<6} {incr i} {set rise [lindex $wm [expr {162+$i}]];if {!($mask&(1<<$i)) || $rise} {lassign [lindex $::ap_spawn $i] sx sy;set y [expr {$sy*16-($rise?(40-$rise)/2:0)}];ap_put [expr {$sx*16}] $y [expr {$rise?89:($::ap_fr>>8)}]}}
+  set idxs {};for {set k 0} {$k<13} {incr k} {lappend idxs $k $k}
+  lassign [ap_cmp col $idxs] bad info;if {$bad} {incr ::ap_cb;if {$::ap_cb<4} {append ::ap_info $info}};set ::ap_cv [expr {$::ap_cv+[array size ::ap_rec]}];if {[info exists ::ap_save]} {lassign $::ap_save sa sb sc;debug write_block memory [expr {$::world_map+9000}] $sa;debug write_block memory $::carts $sb;debug write memory $::enemy_mode $sc;unset ::ap_save}}
+ proc ap_senter {} {if {[debug read memory $::g_CurrentSegment]!=$::ap_ss} {return};ap_snap;set ::ap_out [ap_w $::ca_tile];set ::ap_lists {};set ::ap_in 1
+  set ::ap_wc [debug read_block memory [expr {$::world_collision+876}] 292];set ::ap_bt [debug read_block memory $::ap_bon 180]
+  set r [ap_w [reg SP]];if {[info exists ::ap_sbp]} {catch {debug remove_bp $::ap_sbp}};set ::ap_sbp [debug set_bp $r {} {ap_sexit}]}
+ proc ap_blenter {} {if {!$::ap_in} {return};set ::ap_buf [reg HL];set r [ap_w [reg SP]];if {[info exists ::ap_bbp]} {catch {debug remove_bp $::ap_bbp}};set ::ap_bbp [debug set_bp $r {} {ap_blexit}]}
+ proc ap_blexit {} {if {![info exists ::ap_bbp]} {return};catch {debug remove_bp $::ap_bbp};unset ::ap_bbp;set n [reg A];set l {};for {set i 0} {$i<$n} {incr i} {lappend l [debug read memory [expr {$::ap_buf+$i}]]};lappend ::ap_lists $l}
+ proc ap_sexit {} {if {![info exists ::ap_sbp]} {return};catch {debug remove_bp $::ap_sbp};unset ::ap_sbp;set ::ap_in 0;incr ::ap_sn
+  binary scan $::ap_wc cu* wc;binary scan $::ap_bt cu* bt
+  catch {unset ::ap_rec};set ::ap_n 0;set ::ap_lim 12;set ::ap_ovfv 2;set ::ap_ovf 0
+  proc ap_sput {} {}
+  set np [debug read memory [expr {$::world_collision+1127}]]
+  foreach i [lindex $::ap_lists 0] {set b [expr {$i*6}];ap_put [expr {[lindex $wc $b]+256*[lindex $wc [expr {$b+1}]]}] [expr {[lindex $wc [expr {$b+2}]]+256*[lindex $wc [expr {$b+3}]]}] [lindex $wc [expr {$b+5}]]}
+  for {set i 32} {$i<$np} {incr i} {set b [expr {$i*6}];ap_put [expr {[lindex $wc $b]+256*[lindex $wc [expr {$b+1}]]}] [expr {[lindex $wc [expr {$b+2}]]+256*[lindex $wc [expr {$b+3}]]}] [lindex $wc [expr {$b+5}]]}
+  foreach i [lindex $::ap_lists 1] {set b [expr {$i*5}];ap_put [expr {[lindex $bt $b]+256*[lindex $bt [expr {$b+1}]]}] [expr {[lindex $bt [expr {$b+2}]]+256*[lindex $bt [expr {$b+3}]]}] [expr {94+[lindex $bt [expr {$b+4}]]}]}
+  # slot n -> record index: n<10 -> 4+n, n==10 -> 1, n==11 -> 28
+  set idxs {};for {set k 0} {$k<12} {incr k} {lappend idxs $k [expr {$k<10?4+$k:($k==10?1:28)}]}
+  lassign [ap_cmp sta $idxs] bad info;if {$bad} {incr ::ap_sb;if {$::ap_sb<4} {append ::ap_info $info}};set ::ap_sv [expr {$::ap_sv+[array size ::ap_rec]}]}
+ debug set_bp $::ap_ca {} {ap_center};debug set_bp $::ap_sa {} {ap_senter};debug set_bp $::ap_bl {} {ap_blenter}}
 if {[info exists ::env(BENCH_FLIPCHK)]} {set ::fl_n 0;set ::fl_busy 0;proc fl_chk {} {incr ::fl_n;binary scan [debug read_block "VDP status regs" 2 1] cu st;if {$st&1} {incr ::fl_busy}};debug set_bp $::env(BENCH_FLIPCHK) {} {fl_chk}}
 if {[info exists ::env(BENCH_BTDIAG)]} {set bl $::env(BENCH_BTDIAG);lassign $bl bta btb btbombs btrise;set btsp {};foreach {tx ty} [lrange $bl 4 end] {lappend btsp [list $tx $ty]};set ::bt_bank $btb;set ::bt_bombs [expr {$::world_map+$btbombs}];set ::bt_rise_a [expr {$::world_map+$btrise}];set ::bt_sp $btsp;set ::bt_n 0;set ::bt_bad 0;set ::bt_hits 0;debug set_bp $bta {} {bt_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
