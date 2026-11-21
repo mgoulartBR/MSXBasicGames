@@ -277,6 +277,7 @@ proc finish {} {
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
  if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
  if {[info exists ::env(BENCH_APORC)]} {set f [open $::env(BENCH_OUT).ap w];puts $f "collect=$::ap_cn bad=$::ap_cb static=$::ap_sn bad=$::ap_sb collect_recs=$::ap_cv rise_calls=$::ap_rn actor_calls=$::ap_an state1=$::ap_st1 ovf=$::ap_ovn collect_recs=$::ap_cv static_recs=$::ap_sv $::ap_info";close $f}
+ if {[info exists ::env(BENCH_CIORC)]} {set f [open $::env(BENCH_OUT).ci w];puts $f "calls=$::ci_n bad=$::ci_bad records=$::ci_recs bombs_shown=$::ci_rn $::ci_info";close $f}
  if {[info exists ::env(BENCH_PCORC)]} {set f [open $::env(BENCH_OUT).pc2 w];puts $f "calls=$::pc_n visible=$::pc_vis bad=$::pc_bad $::pc_info";close $f}
  if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
@@ -498,6 +499,39 @@ if {[info exists ::env(BENCH_APORC)]} {lassign $::env(BENCH_APORC) ::ap_ca ::ap_
   set idxs {};for {set k 0} {$k<12} {incr k} {lappend idxs $k [expr {$k<10?4+$k:($k==10?1:28)}]}
   lassign [ap_cmp sta $idxs] bad info;if {$bad} {incr ::ap_sb;if {$::ap_sb<4} {append ::ap_info $info}};set ::ap_sv [expr {$::ap_sv+[array size ::ap_rec]}]}
  debug set_bp $::ap_ca {} {ap_center};debug set_bp $::ap_sa {} {ap_senter};debug set_bp $::ap_bl {} {ap_blenter}}
+if {[info exists ::env(BENCH_CIORC)]} {lassign $::env(BENCH_CIORC) ::ci_a ::ci_s ::ci_spr
+ set ::ci_n 0;set ::ci_bad 0;set ::ci_recs 0;set ::ci_info {};set ::ci_rn 0;set ::ci_s1 0;set ::ci_sd 0
+ set ::ci_spawn {{132 7} {133 7} {134 7} {178 47} {179 47} {180 47}}
+ proc ci_w {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc ci_s16 {v} {expr {$v>=32768?$v-65536:$v}}
+ proc ci_rw {a v} {debug write memory $a [expr {$v&255}];debug write memory [expr {$a+1}] [expr {($v>>8)&255}]}
+ proc ci_put {x y f} {set sp [expr {[ci_w [expr {$::ci_spr+10}]]+$f*8}];set w [debug read memory [expr {$sp+4}]];set h [debug read memory [expr {$sp+5}]];set ox [expr {[debug read memory [expr {$sp+6}]]&127}];set oy [expr {[debug read memory [expr {$sp+7}]]&127}]
+  set dx [ci_s16 [expr {($x+$ox-$::ci_cx)&65535}]];set dy [ci_s16 [expr {($y+$oy-$::ci_cy)&65535}]];set lim [expr {$::ci_hs?192:176}]
+  if {$dx<=-$w || $dx>=256 || $dy<=-$h || $dy>=$lim} {return};if {$::ci_k>=13} {set ::ci_ovf 1;return};set ::ci_rec($::ci_k) [list [expr {$x&65535}] [expr {$y&65535}] $f];incr ::ci_k}
+ proc ci_enter {} {if {[debug read memory $::g_CurrentSegment]!=$::ci_s} {return}
+  set ::ci_cx [ci_w $::camera_px];set ::ci_cy [ci_w $::camera_py];set ::ci_hs [debug read memory $::hardware_scroll];set ::ci_out [ci_w $::ca_x]
+  if {[info exists ::env(BENCH_CIFUZZ)]} {set ::ci_save [list [debug read_block memory [expr {$::world_map+9000}] 400] [debug read memory $::enemy_mode]]
+   foreach b {0 16 32 48 64 80 96 112 128 144 160 176 192 208 224 312 328 344} {set a [expr {$::world_map+9000+$b}];ci_rw $a [expr {($::ci_cx+int(rand()*300)-20)*16}];ci_rw [expr {$a+2}] [expr {($::ci_cy+int(rand()*200)-10)*16}];debug write memory [expr {$a+10}] [expr {rand()<0.9?1:0}];debug write memory [expr {$a+11}] [expr {int(rand()*110)}];debug write memory [expr {$a+13}] [expr {int(rand()*3)}]}
+   foreach b {360 369 378 387} {set a [expr {$::world_map+$b}];ci_rw $a [expr {($::ci_cx+int(rand()*300)-20)*16}];ci_rw [expr {$a+2}] [expr {($::ci_cy+int(rand()*200)-10)*16}];debug write memory [expr {$a+6}] [expr {rand()<0.9?1:0}];debug write memory [expr {$a+7}] [expr {int(rand()*110)}]}
+   debug write memory [expr {$::world_map+9258}] [expr {int(rand()*64)}];for {set j 0} {$j<6} {incr j} {debug write memory [expr {$::world_map+9260+$j}] [expr {rand()<0.4?int(rand()*41):0}]}
+   debug write memory $::enemy_mode [expr {int(rand()*4)}];ci_rw $::ca_r [expr {102+int(rand()*3)}]}
+  set ::ci_wm [debug read_block memory [expr {$::world_map+9000}] 400];set ::ci_en [debug read memory $::enemy_mode];set ::ci_fr [ci_w $::ca_r];set ::ci_lvl [debug read memory $::active_level]
+  set r [ci_w [reg SP]];if {[info exists ::ci_bp]} {catch {debug remove_bp $::ci_bp}};set ::ci_bp [debug set_bp $r {} {ci_exit}]}
+ proc ci_exit {} {if {![info exists ::ci_bp]} {return};catch {debug remove_bp $::ci_bp};unset ::ci_bp;incr ::ci_n
+  binary scan $::ci_wm cu* wm;catch {unset ::ci_rec};set ::ci_k 0;set ::ci_ovf 0
+  if {!($::ci_en&2)} {
+   for {set i 0} {$i<15} {incr i} {set b [expr {$i*16}];if {[lindex $wm [expr {$b+10}]]} {set x [expr {([lindex $wm $b]+256*[lindex $wm [expr {$b+1}]])>>4}];set y [expr {([lindex $wm [expr {$b+2}]]+256*[lindex $wm [expr {$b+3}]])>>4}];if {$i!=10 && [lindex $wm [expr {$b+13}]]!=1} {incr x -24;incr y -4};ci_put [expr {$x&65535}] [expr {$y&65535}] [lindex $wm [expr {$b+11}]]}}
+   set fb [expr {$::ci_lvl==6?312:240}]
+   for {set i 0} {$i<3} {incr i} {set b [expr {$fb+$i*16}];if {[lindex $wm [expr {$b+10}]]} {set x [expr {(([lindex $wm $b]+256*[lindex $wm [expr {$b+1}]])>>4)-24}];set y [expr {(([lindex $wm [expr {$b+2}]]+256*[lindex $wm [expr {$b+3}]])>>4)-4}];ci_put [expr {$x&65535}] [expr {$y&65535}] [lindex $wm [expr {$b+11}]]}}
+   for {set i 0} {$i<4} {incr i} {set b [expr {360+$i*9}];if {[lindex $wm [expr {$b+6}]]} {set x [expr {(([lindex $wm $b]+256*[lindex $wm [expr {$b+1}]])>>4)-24}];set y [expr {(([lindex $wm [expr {$b+2}]]+256*[lindex $wm [expr {$b+3}]])>>4)-4}];ci_put [expr {$x&65535}] [expr {$y&65535}] [lindex $wm [expr {$b+7}]]}}}
+  set mask [lindex $wm 258]
+  for {set i 0} {$i<6} {incr i} {set rise [lindex $wm [expr {260+$i}]];if {!($mask&(1<<$i)) || $rise} {incr ::ci_rn;lassign [lindex $::ci_spawn $i] sx sy;ci_put [expr {$sx*16}] [expr {$sy*16-($rise?(40-$rise)/2:0)}] [expr {$rise?89:($::ci_fr&255)}]}}
+  set bad 0;set info {};for {set k 0} {$k<13} {incr k} {set b [expr {$::ci_out+$k*6}];set vis [debug read memory [expr {$b+5}]];set ev [expr {[info exists ::ci_rec($k)]?1:0}]
+   if {($vis&1)!=$ev} {incr bad;append info " rec$k vis=$vis exp=$ev"} elseif {$ev} {set a [list [ci_w $b] [ci_w [expr {$b+2}]] [debug read memory [expr {$b+4}]]];if {$a ne $::ci_rec($k)} {incr bad;append info " rec$k got=$a exp=$::ci_rec($k)"}}}
+  set ov [debug read memory [expr {$::world_map+9257}]];if {$ov!=$::ci_ovf} {incr bad;append info " ovf=$ov exp=$::ci_ovf"}
+  if {$bad} {incr ::ci_bad;if {$::ci_bad<4} {append ::ci_info $info}};incr ::ci_recs [array size ::ci_rec]
+  if {[info exists ::ci_save]} {lassign $::ci_save sa sb;debug write_block memory [expr {$::world_map+9000}] $sa;debug write memory $::enemy_mode $sb;unset ::ci_save}}
+ debug set_bp $::ci_a {} {ci_enter}}
 if {[info exists ::env(BENCH_FLIPCHK)]} {set ::fl_n 0;set ::fl_busy 0;proc fl_chk {} {incr ::fl_n;binary scan [debug read_block "VDP status regs" 2 1] cu st;if {$st&1} {incr ::fl_busy}};debug set_bp $::env(BENCH_FLIPCHK) {} {fl_chk}}
 if {[info exists ::env(BENCH_BTDIAG)]} {set bl $::env(BENCH_BTDIAG);lassign $bl bta btb btbombs btrise;set btsp {};foreach {tx ty} [lrange $bl 4 end] {lappend btsp [list $tx $ty]};set ::bt_bank $btb;set ::bt_bombs [expr {$::world_map+$btbombs}];set ::bt_rise_a [expr {$::world_map+$btrise}];set ::bt_sp $btsp;set ::bt_n 0;set ::bt_bad 0;set ::bt_hits 0;debug set_bp $bta {} {bt_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
