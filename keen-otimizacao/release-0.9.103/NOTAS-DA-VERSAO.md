@@ -34,6 +34,9 @@ Roteiro de posição controlada (o Keen é levado a pontos fixos); gráficos em 
 
 Medições feitas **apenas no openMSX**; nada foi testado em MSX real.
 
+### Outras frequências e R800 (`graficos/`)
+`fps-z80-1x-3.58MHz.png`, `fps-z80-2x-7.16MHz.png`, `fps-z80-3x-10.74MHz.png` e `fps-r800-7.16MHz.png` (R800 aproximado pelo S1990 do openMSX com C-BIOS; sem BIOS de turbo R real; nesse modo a barra de HUD sai corrompida). Ganhos de City e Apple aparecem em quase todas as frequências (City +30% a 5,37 MHz, +11% a 10,74 MHz e +20% no R800; Apple +21%, +38% a 7,16 MHz, +20% a 10,74 MHz e +17% no R800). **Ressalva:** a 3,58 MHz o jogo roda a 2–7 fps, o ritmo é quantizado pelos vblanks e o roteiro é muito sensível à trajetória; ali aparecem barras negativas (Rapids −16%, City −18%) que não se confirmam parando o Keen em pontos fixos (City 3,58 MHz: 19→23 e 37→44 renders em 8,5 s; Rapids: entre −9% e +3%, ou seja, empate técnico). Os dados brutos estão em `graficos/dados-*.txt`.
+
 ### Diferenças e limites (herdados)
 - A física do Keen avança dois ticks de 70 Hz por passada (35 Hz); o "feeling" pode diferir de leve do original.
 - Em MSX2 (V9938) a ROM não roda (rolagem por software trava ao rolar para a esquerda): requisito MSX2+.

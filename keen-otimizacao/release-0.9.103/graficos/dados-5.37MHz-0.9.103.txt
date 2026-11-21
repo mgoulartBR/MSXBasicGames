@@ -1,0 +1,13 @@
+L1 vb total=14.40 steady=16.48
+L2 vb total=9.22 steady=10.44
+L3 vb total=6.87 steady=5.73
+L4 vb total=9.17 steady=9.50
+L5 vb total=16.50 steady=18.33
+L6 vb total=8.57 steady=9.05
+L7 vb total=15.00 steady=16.44
+L8 vb total=17.82 steady=23.64
+L9 vb total=13.00 steady=14.44
+L10 vb total=11.17 steady=13.78
+L11 vb total=6.61 steady=6.33
+L12 vb total=10.87 steady=11.87
+DONE
