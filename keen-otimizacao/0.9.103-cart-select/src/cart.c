@@ -391,24 +391,21 @@ void CartStepFast(void){CartStep();}   // standalone core payload has no Z80 fas
 #endif
 #ifndef KEEN_CORE15
 // Z80 version of the C CartContact below (all compares are 16-bit modular, as in the C). oldbottom in HL.
-// Scratch: ca_x = oldbottom, ca_r = prior riding index, ca_wx = player_x+64, ca_wy = player_x+304.
+// Scratch (only touched after the early returns): ca_x = oldbottom, ca_r = prior riding index, ca_wx = player_x+64, ca_wy = player_x+304.
 extern u16 ca_x,ca_r,ca_wx,ca_wy;
 void CartContact(u16 oldbottom) __naked
 {
  oldbottom;
  __asm
- ld (_ca_x),hl
  ld a,(_cart_riding)
- ld (_ca_r),a
+ ld b,a
  ld a,#255
  ld (_cart_riding),a
  ld a,(_active_level)
- ld b,#3
  cp #2
  jr z,cc_ok
  cp #7
  ret nz
- ld b,#1
 cc_ok:
  ld a,(_climbing)
  or a
@@ -416,6 +413,15 @@ cc_ok:
  ld a,(_player_vy+1)
  bit 7,a
  ret nz
+ ld (_ca_x),hl
+ ld a,b
+ ld (_ca_r),a
+ ld a,(_active_level)
+ ld b,#3
+ cp #7
+ jr nz,cc_n3
+ ld b,#1
+cc_n3:
  ld hl,(_player_x)
  ld de,#64
  add hl,de
