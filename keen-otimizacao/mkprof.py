@@ -80,6 +80,10 @@ proc begin {} {
  if {[info exists ::env(BENCH_GOD)]} {debug set_watchpoint write_mem $::death_ticks {} {if {[debug read memory $::death_ticks]!=0} {debug write memory $::death_ticks 0;incr ::god_hits}}}
  if {[info exists ::env(BENCH_GOD)] && $::env(BENCH_GOD)==2} {debug set_watchpoint write_mem $::restart_pending {} {if {[debug read memory $::restart_pending]!=0} {debug write memory $::restart_pending 0;debug write memory $::game_lives 3;incr ::god_hits}}}
  if {[info exists ::env(BENCH_TRACK)]} {track}
+ if {[info exists ::env(BENCH_RING)]} {set ::rg {};set ::rg_done 0;proc rgs {} {if {$::rg_done} {return};set pc [reg PC];set sp [reg SP];lappend ::rg "$pc,$sp,[debug read memory $::cur_seg_addr]";if {[llength $::rg]>600} {set ::rg [lrange $::rg 1 end]}
+   if {$pc<2048 && $::rg_n>3} {set ::rg_done 1;set f [open $::env(BENCH_OUT).ring w];foreach e $::rg {puts $f $e};close $f;return}
+   if {$pc<2048} {incr ::rg_n} else {set ::rg_n 0};after time 0.00003 rgs};set ::rg_n 0;rgs}
+ if {[info exists ::env(BENCH_BP0)]} {set ::bp0_n 0;debug set_bp 0x0000 {} {incr ::bp0_n;if {$::bp0_n==1} {set f [open $::env(BENCH_OUT).bp0 w];binary scan [debug read_block memory [reg SP] 48] H* st;puts $f "RESET at t=[machine_info time] SP=[reg SP] seg=[debug read memory $::g_CurrentSegment] px=[word $::player_x] py=[word $::player_y] camx=[word $::camera_px] stack=$st";close $f}}}
  if {[info exists ::env(BENCH_CKPT)]} {set ::ck_list $::env(BENCH_CKPT);set ::ck_k 0;set ::ck_log {};ckpt}
  if {[info exists ::env(BENCH_PC)]} {sample}
  if {[info exists ::env(BENCH_SHOT)]} {foreach t [expr {[info exists ::env(BENCH_SHOTT)]?$::env(BENCH_SHOTT):{3 6 9 12 15}}] {after time $t [list shotlog $t [string map [list .png _$t.png] $::env(BENCH_SHOT)]]}}
@@ -265,6 +269,7 @@ proc bt_check {} {
 }
 proc finish {} {
  if {[info exists ::env(BENCH_VRAMDUMP)]} {set f [open $::env(BENCH_OUT).vram wb];puts -nonewline $f [debug read_block "VRAM" 0 131072];close $f}
+ if {[info exists ::env(BENCH_STK)]} {set f [open $::env(BENCH_OUT).stk w];binary scan [debug read_block memory [reg SP] 64] cu* st;puts $f "PC=[reg PC] SP=[reg SP] seg=[debug read memory $::g_CurrentSegment] stack=$st";close $f}
  if {[info exists ::env(BENCH_VARS)]} {set f [open $::env(BENCH_OUT).vv w];foreach n $::env(BENCH_VARS) {binary scan [debug read_block "memory" [set ::vv_$n] 4] H* h;puts $f "$n $h"};close $f}
  if {[info exists ::env(BENCH_CSORC)]} {set f [open $::env(BENCH_OUT).cs2 w];puts $f "calls=$::cso_n fast=$::cso_fast bad=$::cso_bad $::cso_info";close $f}
  if {[info exists ::env(BENCH_OLORC)]} {set f [open $::env(BENCH_OUT).ol w];puts $f "calls=$::ol_n hits=$::ol_hit bad=$::ol_bad $::ol_info";close $f}
