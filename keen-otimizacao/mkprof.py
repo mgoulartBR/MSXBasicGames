@@ -26,7 +26,7 @@ for _k,_v in _loc.items():
     else:d.setdefault(_k,_v)
 import os
 FUNCS=os.environ.get('BENCH_FUNCS','DrawScene,ActorsPrepare,RingScene,ActorsDraw,ActorDraw,HudDraw,Game_Tick,CombatTick,FollowCamera,ReadInput').split(',')
-s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['carts','cart_riding','cart_cache_valid','climbing','world_collision','camera_px','camera_py','ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
+s+='\n'+'\n'.join(f'set {n} {d[n]}' for n in ['carts','cart_riding','cart_cache_valid','climbing','world_collision','camera_px','camera_py','hardware_scroll','ca_x','ca_map','ca_tile','ca_w','ca_h','ca_wx','ca_wy','key_owned','combat_dirty','game_lives','restart_pending','render_count','bar_on','bar_ph','cur_r2','cur_r23','cur_r26','cur_r27','vdp_fast','player_x','player_y','hero_frame','world_map','boobus_bombs','actors_old','front_page','active_level','scene_ready','world_active','g_CurrentSegment','enemy_mode','player_x','player_y','simulation_ticks','stable_x','stable_y','stable_ticks','defeats','game_lives','camera_px','camera_py','ring_camera_x','ring_camera_y','g_VDP_REGSAV','flip_flag','flip_r2','flip_r5','flip_r6','flip_r8','flip_r11'] if n in d)+'\n'
 s+=''.join(f'set ::vv_{n} {d[n]}\n' for n in os.environ.get('BENCH_VARS','').split() if n in d)
 spec=' '.join('%s %d %d'%(f,d[f]&0xFFFF,(d[f]>>16)&0xFF) for f in FUNCS if f in d)
 s+='set ::funcs {%s}\n'%spec
@@ -276,6 +276,7 @@ proc finish {} {
  if {[info exists ::env(BENCH_FRAMESTAT)]} {set f [open $::env(BENCH_OUT).fr w];foreach k [lsort -integer [array names ::fr_n]] {puts $f "$k $::fr_n($k)"};close $f}
  if {[info exists ::env(BENCH_CMDSTAT)]} {set f [open $::env(BENCH_OUT).cs w];foreach k [lsort [array names ::cs_n]] {puts $f "$k $::cs_n($k) $::cs_px($k) $::cs_t($k)"};foreach k [array names ::c2_n] {puts $f "C2 $k $::c2_n($k) $::c2_t($k)"};close $f}
  if {[info exists ::env(BENCH_BBORC)]} {set f [open $::env(BENCH_OUT).bb a];puts $f "END calls=$::bb_n";close $f}
+ if {[info exists ::env(BENCH_PCORC)]} {set f [open $::env(BENCH_OUT).pc2 w];puts $f "calls=$::pc_n visible=$::pc_vis bad=$::pc_bad $::pc_info";close $f}
  if {[info exists ::env(BENCH_MTORC)]} {set f [open $::env(BENCH_OUT).mt w];puts $f "calls=$::mt_n bad=$::mt_bad $::mt_info";close $f}
  if {[info exists ::env(BENCH_FLIPCHK)]} {set f [open $::env(BENCH_OUT).fl w];puts $f "flips=$::fl_n busy=$::fl_busy";close $f}
  if {[info exists ::env(BENCH_BTDIAG)]} {set f [open $::env(BENCH_OUT).bt w];puts $f "bombtick calls=$::bt_n pickups=$::bt_hits mismatches=$::bt_bad";close $f}
@@ -433,6 +434,18 @@ if {[info exists ::env(BENCH_MTORC)]} {lassign $::env(BENCH_MTORC) mta mtbase;se
   if {$::mt_base==0} {set exp [mt_raw 0 $i]} else {set j [expr {[mt_raw 0 [expr {$i>>3}]]*8+($i&7)}];set exp [mt_raw $::mt_base $j]}
   if {$got!=$exp} {incr ::mt_bad;if {$::mt_bad<5} {append ::mt_info " i=$i exp=$exp got=$got"}}}
  debug set_bp $mta {} {mt_enter}}
+if {[info exists ::env(BENCH_PCORC)]} {set ::pc_n 0;set ::pc_bad 0;set ::pc_vis 0;set ::pc_info {}
+ proc pc_w {a} {expr {[debug read memory $a]+256*[debug read memory [expr {$a+1}]]}}
+ proc pc_s16 {v} {expr {$v>=32768?$v-65536:$v}}
+ proc pc_enter {} {if {[debug read memory $::g_CurrentSegment]!=$::pc_seg([reg PC])} {return};set ::pc_sp [reg HL];set ::pc_x [pc_w $::ca_wx];set ::pc_y [pc_w $::ca_wy];set ::pc_cx [pc_w $::camera_px];set ::pc_cy [pc_w $::camera_py];set ::pc_hs [debug read memory $::hardware_scroll];set sp [reg SP];set r [pc_w $sp];if {[info exists ::pc_bp]} {catch {debug remove_bp $::pc_bp}};set ::pc_bp [debug set_bp $r {} {pc_exit}]}
+ proc pc_exit {} {if {![info exists ::pc_bp]} {return};catch {debug remove_bp $::pc_bp};unset ::pc_bp;incr ::pc_n;set got [expr {[reg A]}];set sp $::pc_sp
+  set w [debug read memory [expr {$sp+4}]];set h [debug read memory [expr {$sp+5}]];set ox [expr {[debug read memory [expr {$sp+6}]]&127}];set oy [expr {[debug read memory [expr {$sp+7}]]&127}]
+  set dx [pc_s16 [expr {($::pc_x+$ox-$::pc_cx)&65535}]];set dy [pc_s16 [expr {($::pc_y+$oy-$::pc_cy)&65535}]]
+  set lim [expr {$::pc_hs?192:176}]
+  set exp [expr {($dx<=-$w || $dx>=256 || $dy<=-$h || $dy>=$lim)?0:1}]
+  if {$exp} {incr ::pc_vis}
+  if {$got!=$exp} {incr ::pc_bad;if {$::pc_bad<6} {append ::pc_info " dx=$dx dy=$dy w=$w h=$h lim=$lim exp=$exp got=$got"}}}
+ foreach {a sg} $::env(BENCH_PCORC) {set ::pc_seg($a) $sg;debug set_bp $a {} {pc_enter}}}
 if {[info exists ::env(BENCH_FLIPCHK)]} {set ::fl_n 0;set ::fl_busy 0;proc fl_chk {} {incr ::fl_n;binary scan [debug read_block "VDP status regs" 2 1] cu st;if {$st&1} {incr ::fl_busy}};debug set_bp $::env(BENCH_FLIPCHK) {} {fl_chk}}
 if {[info exists ::env(BENCH_BTDIAG)]} {set bl $::env(BENCH_BTDIAG);lassign $bl bta btb btbombs btrise;set btsp {};foreach {tx ty} [lrange $bl 4 end] {lappend btsp [list $tx $ty]};set ::bt_bank $btb;set ::bt_bombs [expr {$::world_map+$btbombs}];set ::bt_rise_a [expr {$::world_map+$btrise}];set ::bt_sp $btsp;set ::bt_n 0;set ::bt_bad 0;set ::bt_hits 0;debug set_bp $bta {} {bt_enter}}
 if {[info exists ::env(BENCH_LISR)]} {debug set_bp $::env(BENCH_LISR) {} {incr ::lcnt;lisr_enter};debug set_bp 0xFD9A {} {incr ::kcnt}}
