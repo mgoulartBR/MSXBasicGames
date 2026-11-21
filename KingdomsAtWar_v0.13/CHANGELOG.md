@@ -217,3 +217,6 @@ Esta é a primeira implementação do reino, sem combate, reparação ou bônus 
 - Novos testes de composição, VRAM, estabilidade de números e quadros consecutivos.
 
 FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocupados pelos quatro aliados. Recrutamento ainda não está implementado.
+
+## v0.13 - correção do glitch no V9990 real (caixa de seleção)
+- `v9_lmmm` e `p1_fill0` esperam o fim do comando dentro do `di`: a interrupção de VBlank (LMMV dos retângulos) podia iniciar um comando entre o `gpu_wait()` e a reprogramação dos registradores. No hardware real isso corrompia cópias de poses ao arrastar a seleção.

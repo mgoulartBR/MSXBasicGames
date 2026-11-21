@@ -52,6 +52,10 @@ static u8 v9_busy(void) __naked {__asm
  __endasm;}
 static void v9_lmmm(void) __naked {__asm
  di
+v9w_loop:
+ in a,(#0x65)
+ rra
+ jr c,v9w_loop
  ld a,#32
  out (#0x64),a
  ld hl,#_v9c
@@ -264,6 +268,7 @@ static void io_lmmv(u8 x,u8 y,u8 w,u8 h,u8 c) {
 static void p1_fill0(u16 dx,u16 dy,u16 w,u16 h) {
  gpu_wait();
  __asm di __endasm;
+ while(io_stat&1);
  io_sel=36;io_reg=(u8)dx;io_reg=(u8)(dx>>8);io_reg=(u8)dy;io_reg=(u8)(dy>>8);io_reg=(u8)w;io_reg=(u8)(w>>8);io_reg=(u8)h;io_reg=(u8)(h>>8);
  io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=0;io_reg=0;
  io_sel=52;io_reg=0x20;
