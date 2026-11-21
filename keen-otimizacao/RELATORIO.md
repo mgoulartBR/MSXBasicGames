@@ -1005,3 +1005,6 @@ Medida final (`ckst5.sh`, 5,37 MHz, renders/s, 0.9.99 → 0.9.103): Hill 14,83 �
 
 ### Gráficos por frequência e R800 (0.9.99 × 0.9.103)
 `ckfreq.sh` (3,58 / 7,16 / 10,74 MHz) e `ckr800.sh` (R800 do S1990, 7,16 MHz), 12 fases, mesmo roteiro controlado; PNGs em `release-0.9.103/graficos/`, dados em `dados-*.txt`. Variações 0.9.99 → 0.9.103 por fase (Hill…Castle): 3,58 MHz `+0 +0 +0 −16 +30 −18 +14 −1 +4 −4 −1 +0` %; 7,16 MHz `−2 −2 +10 +1 +4 −9 +38 +0 +16 −0 +1 +10` %; 10,74 MHz `+0 +2 +0 +2 +35 +11 +20 +0 +7 +0 −1 −2` %; R800 `+0 +1 −3 +3 +8 +20 +17 +1 +20 +0 −2 +0` %. As barras negativas de City (3,58 e 7,16 MHz) não se confirmam em pontos parados (City: 3,58 MHz 19→23 e 37→44 renders; 7,16 MHz 116→122 e 177→211); Rapids a 3,58 MHz parado: 38→36, 24→24, 32→33, 33→30 (empate técnico, ±9%). A 3,58 MHz o ritmo é quantizado pelos vblanks, e uma pequena variação de custo pode empurrar um quadro para o vblank seguinte.
+
+### Devlog e resposta da 0.9.103
+`release-0.9.103/devlog/DEVLOG-POST.md` (EN + resumo PT, com a tabela 0.9.99 × 0.9.103, os 7 gráficos, os resultados negativos e as ressalvas) e `release-0.9.103/RESPOSTA-BYTURN.md` (resposta em inglês ao comentário, ponto a ponto: 1 e 3 resolvidos na 0.9.99, 4 convertido na 0.9.100, 2 ainda sem medição, 5 sem mudança).
