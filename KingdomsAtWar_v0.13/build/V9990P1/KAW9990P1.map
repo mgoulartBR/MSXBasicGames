@@ -165,12 +165,12 @@ Area                                    Addr        Size        Decimal Bytes (A
      00001FE8  l__SEG16                        
      00003135  l__DATA                         
      00004000  s__CODE                         
-     00005A0E  l__CODE                         
-     00009A0E  s__HOME                         
-     00009A0E  s__INITIALIZER                  
-     00009A0E  s__RODATA                       
-     00009A36  s__GSFINAL                      
-     00009A36  s__GSINIT                       
+     00005B67  l__CODE                         
+     00009B67  s__HOME                         
+     00009B67  s__INITIALIZER                  
+     00009B67  s__RODATA                       
+     00009B8F  s__GSFINAL                      
+     00009B8F  s__GSINIT                       
      0000C000  s__DATA                         
      0000F135  s__INITIALIZED                  
      0000F15D  s__BSEG                         
@@ -447,7 +447,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00005A0E =       23054. bytes (REL,CON)
+_CODE                               00004000    00005B67 =       23399. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -506,7 +506,7 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00005A0E =       23054. bytes (REL,CON)
+_CODE                               00004000    00005B67 =       23399. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -522,163 +522,163 @@ _CODE                               00004000    00005A0E =       23054. bytes (R
      00005749  _video_char                        main
      0000577C  _video_text                        main
      000057AE  _video_fill                        main
-     00005F26  _video_irq_install                 main
-     00005F46  _game_restart                      main
-     00005F56  _video_cursor                      main
-     00006421  _ae_up                             main
-     00006537  _ae_occ                            main
-     00006969  _bar_calc                          main
-     00006AA3  _ae_ring                           main
-     00006D71  _video_sprites                     main
-     000078B5  _video_init                        main
-     00008391  _video_enable                      main
-     000083B3  _tile                              main
-     000083C4  _passable                          main
-     000083E0  _combat_alive                      main
-     00008460  _free_at                           main
-     00008493  _order_one                         main
-     00008598  _main                              main
-     000088A9  _V9_SetPort                        v9990
-     000088AD  _V9_GetPort                        v9990
-     000088B1  _V9_SetRegister                    v9990
-     000088B9  _V9_SetRegister16                  v9990
-     000088C5  _V9_GetRegister                    v9990
-     000088CC  _V9_Detect                         v9990
-     000088E2  _V9_SetScreenMode                  v9990
-     00008913  _g_V9_ModeConfig                   v9990
-     00008931  _g_V9_ColorConfig                  v9990
-     00008943  _V9_SetColorMode                   v9990
-     00008965  _V9_SetScrollingY                  v9990
-     0000897E  _V9_SetScrollingX                  v9990
-     0000899C  _V9_SetScrollingBY                 v9990
-     000089B5  _V9_SetScrollingBX                 v9990
-     000089D3  _V9_ClearVRAM                      v9990
-     000089F7  _V9_SetWriteAddress                v9990
-     00008A04  _V9_SetReadAddress                 v9990
-     00008A12  _V9_Peek_CurrentAddr               v9990
-     00008A16  _V9_Peek16_CurrentAddr             v9990
-     00008A1E  _V9_Poke_CurrentAddr               v9990
-     00008A22  _V9_Poke16_CurrentAddr             v9990
-     00008A2A  _V9_FillVRAM_CurrentAddr           v9990
-     00008A37  _V9_FillVRAM16_CurrentAddr         v9990
+     0000609B  _video_irq_install                 main
+     000060BB  _game_restart                      main
+     000060CB  _video_cursor                      main
+     00006596  _ae_up                             main
+     000066AC  _ae_occ                            main
+     00006ADE  _bar_calc                          main
+     00006C18  _ae_ring                           main
+     00006EE6  _video_sprites                     main
+     00007A0E  _video_init                        main
+     000084EA  _video_enable                      main
+     0000850C  _tile                              main
+     0000851D  _passable                          main
+     00008539  _combat_alive                      main
+     000085B9  _free_at                           main
+     000085EC  _order_one                         main
+     000086F1  _main                              main
+     00008A02  _V9_SetPort                        v9990
+     00008A06  _V9_GetPort                        v9990
+     00008A0A  _V9_SetRegister                    v9990
+     00008A12  _V9_SetRegister16                  v9990
+     00008A1E  _V9_GetRegister                    v9990
+     00008A25  _V9_Detect                         v9990
+     00008A3B  _V9_SetScreenMode                  v9990
+     00008A6C  _g_V9_ModeConfig                   v9990
+     00008A8A  _g_V9_ColorConfig                  v9990
+     00008A9C  _V9_SetColorMode                   v9990
+     00008ABE  _V9_SetScrollingY                  v9990
+     00008AD7  _V9_SetScrollingX                  v9990
+     00008AF5  _V9_SetScrollingBY                 v9990
+     00008B0E  _V9_SetScrollingBX                 v9990
+     00008B2C  _V9_ClearVRAM                      v9990
+     00008B50  _V9_SetWriteAddress                v9990
+     00008B5D  _V9_SetReadAddress                 v9990
+     00008B6B  _V9_Peek_CurrentAddr               v9990
+     00008B6F  _V9_Peek16_CurrentAddr             v9990
+     00008B77  _V9_Poke_CurrentAddr               v9990
+     00008B7B  _V9_Poke16_CurrentAddr             v9990
+     00008B83  _V9_FillVRAM_CurrentAddr           v9990
+     00008B90  _V9_FillVRAM16_CurrentAddr         v9990
 ASxxxx Linker V05.50.4-SDLD,  page 11.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00005A0E =       23054. bytes (REL,CON)
+_CODE                               00004000    00005B67 =       23399. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00008A48  _V9_WriteVRAM_CurrentAddr          v9990
-     00008A55  _V9_ReadVRAM_CurrentAddr           v9990
-     00008A62  _V9_SetPaletteEntry                v9990
-     00008A7C  _V9_SetCursorAttribute             v9990
-     00008AFE  _V9_SetCursorDisplay               v9990
-     00008B29  __divuchar                         divunsigned
-     00008B2B  __divu8                            divunsigned
-     00008B2E  __divu16                           divunsigned
-     00008B2E  __divuint                          divunsigned
-     00008B5D  _Input_Detect                      input
-     00008B7A  _Joystick_Read                     input
-     00008B8B  _Mouse_Read                        input
-     00008BF2  _Keyboard_Read                     input
-     00008BFD  __moduchar                         modunsigned
-     00008C04  __moduint                          modunsigned
-     00008C09  _VDP_SetModeFlag                   vdp
-     00008C32  _VDP_SetModeText1                  vdp
-     00008C48  _VDP_SetModeMultiColor             vdp
-     00008C70  _VDP_SetModeGraphic1               vdp
-     00008CA0  _VDP_SetModeGraphic2               vdp
-     00008CD1  _VDP_ClearVRAM                     vdp
-     00008D0D  _VDP_WriteVRAM_16K                 vdp
-     00008D4E  _VDP_FillVRAM_16K                  vdp
-     00008D73  _VDP_ReadVRAM_16K                  vdp
-     00008DB3  _VDP_Peek_16K                      vdp
-     00008DC8  _VDP_Poke_16K                      vdp
-     00008DE0  _VDP_SetModeText2                  vdp
-     00008DFF  _VDP_SetModeGraphic3               vdp
-     00008E30  _VDP_SetModeGraphic4               vdp
-     00008E4F  _VDP_SetModeGraphic5               vdp
-     00008E6E  _VDP_SetModeGraphic6               vdp
-     00008E8D  _VDP_SetModeGraphic7               vdp
-     00008EAC  _VDP_ReadStatus                    vdp
-     00008EC0  _VDP_SetAdjustOffset               vdp
-     00008EC9  _VDP_SetPalette                    vdp
-     00008EDA  _VDP_SetPaletteEntry               vdp
-     00008EE9  _VDP_WriteVRAM_128K                vdp
-     00008F36  _VDP_FillVRAM_128K                 vdp
-     00008F7B  _VDP_ReadVRAM_128K                 vdp
-     00008FCD  _VDP_Poke_128K                     vdp
-     00009002  _VDP_Peek_128K                     vdp
-     00009025  _VDP_CommandWait                   vdp
-     0000903E  _VDP_CommandSetupR32               vdp
-     00009071  _VDP_CommandSetupR36               vdp
-     0000909C  _VDP_CommandWriteLoop              vdp
-     000090C4  _VDP_Initialize                    vdp
-     000090E0  _VDP_SetMode                       vdp
-     000091CB  _VDP_GetVersion                    vdp
-     0000921A  _VDP_RegWrite                      vdp
-     00009226  _VDP_RegWriteBak                   vdp
-     00009239  _VDP_RegWriteBakMask               vdp
+     00008BA1  _V9_WriteVRAM_CurrentAddr          v9990
+     00008BAE  _V9_ReadVRAM_CurrentAddr           v9990
+     00008BBB  _V9_SetPaletteEntry                v9990
+     00008BD5  _V9_SetCursorAttribute             v9990
+     00008C57  _V9_SetCursorDisplay               v9990
+     00008C82  __divuchar                         divunsigned
+     00008C84  __divu8                            divunsigned
+     00008C87  __divu16                           divunsigned
+     00008C87  __divuint                          divunsigned
+     00008CB6  _Input_Detect                      input
+     00008CD3  _Joystick_Read                     input
+     00008CE4  _Mouse_Read                        input
+     00008D4B  _Keyboard_Read                     input
+     00008D56  __moduchar                         modunsigned
+     00008D5D  __moduint                          modunsigned
+     00008D62  _VDP_SetModeFlag                   vdp
+     00008D8B  _VDP_SetModeText1                  vdp
+     00008DA1  _VDP_SetModeMultiColor             vdp
+     00008DC9  _VDP_SetModeGraphic1               vdp
+     00008DF9  _VDP_SetModeGraphic2               vdp
+     00008E2A  _VDP_ClearVRAM                     vdp
+     00008E66  _VDP_WriteVRAM_16K                 vdp
+     00008EA7  _VDP_FillVRAM_16K                  vdp
+     00008ECC  _VDP_ReadVRAM_16K                  vdp
+     00008F0C  _VDP_Peek_16K                      vdp
+     00008F21  _VDP_Poke_16K                      vdp
+     00008F39  _VDP_SetModeText2                  vdp
+     00008F58  _VDP_SetModeGraphic3               vdp
+     00008F89  _VDP_SetModeGraphic4               vdp
+     00008FA8  _VDP_SetModeGraphic5               vdp
+     00008FC7  _VDP_SetModeGraphic6               vdp
+     00008FE6  _VDP_SetModeGraphic7               vdp
+     00009005  _VDP_ReadStatus                    vdp
+     00009019  _VDP_SetAdjustOffset               vdp
+     00009022  _VDP_SetPalette                    vdp
+     00009033  _VDP_SetPaletteEntry               vdp
+     00009042  _VDP_WriteVRAM_128K                vdp
+     0000908F  _VDP_FillVRAM_128K                 vdp
+     000090D4  _VDP_ReadVRAM_128K                 vdp
+     00009126  _VDP_Poke_128K                     vdp
+     0000915B  _VDP_Peek_128K                     vdp
+     0000917E  _VDP_CommandWait                   vdp
+     00009197  _VDP_CommandSetupR32               vdp
+     000091CA  _VDP_CommandSetupR36               vdp
+     000091F5  _VDP_CommandWriteLoop              vdp
+     0000921D  _VDP_Initialize                    vdp
+     00009239  _VDP_SetMode                       vdp
+     00009324  _VDP_GetVersion                    vdp
+     00009373  _VDP_RegWrite                      vdp
+     0000937F  _VDP_RegWriteBak                   vdp
+     00009392  _VDP_RegWriteBakMask               vdp
 ASxxxx Linker V05.50.4-SDLD,  page 12.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_CODE                               00004000    00005A0E =       23054. bytes (REL,CON)
+_CODE                               00004000    00005B67 =       23399. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00009258  _VDP_ReadDefaultStatus             vdp
-     0000925B  _VDP_SetPage                       vdp
-     00009268  _VDP_SetLayoutTable                vdp
-     000092D0  _VDP_SetColorTable                 vdp
-     00009359  _VDP_SetPatternTable               vdp
-     000093BE  _VDP_SetSpriteAttributeTable       vdp
-     0000944C  _VDP_SetSpritePatternTable         vdp
-     00009465  _VDP_LoadSpritePattern             vdp
-     00009496  _VDP_SetSpriteSM1                  vdp
-     000094D3  _VDP_SetSprite                     vdp
-     0000950D  _VDP_SetSpriteExMultiColor         vdp
-     00009572  _VDP_SetSpriteExUniColor           vdp
-     000095D4  _VDP_SetSpritePosition             vdp
-     00009606  _VDP_SetSpritePositionX            vdp
-     0000961E  _VDP_SetSpritePositionY            vdp
-     00009635  _VDP_SetSpritePattern              vdp
-     0000964D  _VDP_SetSpriteColorSM1             vdp
-     00009667  _VDP_SetSpriteUniColor             vdp
-     00009684  _VDP_SetSpriteMultiColor           vdp
-     000096A2  _VDP_SetSpriteData                 vdp
-     000096BE  _VDP_DisableSpritesFrom            vdp
-     000096CF  _VDP_SetBlinkTile                  vdp
-     00009719  _g_VDPBitValue                     vdp
-     00009721  _VDP_LoadPattern_GM2               vdp
-     00009795  _VDP_LoadColor_GM2                 vdp
-     00009809  _VDP_WriteLayout_GM2               vdp
-     00009864  _VDP_FillLayout_GM2                vdp
-     000098AC  ___sdcc_bcall                      
-     000098B5  ___sdcc_bcall_abc                  
-     000098CB  ___sdcc_bcall_ehl                  
-     000098E1  __modschar                         modsigned
-     000098E9  __modsint                          modsigned
-     000098EF  _Sys_GetPageSlot                   system
-     0000993D  _Sys_SetPageSlot                   system
-     0000993E  _Sys_SetPage0Slot                  system
-     00009983  _Sys_CheckSlot                     system
-     000099D3  __divschar                         divsigned
-     000099D5  __div8                             divsigned
-     000099D9  __div_signexte                     divsigned
-     000099DD  __div16                            divsigned
-     000099DD  __divsint                          divsigned
-     00009A03  __get_remainder                    divsigned
-     00009A0D  ___sdcc_call_hl                    
+     000093B1  _VDP_ReadDefaultStatus             vdp
+     000093B4  _VDP_SetPage                       vdp
+     000093C1  _VDP_SetLayoutTable                vdp
+     00009429  _VDP_SetColorTable                 vdp
+     000094B2  _VDP_SetPatternTable               vdp
+     00009517  _VDP_SetSpriteAttributeTable       vdp
+     000095A5  _VDP_SetSpritePatternTable         vdp
+     000095BE  _VDP_LoadSpritePattern             vdp
+     000095EF  _VDP_SetSpriteSM1                  vdp
+     0000962C  _VDP_SetSprite                     vdp
+     00009666  _VDP_SetSpriteExMultiColor         vdp
+     000096CB  _VDP_SetSpriteExUniColor           vdp
+     0000972D  _VDP_SetSpritePosition             vdp
+     0000975F  _VDP_SetSpritePositionX            vdp
+     00009777  _VDP_SetSpritePositionY            vdp
+     0000978E  _VDP_SetSpritePattern              vdp
+     000097A6  _VDP_SetSpriteColorSM1             vdp
+     000097C0  _VDP_SetSpriteUniColor             vdp
+     000097DD  _VDP_SetSpriteMultiColor           vdp
+     000097FB  _VDP_SetSpriteData                 vdp
+     00009817  _VDP_DisableSpritesFrom            vdp
+     00009828  _VDP_SetBlinkTile                  vdp
+     00009872  _g_VDPBitValue                     vdp
+     0000987A  _VDP_LoadPattern_GM2               vdp
+     000098EE  _VDP_LoadColor_GM2                 vdp
+     00009962  _VDP_WriteLayout_GM2               vdp
+     000099BD  _VDP_FillLayout_GM2                vdp
+     00009A05  ___sdcc_bcall                      
+     00009A0E  ___sdcc_bcall_abc                  
+     00009A24  ___sdcc_bcall_ehl                  
+     00009A3A  __modschar                         modsigned
+     00009A42  __modsint                          modsigned
+     00009A48  _Sys_GetPageSlot                   system
+     00009A96  _Sys_SetPageSlot                   system
+     00009A97  _Sys_SetPage0Slot                  system
+     00009ADC  _Sys_CheckSlot                     system
+     00009B2C  __divschar                         divsigned
+     00009B2E  __div8                             divsigned
+     00009B32  __div_signexte                     divsigned
+     00009B36  __div16                            divsigned
+     00009B36  __divsint                          divsigned
+     00009B5C  __get_remainder                    divsigned
+     00009B66  ___sdcc_call_hl                    
 ASxxxx Linker V05.50.4-SDLD,  page 13.
 Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_INITIALIZER                        00009A0E    00000028 =          40. bytes (REL,CON)
+_INITIALIZER                        00009B67    00000028 =          40. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
@@ -687,11 +687,11 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_GSFINAL                            00009A36    00000000 =           0. bytes (REL,CON)
+_GSFINAL                            00009B8F    00000000 =           0. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
-     00009A36  _g_LastAddr                        crt0
+     00009B8F  _g_LastAddr                        crt0
 
 ASxxxx Linker V05.50.4-SDLD,  page 15.
 Hexadecimal  [32-Bits]

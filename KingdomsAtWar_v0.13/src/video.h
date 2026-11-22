@@ -44,7 +44,7 @@ const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512,1024,2048};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
 i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
-/* Hardware diagnosis (F1..F5 toggle): 1 no drag box, 2 no building bars, 4 no occluders, 8 no pose crop, 16 no rectangle drawing. */
+/* Hardware diagnosis (F1..F5 toggle): 1 no drag box, 2 rectangles by CPU VRAM writes (no VDP command), 4 no occluders, 8 no pose crop, 16 no rectangle drawing. */
 u8 diag;
 volatile struct {u16 r[6];u8 arg,lop;} v9c;
 static u8 v9_busy(void) __naked {__asm
@@ -279,6 +279,12 @@ static void io_clr(u8 x,u8 y,u8 w,u8 h) {
   y+=n;h-=n;
  }
 }
+/* Diagnostic path: rectangle written by the CPU, byte aligned (2 px granularity), no VDP command involved. */
+static void io_cpu_rect(u8 x,u8 y,u8 w,u8 h,u8 c) {
+ u8 xb=x>>1,nb=(u8)(((u16)x+w+1)>>1)-xb,v=c*17,r,k;
+ while(io_stat&1);
+ for(r=0;r<h;++r) {u16 a=(u16)(y+r)*128+xb;io_sel=0;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=0;for(k=0;k<nb;++k)io_vram=v;}
+}
 /* Main-thread rectangle clear (colour 0 = transparent) inside the VRAM bitmap view; 16-bit coordinates. */
 static void p1_fill0(u16 dx,u16 dy,u16 w,u16 h) {
  gpu_wait();
@@ -346,8 +352,13 @@ static void irq_p1(void) {
    u8 i,same=(rw_n==rc_n);
    for(i=0;same && i<rc_n;++i)if(rw_x[i]!=rc_x[i] || rw_y[i]!=rc_y[i] || rw_w[i]!=rc_w[i] || rw_h[i]!=rc_h[i] || rw_c[i]!=rc_c[i])same=0;
    if(!same) {
+    if(diag&2) {
+     for(i=0;i<rc_n;++i)io_cpu_rect(rc_x[i],rc_y[i],rc_w[i],rc_h[i],0);
+     for(i=0;i<rw_n;++i) {io_cpu_rect(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
+    } else {
     for(i=0;i<rc_n;++i)io_clr(rc_x[i],rc_y[i],rc_w[i],rc_h[i]);
     for(i=0;i<rw_n;++i) {io_lmmv(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
+    }
     rc_n=rw_n;
    }
    rw_dirty=0;
@@ -1254,10 +1265,10 @@ void video_sprites(void) {
  }
 {u8 rn0=rw_n;u16 hs=0;
  for(k=0;k<building_count;++k)hs+=(u16)building_hp[k]+((u16)buildings[k].state<<8)+building_owner[k]*7;
- if(bl_ok && bl_cx==cam_x && bl_cy==cam_y && bl_ep==fog_epoch && bl_hs==hs && bl_bc==building_count && bl_r0==rn0 && bl_do==((draw_opt|(diag<<1))&4)) {
+ if(bl_ok && bl_cx==cam_x && bl_cy==cam_y && bl_ep==fog_epoch && bl_hs==hs && bl_bc==building_count && bl_r0==rn0 && bl_do==(draw_opt&4)) {
   __builtin_memcpy(rw_x+rn0,bl_x,bl_n);__builtin_memcpy(rw_y+rn0,bl_y,bl_n);__builtin_memcpy(rw_w+rn0,bl_w,bl_n);__builtin_memcpy(rw_h+rn0,bl_h,bl_n);__builtin_memcpy(rw_c+rn0,bl_c,bl_n);rw_n=rn0+bl_n;
  } else {
- for(k=0;k<building_count;++k)if(!((draw_opt|(diag<<1))&4) && buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
+ for(k=0;k<building_count;++k)if(!(draw_opt&4) && buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
   i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;
   if(building_owner[k] || building_hp[k]<max) {
    u8 w;if(bw_hp[k]!=building_hp[k] || bw_mx[k]!=max){bw_hp[k]=building_hp[k];bw_mx[k]=max;bw_w[k]=(u8)((u16)building_hp[k]*24/max);}w=bw_w[k];
@@ -1266,7 +1277,7 @@ void video_sprites(void) {
   if(building_owner[k]){rl_add(bx+17,by+1,1,10,11);rl_add(bx+18,by+1,7,4,9);}
  }
  bl_n=rw_n-rn0;__builtin_memcpy(bl_x,rw_x+rn0,bl_n);__builtin_memcpy(bl_y,rw_y+rn0,bl_n);__builtin_memcpy(bl_w,rw_w+rn0,bl_n);__builtin_memcpy(bl_h,rw_h+rn0,bl_n);__builtin_memcpy(bl_c,rw_c+rn0,bl_n);
- bl_cx=cam_x;bl_cy=cam_y;bl_ep=fog_epoch;bl_hs=hs;bl_bc=building_count;bl_r0=rn0;bl_do=(draw_opt|(diag<<1))&4;bl_ok=1;
+ bl_cx=cam_x;bl_cy=cam_y;bl_ep=fog_epoch;bl_hs=hs;bl_bc=building_count;bl_r0=rn0;bl_do=draw_opt&4;bl_ok=1;
  }
  }
  __asm di __endasm;rw_dirty=1;rw_lock=0;__asm ei __endasm;

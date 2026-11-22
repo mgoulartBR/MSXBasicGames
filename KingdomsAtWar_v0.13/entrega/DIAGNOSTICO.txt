@@ -1,8 +1,9 @@
-ROM de diagnostico (KAW9990P1_DIAG.ROM). Teclas F1..F5 ligam/desligam (cada toque inverte):
- F1 = sem a caixa de selecao       F2 = sem barras de vida das construcoes
- F3 = sem sprites de oclusao        F4 = sem recorte (crop) das poses
- F5 = nenhum retangulo e desenhado na camada A (nem caixa, nem barras)
-Roteiro: 1) sem tocar nas teclas, selecionar com a caixa 3x ate os tracos aparecerem.
-2) Reiniciar. Apertar F5, selecionar com a caixa varias vezes: tracos aparecem? (SIM = a causa nao e o desenho de retangulos)
-3) Reiniciar. Apertar F3 (so oclusao) e repetir. 4) Reiniciar. Apertar F4 e repetir.
-Anotar, por tecla, se os tracos pretos aparecem. Filmar cada teste.
+ROM de diagnostico 2 (KAW9990P1_DIAG2.ROM). Cada toque em F1..F5 inverte o estado:
+ F1 = sem a caixa de selecao          F5 = nenhum retangulo e desenhado na camada A
+ F2 = retangulos desenhados e apagados pela CPU (escrita direta na VRAM), SEM comando LMMV/LMMM do V9990
+ F3 = sem sprites de oclusao          F4 = sem recorte (crop) das poses
+Roteiro (reiniciar entre os testes):
+ 1) Sem teclas: selecionar com a caixa varias vezes ate os tracos pretos aparecerem (referencia).
+ 2) Reiniciar, apertar F2 uma vez, repetir a selecao varias vezes. Os tracos pretos aparecem?
+    (o jogo pode ficar um pouco mais lento durante o arrasto: e esperado neste teste)
+Anotar e filmar.
