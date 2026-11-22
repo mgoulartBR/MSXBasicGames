@@ -1,0 +1,8 @@
+ROM de diagnostico (KAW9990P1_DIAG.ROM). Teclas F1..F5 ligam/desligam (cada toque inverte):
+ F1 = sem a caixa de selecao       F2 = sem barras de vida das construcoes
+ F3 = sem sprites de oclusao        F4 = sem recorte (crop) das poses
+ F5 = nenhum retangulo e desenhado na camada A (nem caixa, nem barras)
+Roteiro: 1) sem tocar nas teclas, selecionar com a caixa 3x ate os tracos aparecerem.
+2) Reiniciar. Apertar F5, selecionar com a caixa varias vezes: tracos aparecem? (SIM = a causa nao e o desenho de retangulos)
+3) Reiniciar. Apertar F3 (so oclusao) e repetir. 4) Reiniciar. Apertar F4 e repetir.
+Anotar, por tecla, se os tracos pretos aparecem. Filmar cada teste.

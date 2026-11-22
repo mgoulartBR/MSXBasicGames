@@ -109,6 +109,7 @@ u8 graphics_slot,bios_slot,asset_bank;
 /* One matrix scan per video frame; every key test below is a constant-mask lookup. */
 u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
 extern u8 game_over;
+extern u8 diag;
 void game_restart(void); /* video.h: soft reset after a victory or defeat */
 #define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
 void poll_input(void) {
@@ -117,6 +118,7 @@ void poll_input(void) {
  tick=video_clock();if(tick==raw_tick)return;raw_tick=tick;
  {u8 r;for(r=0;r<9;++r)kbrow[r]=Keyboard_Read(r);}
  if(game_over && KP(KEY_RET))game_restart();
+ {static u8 dprev;u8 d=(KP(KEY_F1)?1:0)|(KP(KEY_F2)?2:0)|(KP(KEY_F3)?4:0)|(KP(KEY_F4)?8:0)|(KP(KEY_F5)?16:0);diag^=(u8)(d&~dprev);dprev=d;}
  {
   u8 rescan=KP(KEY_M);
   if(rescan && !mouse_rescan_down) {

@@ -44,6 +44,8 @@ const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512,1024,2048};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
 i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
+/* Hardware diagnosis (F1..F5 toggle): 1 no drag box, 2 no building bars, 4 no occluders, 8 no pose crop, 16 no rectangle drawing. */
+u8 diag;
 volatile struct {u16 r[6];u8 arg,lop;} v9c;
 static u8 v9_busy(void) __naked {__asm
  in a,(#0x65)
@@ -340,7 +342,7 @@ static void irq_p1(void) {
    if(p1_n>1) {io_vset(SPAT+4);otir_vram(sattr+4,(u16)(p1_n-1)*4);}
    p1_ready=0;
   }
-  if(rw_dirty && !rw_lock && !(io_stat&1)) {
+  if(rw_dirty && !rw_lock && !(diag&16) && !(io_stat&1)) {
    u8 i,same=(rw_n==rc_n);
    for(i=0;same && i<rc_n;++i)if(rw_x[i]!=rc_x[i] || rw_y[i]!=rc_y[i] || rw_w[i]!=rc_w[i] || rw_h[i]!=rc_h[i] || rw_c[i]!=rc_c[i])same=0;
    if(!same) {
@@ -715,7 +717,7 @@ static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
 void ae_up(u8 i) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
  pose_pos(key,sz,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
- {u8 cr=actor_crop[i];if(cr){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
+ {u8 cr=actor_crop[i];if(cr && !(diag&8)){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
  pend_key[i]=key;++frame_uploads;
 }
 void ae_occ(u8 i) {
@@ -737,7 +739,7 @@ void ae_occ(u8 i) {
      if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
      s2=e!=255?occ_get((u16)OCC_ENEMY+e):occ_get(tile_source[t]-50);}
-    if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
+    if(s2!=255 && !(diag&4) && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
    }
   }
  }
@@ -1238,6 +1240,7 @@ void video_sprites(void) {
  __asm di __endasm;rw_lock=1;__asm ei __endasm;
  rw_n=0;
  {u8 box=drag_down&&drag_moved;u16 l=drag_l,t=drag_t,r=drag_r,b=drag_b;
+  if(diag&1)box=0;
   if(box && (r<cam_x || l>=cam_x+256 || b<cam_y || t>=cam_y+160))box=0;
   if(box) {
    if(l<cam_x)l=cam_x;if(r>=cam_x+256)r=cam_x+255;if(t<cam_y)t=cam_y;if(b>=cam_y+160)b=cam_y+159;
@@ -1251,10 +1254,10 @@ void video_sprites(void) {
  }
 {u8 rn0=rw_n;u16 hs=0;
  for(k=0;k<building_count;++k)hs+=(u16)building_hp[k]+((u16)buildings[k].state<<8)+building_owner[k]*7;
- if(bl_ok && bl_cx==cam_x && bl_cy==cam_y && bl_ep==fog_epoch && bl_hs==hs && bl_bc==building_count && bl_r0==rn0 && bl_do==(draw_opt&4)) {
+ if(bl_ok && bl_cx==cam_x && bl_cy==cam_y && bl_ep==fog_epoch && bl_hs==hs && bl_bc==building_count && bl_r0==rn0 && bl_do==((draw_opt|(diag<<1))&4)) {
   __builtin_memcpy(rw_x+rn0,bl_x,bl_n);__builtin_memcpy(rw_y+rn0,bl_y,bl_n);__builtin_memcpy(rw_w+rn0,bl_w,bl_n);__builtin_memcpy(rw_h+rn0,bl_h,bl_n);__builtin_memcpy(rw_c+rn0,bl_c,bl_n);rw_n=rn0+bl_n;
  } else {
- for(k=0;k<building_count;++k)if(!(draw_opt&4) && buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
+ for(k=0;k<building_count;++k)if(!((draw_opt|(diag<<1))&4) && buildings[k].state && (building_owner[k] || building_hp[k]<(buildings[k].type==0?(building_owner[k]?180:240):96)) && bld_visible(k)) {
   i16 bx=(i16)buildings[k].x*16-(i16)cam_x,by=(i16)buildings[k].y*16-(i16)cam_y;u8 max=buildings[k].type==0?(building_owner[k]?180:240):96;
   if(building_owner[k] || building_hp[k]<max) {
    u8 w;if(bw_hp[k]!=building_hp[k] || bw_mx[k]!=max){bw_hp[k]=building_hp[k];bw_mx[k]=max;bw_w[k]=(u8)((u16)building_hp[k]*24/max);}w=bw_w[k];
@@ -1263,7 +1266,7 @@ void video_sprites(void) {
   if(building_owner[k]){rl_add(bx+17,by+1,1,10,11);rl_add(bx+18,by+1,7,4,9);}
  }
  bl_n=rw_n-rn0;__builtin_memcpy(bl_x,rw_x+rn0,bl_n);__builtin_memcpy(bl_y,rw_y+rn0,bl_n);__builtin_memcpy(bl_w,rw_w+rn0,bl_n);__builtin_memcpy(bl_h,rw_h+rn0,bl_n);__builtin_memcpy(bl_c,rw_c+rn0,bl_n);
- bl_cx=cam_x;bl_cy=cam_y;bl_ep=fog_epoch;bl_hs=hs;bl_bc=building_count;bl_r0=rn0;bl_do=draw_opt&4;bl_ok=1;
+ bl_cx=cam_x;bl_cy=cam_y;bl_ep=fog_epoch;bl_hs=hs;bl_bc=building_count;bl_r0=rn0;bl_do=(draw_opt|(diag<<1))&4;bl_ok=1;
  }
  }
  __asm di __endasm;rw_dirty=1;rw_lock=0;__asm ei __endasm;
