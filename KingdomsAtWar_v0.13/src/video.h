@@ -264,6 +264,19 @@ static void io_lmmv(u8 x,u8 y,u8 w,u8 h,u8 c) {
  io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=c*17;io_reg=c*17;
  io_sel=52;io_reg=0x20;
 }
+/* Rectangle clear by LMMM from a zeroed VRAM strip (lines ZERO_Y..ZERO_Y+47): colour-0 LMMV leaves dark streaks on real
+ * V9990 hardware, the copy command (already used for the poses) does not. */
+#define ZERO_Y 1744U
+static void io_clr(u8 x,u8 y,u8 w,u8 h) {
+ while(h) {
+  u8 n=h>48?48:h;
+  while(io_stat&1);
+  io_sel=32;io_reg=x;io_reg=0;io_reg=(u8)ZERO_Y;io_reg=(u8)(ZERO_Y>>8);io_reg=x;io_reg=0;io_reg=y;io_reg=0;io_reg=w;io_reg=0;io_reg=n;io_reg=0;
+  io_reg=0;io_reg=0x0C;
+  io_sel=52;io_reg=0x40;
+  y+=n;h-=n;
+ }
+}
 /* Main-thread rectangle clear (colour 0 = transparent) inside the VRAM bitmap view; 16-bit coordinates. */
 static void p1_fill0(u16 dx,u16 dy,u16 w,u16 h) {
  gpu_wait();
@@ -331,7 +344,7 @@ static void irq_p1(void) {
    u8 i,same=(rw_n==rc_n);
    for(i=0;same && i<rc_n;++i)if(rw_x[i]!=rc_x[i] || rw_y[i]!=rc_y[i] || rw_w[i]!=rc_w[i] || rw_h[i]!=rc_h[i] || rw_c[i]!=rc_c[i])same=0;
    if(!same) {
-    for(i=0;i<rc_n;++i)io_lmmv(rc_x[i],rc_y[i],rc_w[i],rc_h[i],0);
+    for(i=0;i<rc_n;++i)io_clr(rc_x[i],rc_y[i],rc_w[i],rc_h[i]);
     for(i=0;i<rw_n;++i) {io_lmmv(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
     rc_n=rw_n;
    }
@@ -1278,7 +1291,7 @@ void video_init(void) {
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
  units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
  for(i=0;i<OCC_N;++i){occ_key[i]=0xFFFF;occ_stamp[i]=0;occ_pend[i]=0;}
- p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
+ p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(0x36800UL,0,6144);V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
  /* clear both name tables and the HUD pattern table head */
  V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);

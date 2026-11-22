@@ -26,18 +26,18 @@ Creating crt0 config file...
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
 In file included from ./main.c:307:
-./video.h:375:10: warning: missing terminating ' character
-  375 |  ex af,af'
+./video.h:388:10: warning: missing terminating ' character
+  388 |  ex af,af'
       |          ^
-./video.h:395:10: warning: missing terminating ' character
-  395 |  ex af,af'
+./video.h:408:10: warning: missing terminating ' character
+  408 |  ex af,af'
       |          ^
-./video.h:398:10: warning: missing terminating ' character
-  398 |  ex af,af'
+./video.h:411:10: warning: missing terminating ' character
+  411 |  ex af,af'
       |          ^
-./video.h:1262: warning 85: in function video_sprites unreferenced local variable : 'j'
-./video.h:1379: warning 85: in function video_init unreferenced local variable : 'b'
-./video.h:1379: warning 85: in function video_init unreferenced local variable : 'k'
+./video.h:1275: warning 85: in function video_sprites unreferenced local variable : 'j'
+./video.h:1392: warning 85: in function video_init unreferenced local variable : 'b'
+./video.h:1392: warning 85: in function video_init unreferenced local variable : 'k'
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -163,7 +163,7 @@ published under GNU General Public License (GPL)
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
  Start=00004000h Size=00040000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=990Eh Size=22799 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=998Bh Size=22924 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -191,7 +191,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0029]: Lower=A000h Higher=B94Ah Size=6475 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B41Ah Size=5147 (Holes=0)
  Seg[0031]: Lower=A000h Higher=BA0Fh Size=6672 (Holes=0)
- Total size: 167891
+ Total size: 168016
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

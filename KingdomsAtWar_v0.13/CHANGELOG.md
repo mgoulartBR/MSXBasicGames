@@ -220,3 +220,6 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - correção do glitch no V9990 real (caixa de seleção)
 - `v9_lmmm` e `p1_fill0` esperam o fim do comando dentro do `di`: a interrupção de VBlank (LMMV dos retângulos) podia iniciar um comando entre o `gpu_wait()` e a reprogramação dos registradores. No hardware real isso corrompia cópias de poses ao arrastar a seleção.
+
+## v0.13 - limpeza dos retangulos por LMMM (V9990 real)
+- No hardware real, a limpeza dos retangulos da camada A por LMMV de cor 0 deixava tracos pretos horizontais depois de arrastar a selecao. Agora `io_clr` copia de uma faixa zerada da VRAM (linhas 1744..1791) com LMMM, o mesmo comando das poses. Teste `box_clear.tcl`: camada A fica com 0 bytes apos soltar a caixa.
