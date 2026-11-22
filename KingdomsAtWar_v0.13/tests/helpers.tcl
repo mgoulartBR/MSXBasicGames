@@ -14,7 +14,6 @@ if {![info exists ::env(KAW_AI)]} {after time 9 {debug write memory $::S(ai_enab
 if {![info exists ::env(KAW_END)]} {after time 9 {debug write memory $::S(end_enabled) 0}}
 # Idem para a defesa automatica dos soldados parados (auto_defend), salvo KAW_DEF=1.
 if {![info exists ::env(KAW_DEF)]} {after time 9 {debug write memory $::S(auto_defend) 0}}
-if {[info exists ::env(KAW_DIAG)]} {after time 9 {debug write memory $::S(diag) $::env(KAW_DIAG)}}
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}
 proc w {name} {return [expr {[b $name]+256*[b $name 1]}]}
 proc ck {label expression} {

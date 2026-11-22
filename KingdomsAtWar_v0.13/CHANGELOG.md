@@ -223,3 +223,6 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - limpeza dos retangulos por LMMM (V9990 real)
 - No hardware real, a limpeza dos retangulos da camada A por LMMV de cor 0 deixava tracos pretos horizontais depois de arrastar a selecao. Agora `io_clr` copia de uma faixa zerada da VRAM (linhas 1744..1791) com LMMM, o mesmo comando das poses. Teste `box_clear.tcl`: camada A fica com 0 bytes apos soltar a caixa.
+
+## v0.13 - retangulos da camada A pela CPU (V9990 real)
+- Confirmado no hardware real (ROMs de diagnostico): comandos LMMV/LMMM sobre a area de padroes da camada A deixam tracos pretos; a escrita direta da CPU nao. `irq_p1` agora desenha e apaga os retangulos por escrita da CPU (granularidade de 2 px) e os lados verticais longos da caixa de selecao e do fantasma de construcao sao sprites de uma linha (`vline_spr`, celulas 191/175/159). Removidos `io_lmmv`/`io_clr` e as teclas de diagnostico (F1..F5).

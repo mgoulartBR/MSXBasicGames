@@ -44,8 +44,6 @@ const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512,1024,2048};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
 i16 actor_x[RN],actor_y[RN];u8 actor_visible[RN],actor_key[RN],actor_crop[RN];
-/* Hardware diagnosis (F1..F5 toggle): 1 no drag box, 2 rectangles by CPU VRAM writes (no VDP command), 4 no occluders, 8 no pose crop, 16 no rectangle drawing. */
-u8 diag;
 volatile struct {u16 r[6];u8 arg,lop;} v9c;
 static u8 v9_busy(void) __naked {__asm
  in a,(#0x65)
@@ -260,26 +258,8 @@ static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
  * list is compared with the committed one and repainted in the vertical blank, never half drawn. */
 static u8 rw_x[MAXR],rw_y[MAXR],rw_w[MAXR],rw_h[MAXR],rw_c[MAXR],rw_n,rw_lock,rw_dirty;
 static u8 rc_x[MAXR],rc_y[MAXR],rc_w[MAXR],rc_h[MAXR],rc_c[MAXR],rc_n;
-static void io_lmmv(u8 x,u8 y,u8 w,u8 h,u8 c) {
- while(io_stat&1);
- io_sel=36;io_reg=x;io_reg=0;io_reg=y;io_reg=0;io_reg=w;io_reg=0;io_reg=h;io_reg=0;
- io_reg=0;io_reg=0x0C;io_reg=0xFF;io_reg=0xFF;io_reg=c*17;io_reg=c*17;
- io_sel=52;io_reg=0x20;
-}
-/* Rectangle clear by LMMM from a zeroed VRAM strip (lines ZERO_Y..ZERO_Y+47): colour-0 LMMV leaves dark streaks on real
- * V9990 hardware, the copy command (already used for the poses) does not. */
-#define ZERO_Y 1744U
-static void io_clr(u8 x,u8 y,u8 w,u8 h) {
- while(h) {
-  u8 n=h>48?48:h;
-  while(io_stat&1);
-  io_sel=32;io_reg=x;io_reg=0;io_reg=(u8)ZERO_Y;io_reg=(u8)(ZERO_Y>>8);io_reg=x;io_reg=0;io_reg=y;io_reg=0;io_reg=w;io_reg=0;io_reg=n;io_reg=0;
-  io_reg=0;io_reg=0x0C;
-  io_sel=52;io_reg=0x40;
-  y+=n;h-=n;
- }
-}
-/* Diagnostic path: rectangle written by the CPU, byte aligned (2 px granularity), no VDP command involved. */
+/* Layer A rectangles are written by the CPU (byte aligned, 2 px granularity): VDP commands (LMMV/LMMM) aimed at the layer A
+ * pattern area leave dark streaks on real V9990 hardware. Long vertical edges are sprites (see vline_spr), not rows. */
 static void io_cpu_rect(u8 x,u8 y,u8 w,u8 h,u8 c) {
  u8 xb=x>>1,nb=(u8)(((u16)x+w+1)>>1)-xb,v=c*17,r,k;
  while(io_stat&1);
@@ -348,17 +328,12 @@ static void irq_p1(void) {
    if(p1_n>1) {io_vset(SPAT+4);otir_vram(sattr+4,(u16)(p1_n-1)*4);}
    p1_ready=0;
   }
-  if(rw_dirty && !rw_lock && !(diag&16) && !(io_stat&1)) {
+  if(rw_dirty && !rw_lock && !(io_stat&1)) {
    u8 i,same=(rw_n==rc_n);
    for(i=0;same && i<rc_n;++i)if(rw_x[i]!=rc_x[i] || rw_y[i]!=rc_y[i] || rw_w[i]!=rc_w[i] || rw_h[i]!=rc_h[i] || rw_c[i]!=rc_c[i])same=0;
    if(!same) {
-    if(diag&2) {
-     for(i=0;i<rc_n;++i)io_cpu_rect(rc_x[i],rc_y[i],rc_w[i],rc_h[i],0);
-     for(i=0;i<rw_n;++i) {io_cpu_rect(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
-    } else {
-    for(i=0;i<rc_n;++i)io_clr(rc_x[i],rc_y[i],rc_w[i],rc_h[i]);
-    for(i=0;i<rw_n;++i) {io_lmmv(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
-    }
+    for(i=0;i<rc_n;++i)io_cpu_rect(rc_x[i],rc_y[i],rc_w[i],rc_h[i],0);
+    for(i=0;i<rw_n;++i) {io_cpu_rect(rw_x[i],rw_y[i],rw_w[i],rw_h[i],rw_c[i]);rc_x[i]=rw_x[i];rc_y[i]=rw_y[i];rc_w[i]=rw_w[i];rc_h[i]=rw_h[i];rc_c[i]=rw_c[i];}
     rc_n=rw_n;
    }
    rw_dirty=0;
@@ -513,6 +488,14 @@ cl_next:
  __endasm;
 }
 #define SPR(X,Y,P,I) do{i16 _x=(X);*o++=(u8)((Y)-1);*o++=(P);*o++=(u8)_x;*o++=((u8)(_x>>8)&3)|(I);}while(0)
+#define CELL_VLINE15 191  /* one-pixel vertical line, 16 rows: white (drag box) */
+#define CELL_VLINE10 175  /* placement ghost, valid */
+#define CELL_VLINE7 159   /* placement ghost, blocked */
+static u8* vline_spr(u8* o,i16 x,i16 y,u16 h,u8 cell) {
+ u16 rest=h;i16 yy=y;
+ while(rest && o<sattr+496) {i16 py=rest<16?(i16)(y+h-16):yy;SPR(x,py,cell,0x20);if(rest<=16)break;rest-=16;yy+=16;}
+ return o;
+}
 static u16 occ_key[OCC_N];static u8 occ_stamp[OCC_N],occ_pend[OCC_N];static i16 ob_l[8],ob_t[8],ob_r[8],ob_b[8],ub_l,ub_t,ub_r,ub_b;
 /* Occlusion: building tiles (opaque pixels only) become sprites in front of a unit that stands behind the
  * building. Tile art lives in a bitmap bank; a slot is copied into a sprite cell the first time it is needed. */
@@ -728,7 +711,7 @@ static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
 void ae_up(u8 i) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
  pose_pos(key,sz,&px,&py);p1_copy(px,py,(u16)(c2&15)<<4,P1_SGT_LINE+((u16)(c2>>4)<<4),sz,sz);
- {u8 cr=actor_crop[i];if(cr && !(diag&8)){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
+ {u8 cr=actor_crop[i];if(cr){u8 c=c2;p1_fill0((u16)(c&15)<<4,P1_SGT_LINE+((u16)(c>>4)<<4),sz,cr>sz?sz:cr);}pend_crop[i]=cr;}
  pend_key[i]=key;++frame_uploads;
 }
 void ae_occ(u8 i) {
@@ -750,7 +733,7 @@ void ae_occ(u8 i) {
      if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
      s2=e!=255?occ_get((u16)OCC_ENEMY+e):occ_get(tile_source[t]-50);}
-    if(s2!=255 && !(diag&4) && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
+    if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
    }
   }
  }
@@ -1247,21 +1230,22 @@ void video_sprites(void) {
   ob_l[nb]=bl;ob_t[nb]=bt;ob_r[nb]=bl+sd;ob_b[nb]=bt+sd;if(bl<ub_l)ub_l=bl;if(bt<ub_t)ub_t=bt;if(bl+sd>ub_r)ub_r=bl+sd;if(bt+sd>ub_b)ub_b=bt+sd;++nb;
  }
  e_o=(u16)o;ae_nb=nb;ae_run();o=(u8*)e_o;
- n=(u8)((u16)(o-sattr)>>2);
  __asm di __endasm;rw_lock=1;__asm ei __endasm;
  rw_n=0;
  {u8 box=drag_down&&drag_moved;u16 l=drag_l,t=drag_t,r=drag_r,b=drag_b;
-  if(diag&1)box=0;
   if(box && (r<cam_x || l>=cam_x+256 || b<cam_y || t>=cam_y+160))box=0;
   if(box) {
    if(l<cam_x)l=cam_x;if(r>=cam_x+256)r=cam_x+255;if(t<cam_y)t=cam_y;if(b>=cam_y+160)b=cam_y+159;
    if(r>l){rl_add(l-cam_x,t-cam_y,r-l,1,15);rl_add(l-cam_x,b-cam_y,r-l,1,15);}
-   rl_add(l-cam_x,t-cam_y,1,b-t+1,15);rl_add(r-cam_x,t-cam_y,1,b-t+1,15);
+   if(b-t+1>16){o=vline_spr(o,l-cam_x,t-cam_y,b-t+1,CELL_VLINE15);o=vline_spr(o,r-cam_x,t-cam_y,b-t+1,CELL_VLINE15);}
+   else {rl_add(l-cam_x,t-cam_y,1,b-t+1,15);rl_add(r-cam_x,t-cam_y,1,b-t+1,15);}
   }
  }
  if(placement_mode && mouse_y<160) {
   u8 sz=building_size(build_kind)*16,c=place_valid?10:7;i16 gx=(i16)place_x*16-(i16)cam_x,gy=(i16)place_y*16-(i16)cam_y;
-  rl_add(gx,gy,sz,1,c);rl_add(gx,gy+sz-1,sz,1,c);rl_add(gx,gy,1,sz,c);rl_add(gx+sz-1,gy,1,sz,c);
+  rl_add(gx,gy,sz,1,c);rl_add(gx,gy+sz-1,sz,1,c);
+  if(gx>=0 && gx+sz<=256 && gy>=0 && gy+sz<=160) {u8 cl=c==10?CELL_VLINE10:CELL_VLINE7;o=vline_spr(o,gx,gy,sz,cl);o=vline_spr(o,gx+sz-1,gy,sz,cl);}
+  else {rl_add(gx,gy,1,sz,c);rl_add(gx+sz-1,gy,1,sz,c);}
  }
 {u8 rn0=rw_n;u16 hs=0;
  for(k=0;k<building_count;++k)hs+=(u16)building_hp[k]+((u16)buildings[k].state<<8)+building_owner[k]*7;
@@ -1281,6 +1265,7 @@ void video_sprites(void) {
  }
  }
  __asm di __endasm;rw_dirty=1;rw_lock=0;__asm ei __endasm;
+ n=(u8)((u16)(o-sattr)>>2);
  for(k=n;k<sused;++k)sattr[(u16)k*4+3]=0x10;
  __asm di __endasm;
  p1_n=n>sused?n:sused;p1_bx=cam_x;p1_by=cam_y;p1_ready=1;
@@ -1324,7 +1309,10 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
   for(j=0;j<128;++j)c[j]=0;
   for(i=0;i<16;++i)for(q=0;q<8;++q)if(cursor[i]&(128>>q))c[i*8+(q>>1)]|=(q&1)?0x0F:0xF0;
   cell_write(CELL_PTR,c);
-  cell_write(CELL_RING,ring_pixels);}
+  cell_write(CELL_RING,ring_pixels);
+  {u8 v;static const u8 vc[3]={15,10,7},vcell[3]={CELL_VLINE15,CELL_VLINE10,CELL_VLINE7};
+   for(v=0;v<3;++v){u8 k;for(k=0;k<128;++k)tile_buffer[k]=0;for(k=0;k<16;++k)tile_buffer[(u16)k<<3]=(u8)(vc[v]<<4);cell_write(vcell[v],tile_buffer);}}
+ }
   {u8 c2[128],w,k,col,x,q2;
    for(col=0;col<2;++col)for(w=0;w<=8;++w) {
     for(j=0;j<128;++j)c2[j]=0;

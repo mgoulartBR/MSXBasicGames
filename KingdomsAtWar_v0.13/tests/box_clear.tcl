@@ -14,6 +14,7 @@ proc box091 {} {
  delay 45;mouse_open
  mp 34 20;press091;mp 116 68
  ck rectangle_live {[b drag_down] && [b drag_moved] && [b selection_mask]==3 && [b selection_count]==2}
+ set ::throttle on;set ::speed 100;delay 1.0
  shot box091-held;dump091 box091-held
  set ::throttle on;set ::speed 100;delay 0.5
  release091

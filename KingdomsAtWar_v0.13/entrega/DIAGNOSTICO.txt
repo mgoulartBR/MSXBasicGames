@@ -1,9 +1,0 @@
-ROM de diagnostico 2 (KAW9990P1_DIAG2.ROM). Cada toque em F1..F5 inverte o estado:
- F1 = sem a caixa de selecao          F5 = nenhum retangulo e desenhado na camada A
- F2 = retangulos desenhados e apagados pela CPU (escrita direta na VRAM), SEM comando LMMV/LMMM do V9990
- F3 = sem sprites de oclusao          F4 = sem recorte (crop) das poses
-Roteiro (reiniciar entre os testes):
- 1) Sem teclas: selecionar com a caixa varias vezes ate os tracos pretos aparecerem (referencia).
- 2) Reiniciar, apertar F2 uma vez, repetir a selecao varias vezes. Os tracos pretos aparecem?
-    (o jogo pode ficar um pouco mais lento durante o arrasto: e esperado neste teste)
-Anotar e filmar.
