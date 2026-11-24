@@ -709,6 +709,7 @@ os_fn:
 }
 
 u8 draw_opt;
+u8 dbg_don,dbg_dprev,dbg_dprev2,dbg_shown; /* zeroed in video_init: RAM is not cleared on real hardware */
 static u8 ae_nb,ae_j,ae_i,ae_sz;static const u8 cell_ring_v=CELL_RING;
 void ae_up(u8 i) {
  u8 sz=kind_sizes[unit_kind[i]],key=actor_key[i],c2=CELL_POSE(i,act_blk[i]^1);u16 px,py;
@@ -1278,6 +1279,7 @@ void video_sprites(void) {
 static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,14,PA_SOLID+10);}
 void video_init(void) {
  u8 i,j,q;u16 y;
+ dbg_don=dbg_dprev=dbg_dprev2=dbg_shown=0;
 
  VDP_SetMode(VDP_MODE_SCREEN5);VDP_SetFrequency(VDP_FREQ_60HZ);VDP_EnableVBlank(TRUE);VDP_EnableDisplay(FALSE);
  V9_SetPort(V9_P07,2);V9_SetPort(V9_P07,0);
@@ -1397,3 +1399,23 @@ void video_enable(void) {
  video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);video_irq_install();
  video_enabled=1;
 }
+
+/* Hardware diagnosis (F1 toggles): the HUD blank row shows the world cell under the mouse:
+ * N = layer B name written in VRAM for the cell's top-left pattern.
+ * X,Y cell, S fog state (0 unknown, 1 remembered, 2 visible), A art shown, M art remembered, T terrain code (>=10 enemy building). */
+static c8* dbg_num(c8* p,c8 tag,u16 v,u8 w) {u8 k;*p++=tag;for(k=w;k;--k){p[k-1]='0'+(u8)(v%10);v/=10;}return p+w;}
+void dbg_cell(u8 on) {
+ c8 t[40];u8 i;
+ if(!on) {if(dbg_shown){for(i=0;i<34;++i)t[i]=' ';t[34]=0;video_text(0,192,t);dbg_shown=0;}return;}
+ dbg_shown=1;
+ {u16 wx=(u16)mouse_x+cam_x,wy=(u16)mouse_y+cam_y;u8 cx=(u8)((wx>>4)&31),cy=(u8)((wy>>4)&31);u16 c=((u16)cy<<5)+cx,nm;c8* p=t;
+  u32 na=PNT_B+((u16)cy<<8)+((u16)cx<<2);
+  __asm di __endasm;nm=V9_Peek(na)|((u16)V9_Peek(na+1)<<8);__asm ei __endasm;
+  p=dbg_num(p,'X',cx,2);*p++=' ';p=dbg_num(p,'Y',cy,2);*p++=' ';p=dbg_num(p,'S',fog_at(cx,cy),1);*p++=' ';
+  p=dbg_num(p,'A',fog_art(cx,cy),3);*p++=' ';p=dbg_num(p,'M',fog_memory[c],3);*p++=' ';p=dbg_num(p,'T',terrain[c],3);*p++=' ';
+  p=dbg_num(p,'N',nm,4);*p=0;
+  video_text(0,192,t);
+ }
+}
+/* F2: rewrite every layer B name from the current fog state (tells stale names from a wrong fog state). */
+void dbg_redraw(void) {u8 x,y;for(y=0;y<32;++y)for(x=0;x<32;++x)p1_cell(x,y);sprites_dirty|=1;}

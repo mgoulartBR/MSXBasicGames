@@ -7,6 +7,13 @@ if {![info exists ::env(KAW_NO_MOUSE)]} {if {[info exists ::env(KAW_MOUSE_PORT)]
 source symbols-$::env(KAW_VARIANT).tcl
 if {$::env(KAW_VARIANT) eq "V9968"} {source v9968_shim.tcl}
 if {$::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1"} {set videosource GFX9000}
+# KAW_POISON=<byte>: preenche a RAM nao inicializada (_DATA, C000..F132) com esse byte (ou "rnd") quando main() comeca,
+# para achar variaveis lidas antes de serem escritas (a RAM real nao e zerada como a do emulador).
+if {[info exists ::env(KAW_POISON)]} {
+ set ::poison_bp [debug set_bp 0x8684 {} {
+  set n [expr {0xF133-0xC000}];if {$::env(KAW_POISON) eq "rnd"} {set b {};for {set i 0} {$i<$n} {incr i} {lappend b [expr {int(rand()*256)}]}} else {set b [lrepeat $n $::env(KAW_POISON)]}
+  debug write_block memory 0xC000 [binary format c$n $b];puts stderr "INFO poisoned DATA";debug remove_bp $::poison_bp}]
+}
 set failures 0
 # Os testes antigos assumem a base inimiga vazia: desliga a IA inimiga (ai_enabled) logo apos a inicializacao, salvo KAW_AI=1.
 if {![info exists ::env(KAW_AI)]} {after time 9 {debug write memory $::S(ai_enabled) 0}}

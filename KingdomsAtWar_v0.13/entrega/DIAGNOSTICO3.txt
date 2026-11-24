@@ -1,0 +1,13 @@
+ROM de diagnostico 3 (KAW9990P1_DIAG3.ROM) - problema do fundo preto / celulas que nao redesenham perto da base inimiga.
+Teclas (cada toque):
+ F1 = liga/desliga o inspetor de celula: na linha livre do HUD (abaixo da barra vermelha) aparece, para a celula sob o mouse:
+      X03 Y03 S2 A006 M006 T000 N0032
+      X,Y = celula do mapa | S = fog (0 desconhecido, 1 lembrado, 2 visivel) | A = arte mostrada | M = arte lembrada
+      T = terreno (>=10 = predio inimigo) | N = numero de pattern escrito na VRAM para o canto da celula
+ F2 = redesenha TODAS as celulas da camada B a partir do estado do fog.
+Roteiro:
+ 1) Jogar ate o fundo preto / colunas verdes soltas aparecerem (como no video).
+ 2) Apertar F2: o defeito some? (SIM = os nomes na VRAM estavam velhos; NAO = o estado do fog esta errado)
+ 3) Reproduzir de novo, apertar F1 e apontar o mouse para: (a) uma coluna verde solta, (b) uma celula preta ao lado,
+    (c) uma celula tracejada. Fotografar a linha do HUD de cada uma (tirar foto legivel).
+Enviar fotos/videos com o resultado do F2 e os valores lidos.
