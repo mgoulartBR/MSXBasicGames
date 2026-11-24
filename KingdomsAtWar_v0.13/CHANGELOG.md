@@ -229,3 +229,8 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - patterns da camada B abaixo de 2048 (V9990 real)
 - Achado no hardware real: o numero de pattern da camada B tem 11 bits; os patterns >= 2048 (tiles inimigos tracejados e os 16 ultimos tiles inimigos) apareciam como tiles humanos errados ou pretos ao revelar a base inimiga. Novo mapa: `PB_DITH`=776, `ENEMY_PAT`=1544, 120 tiles inimigos (ate 2023), sem versao tracejada do Fog lembrado, canteiros 3x3 usam o canto dos 4x4; verificacao em tempo de compilacao (`pattern_limit_ok`) e teste `enemy_visual` (nenhum nome >= 2048).
+
+## v0.13 - auto-reparo dos nomes da camada B (V9990 real)
+- No V9990 real os nomes da camada B ficavam velhos depois de atualizacoes incrementais do fog (fundo preto, colunas soltas); um redesenho completo (diagnostico F2) curava. `video_stream` agora reescreve poucas celulas visiveis por quadro (1 em quadro ocupado, 6 ocioso, ciclo sobre as 17x11 da tela), reparando qualquer celula em ~1 a 6 s. Custo ~0,8 fps no cenario ativo (29,3).
+- Teclas de diagnostico: F1 inspetor de celula (linha livre do HUD), F2 redesenha toda a camada B. Teste `stale_heal.tcl`.
+- Causa raiz da perda das atualizacoes ainda desconhecida (a hipotese do limite de 2047 patterns tambem foi corrigida: tiles inimigos em 1544).

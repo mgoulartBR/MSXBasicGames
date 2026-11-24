@@ -81,7 +81,22 @@ void video_hud_end(void) {}
 void video_hud_flush(void) {gpu_wait();}
 void video_camera(void) {sprites_dirty|=1;}
 u8 video_camera_ready(u16 y) {y;return 1;}
-void video_stream(void) {}
+/* Self-healing refresh of the layer B names: a few visible cells per call, cycling over the 17x11 cells on screen. Real
+ * V9990 hardware was seen to keep stale names after incremental fog updates (a full redraw cured it); this repairs any
+ * cell within about a second without depending on which update was lost. */
+static void p1_cell(u8 x,u8 y);
+u8 rf_cx,rf_cy;
+void video_stream(void) {
+ u8 n,m,x0,y0;
+ if(!video_enabled)return;
+ m=sprites_dirty?1:6; /* spend idle frames, barely touch busy ones */
+ x0=(u8)(cam_x>>4);y0=(u8)(cam_y>>4);
+ for(n=0;n<m;++n) {
+  u8 x=x0+rf_cx,y=y0+rf_cy;
+  if(++rf_cx>=17){rf_cx=0;if(++rf_cy>=11)rf_cy=0;}
+  if(x<32 && y<32)p1_cell(x,y);
+ }
+}
 /* ---- pattern memory ---- */
 /* Loader helper (the load screen is dominated by VRAM writes): vr_rows rows of vr_w bytes go to the V9990 at address
  * vr_hi:vr_lo, 128 bytes apart (one row of the 256 px wide bitmap view); the source advances vr_s bytes per row.
@@ -1279,7 +1294,7 @@ void video_sprites(void) {
 static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,14,PA_SOLID+10);}
 void video_init(void) {
  u8 i,j,q;u16 y;
- dbg_don=dbg_dprev=dbg_dprev2=dbg_shown=0;
+ dbg_don=dbg_dprev=dbg_dprev2=dbg_shown=rf_cx=rf_cy=0;
 
  VDP_SetMode(VDP_MODE_SCREEN5);VDP_SetFrequency(VDP_FREQ_60HZ);VDP_EnableVBlank(TRUE);VDP_EnableDisplay(FALSE);
  V9_SetPort(V9_P07,2);V9_SetPort(V9_P07,0);
