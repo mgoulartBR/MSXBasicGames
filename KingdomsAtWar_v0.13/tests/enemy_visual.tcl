@@ -14,17 +14,24 @@ proc place {i x y} {
  set a [expr {$::S(units)+16*$i}]
  foreach {o v} [list 0 [expr {$x*16&255}] 1 [expr {$x*16>>8}] 2 [expr {$y*16&255}] 3 [expr {$y*16>>8}] 4 $x 5 $y 6 $x 7 $y 8 $x 9 $y 12 0 13 0 14 0 15 0] {debug write memory [expr {$a+$o}] $v}
 }
+# Hardware real: o numero de pattern da camada B so tem 11 bits. Nenhuma celula pode apontar para pattern >= 2048.
+proc names_ok {tag} {
+ set d [debug read_block {Sunrise GFX9000 VRAM} 0x7E000 8192];set bad 0;set mx 0
+ for {set i 0} {$i<8192} {incr i 2} {set n [expr {[scan [string index $d $i] %c]+256*[scan [string index $d [expr {$i+1}]] %c]}];if {$n>$mx} {set mx $n};if {$n>=2048} {incr bad}}
+ puts stderr "INFO $tag max pattern=$mx"
+ ck patterns_below_2048_$tag {$bad==0}
+}
 proc ev_case {} {
  delay 45
  # quartel e torre inimigos na area ainda nao vista; soldados humanos encostados nas laterais (oclusao)
  place_enemy 2 2 5 24;place_enemy 3 6 5 28;wr building_count 0 4
  place 2 4 26;place 3 9 26;place 0 4 30;place 1 9 30
  wr sprites_dirty 0 3;wr fog_refresh 0 1
- view_y 400;delay 4;shot enemyvis-occl
+ view_y 400;delay 4;shot enemyvis-occl;names_ok occl
  # os soldados vao embora: as celulas dos predios passam a lembradas (tracejado)
  place 2 1 1;place 3 2 1;place 0 3 1;place 1 1 3
  wr sprites_dirty 0 3;wr fog_refresh 0 1
- view_y 400;delay 4;shot enemyvis-remembered
+ view_y 400;delay 4;shot enemyvis-remembered;names_ok remembered
  puts stderr "RESULT failures=$::failures";exit
 }
 coroutine ev_run guard ev_case

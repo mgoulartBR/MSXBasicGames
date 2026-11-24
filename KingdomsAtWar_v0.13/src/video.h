@@ -32,9 +32,11 @@
 #define POSE32_Y 192U
 #define POSE48_Y 640U
 #define PB_PLAIN 8U
-#define PB_DITH 800U
-#define ENEMY_PAT 1568U /* enemy-kingdom building tiles (plain), after the dithered block */
-#define ENEMY_DITH (ENEMY_PAT+(u16)ENEMY_TILES*4) /* and their dithered (remembered) versions */
+#define PB_DITH 776U
+#define ENEMY_PAT 1544U /* enemy-kingdom building tiles, after the dithered block; no dithered copy (remembered = same pattern) */
+/* Real V9990 hardware masks the layer B pattern number to 11 bits: every pattern must stay below 2048 (openMSX and FPGA cores
+ * accept more, which hid this). */
+typedef char pattern_limit_ok[(ENEMY_PAT+(u16)ENEMY_TILES*4<=2048U)?1:-1];
 #define EOV_Y 3072U /* VRAM line (0x60000) of the raw enemy tiles for occlusion, 16 per row */
 #define OCC_ENEMY 141 /* occluder cache key = OCC_ENEMY + tile index (>= 1); human keys are at most 141, 0xFFFF is 'empty' */
 #define PA_SOLID 641U
@@ -224,7 +226,7 @@ static void p1_cell(u8 x,u8 y) {
    if(t>=10) {
     u8 e=enemy_tile_of(t-10,x,y);
     if(e!=255) {
-     n=(st==1?ENEMY_DITH:ENEMY_PAT)+(u16)e*4;
+     n=ENEMY_PAT+(u16)e*4;
      names_put(a,n,n+1,n+2,n+3);return;
     }
    }
@@ -1368,8 +1370,6 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
     {u16 bx=(u16)(e&15)<<4,by=EOV_Y+((u16)(e>>4)<<4);vram_rows((u32)by*128+(bx>>1),tile_buffer,8,8,16);}
     tile_fix();
     tile_patterns(P1_PGT_B_BASE,ENEMY_PAT+(u16)e*4,tile_buffer);
-    tile_dither();
-    tile_patterns(P1_PGT_B_BASE,ENEMY_DITH+(u16)e*4,tile_buffer);
    }
   }
  }

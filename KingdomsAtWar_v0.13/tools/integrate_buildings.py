@@ -3,7 +3,7 @@
 uso: integrate_buildings.py dir  (le dir/0_idx.npy .. dir/7_idx.npy, um por tipo de predio: castle,house,barracks,sawmill,forge,stable,tower,siege)
 - recorta cada imagem 64x64 (48x48 para a casa) em tiles de 16x16, deduplica tiles iguais (o tile vazio e sempre o 0)
 - grava os tiles (LZ, 128 B cada, transparente = 0) no banco 22 e a tabela predio+deslocamento -> tile em art07.h
-Patterns do jogo: tiles inimigos ficam a partir do pattern ENEMY_PAT (depois do bloco 'dither'), sem versao 'dither'."""
+Patterns do jogo: tiles inimigos ficam a partir do pattern ENEMY_PAT (depois do bloco 'dither'), sem versao 'dither'. Total de tiles <= 126 (patterns ENEMY_PAT..2047)."""
 import re,sys
 from pathlib import Path
 import numpy as np
@@ -23,7 +23,9 @@ for t in range(8):
 # Canteiro de obras dos mortos (opcional): site_idx.npy 64x64 (predios 4x4) e site3_idx.npy 48x48 (casa); entradas 128..159
 # do mapa; 255 = usar o canteiro dos humanos.
 emap+=[255]*64  # 128..159 canteiro dos mortos, 160..191 canteiro humano (hsite*_idx.npy)
-for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144),('hsite_idx.npy',4,160),('hsite3_idx.npy',3,176)):
+# Limite do hardware real: numero de pattern <= 2047 (11 bits). Por isso os canteiros 3x3 reaproveitam os 3x3 tiles do canto
+# superior esquerdo do canteiro 4x4 (sem tiles proprios) e o Fog lembrado usa os mesmos patterns (sem versao dither).
+for name,n,base in (('site_idx.npy',4,128),('hsite_idx.npy',4,160)):
     if not (d/name).exists():continue
     a=np.load(d/name);assert a.shape==(16*n,16*n),(name,a.shape)
     for ty in range(n):
@@ -31,6 +33,9 @@ for name,n,base in (('site_idx.npy',4,128),('site3_idx.npy',3,144),('hsite_idx.n
             blk=np.where(a[ty*16:(ty+1)*16,tx*16:(tx+1)*16]>=0,a[ty*16:(ty+1)*16,tx*16:(tx+1)*16],0).astype(np.uint8);k=blk.tobytes()
             if k not in keys:keys[k]=len(tiles);tiles.append(blk)
             emap[base+ty*n+tx]=keys[k]
+for base3,base4 in ((144,128),(176,160)):
+    for ty in range(3):
+        for tx in range(3):emap[base3+ty*3+tx]=emap[base4+ty*4+tx]
 # Os tiles saem em ate dois bancos de 8 KB (22 e 24): corte guloso pelo tamanho comprimido.
 def chunk_enc(ts):return lz(b''.join(pack(t) for t in ts))
 k=len(tiles)

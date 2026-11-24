@@ -4,7 +4,7 @@
 from pathlib import Path
 import sys
 d=Path(__file__).resolve().parent
-PB_PLAIN,PB_DITH=8,800
+PB_PLAIN,PB_DITH=8,776
 vram=(d/'fog011-V9990P1-remembered-vram.bin').read_bytes()
 seen=(d/'fog011-V9990P1-remembered-seen.bin').read_bytes()
 vis=(d/'fog011-V9990P1-remembered-visible.bin').read_bytes()

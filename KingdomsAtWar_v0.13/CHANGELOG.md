@@ -226,3 +226,6 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - retangulos da camada A pela CPU (V9990 real)
 - Confirmado no hardware real (ROMs de diagnostico): comandos LMMV/LMMM sobre a area de padroes da camada A deixam tracos pretos; a escrita direta da CPU nao. `irq_p1` agora desenha e apaga os retangulos por escrita da CPU (granularidade de 2 px) e os lados verticais longos da caixa de selecao e do fantasma de construcao sao sprites de uma linha (`vline_spr`, celulas 191/175/159). Removidos `io_lmmv`/`io_clr` e as teclas de diagnostico (F1..F5).
+
+## v0.13 - patterns da camada B abaixo de 2048 (V9990 real)
+- Achado no hardware real: o numero de pattern da camada B tem 11 bits; os patterns >= 2048 (tiles inimigos tracejados e os 16 ultimos tiles inimigos) apareciam como tiles humanos errados ou pretos ao revelar a base inimiga. Novo mapa: `PB_DITH`=776, `ENEMY_PAT`=1544, 120 tiles inimigos (ate 2023), sem versao tracejada do Fog lembrado, canteiros 3x3 usam o canto dos 4x4; verificacao em tempo de compilacao (`pattern_limit_ok`) e teste `enemy_visual` (nenhum nome >= 2048).
