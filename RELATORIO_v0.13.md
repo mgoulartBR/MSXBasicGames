@@ -414,3 +414,10 @@ O laço livre não mexeu no V9990 (a CPU já estava ocupada) e deu ~30% no V9968
 - Visibilidade dos prédios (`fog_target`) em cache por época do Fog; ordenação por profundidade com os valores de `py` copiados para um vetor local. A tentativa de não esperar o blitter ao copiar poses não mudou nada e foi revertida.
 - Medido: 4 unidades 63 para 67 quadros em 3,44 s (19,5 fps); 1 unidade 68 para 69 em 2,97 s (23,2 fps). Todos os testes de lógica, oclusão, clarão, kernel012 e box011 sem falhas.
 - Observação sobre o perfil: parte do tempo que o perfil por linha atribui a `video_sprites` é da interrupção de vertical blank (cópia de atributos de sprite e retângulos), que roda no meio de qualquer linha.
+
+## 10.11 Validação no V9990 real (novembro/2026)
+Testes de um colega no V9990 real (a FPGA e o openMSX são tolerantes e não mostraram os defeitos) encontraram e confirmaram três correções, todas na ROM `KAW9990P1.ROM` (sha256 em `SHA256SUMS.txt`):
+1. **Traços pretos ao arrastar a seleção:** comandos LMMV/LMMM sobre a área de padrões da camada A corrompem no hardware real. Os retângulos agora são escritos pela CPU e os lados verticais longos são sprites (`vline_spr`). Confirmado com ROMs de diagnóstico (F1/F2/F5).
+2. **Patterns da camada B:** limite de 11 bits (< 2048); tiles inimigos em 1544, sem versão tracejada do Fog lembrado.
+3. **Nomes velhos da camada B** (fundo preto, colunas soltas perto da base inimiga): um redesenho completo curava; `video_stream` agora reescreve poucas células visíveis por quadro (auto-reparo). Confirmado pelo colega. Causa raiz da perda das atualizações ainda desconhecida.
+Lições: RAM não inicializada não é zero no hardware real (`diag` e variáveis estáticas são zeradas em `video_init`); emuladores e FPGA aceitam o que o chip real recusa.
