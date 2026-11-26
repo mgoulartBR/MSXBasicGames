@@ -234,3 +234,6 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - No V9990 real os nomes da camada B ficavam velhos depois de atualizacoes incrementais do fog (fundo preto, colunas soltas); um redesenho completo (diagnostico F2) curava. `video_stream` agora reescreve poucas celulas visiveis por quadro (1 em quadro ocupado, 6 ocioso, ciclo sobre as 17x11 da tela), reparando qualquer celula em ~1 a 6 s. Custo ~0,8 fps no cenario ativo (29,3).
 - Teclas de diagnostico: F1 inspetor de celula (linha livre do HUD), F2 redesenha toda a camada B. Teste `stale_heal.tcl`.
 - Causa raiz da perda das atualizacoes ainda desconhecida (a hipotese do limite de 2047 patterns tambem foi corrigida: tiles inimigos em 1544).
+
+## v0.13 - versao final para o V9990 real
+- Removidas as teclas de diagnostico F1 (inspetor de celula) e F2 (redesenho total). Mantido o auto-reparo da camada B (`video_stream`). Suite completa 43 `RESULT failures=0`; `stale_heal` passa; 28,8 fps no cenario ativo.
