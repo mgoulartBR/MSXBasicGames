@@ -23,9 +23,12 @@ void input(void) __banked {
  if(KP(KEY_UP)) cam_keys|=4;
  if(KP(KEY_DOWN)) cam_keys|=8;
  edge_keys=0;
- if(mouse_present && mouse_active && mouse_y<160) {
-  if(mouse_x<3)edge_keys|=1;if(mouse_x>245)edge_keys|=2;
-  if(mouse_y<3)edge_keys|=4;if(mouse_y>156)edge_keys|=8;
+ if(mouse_present && mouse_active) {
+  /* Bottom edge: the last map lines (157..159) and the very bottom of the screen (below the HUD); the HUD itself does not scroll. */
+  if(mouse_y<160) {
+   if(mouse_x<3)edge_keys|=1;if(mouse_x>245)edge_keys|=2;
+   if(mouse_y<3)edge_keys|=4;if(mouse_y>156)edge_keys|=8;
+  } else if(mouse_y>=204)edge_keys|=8;
  }
  if(edge_hold>=6)cam_keys|=edge_keys;
  if((keys&1) && !(last_keys&1)) mode^=1;

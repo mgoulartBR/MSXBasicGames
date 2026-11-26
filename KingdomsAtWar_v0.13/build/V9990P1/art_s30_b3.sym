@@ -34,12 +34,12 @@ Symbol Table
     _drag_begin                                                     ******** GX
     _drag_down                                                      ******** GX
     _drag_tick                                                      ******** GX
-  7 _economy_order                                                  00001225 GR
+  7 _economy_order                                                  00001234 GR
     _edge_hold                                                      ******** GX
     _edge_keys                                                      ******** GX
     _enemy_selected                                                 ******** GX
     _fog_at                                                         ******** GX
-  7 _format_amount                                                  000006B7 GR
+  7 _format_amount                                                  000006C6 GR
     _free_at                                                        ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
@@ -317,23 +317,23 @@ Symbol Table
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
     _game_seconds                                                   ******** GX
-  7 _goal_free                                                      00000DA3 GR
+  7 _goal_free                                                      00000DB2 GR
     _gold                                                           ******** GX
     _group_orders                                                   ******** GX
-  7 _hud                                                            00000A0A GR
+  7 _hud                                                            00000A19 GR
     _hud_actions                                                    ******** GX
     _hud_cache                                                      ******** GX
     _hud_char_writes                                                ******** GX
     _hud_dirty                                                      ******** GX
     _hud_draw                                                       ******** GX
-  7 _hud_field                                                      00000618 GR
-  7 _hud_init                                                       00000949 GR
+  7 _hud_field                                                      00000627 GR
+  7 _hud_init                                                       00000958 GR
     _hud_live                                                       ******** GX
     _hud_markers                                                    ******** GX
     _hud_pending                                                    ******** GX
     _hud_progress                                                   ******** GX
     _hud_ready                                                      ******** GX
-  7 _hud_render                                                     00000726 GR
+  7 _hud_render                                                     00000735 GR
     _hud_values                                                     ******** GX
   7 _input                                                          00000000 GR
     _kbrow                                                          ******** GX
@@ -352,7 +352,7 @@ Symbol Table
     _mouse_y                                                        ******** GX
     _node_x                                                         ******** GX
     _node_y                                                         ******** GX
-  7 _order_at                                                       00000F0F GR
+  7 _order_at                                                       00000F1E GR
     _order_one                                                      ******** GX
     _passable                                                       ******** GX
     _place_valid                                                    ******** GX
@@ -383,11 +383,11 @@ Symbol Table
     _repair_active                                                  ******** GX
     _repair_target                                                  ******** GX
     _repair_timer                                                   ******** GX
-  7 _select_at                                                      00000A97 GR
+  7 _select_at                                                      00000AA6 GR
     _selected                                                       ******** GX
     _selection_count                                                ******** GX
     _selection_mask                                                 ******** GX
-  7 _selection_update                                               00000A4A GR
+  7 _selection_update                                               00000A59 GR
     _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _stance                                                         ******** GX
@@ -465,7 +465,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG30                                     size     141B   flags    0
+   7 _SEG30                                     size     142A   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

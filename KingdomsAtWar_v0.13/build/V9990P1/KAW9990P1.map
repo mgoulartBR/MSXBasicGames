@@ -146,7 +146,7 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000861  l__SEG13                        
      00000DA0  l__SEG23                        
      0000105D  l__SEG9                         
-     0000141B  l__SEG30                        
+     0000142A  l__SEG30                        
      00001604  l__SEG27                        
      0000194B  l__SEG29                        
      00001A10  l__SEG31                        
@@ -1354,21 +1354,21 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-_SEG30                              001EA000    0000141B =        5147. bytes (REL,CON)
+_SEG30                              001EA000    0000142A =        5162. bytes (REL,CON)
 
          Value  Global                             Global Defined In Module
          -----  --------------------------------   ------------------------
      001EA000  _input                             art_s30_b3
-     001EA618  _hud_field                         art_s30_b3
-     001EA6B7  _format_amount                     art_s30_b3
-     001EA726  _hud_render                        art_s30_b3
-     001EA949  _hud_init                          art_s30_b3
-     001EAA0A  _hud                               art_s30_b3
-     001EAA4A  _selection_update                  art_s30_b3
-     001EAA97  _select_at                         art_s30_b3
-     001EADA3  _goal_free                         art_s30_b3
-     001EAF0F  _order_at                          art_s30_b3
-     001EB225  _economy_order                     art_s30_b3
+     001EA627  _hud_field                         art_s30_b3
+     001EA6C6  _format_amount                     art_s30_b3
+     001EA735  _hud_render                        art_s30_b3
+     001EA958  _hud_init                          art_s30_b3
+     001EAA19  _hud                               art_s30_b3
+     001EAA59  _selection_update                  art_s30_b3
+     001EAAA6  _select_at                         art_s30_b3
+     001EADB2  _goal_free                         art_s30_b3
+     001EAF1E  _order_at                          art_s30_b3
+     001EB234  _economy_order                     art_s30_b3
 
 ASxxxx Linker V05.50.4-SDLD,  page 48.
 Hexadecimal  [32-Bits]

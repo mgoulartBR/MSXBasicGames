@@ -237,3 +237,6 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - versao final para o V9990 real
 - Removidas as teclas de diagnostico F1 (inspetor de celula) e F2 (redesenho total). Mantido o auto-reparo da camada B (`video_stream`). Suite completa 43 `RESULT failures=0`; `stale_heal` passa; 28,8 fps no cenario ativo.
+
+## v0.13 - rolagem na borda inferior
+- O mouse no fim da tela (abaixo do HUD, y>=204) rola o mapa para baixo; sobre o HUD continua sem rolar. Teste `edge_bottom.tcl`.
