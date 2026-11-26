@@ -103,6 +103,8 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 #include "banked_calls.h"
 #include "art07.h"
 #include "art08.h"
+#include "text.h"
+#include "text_asset.h"
 #include "rom_mapper.h"
 u8 graphics_slot,bios_slot,asset_bank;
 #include "asset_codec.h"

@@ -247,3 +247,9 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - Menu (banco 50, `menu_run`): titulo -> NOVO JOGO / IDIOMA (PT, EN, ES, JA em romaji provisorio) com teclado e mouse. O idioma fica em `lang`. Os testes pulam o menu com `menu_auto` (KAW_MENU=1 liga o menu); o reinicio apos o fim volta ao titulo.
 - Textos ainda em ASCII maiusculo; acentos e kana dependem da decisao sobre a fonte.
 - Armadilha: funcao `__banked` precisa ser declarada em `banked_calls.h` (a de `shared.h` nao vale em `main.c`), senao vira `call` direto e executa lixo.
+
+## v0.14 - fonte 8x8 estendida e textos em 4 idiomas
+- `tools/i18n.py`: tabela de textos (PT, EN, ES, JA) e fonte extra de ate 160 glifos (codigos 96..255, linhas 184..223 da VRAM): acentuados de 5 linhas desenhados a mao (Á À Â Ã É È Ê Í Ó Ô Õ Ú Ü Ñ Ç ¿ ¡), kana do IPAGothic em 9 px (sons vozeados = kana + marca ゛ ゜ em celula propria, como o kana de meia largura do MSX). Saidas: `src/text.h`, `src/text_asset.h`, bancos 51 (textos) e 52 (fonte LZ), `reference/fonte/`.
+- `tr(id)`: copia o texto do idioma atual do banco de textos para um buffer (uma string por vez). O menu usa `tr()`.
+- VRAM: bancos de poses e de oclusao deslocados 48 linhas (POSE32_Y 240, POSE48_Y 688, OV_Y 1648) para abrir espaco para a fonte; a faixa de zeros (1744..1791) deixou de existir.
+- Pendente: revisar o kana com um falante nativo (ン/ソ/シ/ツ e algumas hiraganas), traduzir o HUD e as mensagens do jogo.

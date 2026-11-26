@@ -10,9 +10,10 @@
  *   lines    0..159   layer A pattern table: the box/bars bitmap
  *   lines  160..183   layer A HUD patterns: solid colours (PA_SOLID), HUD top line, font (PA_FONT)
 
- *   lines  192..639   pose bank, 32 px poses (8 per row; slots from key_slot[])
- *   lines  640..1599  pose bank, 48 px poses (5 per row)
- *   lines 1600..1743  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
+ *   lines  184..223   extended font (accents, kana), codes 96..255
+ *   lines  240..687   pose bank, 32 px poses (8 per row; slots from key_slot[])
+ *   lines  688..1647  pose bank, 48 px poses (5 per row)
+ *   lines 1648..1791  building tile art without grass, 16x16 cells (occlusion), index = tile - 50
  *   lines 1792..2047  sprite pattern table (R#25 = 0x38000): 256 cells of 16x16
  *        cells   0..191   pose blocks, two 3x3 blocks per actor 0..9 (double buffer), column 15 free (occluders)
  *        cells 192..207   ally health bars 192..200, arrows 201..204, damage cross 205, pointer 206, ring 207
@@ -29,8 +30,8 @@
 #define P1_SGT 0x38000UL
 #define P1_PGT_B_BASE 0x40000UL
 #define P1_SGT_LINE 1792U
-#define POSE32_Y 192U
-#define POSE48_Y 640U
+#define POSE32_Y 240U
+#define POSE48_Y 688U
 #define PB_PLAIN 8U
 #define PB_DITH 776U
 #define ENEMY_PAT 1544U /* enemy-kingdom building tiles, after the dithered block; no dithered copy (remembered = same pattern) */
@@ -313,7 +314,7 @@ static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108,208,210},{48,51,5
 #define OCC_N 14
 /* occluder slots: leftovers of rows 13/14 and the free right-hand column of the pose rows */
 static const u8 occ_cell[OCC_N]={221,222,223,237,238,239,15,31,47,63,79,95,111,127};
-#define OV_Y 1600U
+#define OV_Y 1648U
 /* Pose key -> position in the pose bank (key_slot[] = slot inside the 32 px or the 48 px bank). */
 static void pose_pos(u8 key,u8 sz,u16* x,u16* y) {
  u8 k=key_slot[key];
@@ -1300,6 +1301,30 @@ void screen_show(u8 id) {
   for(r=0;r<40;++r) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(k*40+r)*128,tile_buffer,128);}
  }
 }
+/* Text from the ROM text bank: tr(id) copies the string of the current language into RAM (the bank window is switched for
+ * each byte read, interrupts off). */
+u8 rp_bank;u16 rp_ptr;c8 tr_buf[40];
+static u8 rom_peek(void) __naked {__asm
+ di
+ call get_bank
+ push af
+ ld a,(_rp_bank)
+ call set_bank
+ ld hl,(_rp_ptr)
+ ld e,(hl)
+ pop af
+ call set_bank
+ ei
+ ld a,e
+ ret
+ __endasm;}
+const c8* tr(u8 id) {
+ u16 p;u8 i,c;
+ rp_bank=TEXT_BANK;rp_ptr=0xA000u+((u16)id*LANGS+lang)*2;
+ p=rom_peek();++rp_ptr;p|=(u16)rom_peek()<<8;
+ for(i=0;i<39;++i) {rp_ptr=p+i;c=rom_peek();tr_buf[i]=(c8)c;if(!c)return tr_buf;}
+ tr_buf[39]=0;return tr_buf;
+}
 void video_init(void) {
  u8 i,j,q;u16 y;
  rf_cx=rf_cy=0;
@@ -1317,12 +1342,12 @@ void video_init(void) {
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
  units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
  for(i=0;i<OCC_N;++i){occ_key[i]=0xFFFF;occ_stamp[i]=0;occ_pend[i]=0;}
- p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(0x36800UL,0,6144);V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
+ p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
  /* clear both name tables and the HUD pattern table head */
  V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);
  {u16 row[32];u8 cy,cx;for(cy=0;cy<20;++cy) {for(cx=0;cx<32;++cx)row[cx]=(u16)cy*32+cx;V9_WriteVRAM(PNT_A+((u16)cy<<7),(const u8*)row,64);}}
-V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
+V9_FillVRAM(0x00000UL,0,30720);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  /* layer A patterns: solid colours 1..16 (pattern 1+c, c>=1 only), HUD top line */
  for(i=0;i<16;++i) {u8 pat[32];for(j=0;j<32;++j)pat[j]=i*17;pat_write(0,PA_SOLID+i,pat);}
  {u8 pat[32];for(j=0;j<32;++j)pat[j]=(j<8)?0xAA:0x11;pat_write(0,PA_HUDTOP,pat);}
@@ -1330,6 +1355,9 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  asset_begin(&font_asset);
  for(i=0;i<16;++i) {u8 b;asset_read(tile_buffer,128);for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x10;if(!(v&0x0F))v|=0x01;tile_buffer[b]=v;}
   V9_WriteVRAM((u32)((PA_FONT>>5)*8+i)*128,tile_buffer,128);}
+ /* extended glyphs (accents, kana): codes 96..255 = patterns 736..895, lines 184..223 */
+ asset_begin(&font_ext_asset);
+ for(i=0;i<40;++i) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(184+i)*128,tile_buffer,128);}
  screen_show(SCR_TITLE);
  {u8 r;for(r=0;r<2;++r){hud_draw=r;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);}hud_draw=0;}
  V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);

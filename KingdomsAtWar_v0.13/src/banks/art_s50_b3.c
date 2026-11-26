@@ -1,42 +1,33 @@
 #include "../shared.h"
-/* Title and main menu (first piece of the game shell). Texts are uppercase ASCII for now: the 8x8 font has no accents or
- * kana yet (decision pending); the Japanese column is romanised until the kana font exists. */
-#define LANGS 4
-enum {T_PRESS,T_NEW,T_LANG,T_TITLE,T_SUB,T_COUNT};
-static const c8* const txt[LANGS][T_COUNT]={
- {"PRESSIONE ENTER","NOVO JOGO","IDIOMA","REINOS","OS INSEPULTOS"},
- {"PRESS ENTER","NEW GAME","LANGUAGE","KINGDOMS","THE UNBURIED"},
- {"PULSE ENTER","NUEVO JUEGO","IDIOMA","REINOS","LOS INSEPULTOS"},
- {"ENTA O OSHITE","HAJIMERU","GENGO","KOKUOU","SHIBARERU MONO"}
-};
-static const c8* const lang_name[LANGS]={"PORTUGUES","ENGLISH","ESPANOL","NIHONGO"};
+/* Title and main menu (first piece of the game shell). All texts come from tr() (tools/i18n.py). */
+#include "../text.h"
 #define ITEM_Y 176
 static u8 slen(const c8* s) {u8 n=0;while(s[n])++n;return n;}
 static void band_clear(void) {video_fill(0,168,256,40,1);}
 static void draw_title(void) {
  band_clear();
- video_text(128-(u8)(slen(txt[lang][T_TITLE])*4),176,txt[lang][T_TITLE]);
- video_text(128-(u8)(slen(txt[lang][T_PRESS])*4),192,txt[lang][T_PRESS]);
+ video_text(128-(u8)(slen(tr(TXT_TITLE))*4),176,tr(TXT_TITLE));
+ video_text(128-(u8)(slen(tr(TXT_PRESS))*4),192,tr(TXT_PRESS));
 }
-static void draw_items(const c8* const* items,u8 n,u8 sel) {
+static void draw_items(u8 state,u8 n,u8 sel) {
  u8 i;
  band_clear();
  for(i=0;i<n;++i) {
+  u8 id=(state==1)?(i==0?TXT_NEW_GAME:TXT_LANGUAGE):(u8)(TXT_LANG_PT+i);
   video_text(72,ITEM_Y+i*8,i==sel?"*":" ");
-  video_text(88,ITEM_Y+i*8,items[i]);
+  video_text(88,ITEM_Y+i*8,tr(id));
  }
 }
 void menu_run(void) __banked {
  u8 state=0,sel=0,prev=0,dirty=1,n;
  u16 t;
- const c8* items[LANGS];
  if(menu_auto)return;
  for(;;) {
   u8 k,edge,click,moved;
   if(dirty) {
    if(state==0)draw_title();
-   else if(state==1) {items[0]=txt[lang][T_NEW];items[1]=txt[lang][T_LANG];draw_items(items,2,sel);}
-   else {u8 i;for(i=0;i<LANGS;++i)items[i]=lang_name[i];draw_items(items,LANGS,sel);}
+   else if(state==1)draw_items(1,2,sel);
+   else draw_items(2,LANGS,sel);
    dirty=0;
   }
   t=video_clock();while(video_clock()==t){}
