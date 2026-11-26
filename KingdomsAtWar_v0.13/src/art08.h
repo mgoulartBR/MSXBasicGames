@@ -1,0 +1,10 @@
+/* gerado por tools/integrate_screens.py */
+#define SCR_TITLE 0
+#define SCR_VICTORY_HUMAN 1
+#define SCR_DEFEAT_HUMAN 2
+#define SCR_END_HUMAN 3
+#define SCR_MENU 4
+#define SCR_VICTORY_UNDEAD 5
+#define SCR_DEFEAT_UNDEAD 6
+#define SCR_END_UNDEAD 7
+const Asset screen_chunks[]={{32,0xA000},{32,0xA840},{33,0xA000},{33,0xB184},{33,0xB48F},{34,0xA000},{35,0xA000},{35,0xB3C7},{36,0xA000},{37,0xA000},{38,0xA000},{38,0xB282},{39,0xA000},{39,0xACB8},{40,0xA000},{40,0xB352},{41,0xA000},{42,0xA000},{43,0xA000},{43,0xB234},{44,0xA000},{44,0xABF1},{45,0xA000},{45,0xB401},{46,0xA000},{46,0xAB88},{47,0xA000},{47,0xB4B9},{48,0xA000},{48,0xAC7D},{49,0xA000},{49,0xB4AB}};

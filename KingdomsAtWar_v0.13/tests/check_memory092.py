@@ -9,5 +9,5 @@ for v in sys.argv[1:] or ['V9990','PREVIEW','V9968']:
  assert end<=0xA000,(v,'fixed ROM overflow',hex(end))
  assert ram<0xF380,(v,'RAM/stack overlap',hex(ram))
  assert banks and max(banks)<=8192,(v,'bank overflow')
- b=(R/(n+'.ROM')).read_bytes();assert len(b)==262144 and b[:2]==b'AB'
+ b=(R/(n+'.ROM')).read_bytes();assert len(b)==524288 and b[:2]==b'AB'
  print(f'PASS {v} fixed_end={end:04X} RAM_end={ram:04X} largest_bank={max(banks)}')

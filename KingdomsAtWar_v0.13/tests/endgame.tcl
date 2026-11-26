@@ -31,6 +31,8 @@ proc eg_case {} {
  keymatrixdown 7 128;delay 0.5;delay 0.5;keymatrixup 7 128
  # a carga inicial leva ~45 s emulados
  await {[b video_enabled]==0} 20
+ # depois do reinicio o jogo volta ao titulo: o teste pula o menu como no primeiro inicio
+ delay 6;debug write memory $::S(menu_auto) 1
  await {[b video_enabled]==1 && [w sim_ticks]>100} 100
  ck restarted {[b game_over]==0 && [w game_seconds]<20}
  ck new_game_running {[w sim_ticks]>100 && [b building_hp 0]==240 && [b building_hp 1]==180 && [bd 0 state]==2 && [bd 1 state]==2 && [b game_over]==0}

@@ -102,6 +102,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 
 #include "banked_calls.h"
 #include "art07.h"
+#include "art08.h"
 #include "rom_mapper.h"
 u8 graphics_slot,bios_slot,asset_bank;
 #include "asset_codec.h"
@@ -182,6 +183,7 @@ get_bank::
 
 
 u8 drag_down,drag_moved,drag_add,drag_prior;
+u8 lang,menu_auto; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
 u16 drag_anchor_x,drag_anchor_y,drag_l,drag_t,drag_r,drag_b;
 
 u8 unit_hp[RN],combat_target[RN],attack_cooldown[RN],attack_flash[RN],hurt_flash[RN],stance[N];
@@ -463,7 +465,7 @@ void main(void) {
   ld (0xF3DB),a
  __endasm;
  v9990_check();
- left_seen=0;drag_down=drag_moved=0;
+ lang=0;menu_auto=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
  mouse_probe_tick=mouse_connections=mouse_rescan_down=mouse_probe_port=0;mouse_warmup=2;
@@ -479,6 +481,8 @@ void main(void) {
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}
+ video_menu_enable();menu_run();
+ screen_clear();video_hud_band();hud_erase_count=0;mouse_x=mouse_y=56;
  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
  for(;;) {
   u16 now,dt;

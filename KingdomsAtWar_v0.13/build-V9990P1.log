@@ -14,7 +14,7 @@
 
 » Project: KAW9990P1
 » Machine: MSX2
-» Target:  256KB ROM using ASCII-8 mapper (starting at 4000h)
+» Target:  512KB ROM using ASCII-8 mapper (starting at 4000h)
 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ COMPILE                                                                   │
@@ -25,7 +25,7 @@ Creating crt0 config file...
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
-In file included from ./main.c:307:
+In file included from ./main.c:309:
 ./video.h:393:10: warning: missing terminating ' character
   393 |  ex af,af'
       |          ^
@@ -36,8 +36,8 @@ In file included from ./main.c:307:
   416 |  ex af,af'
       |          ^
 ./video.h:1291: warning 85: in function video_sprites unreferenced local variable : 'j'
-./video.h:1410: warning 85: in function video_init unreferenced local variable : 'b'
-./video.h:1410: warning 85: in function video_init unreferenced local variable : 'k'
+./video.h:1420: warning 85: in function video_init unreferenced local variable : 'b'
+./video.h:1420: warning 85: in function video_init unreferenced local variable : 'k'
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -51,7 +51,7 @@ In file included from ./main.c:307:
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/v9990.c using SDCC C compiler...[0m
 [92mSuccess[0m
-[94mSearching for extra mapper segments to compile [1-31] (banks/art_s?_b?)...[0m
+[94mSearching for extra mapper segments to compile [1-63] (banks/art_s?_b?)...[0m
 Segment found: banks/art_s4_b3.c (addr: 0004A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s4_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -145,6 +145,63 @@ Segment found: banks/art_s30_b3.c (addr: 001EA000h)
 Segment found: banks/art_s31_b3.c (addr: 001FA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s31_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
+Segment found: banks/art_s32_b3.c (addr: 0020A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s32_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s33_b3.c (addr: 0021A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s33_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s34_b3.c (addr: 0022A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s34_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s35_b3.c (addr: 0023A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s35_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s36_b3.c (addr: 0024A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s36_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s37_b3.c (addr: 0025A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s37_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s38_b3.c (addr: 0026A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s38_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s39_b3.c (addr: 0027A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s39_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s40_b3.c (addr: 0028A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s40_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s41_b3.c (addr: 0029A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s41_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s42_b3.c (addr: 002AA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s42_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s43_b3.c (addr: 002BA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s43_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s44_b3.c (addr: 002CA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s44_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s45_b3.c (addr: 002DA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s45_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s46_b3.c (addr: 002EA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s46_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s47_b3.c (addr: 002FA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s47_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s48_b3.c (addr: 0030A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s48_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s49_b3.c (addr: 0031A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s49_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s50_b3.c (addr: 0032A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s50_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ LINK                                                                      │
@@ -161,9 +218,9 @@ published under GNU General Public License (GPL)
 └───────────────────────────────────────────────────────────────────────────┘
 [94mPackaging binary...[0m
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
- Start=00004000h Size=00040000h Bank=00002000h Pad=FFh
+ Start=00004000h Size=00080000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=9BB9h Size=23482 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=9D21h Size=23842 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -191,7 +248,26 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0029]: Lower=A000h Higher=B94Ah Size=6475 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B429h Size=5162 (Holes=0)
  Seg[0031]: Lower=A000h Higher=BA0Fh Size=6672 (Holes=0)
- Total size: 167469
+ Seg[0032]: Lower=A000h Higher=B668h Size=5737 (Holes=0)
+ Seg[0033]: Lower=A000h Higher=BB67h Size=7016 (Holes=0)
+ Seg[0034]: Lower=A000h Higher=ADA7h Size=3496 (Holes=0)
+ Seg[0035]: Lower=A000h Higher=BADEh Size=6879 (Holes=0)
+ Seg[0036]: Lower=A000h Higher=B145h Size=4422 (Holes=0)
+ Seg[0037]: Lower=A000h Higher=B36Ah Size=4971 (Holes=0)
+ Seg[0038]: Lower=A000h Higher=B5CDh Size=5582 (Holes=0)
+ Seg[0039]: Lower=A000h Higher=BE07h Size=7688 (Holes=0)
+ Seg[0040]: Lower=A000h Higher=B68Bh Size=5772 (Holes=0)
+ Seg[0041]: Lower=A000h Higher=AE99h Size=3738 (Holes=0)
+ Seg[0042]: Lower=A000h Higher=B4E5h Size=5350 (Holes=0)
+ Seg[0043]: Lower=A000h Higher=B9A4h Size=6565 (Holes=0)
+ Seg[0044]: Lower=A000h Higher=BE93h Size=7828 (Holes=0)
+ Seg[0045]: Lower=A000h Higher=B91Dh Size=6430 (Holes=0)
+ Seg[0046]: Lower=A000h Higher=BDCAh Size=7627 (Holes=0)
+ Seg[0047]: Lower=A000h Higher=BADEh Size=6879 (Holes=0)
+ Seg[0048]: Lower=A000h Higher=BD88h Size=7561 (Holes=0)
+ Seg[0049]: Lower=A000h Higher=BA3Fh Size=6720 (Holes=0)
+ Seg[0050]: Lower=A000h Higher=A516h Size=1303 (Holes=0)
+ Total size: 279393
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

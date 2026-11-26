@@ -1290,7 +1290,16 @@ void video_sprites(void) {
  sused=n;
  ++rendered_frames;
 }
-static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,14,PA_SOLID+10);}
+static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,24,PA_SOLID+10);}
+/* A 256x160 title/ending picture: four 40-line LZ chunks written straight into the layer A patterns (lines 0..159); the
+ * name table rows 0..19 already map 1:1 onto them. */
+void screen_show(u8 id) {
+ u8 k,r;
+ for(k=0;k<4;++k) {
+  asset_begin(screen_chunks+id*4+k);
+  for(r=0;r<40;++r) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(k*40+r)*128,tile_buffer,128);}
+ }
+}
 void video_init(void) {
  u8 i,j,q;u16 y;
  rf_cx=rf_cy=0;
@@ -1321,6 +1330,8 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  asset_begin(&font_asset);
  for(i=0;i<16;++i) {u8 b;asset_read(tile_buffer,128);for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x10;if(!(v&0x0F))v|=0x01;tile_buffer[b]=v;}
   V9_WriteVRAM((u32)((PA_FONT>>5)*8+i)*128,tile_buffer,128);}
+ screen_show(SCR_TITLE);
+ {u8 r;for(r=0;r<2;++r){hud_draw=r;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);}hud_draw=0;}
  V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);
  /* sprite cells: pointer and selection ring */
  {u8 c[128];
@@ -1405,11 +1416,19 @@ V9_FillVRAM(0x00000UL,0,24576);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
   }
  }
  for(y=0;y<32;++y)for(j=0;j<32;++j)p1_cell(j,y);
- for(i=0;i<16;++i)hud_name(8+i,14,0);
+ for(i=0;i<16;++i)hud_name(8+i,24,PA_SOLID+1); /* the load bar (row 24) disappears */
+ hud_draw=0;
+}
+/* Title/menu state: the V9990 interrupt (pointer sprite) runs, the world sprites do not. */
+void video_menu_enable(void) {video_irq_install();video_enabled=1;}
+/* Game start: layer A returns to a transparent overlay, the HUD frame and labels are drawn. */
+void screen_clear(void) {V9_FillVRAM(0x00000UL,0,20480);}
+void video_hud_band(void) {
+ u8 i;
  for(i=0;i<2;++i) {hud_draw=i;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);video_text(8,168,"[WOOD");video_text(136,168,"]GOLD");video_text(8,184,"^TIME");video_text(136,184,"_FREE");}
  hud_draw=0;
 }
 void video_enable(void) {
- video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);video_irq_install();
+ video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);if(!video_enabled)video_irq_install();
  video_enabled=1;
 }

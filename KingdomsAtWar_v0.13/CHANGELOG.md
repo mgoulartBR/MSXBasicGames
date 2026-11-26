@@ -240,3 +240,10 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 
 ## v0.13 - rolagem na borda inferior
 - O mouse no fim da tela (abaixo do HUD, y>=204) rola o mapa para baixo; sobre o HUD continua sem rolar. Teste `edge_bottom.tcl`.
+
+## v0.14 (em desenvolvimento) - base do jogo: titulo e menu
+- ROM de 512 KiB (ASCII8, segmentos 32..63 para telas, textos e musica).
+- Tela de titulo desenhada na camada A durante a carga (4 blocos LZ de 40 linhas por tela; `tools/integrate_screens.py`, `src/art08.h`, bancos 32..49) e as outras 7 telas ja convertidas (`tools/convert_screens.py`); barra de carga na linha 24.
+- Menu (banco 50, `menu_run`): titulo -> NOVO JOGO / IDIOMA (PT, EN, ES, JA em romaji provisorio) com teclado e mouse. O idioma fica em `lang`. Os testes pulam o menu com `menu_auto` (KAW_MENU=1 liga o menu); o reinicio apos o fim volta ao titulo.
+- Textos ainda em ASCII maiusculo; acentos e kana dependem da decisao sobre a fonte.
+- Armadilha: funcao `__banked` precisa ser declarada em `banked_calls.h` (a de `shared.h` nao vale em `main.c`), senao vira `call` direto e executa lixo.

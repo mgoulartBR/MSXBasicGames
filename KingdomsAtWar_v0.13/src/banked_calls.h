@@ -111,3 +111,4 @@ void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);
 
 void fog_stamp(u8 x,u8 y,u8 r) __banked;
+void menu_run(void) __banked;
