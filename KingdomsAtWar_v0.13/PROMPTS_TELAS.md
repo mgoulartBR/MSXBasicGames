@@ -27,8 +27,11 @@ O conector do Higgsfield instalado no Claude **só lê** (lista modelos, crédit
 ## 3b. Derrota (Insepultos)
 > (Bloco ESTILO) The undead necropolis collapses at dawn: the tall sandstone tower cracking and falling, bone-coloured columns toppling, human swordsmen with blue banners marching through the broken gate, bandaged mummy warriors crumbling to dust on the ground, warm orange sunrise light breaking over a dark blue-purple sky, a lone broken scimitar in the foreground. Grim and final, no gore.
 
-## 4. Final da campanha (humanos; o final dos Insepultos usa o mesmo estilo, a combinar com a storyline)
+## 4. Final da campanha (humanos)
 > (Bloco ESTILO) Peaceful epilogue: the human castle and a small village at sunrise seen from a hill, a narrow river, green fields, a soldier and a peasant standing side by side looking at the horizon, long warm light, soft clouds. Hopeful.
+
+## 4b. Final da campanha (Insepultos)
+> (Bloco ESTILO) Quiet epilogue of the undead campaign: at dusk a tall sandstone necropolis tower rises over the conquered river valley, a long line of bandaged mummy warriors and a jackal-headed guard walking home in silhouette along a dark road, torn blue human banners planted in the ground as trophies, a pale moon and a cold blue-green glow on the horizon, dark purple-blue sky. Solemn and eerie, victory without celebration, no gore.
 
 ## 5. (opcional) Menu / fundo de briefing
 > (Bloco ESTILO) An old parchment map of a river valley with a castle on one side and a necropolis on the other, torn edges, dark brown-and-sand palette, big empty areas where text will be drawn.
