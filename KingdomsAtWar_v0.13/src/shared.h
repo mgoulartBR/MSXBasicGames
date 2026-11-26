@@ -84,8 +84,7 @@ extern const u8 build_wood[];
 extern const u8 build_gold[];
 extern const u8 recruit_wood[];
 extern const u8 recruit_gold[];
-extern const c8* build_names[];
-extern const c8* recruit_names[];
+const c8* bname(u8 i);const c8* rname(u8 i); /* tr() of the building / unit name */
 extern u8 sprite_colors[16];
 
 extern const u8 cursor[];

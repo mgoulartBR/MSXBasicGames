@@ -1,4 +1,5 @@
 #include "../shared.h"
+#include "../text.h"
 u8 has_building(u8 type) __banked {
  u8 i;for(i=0;i<building_count;++i)if(!building_owner[i] && buildings[i].state==2 && buildings[i].type==type)return 1;return 0;
 }
@@ -162,25 +163,33 @@ void hud_context_text(const c8* text) __banked {
   if(hud_context[p][i]!=c) {video_char(8+i*8,176,c);hud_context[p][i]=c;}
  }
 }
+static void cat(c8* d,const c8* a,const c8* b) {while(*a)*d++=*a++;while(*b)*d++=*b++;*d=0;}
 void hud_actions(void) __banked {
- u8 p=hud_draw,i,step=0,old;const c8* line;
- if(game_over)hud_context_text(game_over==1?"VICTORY: ENEMY KEEP DESTROYED":"DEFEAT: YOUR KEEP DESTROYED");
+ u8 p=hud_draw,i,step=0,old;const c8* line;c8 lb[34];
+ if(game_over)hud_context_text(tr(game_over==1?TXT_VICTORY_MSG:TXT_DEFEAT_MSG));
  else if(placement_mode) {
-  c8 text[30];u8 k=0;const c8* name=build_names[build_kind];
+  c8 text[30];u8 k=0;const c8* name=bname(build_kind);
   while(*name)text[k++]=*name++;text[k++]=' ';text[k++]='[';text[k++]='0'+build_wood[build_kind]/10;text[k++]='0'+build_wood[build_kind]%10;
   text[k++]=']';text[k++]='0'+build_gold[build_kind]/10;text[k++]='0'+build_gold[build_kind]%10;
   text[k++]=' ';text[k++]=build_unlocked(build_kind)?(place_valid?'O':'X'):'L';text[k]=0;hud_context_text(text);
  } else if(selection_count>1)group_context();
  else if(repair_context() || combat_context() || structure_context()) {}
- else if(building_selected)hud_context_text(build_names[buildings[building_selected-1].type]);
- else if(selected!=NONE)hud_context_text(recruit_names[unit_kind[selected]]);
- else hud_context_text("HUMAN KINGDOM");
- if(game_over)line="PRESS ENTER TO PLAY AGAIN";
- else if(military_selected())line="STOP      HOLD";
- else if(WORKER(selected))line="HOU BAR SAW FOR STA TOW SIE";
+ else if(building_selected)hud_context_text(bname(buildings[building_selected-1].type));
+ else if(selected!=NONE)hud_context_text(rname(unit_kind[selected]));
+ else hud_context_text(tr(TXT_KINGDOM));
+ if(game_over)line=tr(TXT_AGAIN);
+ else if(military_selected())line=tr(TXT_ACT_MIL);
+ else if(WORKER(selected))line=tr(TXT_ACT_BUILD);
  else if(building_selected) {
   Building* b=&buildings[building_selected-1];
-  line=b->state==1?"WORK IN PROGRESS":b->type==0?"PEASANT [00]08":b->type==2?"SWORD    SPEAR    ARCHER":b->type==5?"KNIGHT [16]24":b->type==7?"RAM [24]16":b->type==4?(research_level?"ATK+2  ARMOR+1":"UPGRADE [16]16"):"";
+  line="";
+  if(b->state==1)line=tr(TXT_WORKING);
+  else if(b->type==2)line=tr(TXT_ACT_BARRACKS);
+  else if(b->type==4 && research_level)line=tr(TXT_ATKARMOR);
+  else {
+   if(b->type==0)cat(lb,rname(0)," [00]08");else if(b->type==5)cat(lb,rname(4)," [16]24");else if(b->type==7)cat(lb,rname(5)," [24]16");else if(b->type==4)cat(lb,tr(TXT_UPGRADE)," [16]16");else lb[0]=0;
+   line=lb;
+  }
   if(b->state==1)step=b->type==2?(180-b->remaining)/18:(240-b->remaining)/24;
   else if(b->training) {u16 total=b->training==1?90:b->training>=5?180:120;step=(total-b->time)*10/total;}
  } else line="";

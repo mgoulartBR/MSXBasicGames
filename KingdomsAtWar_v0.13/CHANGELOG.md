@@ -253,3 +253,8 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - `tr(id)`: copia o texto do idioma atual do banco de textos para um buffer (uma string por vez). O menu usa `tr()`.
 - VRAM: bancos de poses e de oclusao deslocados 48 linhas (POSE32_Y 240, POSE48_Y 688, OV_Y 1648) para abrir espaco para a fonte; a faixa de zeros (1744..1791) deixou de existir.
 - Pendente: revisar o kana com um falante nativo (ン/ソ/シ/ツ e algumas hiraganas), traduzir o HUD e as mensagens do jogo.
+
+## v0.14 - HUD e mensagens traduzidos
+- Todos os textos do jogo passam por `tr()` (tools/i18n.py): nomes de predios e unidades, grupos (plural), rotulos do HUD (madeira, ouro, tempo, vagas), linhas de botoes com colunas fixas (as colunas definem os cliques), custos, mensagens de vitoria/derrota/reinicio, reparo, PV. `bname()`/`rname()` substituem `build_names`/`recruit_names`.
+- PT, EN, ES e JA (kana; marcas ゛ ゜ em celula propria). Teste `lang_hud.tcl` com `KAW_LANG=0..3` (capturas hud-<idioma>-*).
+- Rotulos do HUD limitados a 6 letras (o valor comeca na coluna x=64): ES usa HORA/LIBRE, PT usa LENHA/TEMPO/VAGAS.

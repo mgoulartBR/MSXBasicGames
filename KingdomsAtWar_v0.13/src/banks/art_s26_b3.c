@@ -1,4 +1,5 @@
 #include "../shared.h"
+#include "../text.h"
 #define LEASH 8 /* an auto-defending soldier gives up a chase this many cells (either axis) from its post and walks back */
 static u16 cc_a[RN],cc_b[RN];static u8 cc_r[RN]; /* last range/line test per attacker: positions and result */
 #define AGGRO 5 /* idle soldiers defend themselves against visible enemies this many cells away (both axes) */
@@ -360,10 +361,10 @@ void combat_tick(void) __banked {
 static void number(c8* p,u8 value) {p[0]='0'+value/100;p[1]='0'+value/10%10;p[2]='0'+value%10;p[3]=0;}
 u8 combat_context(void) __banked {
  c8 text[30];u8 i=0,hp,max;const c8* name;
- if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {u8 bt=buildings[t&127].type;hp=building_hp[t&127];max=bt?96:180;name=bt?build_names[bt]:"ENEMY KEEP";}else {hp=unit_hp[t];max=48;name="ENEMY SWORD";}}
- else if(selected!=NONE && unit_kind[selected]>=1 && unit_kind[selected]<=5) {hp=unit_hp[selected];max=unit_max_hp[unit_kind[selected]];name=recruit_names[unit_kind[selected]];}
+ if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {u8 bt=buildings[t&127].type;hp=building_hp[t&127];max=bt?96:180;name=bt?bname(bt):tr(TXT_ENEMY_KEEP);}else {hp=unit_hp[t];max=48;name=tr(TXT_ENEMY_SWORD);}}
+ else if(selected!=NONE && unit_kind[selected]>=1 && unit_kind[selected]<=5) {hp=unit_hp[selected];max=unit_max_hp[unit_kind[selected]];name=rname(unit_kind[selected]);}
  else return 0;
- while(*name)text[i++]=*name++;text[i++]=' ';text[i++]='H';text[i++]='P';text[i++]=' ';number(text+i,hp);i+=3;text[i++]='/';number(text+i,max);i+=3;
+ while(*name)text[i++]=*name++;text[i++]=' ';{const c8* h=tr(TXT_HP);text[i++]=h[0];text[i++]=h[1];}text[i++]=' ';number(text+i,hp);i+=3;text[i++]='/';number(text+i,max);i+=3;
  if(enemy_selected==NONE && selected!=NONE) {u8 d=military_damage(unit_kind[selected],0);text[i++]=' ';text[i++]='A';text[i++]='0'+d/10;text[i++]='0'+d%10;text[i++]=' ';text[i++]='D';text[i++]=research_level?'1':'0';text[i]=0;}
  hud_context_text(text);return 1;
 }

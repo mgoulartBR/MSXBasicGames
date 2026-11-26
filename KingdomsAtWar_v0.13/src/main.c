@@ -94,8 +94,6 @@ const u8 build_wood[]={0,16,24,24,24,32,24,40};
 const u8 build_gold[]={0,0,16,8,16,24,8,24};
 const u8 recruit_wood[]={0,8,8,8,16,24};
 const u8 recruit_gold[]={8,8,8,12,24,16};
-const c8* build_names[]={"CASTLE","HOUSE","BARRACKS","SAWMILL","FORGE","STABLE","TOWER","SIEGE"};
-const c8* recruit_names[]={"PEASANT","SWORD","SPEAR","ARCHER","KNIGHT","RAM"};
 u8 sprite_colors[16];
 /* MSX 16x16: left 8 columns top->bottom, then right 8 columns. */
 const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};

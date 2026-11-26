@@ -1,4 +1,5 @@
 #include "../shared.h"
+#include "../text.h"
 /* Preview selection uses world coordinates, so camera scrolling and release
  * outside the field do not turn a drag into a HUD click. Enemies/buildings
  * retain ordinary click inspection and never enter the allied selection mask. */
@@ -41,6 +42,6 @@ void drag_tick(void) __banked {
 void group_context(void) __banked {
  c8 text[30];u8 i,j=2,kind=unit_kind[selected];const c8* name;
  for(i=0;i<unit_count;++i)if((selection_mask&(1<<i)) && unit_kind[i]!=kind)kind=NONE;
- name=kind==0?"PEASANTS":kind==1?"SWORDS":kind==2?"SPEARS":kind==3?"ARCHERS":kind==4?"KNIGHTS":kind==5?"RAMS":"UNITS";
+ name=tr(kind<6?TXT_G_PEASANTS+kind:TXT_G_UNITS);
  text[0]='0'+selection_count;text[1]=' ';while(*name)text[j++]=*name++;text[j]=0;hud_context_text(text);
 }

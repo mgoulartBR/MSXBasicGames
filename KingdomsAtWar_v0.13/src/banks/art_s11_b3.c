@@ -1,4 +1,5 @@
 #include "../shared.h"
+#include "../text.h"
 u8 line_clear(u8 x,u8 y,u8 tx,u8 ty,u8 water,u8 ignore) __banked {
  i16 dx=(i16)tx-x,dy=(i16)ty-y,sx=dx<0?-1:1,sy=dy<0?-1:1,err,e;
  if(dx<0)dx=-dx;if(dy<0)dy=-dy;dy=-dy;err=dx+dy;
@@ -14,14 +15,14 @@ void structure_dirty(u8 id) __banked {
  u8 y=buildings[id].y;if(y){video_tile(buildings[id].x+1,y-1);video_tile(buildings[id].x+2,y-1);}hud_dirty=3;sprites_dirty=3;
 }
 static void hp_text(const c8* name,u8 hp,u8 max) {
- c8 text[30];u8 i=0;while(*name && i<14)text[i++]=*name++;text[i++]=' ';text[i++]='H';text[i++]='P';text[i++]=' ';
+ c8 text[30];u8 i=0;while(*name && i<18)text[i++]=*name++;text[i++]=' ';{const c8* h=tr(TXT_HP);text[i++]=h[0];text[i++]=h[1];}text[i++]=' ';
  text[i++]='0'+hp/100;text[i++]='0'+hp/10%10;text[i++]='0'+hp%10;text[i++]='/';text[i++]='0'+max/100;text[i++]='0'+max/10%10;text[i++]='0'+max%10;text[i]=0;hud_context_text(text);
 }
 u8 structure_context(void) __banked {
- u8 id;if(!building_selected)return 0;id=building_selected-1;hp_text(build_names[buildings[id].type],building_hp[id],structure_max_hp(id));return 1;
+ u8 id;if(!building_selected)return 0;id=building_selected-1;hp_text(bname(buildings[id].type),building_hp[id],structure_max_hp(id));return 1;
 }
 u8 repair_context(void) __banked {
- u8 id;if(!WORKER(selected) || repair_target[selected]==NONE)return 0;id=repair_target[selected];hp_text("REPAIR",building_hp[id],structure_max_hp(id));return 1;
+ u8 id;if(!WORKER(selected) || repair_target[selected]==NONE)return 0;id=repair_target[selected];hp_text(tr(TXT_REPAIR),building_hp[id],structure_max_hp(id));return 1;
 }
 void tower_tick(void) __banked {
  u8 id,j,k,best,best_d,d,n,sx,sy;Building* b;

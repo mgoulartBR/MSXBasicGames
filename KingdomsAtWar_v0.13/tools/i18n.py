@@ -13,6 +13,22 @@ import numpy as np
 from PIL import Image,ImageDraw,ImageFont
 r=Path(__file__).resolve().parents[1]
 LANGS=4
+def expand_text(s):
+    """NFD para o kana: vozeado vira base + marca."""
+    out=[]
+    for ch in s:
+        d=unicodedata.normalize('NFD',ch)
+        if len(d)==2 and d[1] in '゙゚':out+= [d[0],'゛' if d[1]=='゙' else '゜']
+        else:out.append(ch)
+    return out
+def xlen(t):
+    return len(expand_text(t))
+def cols(*pairs):
+    """linha de botoes do HUD: cada (coluna, texto) comeca na coluna dada (contando as marcas dos sons vozeados)."""
+    out=''
+    for c,t in pairs:out+=' '*(c-xlen(out))+t
+    return out
+def L(pt,en,es,ja):return (pt,en,es,ja)
 STRINGS=[
  ('PRESS',('PRESSIONE ENTER','PRESS ENTER','PULSE ENTER','エンターキーをおしてください')),
  ('NEW_GAME',('NOVO JOGO','NEW GAME','NUEVO JUEGO','あたらしいゲーム')),
@@ -23,6 +39,53 @@ STRINGS=[
  ('LANG_EN',('ENGLISH',)*4),
  ('LANG_ES',('ESPAÑOL',)*4),
  ('LANG_JA',('ニホンゴ',)*4),
+ # predios (ordem de build_names)
+ ('B_CASTLE',L('CASTELO','CASTLE','CASTILLO','しろ')),
+ ('B_HOUSE',L('CASA','HOUSE','CASA','いえ')),
+ ('B_BARRACKS',L('QUARTEL','BARRACKS','CUARTEL','へいしゃ')),
+ ('B_SAWMILL',L('SERRARIA','SAWMILL','ASERRADERO','せいざいしょ')),
+ ('B_FORGE',L('FORJA','FORGE','FORJA','かじや')),
+ ('B_STABLE',L('ESTÁBULO','STABLE','ESTABLO','うまごや')),
+ ('B_TOWER',L('TORRE','TOWER','TORRE','とう')),
+ ('B_SIEGE',L('CERCO','SIEGE','ASEDIO','こうじょう')),
+ # unidades (ordem de recruit_names)
+ ('R_PEASANT',L('CAMPONÊS','PEASANT','CAMPESINO','のうふ')),
+ ('R_SWORD',L('ESPADA','SWORD','ESPADA','けんし')),
+ ('R_SPEAR',L('LANCEIRO','SPEAR','LANCERO','やりへい')),
+ ('R_ARCHER',L('ARQUEIRO','ARCHER','ARQUERO','ゆみへい')),
+ ('R_KNIGHT',L('CAVALEIRO','KNIGHT','CABALLERO','きし')),
+ ('R_RAM',L('ARIETE','RAM','ARIETE','ラム')),
+ # grupos (plural)
+ ('G_PEASANTS',L('CAMPONESES','PEASANTS','CAMPESINOS','のうふ')),
+ ('G_SWORDS',L('ESPADAS','SWORDS','ESPADAS','けんし')),
+ ('G_SPEARS',L('LANCEIROS','SPEARS','LANCEROS','やりへい')),
+ ('G_ARCHERS',L('ARQUEIROS','ARCHERS','ARQUEROS','ゆみへい')),
+ ('G_KNIGHTS',L('CAVALEIROS','KNIGHTS','CABALLEROS','きし')),
+ ('G_RAMS',L('ARIETES','RAMS','ARIETES','ラム')),
+ ('G_UNITS',L('UNIDADES','UNITS','UNIDADES','ぶたい')),
+ ('ENEMY_KEEP',L('FORTALEZA INIMIGA','ENEMY KEEP','FORTALEZA ENEMIGA','てきのしろ')),
+ ('ENEMY_SWORD',L('ESPADA INIMIGA','ENEMY SWORD','ESPADA ENEMIGA','てきのけんし')),
+ ('REPAIR',L('REPARO','REPAIR','REPARAR','しゅうり')),
+ ('KINGDOM',L('REINO HUMANO','HUMAN KINGDOM','REINO HUMANO','にんげんのおうこく')),
+ ('WORKING',L('CONSTRUINDO','WORK IN PROGRESS','CONSTRUYENDO','こうじちゅう')),
+ ('AGAIN',L('ENTER PARA JOGAR DE NOVO','PRESS ENTER TO PLAY AGAIN','ENTER PARA JUGAR OTRA VEZ','エンターでもういちど')),
+ ('VICTORY_MSG',L('VITÓRIA: INIMIGO DERROTADO','VICTORY: ENEMY KEEP DESTROYED','VICTORIA: ENEMIGO DERROTADO','しょうり: てきのしろをたおした')),
+ ('DEFEAT_MSG',L('DERROTA: SUA FORTALEZA CAIU','DEFEAT: YOUR KEEP DESTROYED','DERROTA: TU FORTALEZA CAYÓ','はいぼく: しろがおちた')),
+ ('UPGRADE',L('MELHORAR','UPGRADE','MEJORAR','きょうか')),
+ ('ATKARMOR',L('ATQ+2  ARMAD+1','ATK+2  ARMOR+1','ATQ+2  ARMAD+1','こうげき+2 ぼうぎょ+1')),
+ ('HP',L('PV','HP','PV','HP')),
+ ('L_WOOD',L('[LENHA','[WOOD','[MADERA','[もくざい')),
+ ('L_GOLD',L(']OURO',']GOLD',']ORO',']おかね')),
+ ('L_TIME',L('^TEMPO','^TIME','^HORA','^じかん')),
+ ('L_FREE',L('_VAGAS','_FREE','_LIBRE','_あき')),
+ # linhas de botoes (colunas fixas: os cliques dependem delas)
+ ('ACT_BUILD',L(cols((0,'CAS'),(4,'QUA'),(8,'SER'),(12,'FOR'),(16,'EST'),(20,'TOR'),(24,'CER')),
+  cols((0,'HOU'),(4,'BAR'),(8,'SAW'),(12,'FOR'),(16,'STA'),(20,'TOW'),(24,'SIE')),
+  cols((0,'CAS'),(4,'CUA'),(8,'ASE'),(12,'FOR'),(16,'EST'),(20,'TOR'),(24,'ASD')),
+  cols((0,'いえ'),(4,'へい'),(8,'せい'),(12,'かじ'),(16,'うま'),(20,'とう'),(24,'こう')))),
+ ('ACT_MIL',L(cols((0,'PARAR'),(10,'MANTER')),cols((0,'STOP'),(10,'HOLD')),cols((0,'PARAR'),(10,'MANTENER')),cols((0,'ていし'),(10,'ぼうえい')))),
+ ('ACT_BARRACKS',L(cols((0,'ESPADA'),(9,'LANCEIRO'),(18,'ARQUEIRO')),cols((0,'SWORD'),(9,'SPEAR'),(18,'ARCHER')),
+  cols((0,'ESPADA'),(9,'LANCERO'),(18,'ARQUERO')),cols((0,'けんし'),(9,'やりへい'),(18,'ゆみへい')))),
 ]
 # ---- fonte base (5x7 maiuscula, ver art/reference_v68_font.bin)
 b=np.frombuffer(open(r/'art/reference_v68_font.bin','rb').read(),dtype=np.uint8)
@@ -76,14 +139,6 @@ def kana(ch):
     h,w=best.shape;out=np.zeros((8,8),np.uint8);h=min(h,8);w=min(w,8)
     y0=(8-h)//2 if h<7 else 0;x0=(8-w)//2
     out[y0:y0+h,x0:x0+w]=best[:h,:w];return out
-def expand_text(s):
-    """NFD para o kana: vozeado vira base + marca."""
-    out=[]
-    for ch in s:
-        d=unicodedata.normalize('NFD',ch)
-        if len(d)==2 and d[1] in '゙゚':out+= [d[0],'゛' if d[1]=='゙' else '゜']
-        else:out.append(ch)
-    return out
 def build():
     used=[];texts=[]
     for sid,tr_ in STRINGS:

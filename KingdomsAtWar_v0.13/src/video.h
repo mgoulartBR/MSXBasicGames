@@ -1325,6 +1325,8 @@ const c8* tr(u8 id) {
  for(i=0;i<39;++i) {rp_ptr=p+i;c=rom_peek();tr_buf[i]=(c8)c;if(!c)return tr_buf;}
  tr_buf[39]=0;return tr_buf;
 }
+const c8* bname(u8 i) {return tr(TXT_B_CASTLE+i);}
+const c8* rname(u8 i) {return tr(TXT_R_PEASANT+i);}
 void video_init(void) {
  u8 i,j,q;u16 y;
  rf_cx=rf_cy=0;
@@ -1453,7 +1455,7 @@ void video_menu_enable(void) {video_irq_install();video_enabled=1;}
 void screen_clear(void) {V9_FillVRAM(0x00000UL,0,20480);}
 void video_hud_band(void) {
  u8 i;
- for(i=0;i<2;++i) {hud_draw=i;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);video_text(8,168,"[WOOD");video_text(136,168,"]GOLD");video_text(8,184,"^TIME");video_text(136,184,"_FREE");}
+ for(i=0;i<2;++i) {hud_draw=i;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);video_text(8,168,tr(TXT_L_WOOD));video_text(136,168,tr(TXT_L_GOLD));video_text(8,184,tr(TXT_L_TIME));video_text(136,184,tr(TXT_L_FREE));}
  hud_draw=0;
 }
 void video_enable(void) {
