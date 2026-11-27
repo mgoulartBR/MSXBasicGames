@@ -27,6 +27,27 @@ if {![info exists ::env(KAW_MENU)]} {after time 9 {debug write memory $::S(menu_
 if {[info exists ::env(KAW_LANG)]} {after time 9 {debug write memory $::S(lang) $::env(KAW_LANG)}}
 # Os testes antigos assumem o objetivo classico (derrubar a fortaleza inimiga, OBJ_DESTROY=0): a missao 1 da campanha e outra.
 if {![info exists ::env(KAW_OBJ)]} {after time 9 {debug write memory [expr {$::S(mis)+7}] 0}}
+# O mapa fica na VRAM (terrain/art/stock/fog_memory, 128 bytes por linha); terrain[] na RAM espelha a janela 32x32 da navegacao.
+proc vmap {base c} {return [expr {$base+(($c>>5)<<7)+($c&31)}]}
+proc vrd {a} {return [debug read {Sunrise GFX9000 VRAM} $a]}
+proc vwr {a v} {debug write {Sunrise GFX9000 VRAM} $a $v}
+proc vstock {c} {return [vrd [vmap 0x6E000 $c]]}
+proc vart {c} {return [vrd [vmap 0x6A000 $c]]}
+proc vterr {c} {return [vrd [vmap 0x66000 $c]]}
+proc set_terr {c v} {vwr [vmap 0x66000 $c] $v;debug write memory [expr {$::S(terrain)+$c}] $v}
+proc set_art {c v} {vwr [vmap 0x6A000 $c] $v}
+proc layer1k {base} {set out "";for {set y 0} {$y<32} {incr y} {append out [debug read_block {Sunrise GFX9000 VRAM} [expr {$base+$y*128}] 32]};return $out}
+proc rdb {dev start length} {if {$dev eq "layer"} {return [layer1k $start]};return [debug read_block $dev $start $length]}
+# Fog v2: visivel = dentro do disco de uma das fontes de visao (vs_x/vs_y/vs_r), lembrado = flag de explorado na VRAM (0x72000).
+proc fog_state {x y} {
+ set n [b vs_n]
+ for {set i 0} {$i<$n} {incr i} {
+  set dx [expr {abs($x-[b vs_x $i])}];set dy [expr {abs($y-[b vs_y $i])}];set r [b vs_r $i]
+  if {$dx<=$r && $dy<=$r && $dx+$dy<=$r+($r>>1)} {return 2}
+ }
+ return [expr {[vrd [expr {0x72000+($y<<7)+$x}]]?1:0}]
+}
+proc dump_sources {name} {set f [open $name w];for {set i 0} {$i<[b vs_n]} {incr i} {puts $f "[b vs_x $i] [b vs_y $i] [b vs_r $i]"};close $f}
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}
 proc w {name} {return [expr {[b $name]+256*[b $name 1]}]}
 proc ck {label expression} {

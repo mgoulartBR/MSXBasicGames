@@ -40,13 +40,18 @@ proc choose_building {id} {
 proc materials {} {
  set ::initial_wood 0;set ::initial_gold 0
  for {set i 0} {$i<1024} {incr i} {
-  if {[b terrain $i]==1} {incr ::initial_wood [b stock $i]}
-  if {[b terrain $i]==4} {incr ::initial_gold [b stock $i]}
+  if {[b terrain $i]==1} {incr ::initial_wood [vstock $i]}
+  if {[b terrain $i]==4} {incr ::initial_gold [vstock $i]}
  }
 }
+# Os recursos mudam em varias escritas (estoque na VRAM, carga, banco): amostra de novo se pegar o meio de uma coleta.
 proc conserved {} {
+ for {set try 0} {$try<12} {incr try} {if {[conserved_once]} {return 1};delay 0.03}
+ return 0
+}
+proc conserved_once {} {
  set ww [w wood];set gg [w gold]
- for {set i 0} {$i<1024} {incr i} {if {[b terrain $i]==1} {incr ww [b stock $i]};if {[b terrain $i]==4} {incr gg [b stock $i]}}
+ for {set i 0} {$i<1024} {incr i} {if {[b terrain $i]==1} {incr ww [vstock $i]};if {[b terrain $i]==4} {incr gg [vstock $i]}}
  for {set i 0} {$i<[b unit_count]} {incr i} {
   if {[b cargo_kind $i]==1} {incr ww [b cargo $i]} else {incr gg [b cargo $i]}
   if {$i>=4} {set kind [b unit_kind $i];incr ww [b recruit_wood $kind];incr gg [b recruit_gold $kind]}
@@ -70,13 +75,13 @@ proc fund {wood_target gold_target} {
  foreach root $roots {
   if {[w wood]>=$wood_target} {break}
   lassign $root x y
-  if {![b stock [expr {$y*32+$x}]]} {continue}
+  if {![vstock [expr {$y*32+$x}]]} {continue}
   set desired [expr {$y*16-96}];if {$desired<0} {set desired 0}
   camera_until cam_y 0 32;choose 0
   if {[w cam_y]<$desired} {camera_until cam_y $desired 64}
   point [expr {$x*16+8}] [expr {$y*16+8-[w cam_y]}];tap 5 32
   set bank [w wood]
-  await {[w wood]>=$bank+32 || [b stock [expr {$y*32+$x}]]==0} 100
+  await {[w wood]>=$bank+32 || [vstock [expr {$y*32+$x}]]==0} 100
   await {[b cargo 0]==0 && [b worker_task]==0} 100
  }
  await {[w gold]>=$gold_target} 200
@@ -90,6 +95,6 @@ proc fund {wood_target gold_target} {
 proc guard {cmd} {if {[catch {uplevel #0 $cmd} m opts]} {puts stderr "FAIL $m\n[dict get $opts -errorinfo]";puts stderr "TRACE mask=[b selection_mask] selected=[b selected] camera=[w cam_x],[w cam_y] job=[b job_unit]";for {set z 0} {$z<4} {incr z} {puts stderr "UNIT $z hp=[b unit_hp $z] x=[unit $z x] y=[unit $z y] tx=[unit $z tx] ty=[unit $z ty] state=[unit $z state] progress=[unit $z progress] req=[b requested $z] task=[b worker_task $z] target=[b combat_target $z] stance=[b stance $z]"};screenshot -raw -doublesize ../screenshots/$::env(KAW_VARIANT)/failure07.png;exit}}
 
 proc fresh_tree {} {
- for {set y 7} {$y<30} {incr y} {for {set x 0} {$x<11} {incr x} {if {[b terrain [expr {$y*32+$x}]]==1 && [b stock [expr {$y*32+$x}]]>0} {return [list $x $y]}}}
+ for {set y 7} {$y<30} {incr y} {for {set x 0} {$x<11} {incr x} {if {[b terrain [expr {$y*32+$x}]]==1 && [vstock [expr {$y*32+$x}]]>0} {return [list $x $y]}}}
  error "no fresh tree"
 }

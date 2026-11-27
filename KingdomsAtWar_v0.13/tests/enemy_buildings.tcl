@@ -7,7 +7,7 @@ proc place_enemy {k type x y} {
  wr building_owner $k 1;wr building_hp $k 96
  for {set dy 0} {$dy<$n} {incr dy} {for {set dx 0} {$dx<$n} {incr dx} {
   set c [expr {($y+$dy)*32+$x+$dx}]
-  wr terrain $c [expr {10+$k}];wr art_map $c [expr {[lindex $base $type]+$dy*$n+$dx}]
+  set_terr $c [expr {10+$k}];set_art $c [expr {[lindex $base $type]+$dy*$n+$dx}]
  }}
 }
 proc eb_case {} {

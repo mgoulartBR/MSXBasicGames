@@ -6,7 +6,7 @@ u8 p1_shared[756]; /* 500 bytes of sprite attributes + 256 to find a page-aligne
 #define packed_window p1_shared
 u8 packed_write,packed_flags,packed_bits,packed_copy,packed_left;
 u16 lz_dst,lz_win;u8 lz_cnt;
-static void asset_begin(const Asset* a) {
+void asset_begin(const Asset* a) {
  asset_bank=a->bank;packed_src=(const u8*)a->ptr;packed_write=packed_bits=packed_left=0;lz_win=((u16)p1_shared+255u)&0xFF00u;
 }
 /* Z80 LZ decoder (state kept between calls in packed_*): the load screen is dominated by this. The 256 byte window is

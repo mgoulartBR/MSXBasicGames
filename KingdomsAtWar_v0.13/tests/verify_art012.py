@@ -35,7 +35,7 @@ for f in range(16):
 hashes={};memory={}
 for variant,name in [('V9990','KAW9990'),('PREVIEW','KAW68PV'),('V9968','KAW9968')]:
  blob=(R/(name+'.ROM')).read_bytes();hashes[name]=hashlib.sha256(blob).hexdigest()
- ck(name+'_header_size',len(blob)==524288 and blob[:2]==b'AB')
+ ck(name+'_header_size',len(blob)==1048576 and blob[:2]==b'AB')
  for rec in M['records']:
   start=rec['bank']*8192+rec['offset']
   ck(name+'_'+rec['name'],decode(blob[start:start+rec['compressed']],rec['raw'])==(R/f"art07/runtime/{rec['name']}.bin").read_bytes())

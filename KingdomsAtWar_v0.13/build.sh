@@ -32,6 +32,6 @@ python3 - "$KAW_DIR" <<'PY2'
 from pathlib import Path
 import hashlib,sys
 for p in sorted(Path(sys.argv[1]).glob('KAW9990P1.ROM')):
- b=p.read_bytes();assert len(b)==524288 and b[:2]==b'AB'
+ b=p.read_bytes();assert len(b)==1048576 and b[:2]==b'AB'
  print(p.name,len(b),hashlib.sha256(b).hexdigest())
 PY2

@@ -270,3 +270,14 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - Reinicio suave: `game_reset(m)` + `video_game_reset()` preparam a missao sem recarregar os assets (antes o reinicio era um reset de hardware de ~30 s). `briefing(m)`: pergaminho com titulo e 4 linhas no HUD. `end_screen` devolve proxima missao / tentar de novo / menu; apos a ultima missao vem a imagem de fim da campanha. `hud_context`/`hud_action_cache` sao zerados a cada missao.
 - Em jogo o HUD mostra o objetivo da missao no lugar de "HUMAN KINGDOM". Testes: `campaign_flow.tcl` (KAW_MENU=1 KAW_OBJ=1), os antigos poem o objetivo DESTROY (KAW_OBJ) e pulam briefing/menu (menu_auto).
 - Codigo fixo em 9F2E (margem de 210 bytes): `reset_caches()` compartilhado, `game_restart` removido.
+
+## v0.15 - mapas grandes (64x64 e 128x128)
+- **Mundo na VRAM** (`src/mapdef.h`, stride 128 B/linha): terreno 0x66000, arte 0x6A000, estoque das minas 0x6E000, fog explorado 0x72000, arte lembrada 0x76000. Acessores em `video.h` (`tile/tile_set`, `art_*`, `stock_*`, `fmem_*`, `fogx_*`). `terrain[1024]` na RAM virou espelho 32x32 da janela de navegacao.
+- **Fog v2** (`art_s12_b3.c`): visivel = octogono ao redor de cada fonte de visao; lembrado = flag em FOGX; so o anel que mudou e redesenhado (2 fontes por chamada).
+- **Janela de desenho**: a camada B (torus 32x32 celulas) so recebe a area da camera + margem; `video_scroll_update()` escreve linhas/colunas novas.
+- **Navegacao**: BFS segue 32x32 em janela deslizante (origem multipla de 8); destinos fora da janela usam rotas parciais (`nav_partial`, `nav_arrive`).
+- **Formato de mapa na ROM** (`tools/maps.py` -> `src/map_data.h`, bancos 56..59): 3 camadas em chunks LZ de 16 linhas + rota de waypoints da onda da IA. 4 mapas: 64x64 (missoes 2 e 3) e 128x128 (missoes 4 e 5); a missao 1 mantem o mapa embutido 32x32. Previas em `reference/mapas/`.
+- **IA em mapa grande**: sitios relativos a fortaleza inimiga, onda segue a rota de waypoints (pula waypoint se travar 5 vezes).
+- ROM de 1 MiB (`ROMSize=1024`). `video_init` e auxiliares de boot foram para o banco 54 (liberou ~2,9 KB de codigo fixo): codigo fixo 97E1, RAM ate E382.
+- Testes novos: `bigmap` (64x64: camera, rolagem, caminho longo, fog, mina, arvore), `bigmap_ai` (onda 64x64 chega a base em 18 s), `bigmap128` (128x128: onda de 196 celulas chega em 54 s; 30 ticks/s). Tempo de carga de missao ~4,75 s com mensagem de carregamento.
+- Nao testado em V9990 real: leituras de VRAM dos acessores, fog v2, janela de desenho.

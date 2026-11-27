@@ -29,7 +29,6 @@ extern u8 worker_task[N],node_x[N],node_y[N],worker_kind[N];
 extern u8 cargo[N],cargo_kind[N],work_timer[N],work_tries[N];
 extern u8 mine_phase[N],mine_step[N];
 extern i16 unit_draw_x,unit_draw_y;
-extern u8 stock[1024];
 extern u16 wood,gold,pickups,deposits;
 extern u16 game_seconds;
 extern u8 second_phase;
@@ -46,7 +45,8 @@ typedef struct {
     u8 x,y,tx,ty,nx,ny,owner,len,pos,progress,phase,state;
 } Unit;
 extern Unit units[RN];
-extern u8 terrain[1024],art_map[1024];
+extern u8 terrain[1024];
+void tile_set(u8 x,u8 y,u8 t);void art_set(u8 x,u8 y,u8 a);u8 stock_get(u8 x,u8 y);void stock_set(u8 x,u8 y,u8 n);u8 fmem_get(u8 x,u8 y);void fmem_set(u8 x,u8 y,u8 a);void fmem_clear(void);void map_row_put(u32 base_sel,u8 y,const u8* src);
 
 extern u8 routes[N][ROUTE_MAX];
 extern u8 requested[N], retry_wait[N], retry_left[N];
@@ -157,9 +157,11 @@ u8 video_camera_ready(u16 y);
 void video_camera(void);
 void video_stream(void);
 void video_tile(u8 x,u8 y);
-void video_init(void);
+void video_init(void) __banked;
 void video_enable(void);void video_menu_enable(void);void screen_show(u8 id);void screen_clear(void);void video_hud_band(void);
 #include "mission.h"
+#include "mapdef.h"
+#include "asset_t.h"
 extern Mission mis;extern u16 enemy_kills;extern u8 mission_n,mission_total;
 void mission_load(u8 m) __banked;void game_reset(u8 m) __banked;void briefing(u8 m) __banked;void video_game_reset(void);
 extern u8 lang,menu_auto,side;extern u16 end_t0;void end_show(u8 id);void end_hide(void);void video_hud_band(void);u8 end_screen(void) __banked;const c8* tr(u8 id);void menu_run(void) __banked;
@@ -224,7 +226,7 @@ u8 fog_art(u8 x,u8 y);
 u8 fog_target(u8 t) __banked;
 void fog_init(void) __banked;
 u8 fog_update(void) __banked;
-void fog_apply(void) __banked;
+u8 fog_apply(void) __banked;
 u8 line_clear(u8 x,u8 y,u8 tx,u8 ty,u8 water,u8 ignore) __banked;
 u8 military_damage(u8 kind,u8 owner) __banked;
 u8 structure_max_hp(u8 id) __banked;
@@ -235,8 +237,9 @@ u8 repair_order(u8 id) __banked;
 void repair_tick(void) __banked;
 u8 repair_context(void) __banked;
 
-extern u8 fog_seen[128],fog_visible[128],fog_next[128],fog_memory[1024],fog_refresh;
-extern u16 fog_sources[N];
+#define AI_ROUTE_MAX 128
+extern u8 pb_x,pb_y,eb_x,eb_y,ai_route_n,ai_rx[AI_ROUTE_MAX],ai_ry[AI_ROUTE_MAX],ai_wpi[4],map_custom;void map_load(u8 m) __banked;
+extern u8 goal_x[N],goal_y[N],nav_partial[N];void map_window_load(void);extern u8 fog_refresh,vs_n,vs_x[20],vs_y[20],vs_r[20],map_w,map_h,nav_x0,nav_y0;u8 fogx_get(u8 x,u8 y);void fogx_set(u8 x,u8 y,u8 v);void map_clear_fog(void);void video_scroll_update(void);u8 fog_at(u8 x,u8 y);
 extern u8 repair_target[N],repair_timer[N],repair_active,tower_cooldown[BMAX];
 extern u16 tower_shots,repair_spent,repair_healed,fog_updates;
 
@@ -244,11 +247,12 @@ extern u16 tower_shots,repair_spent,repair_healed,fog_updates;
 void fog_traverse(u8 i) __banked;
 void video_known_tile(u8 x,u8 y);
 void video_world_tile(u8 x,u8 y);
-extern const u8 fog_bit_table[8];
-extern u8 fog_trail[128];extern u8* fog_dest;extern u16 fog_epoch;
+extern const u8 fog_bit_table[8];extern u16 fog_epoch;
 
-extern u8 fog_static[128],fog_build_dirty,repair_pending;
-void fog_stamp(u8 x,u8 y,u8 r) __banked;
+extern u8 fog_build_dirty,repair_pending;
 
-extern u8 fog_need[128],fog_delta[128];
-u8 fog_merge(void) __banked;
+
+
+void asset_begin(const Asset* a);void asset_read(u8* dst,u8 count);
+extern u8 tile_buffer[128],boot_poses,cache_tick,p1_ready,ord_n,sused,rc_n,rw_n,rw_lock,rw_dirty,rf_cx,rf_cy;extern u16 frame_uploads,rendered_frames;
+extern u8 wv_x0,wv_y0,wv_x1,wv_y1;void hud_name(u8 col,u8 row,u16 n);void p1_cell(u8 x,u8 y);void pose_pos(u8 key,u8 sz,u16* x,u16* y);void reset_caches(void);

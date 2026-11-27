@@ -7,8 +7,7 @@ Symbol Table
     .__.ABS.                                                    =   00000000 G
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
-    _fog_dest                                                       ******** GX
-  7 _fog_stamp                                                      00000022 GR
+  7 _artbank_15                                                     00000000 GR
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
     _g_ASPCT2                                                   =   0000F40D G
@@ -58,12 +57,12 @@ Symbol Table
     _g_EXPTBL                                                   =   0000FCC1 G
     _g_FLAGS                                                    =   0000FB1B G
     _g_FLBMEM                                                   =   0000FCAE G
+    _g_FNKFLG                                                   =   0000FBCE G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_FNKFLG                                                   =   0000FBCE G
     _g_FNKSTR                                                   =   0000F87F G
     _g_FNKSWI                                                   =   0000FBCD G
     _g_FORCLR                                                   =   0000F3E9 G
@@ -118,12 +117,12 @@ Symbol Table
     _g_MLTCOL                                                   =   0000F3D3 G
     _g_MLTNAM                                                   =   0000F3D1 G
     _g_MLTPAT                                                   =   0000F3D9 G
+    _g_MNROM                                                    =   0000FCC1 G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_MNROM                                                    =   0000FCC1 G
     _g_MODE                                                     =   0000FAFC G
     _g_MSXAudio_DataPort                                        =   000000C1 
     _g_MSXAudio_DataPort2                                       =   000000C3 
@@ -178,12 +177,12 @@ Symbol Table
     _g_RG12SAV                                                  =   0000FFEB G
     _g_RG13SAV                                                  =   0000FFEC G
     _g_RG14SAV                                                  =   0000FFED G
+    _g_RG15SAV                                                  =   0000FFEE G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_RG15SAV                                                  =   0000FFEE G
     _g_RG16SAV                                                  =   0000FFEF G
     _g_RG17SAV                                                  =   0000FFF0 G
     _g_RG18SAV                                                  =   0000FFF1 G
@@ -238,28 +237,13 @@ Symbol Table
     _g_TXTNAM                                                   =   0000F3B3 G
     _g_TXTPAT                                                   =   0000F3BB G
     _g_TimerHighPort                                            =   000000E7 
+    _g_TimerLowPort                                             =   000000E6 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-    _g_TimerLowPort                                             =   000000E6 
     _g_USRTAB                                                   =   0000F39A G
-    _g_V9_CmdDataPort                                           =   00000062 
-    _g_V9_IntFlagPort                                           =   00000066 
-    _g_V9_Kanji2AddrHPort                                       =   0000006B 
-    _g_V9_Kanji2AddrLPort                                       =   0000006A 
-    _g_V9_Kanji2DataPort                                        =   0000006B 
-    _g_V9_KanjiAddrHPort                                        =   00000069 
-    _g_V9_KanjiAddrLPort                                        =   00000068 
-    _g_V9_KanjiDataPort                                         =   00000069 
-    _g_V9_OutputCtrPort                                         =   0000006F 
-    _g_V9_PalettePort                                           =   00000061 
-    _g_V9_RegDataPort                                           =   00000063 
-    _g_V9_RegSelectPort                                         =   00000064 
-    _g_V9_SatusPort                                             =   00000065 
-    _g_V9_SysCtrlPort                                           =   00000067 
-    _g_V9_VRAMPort                                              =   00000060 
     _g_VCBA                                                     =   0000FB41 G
     _g_VCBB                                                     =   0000FB66 G
     _g_VCBC                                                     =   0000FB8B G
@@ -279,16 +263,6 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _offsets                                                        000000D8 R
-  1 _st_dst                                                         00000000 R
-  1 _st_rows                                                        00000004 R
-  1 _st_src                                                         00000002 R
-  7 _stamp_rows                                                     00000000 R
-  7 _stamps                                                         000000E7 R
-  7 _strides                                                        000000E2 R
-    b_fog_stamp                                                 =   0000000F G
-  7 st_row                                                          0000000B R
-
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
@@ -296,13 +270,13 @@ Hexadecimal [32-Bits]
 Area Table
 
    0 _CODE                                      size        0   flags    0
-   1 _DATA                                      size        5   flags    0
+   1 _DATA                                      size        0   flags    0
    2 _INITIALIZED                               size        0   flags    0
    3 _DABS                                      size        0   flags    8
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG15                                     size     1C67   flags    0
+   7 _SEG15                                     size        1   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

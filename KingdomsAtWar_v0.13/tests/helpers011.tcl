@@ -1,8 +1,4 @@
 source kingdom_helpers.tcl
-proc fog_state {x y} {
- set c [expr {$y*32+$x}];set m [expr {1<<($c&7)}];set off [expr {$c>>3}]
- return [expr {([b fog_visible $off]&$m)?2:([b fog_seen $off]&$m)?1:0}]
-}
 # Keep the normal collection/construction controls, exploring before unknown targets.
 rename fund fund010
 proc fund {wt gt} {
@@ -24,9 +20,9 @@ proc build {kind x y} {
  }
  return [build010 $kind $x $y]
 }
-rename conserved conserved010
-proc conserved {} {
- set body [info body conserved010]
+rename conserved_once conserved_once010
+proc conserved_once {} {
+ set body [info body conserved_once010]
  set body [string map [list {$ww==$::initial_wood} {$ww+[w repair_spent]==$::initial_wood}] $body]
  proc conserved011_impl {} $body
  return [conserved011_impl]

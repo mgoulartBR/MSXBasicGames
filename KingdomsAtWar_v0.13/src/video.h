@@ -27,22 +27,10 @@
  * The vertical-blank handler (irq_p1) applies scroll, the sprite list and the rectangle list together, so a frame
  * never shows a half-updated state. Main-thread VRAM access that uses the write address runs with interrupts off.
  */
-#define P1_SGT 0x38000UL
-#define P1_PGT_B_BASE 0x40000UL
-#define P1_SGT_LINE 1792U
-#define POSE32_Y 240U
-#define POSE48_Y 688U
-#define PB_PLAIN 8U
-#define PB_DITH 776U
-#define ENEMY_PAT 1544U /* enemy-kingdom building tiles, after the dithered block; no dithered copy (remembered = same pattern) */
 /* Real V9990 hardware masks the layer B pattern number to 11 bits: every pattern must stay below 2048 (openMSX and FPGA cores
  * accept more, which hid this). */
+#include "vdefs.h"
 typedef char pattern_limit_ok[(ENEMY_PAT+(u16)ENEMY_TILES*4<=2048U)?1:-1];
-#define EOV_Y 3072U /* VRAM line (0x60000) of the raw enemy tiles for occlusion, 16 per row */
-#define OCC_ENEMY 141 /* occluder cache key = OCC_ENEMY + tile index (>= 1); human keys are at most 141, 0xFFFF is 'empty' */
-#define PA_SOLID 641U
-#define PA_FONT 672U
-#define PA_HUDTOP 660U
 const u16 render_bit[RN]={1,2,4,8,16,32,64,128,256,512,1024,2048};
 u8 tile_buffer[128],boot_poses,cache_tick;
 u16 frame_uploads,rendered_frames;
@@ -85,7 +73,7 @@ u8 video_camera_ready(u16 y) {y;return 1;}
 /* Self-healing refresh of the layer B names: a few visible cells per call, cycling over the 17x11 cells on screen. Real
  * V9990 hardware was seen to keep stale names after incremental fog updates (a full redraw cured it); this repairs any
  * cell within about a second without depending on which update was lost. */
-static void p1_cell(u8 x,u8 y);
+void p1_cell(u8 x,u8 y);
 u8 rf_cx,rf_cy;
 void video_stream(void) {
  u8 n,m,x0,y0;
@@ -95,122 +83,10 @@ void video_stream(void) {
  for(n=0;n<m;++n) {
   u8 x=x0+rf_cx,y=y0+rf_cy;
   if(++rf_cx>=17){rf_cx=0;if(++rf_cy>=11)rf_cy=0;}
-  if(x<32 && y<32)p1_cell(x,y);
- }
-}
-/* ---- pattern memory ---- */
-/* Loader helper (the load screen is dominated by VRAM writes): vr_rows rows of vr_w bytes go to the V9990 at address
- * vr_hi:vr_lo, 128 bytes apart (one row of the 256 px wide bitmap view); the source advances vr_s bytes per row.
- * One call replaces vr_rows V9_WriteVRAM calls and their 32-bit address arithmetic. Runs with interrupts off. */
-static u16 vr_lo;static u8 vr_hi,vr_w,vr_s,vr_rows;static const u8* vr_src;
-static void vram_rows_run(void) __naked {
- __asm
- di
-vr_loop:
- xor a,a
- out (#0x64),a
- ld a,(_vr_lo)
- out (#0x63),a
- ld a,(_vr_lo+1)
- out (#0x63),a
- ld a,(_vr_hi)
- out (#0x63),a
- ld hl,(_vr_src)
- push hl
- ld a,(_vr_w)
- ld b,a
- ld c,#0x60
- otir
- pop hl
- ld a,(_vr_s)
- ld e,a
- ld d,#0
- add hl,de
- ld (_vr_src),hl
- ld hl,(_vr_lo)
- ld de,#128
- add hl,de
- ld (_vr_lo),hl
- jr nc,vr_nc
- ld hl,#_vr_hi
- inc (hl)
-vr_nc:
- ld hl,#_vr_rows
- dec (hl)
- jr nz,vr_loop
- ei
- ret
- __endasm;
-}
-static void vram_rows(u32 a,const u8* src,u8 w,u8 s,u8 rows) {vr_lo=(u16)a;vr_hi=(u8)(a>>16);vr_src=src;vr_w=w;vr_s=s;vr_rows=rows;vram_rows_run();}
-/* tile_buffer fix-ups for the loader (Z80): transparent nibbles become the grass colour 3 for the opaque-tile patterns;
- * tile_dither() overlays the remembered-fog checker (colour 1 on alternate pixels, per row parity). */
-static void tile_fix(void) __naked {
- __asm
- ld hl,#_tile_buffer
- ld b,#128
-tf_lp:
- ld a,(hl)
- ld c,a
- and a,#0xF0
- jr nz,tf_1
- ld a,c
- or a,#0x30
- ld c,a
-tf_1:
- ld a,c
- and a,#0x0F
- jr nz,tf_2
- ld a,c
- or a,#0x03
- ld c,a
-tf_2:
- ld (hl),c
- inc hl
- djnz tf_lp
- ret
- __endasm;
-}
-static void tile_dither(void) __naked {
- __asm
- ld hl,#_tile_buffer
- ld c,#8
-td_pair:
- ld b,#8
-td_even:
- ld a,(hl)
- and a,#0x0F
- or a,#0x10
- ld (hl),a
- inc hl
- djnz td_even
- ld b,#8
-td_odd:
- ld a,(hl)
- and a,#0xF0
- or a,#0x01
- ld (hl),a
- inc hl
- djnz td_odd
- dec c
- jr nz,td_pair
- ret
- __endasm;
-}
-static void pat_write(u32 base,u16 n,const u8* src) {
- vram_rows(base+((u32)(n>>5)<<10)+((n&31)<<2),src,4,4,8);
-}
-/* A 16x16 tile (16 rows of 8 bytes) as four 8x8 patterns: TL, TR, BL, BR. */
-static void tile_patterns(u32 base,u16 n,const u8* t) {
- u8 q;
- for(q=0;q<4;++q) {
-  u16 pn=n+q;
-  vram_rows(base+((u32)(pn>>5)<<10)+((pn&31)<<2),t+(u16)((q>>1)<<6)+((q&1)<<2),4,8,8);
+  if(x<map_w && y<map_h)p1_cell(x,y);
  }
 }
 /* ---- names ---- */
-#define PNT_A 0x7C000UL
-#define PNT_B 0x7E000UL
 __sfr __at(0x60) io_vram;
 __sfr __at(0x63) io_reg;
 __sfr __at(0x64) io_sel;
@@ -232,13 +108,17 @@ static u8 enemy_tile_of(u8 t,u8 x,u8 y) {
  if(b->state==1)return enemy_tile_map[(building_owner[t]?128:160)+(n==3?16:0)+i];
  return building_owner[t]?enemy_tile_map[(b->type<<4)+i]:255;
 }
-static void p1_cell(u8 x,u8 y) {
- u8 st=fog_at(x,y);u16 n;u32 a;
- a=PNT_B+((u16)y<<8)+((u16)x<<2);
+/* Layer B names form a torus of 32x32 cells; wv_* is the rectangle of world cells currently drawn in it (x1,y1 exclusive). */
+u8 wv_x0,wv_y0,wv_x1,wv_y1;
+void p1_cell(u8 x,u8 y) {
+ u8 st;u16 n;u32 a;
+ if(x<wv_x0 || x>=wv_x1 || y<wv_y0 || y>=wv_y1)return;
+ st=fog_at(x,y);
+ a=PNT_B+((u16)(y&31)<<8)+((u16)(x&31)<<2);
  if(!st) {names_put(a,1,1,1,1);return;}
  {u8 art=fog_art(x,y);
   if(art>=64 && art<201) {
-   u8 t=terrain[((u16)y<<5)+x];
+   u8 t=tile(x,y);
    if(t>=10) {
     u8 e=enemy_tile_of(t-10,x,y);
     if(e!=255) {
@@ -254,10 +134,10 @@ static void p1_cell(u8 x,u8 y) {
 void video_world_tile(u8 x,u8 y) {p1_cell(x,y);}
 void video_known_tile(u8 x,u8 y) {p1_cell(x,y);sprites_dirty|=1;}
 void video_tile(u8 x,u8 y) {
- u16 cell=((u16)y<<5)+x;if(x>=32 || y>=32 || fog_at(x,y)!=2)return;fog_memory[cell]=art_map[cell];video_known_tile(x,y);
+ if(x>=map_w || y>=map_h || fog_at(x,y)!=2)return;fmem_set(x,y,art_tile(x,y));video_known_tile(x,y);
 }
 /* ---- HUD (layer A) ---- */
-static void hud_name(u8 col,u8 row,u16 n) {__asm di __endasm;io_vset(PNT_A+((u16)row<<7)+((u16)col<<1));io_vram=(u8)n;io_vram=(u8)(n>>8);__asm ei __endasm;}
+void hud_name(u8 col,u8 row,u16 n) {__asm di __endasm;io_vset(PNT_A+((u16)row<<7)+((u16)col<<1));io_vram=(u8)n;io_vram=(u8)(n>>8);__asm ei __endasm;}
 void video_char(u8 x,u16 y,u8 c) {hud_name(x>>3,(u8)(y>>3),PA_FONT+(u8)(c-32));}
 void video_text(u8 x,u16 y,const c8* s) {while(*s && x<249){video_char(x,y,*s++);x+=8;}}
 void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
@@ -268,14 +148,14 @@ void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
 /* ---- sprites ---- */
 /* Pose slots are double buffered: a new pose is copied into the idle block and shown only once the copy ended,
  * so a half-copied pose is never on screen. Attributes and scroll are committed in the vertical blank. */
-static u8 disp_key[RN],pend_key[RN],act_blk[RN],sused;static u8 disp_crop[RN],pend_crop[RN];
+u8 sused;static u8 disp_key[RN],pend_key[RN],act_blk[RN];static u8 disp_crop[RN],pend_crop[RN];
 #define sattr p1_shared
-static u16 p1_bx,p1_by;static u8 p1_ready,p1_n,r22;
+u8 p1_ready;static u16 p1_bx,p1_by;static u8 p1_n,r22;
 #define MAXR 20
 /* Screen-space rectangles painted into the layer A bitmap (drag box, building bars and banners): the pending
  * list is compared with the committed one and repainted in the vertical blank, never half drawn. */
-static u8 rw_x[MAXR],rw_y[MAXR],rw_w[MAXR],rw_h[MAXR],rw_c[MAXR],rw_n,rw_lock,rw_dirty;
-static u8 rc_x[MAXR],rc_y[MAXR],rc_w[MAXR],rc_h[MAXR],rc_c[MAXR],rc_n;
+u8 rw_n,rw_lock,rw_dirty;static u8 rw_x[MAXR],rw_y[MAXR],rw_w[MAXR],rw_h[MAXR],rw_c[MAXR];
+u8 rc_n;static u8 rc_x[MAXR],rc_y[MAXR],rc_w[MAXR],rc_h[MAXR],rc_c[MAXR];
 /* Layer A rectangles are written by the CPU (byte aligned, 2 px granularity): VDP commands (LMMV/LMMM) aimed at the layer A
  * pattern area leave dark streaks on real V9990 hardware. Long vertical edges are sprites (see vline_spr), not rows. */
 static void io_cpu_rect(u8 x,u8 y,u8 w,u8 h,u8 c) {
@@ -299,31 +179,17 @@ static void rl_add(i16 x,i16 y,u8 w,u8 h,u8 c) {
  if(x1<=x || y1<=y || rw_n>=MAXR)return;
  rw_x[rw_n]=x;rw_y[rw_n]=y;rw_w[rw_n]=(x1-x>255)?255:(u8)(x1-x);rw_h[rw_n]=(u8)(y1-y);rw_c[rw_n]=c;++rw_n;
 }
-#define SPAT 0x3FE00UL
 /* Top-left sprite cell of each actor's pose blocks: 3x3 blocks for actors 0..9 (two per actor, double buffered); actors
  * 10 and 11 (enemy swordsmen/archers, 32 px only) share one 2x2 block between both entries (single buffered). */
 static const u8 cell_tab[2][RN]={{0,3,6,9,12,96,99,102,105,108,208,210},{48,51,54,57,60,144,147,150,153,156,208,210}};
 #define CELL_POSE(i,b) cell_tab[b][i]
-#define CELL_BAR_ALLY 192   /* 192..200 */
-#define CELL_ARROW 201      /* 201..204 */
-#define CELL_CROSS 205
-#define CELL_PTR 206
-#define CELL_RING 207
-#define CELL_BAR_ENEMY 212  /* 212..220 */
-#define CELL_BAR_WHITE 228  /* 228..236 */
-#define OCC_N 14
 /* occluder slots: leftovers of rows 13/14 and the free right-hand column of the pose rows */
 static const u8 occ_cell[OCC_N]={221,222,223,237,238,239,15,31,47,63,79,95,111,127};
-#define OV_Y 1648U
 /* Pose key -> position in the pose bank (key_slot[] = slot inside the 32 px or the 48 px bank). */
-static void pose_pos(u8 key,u8 sz,u16* x,u16* y) {
+void pose_pos(u8 key,u8 sz,u16* x,u16* y) {
  u8 k=key_slot[key];
  if(sz==32){*x=(u16)(k&7)*32;*y=POSE32_Y+(u16)(k>>3)*32;}
  else {u8 q=(u8)(((u16)k*205)>>10);*x=(u16)(k-q*5)*48;*y=POSE48_Y+(u16)q*48;}
-}
-static void px4(u8* buf,u8 x,u8 y,u8 c) {u8* p=buf+((u16)y<<3)+(x>>1);if(x&1)*p=(*p&0xF0)|c;else *p=(*p&0x0F)|(c<<4);}
-static void cell_write(u8 cell,const u8* src16rows) {
- u8 k;for(k=0;k<16;++k)V9_WriteVRAM(P1_SGT+((u32)((cell>>4)<<4)+k)*128+((cell&15)<<3),src16rows+(k<<3),8);
 }
 static void otir_vram(const u8* p,u16 n) __naked {p;n;__asm
  ld b,e
@@ -342,7 +208,7 @@ static void irq_p1(void) {
   io_int=1;*((volatile u8*)0xF3F6)=255;
   io_vset(SPAT);io_vram=(u8)(mouse_y-1);io_vram=CELL_PTR;io_vram=mouse_x;io_vram=0;
   if(p1_ready) {
-   io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)(p1_bx>>3));
+   io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)((p1_bx>>3)&63));
    if(p1_n>1) {io_vset(SPAT+4);otir_vram(sattr+4,(u16)(p1_n-1)*4);}
    p1_ready=0;
   }
@@ -510,9 +376,6 @@ cl_next:
  __endasm;
 }
 #define SPR(X,Y,P,I) do{i16 _x=(X);*o++=(u8)((Y)-1);*o++=(P);*o++=(u8)_x;*o++=((u8)(_x>>8)&3)|(I);}while(0)
-#define CELL_VLINE15 191  /* one-pixel vertical line, 16 rows: white (drag box) */
-#define CELL_VLINE10 175  /* placement ghost, valid */
-#define CELL_VLINE7 159   /* placement ghost, blocked */
 static u8* vline_spr(u8* o,i16 x,i16 y,u16 h,u8 cell) {
  u16 rest=h;i16 yy=y;
  while(rest && o<sattr+496) {i16 py=rest<16?(i16)(y+h-16):yy;SPR(x,py,cell,0x20);if(rest<=16)break;rest-=16;yy+=16;}
@@ -542,7 +405,7 @@ static u8 bld_visible(u8 k) {
  bv_state[k]=r;bv_x[k]=x;bv_y[k]=y;return r==2;
 }
 static u8 bw_hp[BMAX],bw_w[BMAX],bw_mx[BMAX];
-static u8 bl_x[MAXR],bl_y[MAXR],bl_w[MAXR],bl_h[MAXR],bl_c[MAXR],bl_n,bl_ok,bl_r0,bl_do,bl_bc;static u16 bl_cx,bl_cy,bl_ep,bl_hs;static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN],ord_n;
+static u8 bl_x[MAXR],bl_y[MAXR],bl_w[MAXR],bl_h[MAXR],bl_c[MAXR],bl_n,bl_ok,bl_r0,bl_do,bl_bc;static u16 bl_cx,bl_cy,bl_ep,bl_hs;static u16 bar_sig[RN];static u8 bar_w[RN];static u8 ord_prev[RN];u8 ord_n;
 
 static u8 ord_cur[RN],os_cnt,os_j,os_i,os_ko;static u16 os_kv;
 /* Visible actors in front-to-back order: last frame's order first (nearly sorted), then new arrivals,
@@ -750,7 +613,7 @@ void ae_occ(u8 i) {
     u8 t,s2;
     if(fog_at(cx,cy)!=2)continue;
     t=fog_art(cx,cy);if(t<64)continue;
-    {u8 tt=terrain[((u16)cy<<5)+cx];
+    {u8 tt=tile(cx,cy);
      u8 e=255;
      if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
@@ -1295,7 +1158,6 @@ void video_sprites(void) {
  sused=n;
  ++rendered_frames;
 }
-static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,24,PA_SOLID+10);}
 /* A 256x160 title/ending picture: four 40-line LZ chunks written straight into the layer A patterns (lines 0..159); the
  * name table rows 0..19 already map 1:1 onto them. */
 void screen_show(u8 id) {
@@ -1331,125 +1193,7 @@ const c8* tr(u8 id) {
 }
 const c8* bname(u8 i) {return tr(TXT_B_CASTLE+i);}
 const c8* rname(u8 i) {return tr(TXT_R_PEASANT+i);}
-void video_init(void) {
- u8 i,j,q;u16 y;
- rf_cx=rf_cy=0;
 
- VDP_SetMode(VDP_MODE_SCREEN5);VDP_SetFrequency(VDP_FREQ_60HZ);VDP_EnableVBlank(TRUE);VDP_EnableDisplay(FALSE);
- V9_SetPort(V9_P07,2);V9_SetPort(V9_P07,0);
- V9_SetScreenMode(V9_MODE_P1);V9_SetDisplayEnable(FALSE);V9_SetInterrupt(V9_INT_NONE);
- V9_SetCursorEnable(FALSE);V9_SetSpriteEnable(TRUE);V9_SetSpritePatternAddr(V9_P1_SGT_38000);
- V9_SetBackgroundColor(0);V9_SetCommandWriteMask(0xFFFF);V9_SetScrolling(0,0);V9_SetScrollingB(0,0);
- for(i=0;i<64;++i)V9_SetPaletteEntry(i,palette9+(i&15)*3);
- /* sprite palette group 1 belongs to the enemy kingdom (its poses use their own 15 colours) */
- for(i=0;i<16;++i)V9_SetPaletteEntry(16+i,enemy_palette+i*3);
- cache_tick=frame_uploads=rendered_frames=0;
- reset_caches();
- p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
- sused=0;ord_n=0;
- /* clear both name tables and the HUD pattern table head */
- V9_FillVRAM(PNT_A,0,8192);V9_FillVRAM(PNT_B,0,8192);
- {u16 row[32];u8 cy,cx;for(cy=0;cy<20;++cy) {for(cx=0;cx<32;++cx)row[cx]=(u16)cy*32+cx;V9_WriteVRAM(PNT_A+((u16)cy<<7),(const u8*)row,64);}}
-V9_FillVRAM(0x00000UL,0,30720);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
- /* layer A patterns: solid colours 1..16 (pattern 1+c, c>=1 only), HUD top line */
- for(i=0;i<16;++i) {u8 pat[32];for(j=0;j<32;++j)pat[j]=i*17;pat_write(0,PA_SOLID+i,pat);}
- {u8 pat[32];for(j=0;j<32;++j)pat[j]=(j<8)?0xAA:0x11;pat_write(0,PA_HUDTOP,pat);}
- /* font: 64 chars as 256x16 bitmap strip -> two pattern rows; colour 0 would be transparent, use 1 */
- asset_begin(&font_asset);
- for(i=0;i<16;++i) {u8 b;asset_read(tile_buffer,128);for(b=0;b<128;++b){u8 v=tile_buffer[b];if(!(v&0xF0))v|=0x10;if(!(v&0x0F))v|=0x01;tile_buffer[b]=v;}
-  V9_WriteVRAM((u32)((PA_FONT>>5)*8+i)*128,tile_buffer,128);}
- /* extended glyphs (accents, kana): codes 96..255 = patterns 736..895, lines 184..223 */
- asset_begin(&font_ext_asset);
- for(i=0;i<40;++i) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(184+i)*128,tile_buffer,128);}
- screen_show(SCR_TITLE);
- {u8 r;for(r=0;r<2;++r){hud_draw=r;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);}hud_draw=0;}
- V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);
- /* sprite cells: pointer and selection ring */
- {u8 c[128];
-  for(j=0;j<128;++j)c[j]=0;
-  for(i=0;i<16;++i)for(q=0;q<8;++q)if(cursor[i]&(128>>q))c[i*8+(q>>1)]|=(q&1)?0x0F:0xF0;
-  cell_write(CELL_PTR,c);
-  cell_write(CELL_RING,ring_pixels);
-  {u8 v;static const u8 vc[3]={15,10,7},vcell[3]={CELL_VLINE15,CELL_VLINE10,CELL_VLINE7};
-   for(v=0;v<3;++v){u8 k;for(k=0;k<128;++k)tile_buffer[k]=0;for(k=0;k<16;++k)tile_buffer[(u16)k<<3]=(u8)(vc[v]<<4);cell_write(vcell[v],tile_buffer);}}
- }
-  {u8 c2[128],w,k,col,x,q2;
-   for(col=0;col<2;++col)for(w=0;w<=8;++w) {
-    for(j=0;j<128;++j)c2[j]=0;
-    for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w*2?(col?9:5):12);
-    cell_write((col?CELL_BAR_ENEMY:CELL_BAR_ALLY)+w,c2);
-   }
-   for(w=0;w<=8;++w) {
-    for(j=0;j<128;++j)c2[j]=0;
-    for(k=0;k<2;++k)for(x=0;x<16;++x)px4(c2,x,k,x<w*2?15:12);
-    cell_write(CELL_BAR_WHITE+w,c2);
-   }
-   for(j=0;j<128;++j)c2[j]=0;
-   for(x=6;x<11;++x)px4(c2,x,12,15);
-   for(k=10;k<15;++k)px4(c2,8,k,15);
-   cell_write(CELL_CROSS,c2);
-   for(q2=0;q2<4;++q2) {
-    for(j=0;j<128;++j)c2[j]=0;
-    if(q2<2) {
-     for(x=6;x<10;++x)px4(c2,x,8,11);
-     for(k=7;k<10;++k)px4(c2,q2?6:10,k,15);
-    } else {
-     for(k=6;k<10;++k)px4(c2,8,k,11);
-     for(x=7;x<10;++x)px4(c2,x,q2==2?10:6,15);
-    }
-    cell_write(CELL_ARROW+q2,c2);
-   }
-  }
- /* world patterns: fog, plain, dithered */
- {u8 pat[32];for(j=0;j<32;++j)pat[j]=0x11;pat_write(P1_PGT_B_BASE,1,pat);}
- for(q=0;q<3;++q) {
-  asset_begin(static_assets+q);
-  for(i=0;i<64;++i) {
-   u8 t=q*64+i,b;u16 phy=t;
-   asset_read(tile_buffer,128);
-   if(phy>=50) {
-    u16 ov=phy-50,bx=(ov&15)<<4,by=OV_Y+((ov>>4)<<4);u8 k;
-    vram_rows((u32)by*128+(bx>>1),tile_buffer,8,8,16);
-   }
-   if(phy>=50)tile_fix();
-   tile_patterns(P1_PGT_B_BASE,PB_PLAIN+phy*4,tile_buffer);
-   tile_dither();
-   tile_patterns(P1_PGT_B_BASE,PB_DITH+phy*4,tile_buffer);
-  }
- }
- {u8 part,e=0;
-  for(part=0;part<2;++part) {
-   u8 cnt=part?(u8)(ENEMY_TILES-ENEMY_TILES1):(u8)ENEMY_TILES1;
-   if(!cnt)continue;
-   asset_begin(part?&enemy_tiles_asset2:&enemy_tiles_asset);
-   for(i=0;i<cnt;++i,++e) {
-    u8 b;
-    asset_read(tile_buffer,128);
-    {u16 bx=(u16)(e&15)<<4,by=EOV_Y+((u16)(e>>4)<<4);vram_rows((u32)by*128+(bx>>1),tile_buffer,8,8,16);}
-    tile_fix();
-    tile_patterns(P1_PGT_B_BASE,ENEMY_PAT+(u16)e*4,tile_buffer);
-   }
-  }
- }
- for(i=0;i<12;++i) {
-  u8 f,n=kind_sizes[i]>>4;
-  for(f=0;f<pose_count[i];++f) {
-   u8 key=pose_base[i]+f;
-   if(!poses[key].bank)continue;
-   asset_begin(poses+key);
-   {u16 px,py;u8 qx=0,qy=0,nn=n*n;pose_pos(key,kind_sizes[i],&px,&py);
-   for(q=0;q<nn;++q) {
-    u16 x,yy;x=px+((u16)qx<<4);yy=py+((u16)qy<<4);if(++qx==n){qx=0;++qy;}
-    asset_read(tile_buffer,128);
-    vram_rows((u32)yy*128+(x>>1),tile_buffer,8,8,16);
-   }}
-   ++boot_poses;load_progress((u8)((u16)boot_poses*16/208));
-  }
- }
- for(y=0;y<32;++y)for(j=0;j<32;++j)p1_cell(j,y);
- for(i=0;i<16;++i)hud_name(8+i,24,PA_SOLID+1); /* the load bar (row 24) disappears */
- hud_draw=0;
-}
 /* Title/menu state: the V9990 interrupt (pointer sprite) runs, the world sprites do not. */
 void video_menu_enable(void) {video_irq_install();video_enabled=1;}
 /* Game start: layer A returns to a transparent overlay, the HUD frame and labels are drawn. */
@@ -1471,7 +1215,7 @@ void end_hide(void) {
  sprites_dirty=3;
 }
 /* Pose, bar and occluder caches back to empty (boot and every new mission). */
-static void reset_caches(void) {
+void reset_caches(void) {
  u8 i;
  for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;disp_crop[i]=pend_crop[i]=0;actor_crop[i]=0;act_blk[i]=0;bar_sig[i]=65535;}
  for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
@@ -1487,7 +1231,7 @@ void video_game_reset(void) {
  sused=0;ord_n=0;rf_cx=rf_cy=0;
  for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  V9_FillVRAM(PNT_B,0,8192);
- for(y=0;y<32;++y)for(x=0;x<32;++x)p1_cell(x,y);
+ wv_x0=wv_y0=wv_x1=wv_y1=0;video_scroll_update();
  hud_erase_count=0;sprites_dirty=3;
 }
 void video_hud_band(void) {
@@ -1498,4 +1242,49 @@ void video_hud_band(void) {
 void video_enable(void) {
  video_sprites();V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);if(!video_enabled)video_irq_install();
  video_enabled=1;
+}
+
+/* World layers in VRAM (stride 128 bytes per row, so maps up to 128x128 fit): terrain, art, stock and the player's fog memory.
+ * 0x66000..0x7A000 is free VRAM (above the raw enemy tiles, below the layer A names). The RAM array terrain[] mirrors the
+ * 32x32 window the navigation works on; tile_set keeps both. */
+static u8 vm_get(u32 a) {u8 v;__asm di __endasm;io_sel=3;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=(u8)(a>>16);v=io_vram;__asm ei __endasm;return v;}
+static void vm_put(u32 a,u8 v) {__asm di __endasm;io_vset(a);io_vram=v;__asm ei __endasm;}
+#define MAPA(base,x,y) ((base)+((u32)(y)<<7)+(x))
+u8 tile(u8 x,u8 y) {return vm_get(MAPA(MAP_T,x,y));}
+void tile_set(u8 x,u8 y,u8 t) {vm_put(MAPA(MAP_T,x,y),t);if(x>=nav_x0 && x<nav_x0+32 && y>=nav_y0 && y<nav_y0+32)terrain[((u16)(y-nav_y0)<<5)+(x-nav_x0)]=t;}
+u8 art_tile(u8 x,u8 y) {return vm_get(MAPA(MAP_ART,x,y));}
+void art_set(u8 x,u8 y,u8 a) {vm_put(MAPA(MAP_ART,x,y),a);}
+u8 stock_get(u8 x,u8 y) {return vm_get(MAPA(MAP_STOCK,x,y));}
+void stock_set(u8 x,u8 y,u8 n) {vm_put(MAPA(MAP_STOCK,x,y),n);}
+u8 fmem_get(u8 x,u8 y) {return vm_get(MAPA(MAP_FOGM,x,y));}
+void fmem_set(u8 x,u8 y,u8 a) {vm_put(MAPA(MAP_FOGM,x,y),a);}
+u8 fogx_get(u8 x,u8 y) {return vm_get(MAPA(MAP_FOGX,x,y));}
+void fogx_set(u8 x,u8 y,u8 v) {vm_put(MAPA(MAP_FOGX,x,y),v);}
+void map_clear_fog(void) {V9_FillVRAM(MAP_FOGM,0,16384);V9_FillVRAM(MAP_FOGX,0,16384);}
+/* The rendered rectangle follows the camera (view plus a margin of cells): cells entering it are drawn, the ones leaving are
+ * simply overwritten by the torus. Called every frame before the sprites; a fresh rectangle (reset) draws everything. */
+void video_scroll_update(void) {
+ u8 ax0,ay0,ax1,ay1,x,y,nx0,ny0,nx1,ny1;
+ ax0=(u8)(cam_x>>4);ay0=(u8)(cam_y>>4);ax1=(u8)((cam_x+255)>>4)+1;ay1=(u8)((cam_y+159)>>4)+1;
+ ax0=ax0>3?ax0-3:0;ay0=ay0>3?ay0-3:0;ax1+=3;ay1+=3;
+ if(ax1>map_w)ax1=map_w;if(ay1>map_h)ay1=map_h;
+ if(ax0==wv_x0 && ay0==wv_y0 && ax1==wv_x1 && ay1==wv_y1)return;
+ {u8 ox0=wv_x0,oy0=wv_y0,ox1=wv_x1,oy1=wv_y1;
+  wv_x0=ax0;wv_y0=ay0;wv_x1=ax1;wv_y1=ay1;
+  for(y=ay0;y<ay1;++y)for(x=ax0;x<ax1;++x)if(x<ox0 || x>=ox1 || y<oy0 || y>=oy1)p1_cell(x,y);
+ }
+}
+/* Whole-map writes for the world generator: row y of 32 cells from a RAM buffer. */
+void map_row_put(u32 base_sel,u8 y,const u8* src) {u8 x;__asm di __endasm;io_vset(base_sel+((u32)y<<7));for(x=0;x<32;++x)io_vram=src[x];__asm ei __endasm;}
+
+/* RAM copy (terrain[], 32x32) of the map window the navigation works on, read from VRAM at origin nav_x0,nav_y0. */
+void map_window_load(void) {
+ u8 y,x;u8* d=terrain;
+ for(y=0;y<32;++y) {
+  u32 a=MAP_T+((u32)(nav_y0+y)<<7)+nav_x0;
+  __asm di __endasm;
+  io_sel=3;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=(u8)(a>>16);
+  for(x=0;x<32;++x)*d++=io_vram;
+  __asm ei __endasm;
+ }
 }

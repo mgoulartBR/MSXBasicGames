@@ -32,7 +32,7 @@ proc eg_case {} {
  keymatrixdown 7 128;delay 0.5;keymatrixup 7 128
  # derrota: Enter tenta a missao de novo (reinicio suave, sem recarregar os assets)
  await {[b game_over]==0 && [w game_seconds]<5} 20
- delay 3
+ await {[w sim_ticks]>30} 30
  ck restarted {[b game_over]==0 && [w game_seconds]<20}
  ck new_game_running {[w sim_ticks]>0 && [b building_hp 0]==240 && [b building_hp 1]==180 && [bd 0 state]==2 && [bd 1 state]==2 && [b game_over]==0}
  shot endgame-restarted

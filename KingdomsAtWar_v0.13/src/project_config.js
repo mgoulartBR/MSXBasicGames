@@ -3,7 +3,7 @@ ProjName = "KAW9990P1";
 ProjModules = ["main"];
 LibModules = ["system", "bios", "vdp", "input", "memory", "v9990"];
 CompileOpt = "--reserve-regs-iy"; // keep IY out of allocation across ROM-bound expressions and BIOS callbacks
-Machine = "2"; Target = "ROM_ASCII8"; ROMSize = 512; ROMMainSegments = 4; BankedCall = false;
+Machine = "2"; Target = "ROM_ASCII8"; ROMSize = 1024; ROMMainSegments = 4; BankedCall = false;
 ProjSegments = "banks/art"; DoRun = false; DoDeploy = false;
 // Incremental build (KAW_INCR=1) skips objects newer than their source; use only when no .h changed.
 CompileSkipOld = !!process.env.KAW_INCR;

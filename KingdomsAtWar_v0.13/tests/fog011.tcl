@@ -1,16 +1,14 @@
 source kingdom_helpers.tcl
-proc fog_state {x y} {
- set cell [expr {$y*32+$x}];set mask [expr {1<<($cell&7)}];set off [expr {$cell>>3}]
- return [expr {([b fog_visible $off]&$mask)?2:([b fog_seen $off]&$mask)?1:0}]
-}
 proc dump_fog011 {state} {
  set pre fog011-$::env(KAW_VARIANT)-$state
  set device [expr {($::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1")?"Sunrise GFX9000 VRAM":"VRAM"}]
  set size [expr {($::env(KAW_VARIANT) eq "V9990" || $::env(KAW_VARIANT) eq "V9990P1")?524288:131072}]
  delay 0.7
- foreach {suffix dev start length} [list map memory $::S(art_map) 1024 memory memory $::S(fog_memory) 1024 seen memory $::S(fog_seen) 128 visible memory $::S(fog_visible) 128 vram $device 0 $size] {
-  set f [open $pre-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $dev $start $length];close $f
+ foreach {suffix dev start length} [list map layer 0x6A000 1024 memory layer 0x76000 1024 seen layer 0x72000 1024 vram $device 0 $size] {
+  set f [open $pre-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [rdb $dev $start $length];close $f
  }
+ dump_sources $pre-sources.txt
+ set wf [open $pre-window.txt w];puts $wf "[b wv_x0] [b wv_y0] [b wv_x1] [b wv_y1]";close $wf
  set f [open $pre-meta.txt w];puts $f "0 [w cam_x] [w cam_y]";close $f
  shot $pre
 }

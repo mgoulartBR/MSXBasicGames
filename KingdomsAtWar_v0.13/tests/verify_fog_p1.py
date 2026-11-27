@@ -6,18 +6,21 @@ import sys
 d=Path(__file__).resolve().parent
 PB_PLAIN,PB_DITH=8,776
 vram=(d/'fog011-V9990P1-remembered-vram.bin').read_bytes()
-seen=(d/'fog011-V9990P1-remembered-seen.bin').read_bytes()
-vis=(d/'fog011-V9990P1-remembered-visible.bin').read_bytes()
+seen=(d/'fog011-V9990P1-remembered-seen.bin').read_bytes()   # explored flag, 1 byte per cell (32x32 window of the map)
+src=[tuple(map(int,l.split())) for l in (d/'fog011-V9990P1-remembered-sources.txt').read_text().splitlines() if l.strip()]
+win=tuple(map(int,(d/'fog011-V9990P1-remembered-window.txt').read_text().split()))  # rendered rectangle x0 y0 x1 y1
 def state(x,y):
-    c=y*32+x
-    return 2 if vis[c>>3]>>(c&7)&1 else 1 if seen[c>>3]>>(c&7)&1 else 0
+    for sx,sy,r in src:
+        dx,dy=abs(x-sx),abs(y-sy)
+        if dx<=r and dy<=r and dx+dy<=r+(r>>1):return 2
+    return 1 if seen[y*32+x] else 0
 def pattern_row(n,k):
     a=0x40000+(n>>5)*1024+k*128+(n&31)*4
     return vram[a:a+4]
 bad=0
-for y in range(32):
-    for x in range(32):
-        a=0x7E000+y*256+x*4
+for y in range(win[1],win[3]):
+    for x in range(win[0],win[2]):
+        a=0x7E000+(y&31)*256+(x&31)*4
         n=vram[a]+256*vram[a+1]
         st=state(x,y)
         kind=0 if n==1 else (1 if n>=PB_DITH else 2)

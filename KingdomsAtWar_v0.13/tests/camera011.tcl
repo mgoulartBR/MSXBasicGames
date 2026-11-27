@@ -1,10 +1,8 @@
 source helpers.tcl
 proc dump07 {name} {
  set prefix camera07-$::env(KAW_VARIANT)-$name
- foreach {suffix name len} {memory fog_memory 1024 seen fog_seen 128 visible fog_visible 128} {
-  set f [open $prefix-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S($name) $len];close $f
- }
- set f [open $prefix-map.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S(art_map) 1024];close $f
+ set f [open $prefix-seen.bin wb];fconfigure $f -translation binary;puts -nonewline $f [layer1k 0x72000];close $f;dump_sources $prefix-sources.txt
+ set f [open $prefix-map.bin wb];fconfigure $f -translation binary;puts -nonewline $f [layer1k 0x6A000];close $f
  if {$::env(KAW_VARIANT) eq "V9990"} {set device {Sunrise GFX9000 VRAM};set size 524288} else {set device VRAM;set size 131072}
  set f [open $prefix-vram.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $device 0 $size];close $f
  set f [open $prefix-meta.txt w];puts $f "[w cam_x] [w cam_y] 0";close $f

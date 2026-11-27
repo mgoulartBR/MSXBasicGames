@@ -6,9 +6,9 @@ proc boot {} {
  ck keyclick_off {[debug read memory 0xF3DB]==0}
  ck bios_restored {[debug read memory 0]==243}
  ck real_simulation {[w sim_ticks]>30 && [w game_seconds]>0}
- ck castle_footprint {[b terrain [expr {9*32+5}]]==5 && [b terrain [expr {10*32+5}]]==0}
- ck larger_art_ids {[b art_map [expr {6*32+2}]]==64}
- ck no_auto_bridge {[b terrain [expr {6*32+12}]]==2}
+ ck castle_footprint {[vterr [expr {9*32+5}]]==5 && [vterr [expr {10*32+5}]]==0}
+ ck larger_art_ids {[vart [expr {6*32+2}]]==64}
+ ck no_auto_bridge {[vterr [expr {6*32+12}]]==2}
  shot boot07
  puts stderr "BOOT loops=[w loops] ticks=[w sim_ticks] sec=[w game_seconds] rendered=[w rendered_frames] upload=[w frame_uploads]"
  puts stderr "RESULT failures=$::failures";exit

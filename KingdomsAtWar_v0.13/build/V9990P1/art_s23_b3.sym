@@ -9,28 +9,32 @@ Symbol Table
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
     __moduint                                                       ******** GX
-  7 _ai_build                                                       0000022E R
+  7 _ai_build                                                       00000226 R
     _ai_dir                                                         ******** GX
     _ai_enabled                                                     ******** GX
     _ai_gold                                                        ******** GX
-  7 _ai_has                                                         00000129 R
+  7 _ai_has                                                         00000121 R
   7 _ai_init                                                        00000000 GR
     _ai_kind                                                        ******** GX
     _ai_launch                                                      ******** GX
     _ai_left                                                        ******** GX
-  7 _ai_move                                                        00000E5D GR
-  7 _ai_second                                                      00000519 GR
+  7 _ai_move                                                        00001007 GR
+    _ai_route_n                                                     ******** GX
+    _ai_rx                                                          ******** GX
+    _ai_ry                                                          ******** GX
+  7 _ai_second                                                      0000058E GR
     _ai_site                                                        ******** GX
     _ai_state                                                       ******** GX
     _ai_step                                                        ******** GX
     _ai_stuck                                                       ******** GX
     _ai_timer                                                       ******** GX
-  7 _ai_unit                                                        00000AD4 R
+  7 _ai_unit                                                        00000B59 R
     _ai_wave                                                        ******** GX
     _ai_wood                                                        ******** GX
+    _ai_wpi                                                         ******** GX
     _attack_cooldown                                                ******** GX
     _attack_flash                                                   ******** GX
-  7 _bdist                                                          00000938 R
+  7 _bdist                                                          000009BD R
     _build_gold                                                     ******** GX
     _build_wood                                                     ******** GX
     _building_count                                                 ******** GX
@@ -39,30 +43,32 @@ Symbol Table
     _building_refresh                                               ******** GX
     _building_size                                                  ******** GX
     _buildings                                                      ******** GX
-  7 _built_count                                                    000007F3 R
+  7 _built_count                                                    00000878 R
     _combat_active                                                  ******** GX
     _combat_alive                                                   ******** GX
     _combat_target                                                  ******** GX
-  7 _ddx                                                            0000010D R
-  7 _ddy                                                            00000111 R
-  7 _end_check                                                      0000083C GR
+  7 _ddx                                                            00000105 R
+  7 _ddy                                                            00000109 R
+    _eb_x                                                           ******** GX
+    _eb_y                                                           ******** GX
+  7 _end_check                                                      000008C1 GR
     _end_enabled                                                    ******** GX
     _enemy_kills                                                    ******** GX
-  7 _extra_kind                                                     00000115 R
-  7 _face_of                                                        00000121 R
-  7 _find_target                                                    000009A6 R
+  7 _extra_kind                                                     0000010D R
+  7 _face_of                                                        00000119 R
+  7 _find_target                                                    00000A2B R
     _free_at                                                        ******** GX
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_ACPAGE                                                   =   0000FAF6 G
     _g_ASPCT1                                                   =   0000F40B G
     _g_ASPCT2                                                   =   0000F40D G
     _g_ATRBYT                                                   =   0000F3F2 G
     _g_AVCSAV                                                   =   0000FAF7 G
     _g_BAKCLR                                                   =   0000F3EA G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_BASROM                                                   =   0000FBB1 G
     _g_BASRVN                                                   =   0000002B G
     _g_BDOS                                                     =   0000F37D G
@@ -112,17 +118,17 @@ Symbol Table
     _g_FORCLR                                                   =   0000F3E9 G
     _g_FRCNEW                                                   =   0000F3F5 G
     _g_FSTPOS                                                   =   0000FBCA G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_GETPNT                                                   =   0000F3FA G
     _g_GRPACX                                                   =   0000FCB7 G
     _g_GRPACY                                                   =   0000FCB9 G
     _g_GRPATR                                                   =   0000F3CD G
     _g_GRPCGP                                                   =   0000F3CB G
     _g_GRPCOL                                                   =   0000F3C9 G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 3
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_GRPHED                                                   =   0000FCA6 G
     _g_GRPNAM                                                   =   0000F3C7 G
     _g_GRPPAT                                                   =   0000F3CF G
@@ -172,17 +178,17 @@ Symbol Table
     _g_MSXAudio_DataPort2                                       =   000000C3 
     _g_MSXAudio_IndexPort                                       =   000000C0 
     _g_MSXAudio_IndexPort2                                      =   000000C2 
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_MSXMID                                                   =   0000002E G
     _g_MSXMusic_DataPort                                        =   0000007D 
     _g_MSXMusic_IndexPort                                       =   0000007C 
     _g_MSXVER                                                   =   0000002D G
     _g_MUSICF                                                   =   0000FB3F G
     _g_NEWKEY                                                   =   0000FBE5 G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 4
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_NORUSE                                                   =   0000FAFD G
     _g_OLDINT                                                   =   0000FB0C G
     _g_OLDKEY                                                   =   0000FBDA G
@@ -232,17 +238,17 @@ Symbol Table
     _g_RG18SAV                                                  =   0000FFF1 G
     _g_RG19SAV                                                  =   0000FFF2 G
     _g_RG1SAV                                                   =   0000F3E0 G
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_RG20SAV                                                  =   0000FFF3 G
     _g_RG21SAV                                                  =   0000FFF4 G
     _g_RG22SAV                                                  =   0000FFF5 G
     _g_RG23SAV                                                  =   0000FFF6 G
     _g_RG25SAV                                                  =   0000FFFA G
     _g_RG26SAV                                                  =   0000FFFB G
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 5
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_RG27SAV                                                  =   0000FFFC G
     _g_RG2SAV                                                   =   0000F3E1 G
     _g_RG3SAV                                                   =   0000F3E2 G
@@ -292,17 +298,17 @@ Symbol Table
     _g_V9_IntFlagPort                                           =   00000066 
     _g_V9_Kanji2AddrHPort                                       =   0000006B 
     _g_V9_Kanji2AddrLPort                                       =   0000006A 
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _g_V9_Kanji2DataPort                                        =   0000006B 
     _g_V9_KanjiAddrHPort                                        =   00000069 
     _g_V9_KanjiAddrLPort                                        =   00000068 
     _g_V9_KanjiDataPort                                         =   00000069 
     _g_V9_OutputCtrPort                                         =   0000006F 
     _g_V9_PalettePort                                           =   00000061 
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _g_V9_RegDataPort                                           =   00000063 
     _g_V9_RegSelectPort                                         =   00000064 
     _g_V9_SatusPort                                             =   00000065 
@@ -332,25 +338,31 @@ Symbol Table
     _gold                                                           ******** GX
     _hud_dirty                                                      ******** GX
     _hurt_flash                                                     ******** GX
+    _map_custom                                                     ******** GX
     _mine_phase                                                     ******** GX
     _mis                                                            ******** GX
-  7 _muster_x                                                       00000125 R
-  7 _need_of                                                        000003A7 R
-  7 _ord_type                                                       000000E9 R
-  7 _ord_x                                                          000000F1 R
-  7 _ord_y                                                          000000F9 R
+  7 _muster_dx                                                      0000011D R
+  7 _need_of                                                        000003AA R
+  7 _ord_dx                                                         000000E9 R
+  7 _ord_dy                                                         000000F1 R
+  7 _ord_type                                                       000000E1 R
     _recruit_gold                                                   ******** GX
     _recruit_wood                                                   ******** GX
     _sim_ticks                                                      ******** GX
-  7 _site_free                                                      00000164 R
-  7 _spawn                                                          000003B6 R
+  7 _site_free                                                      0000015C R
+  7 _spawn                                                          000003B9 R
     _sprites_dirty                                                  ******** GX
-    _stock                                                          ******** GX
-    _terrain                                                        ******** GX
+    _stock_set                                                      ******** GX
   1 _tg_n                                                           00000002 R
   1 _tg_x                                                           00000000 R
   1 _tg_y                                                           00000001 R
     _tile                                                           ******** GX
+    _tile_set                                                       ******** GX
+ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _tower_cooldown                                                 ******** GX
     _unit_count                                                     ******** GX
     _unit_facing                                                    ******** GX
@@ -358,23 +370,19 @@ Symbol Table
     _unit_hp                                                        ******** GX
     _unit_kind                                                      ******** GX
     _unit_max_hp                                                    ******** GX
-ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
-Hexadecimal [32-Bits]
-
-Symbol Table
-
     _unit_range                                                     ******** GX
     _unit_walk_dist                                                 ******** GX
     _unit_walk_phase                                                ******** GX
     _units                                                          ******** GX
     _units_prep_reset                                               ******** GX
-  7 _wave_kind                                                      00000101 R
+  7 _wave_kind                                                      000000F9 R
     b_ai_init                                                   =   00000017 G
     b_ai_move                                                   =   00000017 G
     b_ai_second                                                 =   00000017 G
     b_building_refresh                                              ******** GX
     b_end_check                                                 =   00000017 G
     b_units_prep_reset                                              ******** GX
+
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
@@ -388,7 +396,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG23                                     size      E7E   flags    0
+   7 _SEG23                                     size     1028   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

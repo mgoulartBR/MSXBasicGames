@@ -3,19 +3,19 @@ void economy(void) __banked {
  u8 i;
  for(i=0;i<unit_count;++i) {
   if(!worker_task[i] || !WORKER(i))continue;
-  Unit* u=&units[i];u8 task=worker_task[i];u16 cell=((u16)node_y[i]<<5)+node_x[i];
+  Unit* u=&units[i];u8 task=worker_task[i];u8 nx=node_x[i],ny=node_y[i];
   if(u->progress || mine_phase[i]==1 || mine_phase[i]==3)continue;
   if(task==WAIT_NODE || task==WAIT_BASE) {
    if(work_timer[i]) {--work_timer[i];continue;}
-   if(task==WAIT_NODE && (!stock[cell] || (terrain[cell]!=1 && terrain[cell]!=4))) {worker_task[i]=0;u->state=ARRIVED;continue;}
+   if(task==WAIT_NODE && (!stock_get(nx,ny) || (tile(nx,ny)!=1 && tile(nx,ny)!=4))) {worker_task[i]=0;u->state=ARRIVED;continue;}
    if(work_route(i,task==WAIT_NODE?node_x[i]:buildings[deposit_id[i]].x,task==WAIT_NODE?node_y[i]:buildings[deposit_id[i]].y)) {
     worker_task[i]=task==WAIT_NODE?TO_NODE:TO_BASE;
    } else work_timer[i]=30;
   } else if(task==HARVEST) {
-   if(!stock[cell]) {worker_task[i]=0;u->state=ARRIVED;if(mine_phase[i]) {mine_phase[i]=3;fog_refresh=1;sprites_dirty=3;}continue;}
+   if(!stock_get(nx,ny)) {worker_task[i]=0;u->state=ARRIVED;if(mine_phase[i]) {mine_phase[i]=3;fog_refresh=1;sprites_dirty=3;}continue;}
    if(work_timer[i]) {--work_timer[i];continue;}
-   cargo[i]=stock[cell]<8?stock[cell]:8;cargo_kind[i]=worker_kind[i];stock[cell]-=cargo[i];++pickups;
-   if(!stock[cell])resource_empty(node_x[i],node_y[i]);
+   {u8 sk=stock_get(nx,ny);cargo[i]=sk<8?sk:8;cargo_kind[i]=worker_kind[i];stock_set(nx,ny,sk-cargo[i]);++pickups;}
+   if(!stock_get(nx,ny))resource_empty(node_x[i],node_y[i]);
    if(mine_phase[i]) {mine_phase[i]=3;fog_refresh=1;sprites_dirty=3;}
    worker_task[i]=WAIT_BASE;work_timer[i]=0;work_tries[i]=0;u->state=PLANNING;
   } else if(u->state==BLOCKED) {

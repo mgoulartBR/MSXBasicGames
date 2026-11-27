@@ -168,7 +168,7 @@ void order_at(u8 x,u8 y) __banked {
   for(r=0;r<=4 && !found;++r)for(dy=-(i8)r;dy<=(i8)r && !found;++dy)for(dx=-(i8)r;dx<=(i8)r;++dx) {
    if(dx!=-(i8)r && dx!=(i8)r && dy!=-(i8)r && dy!=(i8)r)continue;
    if(!dx)poll_input();gx=(i16)x+dx;gy=(i16)y+dy;
-   if(gx<0 || gx>=32 || gy<0 || gy>=32)continue;
+   if(gx<0 || gx>=map_w || gy<0 || gy>=map_h)continue;
    if(!goal_free(gx,gy,i,assigned))continue;
    if(unit_build[i]!=NONE) {buildings[unit_build[i]].worker=NONE;unit_build[i]=NONE;builder_working&=~(1<<i);}
    if(WORKER(i))worker_task[i]=0;
@@ -188,7 +188,7 @@ u8 economy_order(u8 x,u8 y) __banked {
   t=tile(x,y);
  }
  if(!fog_at(x,y) || (t!=1 && t!=4 && t!=5))return 0;
- if(t==4) {x=9;y=7;}
+ if(t==4) {if(x && tile(x-1,y)==4)--x;if(y && tile(x,y-1)==4)--y;} /* the node of a mine is its top-left cell */
  ++group_orders;
  for(i=0;i<unit_count;++i)if(WORKER(i) && (selection_mask&(1<<i))) {
   if(t==5 && !cargo[i])continue;

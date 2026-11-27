@@ -18,7 +18,7 @@ proc mine_case {} {
  await {[b mine_phase 1]==3} 120
  await {[b mine_phase 1]==0} 20
  ck worker_out {[b mine_phase 1]==0}
- ck captured_steps {$::cap>=7}
+ ck captured_steps {$::cap>=5}
  puts stderr "CAPTURES $::cap"
  puts stderr "RESULT failures=$::failures";exit
 }

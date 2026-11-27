@@ -27,8 +27,10 @@ void game_reset(u8 m) __banked {
  {u8 p;for(p=0;p<2;++p)for(i=0;i<30;++i)hud_context[p][i]=hud_action_cache[p][i]=0;} /* the band is redrawn from scratch */
  init_world();fog_init();
  wood=mis.wood;gold=mis.gold;
+ {u16 mx=(u16)map_w*16-256,my=(u16)map_h*16-160,cx=(u16)(pb_x>2?pb_x-2:0)*16,cy=(u16)(pb_y>6?pb_y-6:0)*16;cam_x=cx>mx?mx:cx;cam_y=cy>my?my:cy;} /* the camera starts at the castle */
 }
 /* Briefing: the parchment picture, the mission title and four text lines in the HUD band; Enter or a click starts. */
+static u8 tr_len(const c8* s) {u8 n=0;while(s[n])++n;return n;}
 void briefing(u8 m) __banked {
  u8 prev=1,i;u16 t;
  if(menu_auto)return;
@@ -44,5 +46,7 @@ void briefing(u8 m) __banked {
   if((k&&!prev)||click)break;
   prev=k;
  }
- end_hide();
+ /* the picture stays while the mission is prepared; the band says so */
+ video_fill(0,168,256,40,1);
+ video_text(128-(u8)(4*(u8)tr_len(tr(TXT_LOADING))),184,tr(TXT_LOADING));
 }

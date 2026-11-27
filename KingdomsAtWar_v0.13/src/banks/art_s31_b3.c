@@ -1,4 +1,10 @@
 #include "../shared.h"
+/* End of a route: a partial route (goal beyond the 32x32 window) is followed by a new plan toward the goal. */
+static void nav_arrive(u8 i) {
+ Unit* u=&units[i];
+ if(nav_partial[i]) {nav_partial[i]=0;u->len=u->pos=0;u->state=PLANNING;requested[i]=1;retry_wait[i]=0;retry_left[i]=8;}
+ else u->state=ARRIVED;
+}
 void nav_retry(u8 id) __banked {
  units[id].len=units[id].pos=0;
  if(worker_task[id] || unit_build[id]!=NONE || repair_target[id]!=NONE || combat_target[id]!=NONE) {
@@ -10,8 +16,14 @@ void nav_retry(u8 id) __banked {
 }
 /* Multi-goal BFS: reserve a reachable entrance, not a Manhattan guess.
  * One 128-byte bitset is reused by the single budgeted navigation job. */
-static u8 nav_goal_free(u8 id,u16 cell) {
- u8 j,x=cell&31,y=cell>>5;
+/* The BFS works on a 32x32 window of the map (origin nav_x0,nav_y0; cell = (y-nav_y0)*32+x-nav_x0); everything outside is
+ * reached by consecutive partial routes toward the goal (nav_far). */
+static u8 nav_far,nav_fx,nav_fy;
+/* top-left cell of the 2x2 mine that contains (x,y) */
+static void mine_org(u8* x,u8* y) {if(*x && tile(*x-1,*y)==4)--*x;if(*y && tile(*x,*y-1)==4)--*y;}
+static i16 loc(i16 x,i16 y) {x-=nav_x0;y-=nav_y0;return (x<0 || y<0 || x>=32 || y>=32)?-1:(i16)((y<<5)+x);}
+static u8 nav_goal_free(u8 id,u8 x,u8 y) {
+ u8 j;
  if(!free_at(x,y,id))return 0;
  for(j=0;j<unit_count;++j)if(j!=id && (units[j].state==PLANNING || units[j].state==MOVING) && units[j].tx==x && units[j].ty==y)return 0;
  return 1;
@@ -27,9 +39,9 @@ static u8 mine_waiter(void) {
  return NONE;
 }
 static void nav_target(u8 id,i16 x,i16 y) {
- u8 j;u16 cell;
- if(x<0||y<0||x>=32||y>=32)return;
- cell=((u16)y<<5)+x;
+ u8 j;i16 c=loc(x,y);u16 cell;
+ if(c<0 || x>=map_w || y>=map_h)return;
+ cell=(u16)c;
  if(parent[cell]!=255 && parent[cell]!=254)return;
  for(j=0;j<unit_count;++j)if(j!=id &&
   (units[j].state==PLANNING || units[j].state==MOVING) && units[j].tx==x && units[j].ty==y)return;
@@ -123,34 +135,77 @@ static void nav_reset(void) {
  nav_restore(nav_marks,nav_mark_n);
  qtail=qhead=0;nav_mark_n=0;nav_clean=1;
 }
+/* Main point the unit is heading for (a target position for combat/work orders, the order goal otherwise). */
+static void nav_primary(u8 id,u8* gx,u8* gy) {
+ Unit* u=&units[id];u8 j,best=255;
+ *gx=goal_x[id];*gy=goal_y[id];
+ if(combat_target[id]!=NONE) {u8 t=combat_target[id];if(t&128){*gx=buildings[t&127].x;*gy=buildings[t&127].y;}else{*gx=units[t].x;*gy=units[t].y;}}
+ else if(repair_target[id]!=NONE) {*gx=buildings[repair_target[id]].x;*gy=buildings[repair_target[id]].y;}
+ else if(worker_task[id]==TO_NODE) {*gx=node_x[id];*gy=node_y[id];}
+ else if(worker_task[id]==TO_BASE) {
+  for(j=0;j<building_count;++j) {
+   Building* b=&buildings[j];
+   if(!building_owner[j] && b->state==2 && (!j || (b->type==3 && cargo_kind[id]==1))) {
+    u8 d=(u->x>b->x?u->x-b->x:b->x-u->x)+(u->y>b->y?u->y-b->y:b->y-u->y);
+    if(d<best){best=d;*gx=b->x;*gy=b->y;}
+   }
+  }
+ }
+ else if(unit_build[id]!=NONE) {*gx=buildings[unit_build[id]].x;*gy=buildings[unit_build[id]].y;}
+}
+/* Window origin on one axis: both ends inside when they are less than ~25 cells apart, else the window opens toward the goal. */
+static u8 axis_origin(u8 s,u8 g,u8 mapn) {
+ i16 o,d;
+ if(mapn<=32)return 0;
+ o=((i16)s+g)/2-16;d=g>s?g-s:s-g;
+ if(d>24)o=(i16)s-16+(g>s?9:-9);
+ if(o<0)o=0;if(o>mapn-32)o=mapn-32;
+ o&=~7;
+ while((i16)s<o+1 && o>0)o-=8;
+ while((i16)s>o+30 && o<mapn-32)o+=8;
+ return (u8)o;
+}
+static void nav_window(u8 sx,u8 sy,u8 gx,u8 gy) {
+ u8 ox=axis_origin(sx,gx,map_w),oy=axis_origin(sy,gy,map_h);
+ if(ox!=nav_x0 || oy!=nav_y0) {nav_x0=ox;nav_y0=oy;map_window_load();nav_base_dirty=1;}
+ nav_far=(gx<ox || gx>=ox+32 || gy<oy || gy>=oy+32);nav_fx=gx;nav_fy=gy;
+}
 void nav_begin(u8 id) __banked {
- u16 i,start;u8 j;
+ u16 i,start;u8 j,gx,gy;i16 c;
  Unit* u=&units[id];
  job_unit=id;requested[id]=0;nav_work_mode=0;
+ nav_primary(id,&gx,&gy);
+ nav_window(u->x,u->y,gx,gy);
  nav_reset();
  nav_mark_n=0;
  for(j=0;j<RN;++j)if(j!=id && combat_alive(j)) {
-  u16 c=((u16)units[j].y<<5)+units[j].x;parent[c]=253;nav_marks[nav_mark_n++]=c;
-  if(units[j].progress){c=((u16)units[j].ny<<5)+units[j].nx;parent[c]=253;nav_marks[nav_mark_n++]=c;}
+  c=loc(units[j].x,units[j].y);if(c>=0){parent[c]=253;nav_marks[nav_mark_n++]=c;}
+  if(units[j].progress){c=loc(units[j].nx,units[j].ny);if(c>=0){parent[c]=253;nav_marks[nav_mark_n++]=c;}}
  }
  nav_clean=0;
- start=((u16)u->y<<5)+u->x;job_goal=((u16)u->ty<<5)+u->tx;
+ c=loc(u->x,u->y);start=(u16)(c<0?0:c);
+ /* far goal: the plain goal is the window cell closest to it (or, if unreachable, the closest cell the BFS reaches) */
+ {u8 cx=gx<nav_x0?nav_x0:gx>nav_x0+31?nav_x0+31:gx,cy=gy<nav_y0?nav_y0:gy>nav_y0+31?nav_y0+31:gy;job_goal=((u16)(cy-nav_y0)<<5)+(cx-nav_x0);}
  parent[start]=254;queue[0]=start;qhead=0;qtail=1;
  __builtin_memset(nav_targets,0,128);
- if(combat_target[id]!=NONE) {
+ if(nav_far) {
+  /* plain far route */
+ } else if(combat_target[id]!=NONE) {
   u8 t=combat_target[id];nav_work_mode=4;
   u8 x,y,n,r=unit_range[unit_kind[id]];i16 xx,yy;
   if(t&128) {Building* b=&buildings[t&127];x=b->x;y=b->y;n=building_size(b->type);}else {x=units[t].x;y=units[t].y;n=1;}
   for(yy=(i16)y-r;yy<y+n+r;++yy)for(xx=(i16)x-r;xx<x+n+r;++xx)
-   if(xx>=0 && yy>=0 && xx<32 && yy<32 && combat_position(id,xx,yy,t))nav_target(id,xx,yy);
+   if(xx>=0 && yy>=0 && xx<map_w && yy<map_h && combat_position(id,xx,yy,t))nav_target(id,xx,yy);
  } else if(repair_target[id]!=NONE) {
   Building* b=&buildings[repair_target[id]];nav_work_mode=5;nav_border(id,b->x,b->y,building_size(b->type));
  } else if(worker_task[id]==TO_NODE) {
   u8 x=node_x[id],y=node_y[id];nav_work_mode=1;
   if(tile(x,y)==4) {
+   u8 mx=x,my=y;
+   mine_org(&mx,&my);
    j=mine_waiter();
-   if(j==id) {nav_target(id,9,9);nav_target(id,10,9);}
-   else if(j!=NONE && (nav_goal_free(j,297) || nav_goal_free(j,298)))work_timer[j]=0;
+   if(j==id) {nav_target(id,mx,my+2);nav_target(id,mx+1,my+2);}
+   else if(j!=NONE && (nav_goal_free(j,mx,my+2) || nav_goal_free(j,mx+1,my+2)))work_timer[j]=0;
   }
   else nav_border(id,x,y,object_size(x,y));
  } else if(worker_task[id]==TO_BASE) {
@@ -171,8 +226,11 @@ void nav_finish(u16 cell) __banked {
  u8 len=0,i,tmp;
  Unit* u=&units[job_unit];
  u8* path=routes[job_unit];
+ u8 xw=(u8)(cell&31)+nav_x0,yw=(u8)(cell>>5)+nav_y0;
+ nav_partial[job_unit]=nav_far;
+ if(nav_far){u->tx=xw;u->ty=yw;}
  if(nav_work_mode) {
-  u8 x=cell&31,y=cell>>5;
+  u8 x=xw,y=yw;
   if(nav_work_mode==1 && tile(node_x[job_unit],node_y[job_unit])==4) {mine_turn=job_unit+1;if(mine_turn==unit_count)mine_turn=0;}
   if(u->tx!=x || u->ty!=y)++alternate_approaches;
   u->tx=x;u->ty=y;
@@ -404,10 +462,19 @@ void navigation(void) __banked {
  for(;;) {
   u16 cell=nav_bfs_run();
   if(cell==0xFFFF)break;
-  if(!nav_work_mode || nav_goal_free(job_unit,cell)) {nav_finish(cell);return;}
+  if(!nav_work_mode || nav_goal_free(job_unit,(u8)(cell&31)+nav_x0,(u8)(cell>>5)+nav_y0)) {nav_finish(cell);return;}
   nav_arg=cell;nav_expand_run();
  }
  if(qhead==qtail && job_unit!=NONE) {
+  if(nav_far) {
+   /* the far goal is out of reach inside the window: walk to the reachable cell nearest to it, then plan again */
+   u16 k,bestc=0xFFFF;u8 bd=255;
+   for(k=1;k<qtail;++k) {
+    u16 cc=queue[k];u8 x=(u8)(cc&31)+nav_x0,y=(u8)(cc>>5)+nav_y0,d=(x>nav_fx?x-nav_fx:nav_fx-x)+(y>nav_fy?y-nav_fy:nav_fy-y);
+    if(d<bd){bd=d;bestc=cc;}
+   }
+   if(bestc!=0xFFFF) {nav_work_mode=0;nav_finish(bestc);return;}
+  }
   if(nav_work_mode==1 && tile(node_x[job_unit],node_y[job_unit])==4) {mine_turn=job_unit+1;if(mine_turn==unit_count)mine_turn=0;}
   nav_retry(job_unit);job_unit=NONE;
  }
@@ -441,10 +508,10 @@ void resource_empty(u8 x,u8 y) __banked {
  u8 n=object_size(x,y),dx,dy;
  if(tile(x,y)==4)return; /* Empty cave remains for workers to leave safely. */
  nav_base_dirty=1;
- for(dy=0;dy<n;++dy)for(dx=0;dx<n;++dx)terrain[((u16)(y+dy)<<5)+x+dx]=0;
+ for(dy=0;dy<n;++dy)for(dx=0;dx<n;++dx)tile_set(x+dx,y+dy,0);
  /* The oak crown extends one row above its root; mines occupy two rows. */
- for(dy=y?y-1:0;dy<=y+1 && dy<32;++dy)for(dx=x;dx<=x+1 && dx<32;++dx) {
-  art_map[((u16)dy<<5)+dx]=art_index(dx,dy);video_tile(dx,dy);
+ for(dy=y?y-1:0;dy<=y+1 && dy<map_h;++dy)for(dx=x;dx<=x+1 && dx<map_w;++dx) {
+  art_set(dx,dy,art_index(dx,dy));video_tile(dx,dy);
  }
 }
 /* Phase is 0..2 plus a class speed of 4, 8 or 10. */
@@ -767,7 +834,7 @@ void simulate(void) __banked {
    u8 step;
    if(!u->progress) {
     u8 d;
-    if(u->pos>=u->len) { u->state=ARRIVED; break; }
+    if(u->pos>=u->len) { nav_arrive(i); break; }
     d=routes[i][u->pos]; u->nx=u->x; u->ny=u->y;
     if(d==0) ++u->nx; else if(d==1) ++u->ny; else if(d==2) --u->nx; else --u->ny;
     if(!free_at(u->nx,u->ny,i)) { nav_retry(i); break; }
@@ -781,7 +848,7 @@ void simulate(void) __banked {
    if(u->progress==16) {
     u->x=u->nx; u->y=u->ny;fog_traverse(i); u->progress=0; ++u->pos;
     if(requested[i]) { u->state=PLANNING; break; }
-    if(u->pos>=u->len) { u->state=ARRIVED; break; }
+    if(u->pos>=u->len) { nav_arrive(i); break; }
    }
   }
  }

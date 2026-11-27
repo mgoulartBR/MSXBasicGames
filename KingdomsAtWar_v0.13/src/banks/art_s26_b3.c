@@ -86,12 +86,12 @@ void combat_init(void) __banked {
  for(i=0;i<N;++i){stance[i]=0;auto_hx[i]=255;}
  for(i=0;i<BMAX;++i) {building_owner[i]=0;building_hp[i]=i?0:240;}
  nav_base_dirty=1;
- for(y=20;y<32;++y)for(x=0;x<12;++x) {u16 c=((u16)y<<5)+x;terrain[c]=0;stock[c]=0;}
- building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=3;buildings[1].y=27;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
- for(y=27;y<31;++y)for(x=3;x<7;++x)terrain[((u16)y<<5)+x]=11;
- for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=i==N?3:8;u->y=u->ty=u->ny=23;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
+ if(!map_custom)for(y=20;y<32;++y)for(x=0;x<12;++x) {tile_set(x,y,0);stock_set(x,y,0);}
+ building_count=2;buildings[1].type=0;buildings[1].state=2;buildings[1].x=eb_x;buildings[1].y=eb_y;buildings[1].worker=NONE;buildings[1].training=0;building_owner[1]=1;building_hp[1]=180;
+ for(y=eb_y;y<eb_y+4;++y)for(x=eb_x;x<eb_x+4;++x)tile_set(x,y,11);
+ for(i=N;i<RN;++i) {Unit* u=&units[i];u->x=u->tx=u->nx=eb_x+(i==N?0:5);u->y=u->ty=u->ny=eb_y-4;u->px=(u16)u->x*16;u->py=(u16)u->y*16;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;unit_kind[i]=6;unit_hp[i]=48;unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;}
  /* actors 10 and 11 are light reinforcements the AI trains later: dead (and 32 px sized) until then */
- for(i=10;i<RN;++i){unit_hp[i]=0;unit_kind[i]=1;units[i].state=IDLE;units[i].x=units[i].tx=units[i].nx=i-5;units[i].y=units[i].ty=units[i].ny=23;units[i].px=(u16)units[i].x*16;units[i].py=23*16;}
+ for(i=10;i<RN;++i){unit_hp[i]=0;unit_kind[i]=1;units[i].state=IDLE;units[i].x=units[i].tx=units[i].nx=eb_x+i-8;units[i].y=units[i].ty=units[i].ny=eb_y-4;units[i].px=(u16)units[i].x*16;units[i].py=(u16)units[i].y*16;}
  {u8 q;for(q=0;q<RN;++q)cc_a[q]=cc_b[q]=0xFFFF;}
  game_over=0;end_enabled=1;auto_defend=1;ai_init();
 }
@@ -100,7 +100,7 @@ u8 combat_hit_test(u16 wx,u16 wy) __banked {
  for(i=N;i<RN;++i)if(unit_position(i)) {const u8* b=pose_bounds+(u16)POSE_KEY(i)*4;i16 x=unit_draw_x+cam_x,y=unit_draw_y+cam_y;
   if((i16)wx>=x+b[0] && (i16)wx<x+b[0]+b[2] && (i16)wy>=y+b[1] && (i16)wy<y+b[1]+b[3])return i;
  }
- if(wx<512 && wy<512) {i=tile(wx>>4,wy>>4);if(i>=10 && i-10<building_count && building_owner[i-10] && buildings[i-10].state && fog_target(128+i-10))return 128+i-10;}
+ if(wx<(u16)map_w*16 && wy<(u16)map_h*16) {i=tile(wx>>4,wy>>4);if(i>=10 && i-10<building_count && building_owner[i-10] && buildings[i-10].state && fog_target(128+i-10))return 128+i-10;}
  return NONE;
 }
 u8 combat_click(u16 wx,u16 wy) __banked {

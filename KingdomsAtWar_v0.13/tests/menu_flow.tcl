@@ -17,8 +17,8 @@ proc mf_case {} {
  tapkey 8 32;tapkey 7 128
  delay 6;shot menu-briefing
  tapkey 7 128
- delay 4
- ck game_started {[w loops]>0}
+ delay 1;set t0 [machine_info time];while {[w game_seconds]<1 && [machine_info time]-$t0<40} {delay 0.25}
+ ck game_started {[w loops]>0 && [w game_seconds]>=1}
  shot menu-game
  puts stderr "RESULT failures=$::failures";exit
 }

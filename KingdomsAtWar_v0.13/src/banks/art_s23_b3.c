@@ -4,7 +4,8 @@
  * between cells so that the regular combat code (combat_tick) can pick targets for stationary enemy units. */
 /* Sites keep the corridor x=4..7 (y=19..22) free: soldiers cross it at the gate (5,21). */
 static const u8 ord_type[8]={2,3,1,6,5,7,1,6};
-static const u8 ord_x[8]={7,0,0,8,7,0,0,8},ord_y[8]={24,19,24,19,28,15,28,15};
+/* building sites relative to the enemy keep (built-in map: keep at (3,27)) */
+static const i8 ord_dx[8]={4,-3,-3,5,4,-3,-3,5},ord_dy[8]={-3,-8,-3,-8,1,-12,1,-12};
 /* Balance knobs (see CHANGELOG): first wave, gap between launches, training times, gold income, wave table. */
 /* The mission (mis) sets the first wave, the wave gap and whether the two light reinforcements (actors 10 and 11) join. */
 #define AI_TRAIN_LIGHT 15
@@ -14,7 +15,7 @@ static const i8 ddx[4]={1,0,-1,0},ddy[4]={0,1,0,-1};
 /* Slots 8 and 9 are the heavy fighters (any kind); 10 and 11 are light reinforcements (swordsman or archer only: 32 px
  * poses, single pose block) that train when the heavy ones are not waiting for money and join the wave when ready. */
 static const u8 extra_kind[12]={1,3, 1,3, 1,3, 3,3, 3,3, 3,3};
-static const u8 face_of[4]={1,0,3,2},muster_x[4]={3,8,5,6};
+static const u8 face_of[4]={1,0,3,2},muster_dx[4]={0,5,2,3};
 static u8 tg_x,tg_y,tg_n;
 void ai_init(void) __banked {
  u8 i;
@@ -22,7 +23,8 @@ void ai_init(void) __banked {
  for(i=0;i<4;++i)ai_state[i]=ai_timer[i]=ai_stuck[i]=ai_dir[i]=ai_kind[i]=0;
  ai_state[2]=ai_state[3]=2; /* the reinforcements start dead, waiting for a barracks */
  /* Trees at the edge of the enemy base (x=0 and x=10, y=15..19) are cleared so that the 4x4 sites fit. */
- for(i=15;i<20;i+=2)terrain[((u16)i<<5)+0]=terrain[((u16)i<<5)+10]=stock[((u16)i<<5)+0]=stock[((u16)i<<5)+10]=0;
+ if(!map_custom)for(i=15;i<20;i+=2) {tile_set(0,i,0);tile_set(10,i,0);stock_set(0,i,0);stock_set(10,i,0);}
+ for(i=0;i<4;++i)ai_wpi[i]=0;
 }
 static u8 ai_has(u8 type) {
  u8 i;for(i=0;i<building_count;++i)if(building_owner[i] && buildings[i].state==2 && buildings[i].type==type)return 1;return 0;
@@ -40,7 +42,7 @@ static void ai_build(void) {
  if(ai_step>=8)return;
  type=ord_type[ai_step];
  if(ai_wood<build_wood[type] || ai_gold<build_gold[type])return;
- x=ord_x[ai_step];y=ord_y[ai_step];n=building_size(type);++ai_step;
+ x=eb_x+ord_dx[ai_step];y=eb_y+ord_dy[ai_step];n=building_size(type);++ai_step;
  if(!site_free(x,y,n))return;
  for(id=BMAX-1;id>=2;--id)if(!buildings[id].state)break;
  if(id<2)return;
@@ -52,9 +54,9 @@ static void ai_build(void) {
 }
 static u8 need_of(u8 kind) {return kind==5?7:kind==4?5:2;}
 static u8 spawn(u8 s) {
- u8 i=8+s,x=muster_x[s],k=ai_kind[s];Unit* u=&units[i];
- if(!free_at(x,23,i))return 0;
- u->x=u->tx=u->nx=x;u->y=u->ty=u->ny=23;u->px=(u16)x<<4;u->py=23<<4;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;
+ u8 i=8+s,x=eb_x+muster_dx[s],y=eb_y-4,k=ai_kind[s];Unit* u=&units[i];
+ if(!free_at(x,y,i))return 0;
+ u->x=u->tx=u->nx=x;u->y=u->ty=u->ny=y;u->px=(u16)x<<4;u->py=(u16)y<<4;ai_wpi[s]=0;u->owner=1;u->state=ARRIVED;u->len=u->pos=u->progress=u->phase=0;
  unit_kind[i]=k;unit_hp[i]=unit_max_hp[k];unit_facing[i]=2;unit_frame[i]=9;unit_walk_dist[i]=unit_walk_phase[i]=0;
  combat_target[i]=NONE;attack_cooldown[i]=attack_flash[i]=hurt_flash[i]=0;
  sprites_dirty=3;units_prep_reset();return 1;
@@ -91,7 +93,7 @@ void ai_second(void) __banked {
  }
  if(!ai_state[0] && !ai_state[1] && unit_hp[8] && unit_hp[9] && game_seconds>=ai_launch) {
   ai_state[0]=ai_state[1]=1;if(!ai_state[2])ai_state[2]=1;if(!ai_state[3])ai_state[3]=1;
-  ++ai_wave;ai_launch=game_seconds+mis.wave_gap;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;
+  ++ai_wave;ai_launch=game_seconds+mis.wave_gap;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;ai_wpi[0]=ai_wpi[1]=ai_wpi[2]=ai_wpi[3]=0;
  }
 }
 /* Once per second: the game ends when a keep falls (defeat wins a tie). The simulation then stops (simulate). */
@@ -134,8 +136,16 @@ static void ai_unit(u8 i,u8 s) {
   u8 d,best=255,bd=0,sc,nx,ny,range;
   if(combat_target[i]!=NONE || (sim_ticks&7)!=1 || !find_target(i))return;
   range=unit_range[unit_kind[i]];
-  /* Crossing between the base (south of y=23) and the field (north of y=18): go through the gate first. */
-  if((u->y>=23 && tg_y<=18) || (u->y<=18 && tg_y>=23)) {tg_x=5;tg_y=21;tg_n=1;range=1;}
+  /* Built-in map: crossing between the base (south of y=23) and the field (north of y=18) goes through the gate first. */
+  if(!ai_route_n && ((u->y>=23 && tg_y<=18) || (u->y<=18 && tg_y>=23))) {tg_x=5;tg_y=21;tg_n=1;range=1;}
+  /* Campaign maps: far targets are reached through the waypoints of the route computed by tools/maps.py. */
+  if(ai_route_n) {
+   u8 w=ai_wpi[s];
+   if(ai_stuck[s]>=5 && w<ai_route_n){++w;ai_stuck[s]=0;} /* blocked: skip to the next waypoint */
+   while(w<ai_route_n && bdist(u->x,u->y,ai_rx[w],ai_ry[w],1)<=1)++w;
+   ai_wpi[s]=w;
+   if(w<ai_route_n && bdist(u->x,u->y,tg_x,tg_y,tg_n)>12){tg_x=ai_rx[w];tg_y=ai_ry[w];tg_n=1;range=1;}
+  }
   if(bdist(u->x,u->y,tg_x,tg_y,tg_n)<=range && (ai_stuck[s]<3 || range==1)) {if(ai_stuck[s]<250)++ai_stuck[s];return;}
   for(d=0;d<4;++d) {
    nx=u->x+ddx[d];ny=u->y+ddy[d];

@@ -75,7 +75,7 @@ proc combat09 {} {
  shot combat09-siege
  await {[bd 1 state]==0 && [w combat_buildings]==1} 50
  ck structure_destroyed {[b building_hp 1]==0 && [w combat_buildings]==1}
- ck footprint_released {[b terrain [expr {27*32+3}]]==0 && [b terrain [expr {30*32+6}]]==0}
+ ck footprint_released {[vterr [expr {27*32+3}]]==0 && [vterr [expr {30*32+6}]]==0}
  move_unit 2 3 28
  ck ruined_site_walkable {[unit 2 x]==3 && [unit 2 y]==28}
  ck own_keep_intact {[b building_hp]==240 && [bd 0 state]==2}

@@ -3,12 +3,10 @@ proc dump_overlay011 {name} {
  set prefix overlay011-$::env(KAW_VARIANT)-$name
  set device [expr {$::env(KAW_VARIANT) eq "V9990"?"Sunrise GFX9000 VRAM":"VRAM"}]
  set size [expr {$::env(KAW_VARIANT) eq "V9990"?524288:131072}]
- foreach {suffix dev start length} [list map memory $::S(art_map) 1024 vram $device 0 $size] {
-  set f [open $prefix-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block $dev $start $length];close $f
+ foreach {suffix dev start length} [list map layer 0x6A000 1024 vram $device 0 $size] {
+  set f [open $prefix-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [rdb $dev $start $length];close $f
  }
- foreach {suffix name len} {memory fog_memory 1024 seen fog_seen 128 visible fog_visible 128} {
-  set f [open $prefix-$suffix.bin wb];fconfigure $f -translation binary;puts -nonewline $f [debug read_block memory $::S($name) $len];close $f
- }
+ set f [open $prefix-seen.bin wb];fconfigure $f -translation binary;puts -nonewline $f [layer1k 0x72000];close $f;dump_sources $prefix-sources.txt
  set f [open $prefix-meta.txt w];puts $f "0 [w cam_x] [w cam_y] [b placement_mode] [b place_valid]";close $f
  shot $prefix
 }

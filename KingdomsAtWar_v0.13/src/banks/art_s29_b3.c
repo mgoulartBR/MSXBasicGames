@@ -20,13 +20,13 @@ u8 build_unlocked(u8 kind) __banked {
 void building_refresh(u8 id) __banked {
  Building* b=&buildings[id];u8 x,y,n=building_size(b->type);fog_refresh=1;fog_build_dirty=1;
  for(y=b->y;y<b->y+n;++y)for(x=b->x;x<b->x+n;++x) {
-  nav_base_dirty=1;terrain[((u16)y<<5)+x]=b->state?10+id:0;
-  art_map[((u16)y<<5)+x]=art_index(x,y);video_tile(x,y);
+  nav_base_dirty=1;tile_set(x,y,b->state?10+id:0);
+  art_set(x,y,art_index(x,y));video_tile(x,y);
  }
 }
 u8 placement_valid(u8 x,u8 y) __banked {
  u8 dx,dy,i,n=building_size(build_kind);
- if(!build_unlocked(build_kind) || x>32-n || y>32-n || wood<build_wood[build_kind] || gold<build_gold[build_kind])return 0;
+ if(!build_unlocked(build_kind) || x+n>map_w || y+n>map_h || wood<build_wood[build_kind] || gold<build_gold[build_kind])return 0;
  for(i=1;i<BMAX;++i)if(!buildings[i].state)break;
  if(i==BMAX)return 0;
  for(dy=y;dy<y+n;++dy)for(dx=x;dx<x+n;++dx) {
@@ -138,7 +138,7 @@ void production(void) __banked {
    x=b->x;y=b->y;
    if(d<n) {x+=d;y+=n;}else if(d<n*2) {x+=n;y+=d-n;}
    else if(d<n*3) {x+=d-n*2;--y;}else {--x;y+=d-n*3;}
-   if(x<0||x>=32||y<0||y>=32||!free_at(x,y,NONE))continue;
+   if(x<0||x>=map_w||y<0||y>=map_h||!free_at(x,y,NONE))continue;
    for(j=0;j<unit_count;++j)if((units[j].state==PLANNING || units[j].state==MOVING) && units[j].tx==x && units[j].ty==y)break;
    if(j<unit_count)continue;
    for(who=0;who<unit_count;++who)if(!unit_hp[who])break;

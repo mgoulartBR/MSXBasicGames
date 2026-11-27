@@ -31,7 +31,6 @@ u8 worker_task[N],node_x[N],node_y[N],worker_kind[N];
 u8 cargo[N],cargo_kind[N],work_timer[N],work_tries[N];
 u8 mine_phase[N],mine_step[N];
 i16 unit_draw_x,unit_draw_y;
-u8 stock[1024];
 u16 wood,gold,pickups,deposits;
 u16 game_seconds;
 u8 second_phase;
@@ -56,7 +55,7 @@ typedef struct {
     u8 x,y,tx,ty,nx,ny,owner,len,pos,progress,phase,state;
 } Unit;
 Unit units[RN];
-u8 terrain[1024],art_map[1024];
+u8 terrain[1024]; /* RAM copy of the 32x32 navigation window of the map; the map itself (terrain, art, stock, fog memory) is in VRAM */
 
 u8 routes[N][ROUTE_MAX];
 u8 requested[N], retry_wait[N], retry_left[N];
@@ -102,6 +101,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 #include "art07.h"
 #include "screens.h"
 #include "mission.h"
+#include "mapdef.h"
 #include "art08.h"
 #include "text.h"
 #include "text_asset.h"
@@ -199,13 +199,9 @@ u8 building_size(u8 type) {return build_sizes[type];}
 
 /* Visual composition is cached once per cell; camera work remains a lookup. */
 
-u8 art_tile(u8 x,u8 y) {return art_map[((u16)y<<5)+x];}
 /* S,E,N,W. Kept outside Unit so route/debug ABI stays 16 bytes. */
 
-u8 fog_seen[128],fog_visible[128],fog_next[128],fog_memory[1024],fog_refresh;
-u8 fog_static[128],fog_build_dirty,fog_need[128],fog_delta[128];
-u16 fog_sources[N];
-u8 fog_trail[128];u8* fog_dest=fog_next;u16 fog_epoch;
+u8 goal_x[N],goal_y[N],nav_partial[N];u8 pb_x,pb_y,eb_x,eb_y,ai_route_n,ai_rx[128],ai_ry[128],ai_wpi[4],map_custom;u8 fog_refresh,fog_build_dirty;u16 fog_epoch;u8 map_w,map_h,nav_x0,nav_y0;
 
 u8 repair_target[N],repair_timer[N],repair_active,repair_pending,tower_cooldown[BMAX];
 u16 tower_shots,repair_spent,repair_healed,fog_updates;
@@ -216,102 +212,26 @@ u8 shot_time[PS],shot_target[PS],shot_damage[PS],shot_owner[PS];
 const u8 unit_range[]={0,1,2,4,1,1,1},unit_damage[]={0,8,7,5,12,36,4},unit_cooldown[]={0,24,30,36,24,60,30};
 
 
-/* 0 unknown, 1 remembered, 2 visible. Z80: A=x, L=y, result in A (sdcccall(1)). */
-u8 fog_at(u8 x,u8 y) __naked {
- x;y;
- __asm
- cp #32
- jr nc,fog_at_zero
- ld c,a
- ld a,l
- cp #32
- jr nc,fog_at_zero
- add a,a
- add a,a
- ld b,a
- ld a,c
- rrca
- rrca
- rrca
- and #3
- add a,b
- ld e,a
- ld d,#0
- ld a,c
- and #7
- ld c,a
- ld b,#0
- ld hl,#_fog_bit_table
- add hl,bc
- ld c,(hl)
- ld hl,#_fog_visible
- add hl,de
- ld a,(hl)
- and a,c
- jr z,fog_at_notvis
- ld a,#2
- ret
-fog_at_notvis:
- ld hl,#_fog_seen
- add hl,de
- ld a,(hl)
- and a,c
- ret z
- ld a,#1
- ret
-fog_at_zero:
- xor a,a
- ret
- __endasm;
-}
-const u8 fog_bit_table[8]={1,2,4,8,16,32,64,128};
-/* Art of a cell: live while visible, otherwise the player's memory. A=x, L=y. */
-u8 fog_art(u8 x,u8 y) __naked {
- x;y;
- __asm
- ld c,a
- ld h,#0
- add hl,hl
- add hl,hl
- add hl,hl
- add hl,hl
- add hl,hl
- ld b,#0
- add hl,bc
- ex de,hl
- ld a,c
- and #7
- ld c,a
- ld hl,#_fog_bit_table
- add hl,bc
- ld c,(hl)
- push de
- srl d
- rr e
- srl d
- rr e
- srl d
- rr e
- ld hl,#_fog_visible
- add hl,de
- ld a,(hl)
- pop de
- and a,c
- ld hl,#_art_map
- jr nz,fog_art_pick
- ld hl,#_fog_memory
-fog_art_pick:
- add hl,de
- ld a,(hl)
- ret
- __endasm;
+/* 0 unknown, 1 remembered, 2 visible: visible = inside the disc of one of the sight sources (vs_*), remembered = explored. */
+const u8 fog_bit_table[8]={1,2,4,8,16,32,64,128}; /* also used by the navigation asm */
+u8 vs_n,vs_x[20],vs_y[20],vs_r[20];
+u8 fog_at(u8 x,u8 y) {
+ u8 i,dx,dy,r;
+ if(x>=map_w || y>=map_h)return 0;
+ for(i=0;i<vs_n;++i) {
+  dx=x>vs_x[i]?x-vs_x[i]:vs_x[i]-x;r=vs_r[i];if(dx>r)continue;
+  dy=y>vs_y[i]?y-vs_y[i]:vs_y[i]-y;if(dy>r)continue;
+  if(dx+dy<=r+(r>>1))return 2;
+ }
+ return fogx_get(x,y)?1:0;
 }
 #include "video.h"
-u8 tile(u8 x,u8 y) { return terrain[((u16)y<<5)+x]; }
+/* Art of a cell: live while visible, otherwise the player's memory. */
+u8 fog_art(u8 x,u8 y) {return fog_at(x,y)==2?art_tile(x,y):fmem_get(x,y);}
 u8 passable(u8 x,u8 y)
 {
  u8 t;
- if(x>=32 || y>=32) return 0;
+ if(x>=map_w || y>=map_h) return 0;
  t=tile(x,y); return t==0 || t==3;
 }
 u8 combat_alive(u8 i) {return i<RN && unit_hp[i] && (i<unit_count || i>=N);}
@@ -388,7 +308,7 @@ void order_one(u8 id,u8 x,u8 y)
  Unit* u=&units[id];sprites_dirty=3;
  if(WORKER(id) && mine_phase[id]) {mine_phase[id]=3;fog_refresh=1;sprites_dirty=3;}
  if(job_unit==id)job_unit=NONE;
- u->tx=x;u->ty=y;u->len=u->pos=0;u->state=PLANNING;
+ u->tx=x;u->ty=y;goal_x[id]=x;goal_y[id]=y;nav_partial[id]=0;u->len=u->pos=0;u->state=PLANNING;
  requested[id]=1;retry_wait[id]=0;retry_left[id]=8;
 }
 /* Distinct nearby goals, bounded to a four-cell radius. A tile occupied by
@@ -466,7 +386,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
+ map_w=map_h=32;nav_x0=nav_y0=0;lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
  mouse_probe_tick=mouse_connections=mouse_rescan_down=mouse_probe_port=0;mouse_warmup=2;
@@ -478,7 +398,8 @@ void main(void) {
  selection_mask=selection_count=nav_cursor=0;group_orders=replans=0;
  for(mode=0;mode<N;++mode)retry_wait[mode]=retry_left[mode]=0;mode=0;
  game_seconds=second_phase=hud_dirty=0;hud_live=hud_ready=hud_pending=hud_draw=video_enabled=0;hud_char_writes=hud_swaps=hud_erase_count=0;
- mission_load(0);init_world();fog_init(); graphics_slot=Sys_GetPageSlot(1);bios_slot=Sys_GetPageSlot(0);
+ graphics_slot=Sys_GetPageSlot(1);bios_slot=Sys_GetPageSlot(0);
+ video_boot();mission_load(0);init_world();fog_init(); /* the world lives in VRAM: the V9990 is reset first */
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}
@@ -503,9 +424,9 @@ void main(void) {
    /* After a victory or defeat: a short pause on the final scene, then the end screen. */
    if(game_over){if(!end_t0)end_t0=now|1;else if((u16)(now-end_t0)>=90){res=end_screen();end_t0=0;}} else end_t0=0;
    /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
-   if(fog_pending){fog_pending=0;fog_apply();}
+   if(fog_pending){fog_pending=fog_apply();}
    else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}
-   video_stream();camera_update(dt);
+   video_stream();camera_update(dt);video_scroll_update();
    if(sprites_dirty) {video_sprites();sprites_dirty=0;}
    hud();
   }

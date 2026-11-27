@@ -58,7 +58,7 @@ proc box091 {} {
  ck selects_two_swords {[b selection_mask]==12 && [b selection_count]==2}
  camera_until cam_y 288 64
  mp 24 [expr {312-[w cam_y]}];mc 3
- await {[unit 2 x]==1 && [unit 2 y]==19 && [unit 2 state]==3 && [unit 3 state]==3 && ([b fog_visible [expr {(23*32+3)>>3}]]&(1<<((23*32+3)&7)))!=0} 100
+ await {[unit 2 x]==1 && [unit 2 y]==19 && [unit 2 state]==3 && [unit 3 state]==3 && [fog_state 3 23]==2} 100
  camera_until cam_y 304 64
  mp 56 [expr {362-[w cam_y]}];mc 3
  ck both_swords_attack {[b combat_target 2]==8 && [b combat_target 3]==8}

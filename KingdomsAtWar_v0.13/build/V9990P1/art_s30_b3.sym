@@ -34,7 +34,7 @@ Symbol Table
     _drag_begin                                                     ******** GX
     _drag_down                                                      ******** GX
     _drag_tick                                                      ******** GX
-  7 _economy_order                                                  00001234 GR
+  7 _economy_order                                                  00001244 GR
     _edge_hold                                                      ******** GX
     _edge_keys                                                      ******** GX
     _enemy_selected                                                 ******** GX
@@ -344,6 +344,8 @@ Symbol Table
     _left_wy                                                        ******** GX
     _left_x                                                         ******** GX
     _left_y                                                         ******** GX
+    _map_h                                                          ******** GX
+    _map_w                                                          ******** GX
     _military_selected                                              ******** GX
     _mode                                                           ******** GX
     _mouse_active                                                   ******** GX
@@ -356,13 +358,13 @@ Symbol Table
     _order_one                                                      ******** GX
     _passable                                                       ******** GX
     _place_valid                                                    ******** GX
-    _place_x                                                        ******** GX
-    _place_y                                                        ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _place_x                                                        ******** GX
+    _place_y                                                        ******** GX
     _placement_choose                                               ******** GX
     _placement_confirm                                              ******** GX
     _placement_mode                                                 ******** GX
@@ -416,13 +418,13 @@ Symbol Table
     _worker_kind                                                    ******** GX
     _worker_task                                                    ******** GX
     b_building_order                                                ******** GX
-    b_combat_click                                                  ******** GX
-    b_combat_hit_test                                               ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_combat_click                                                  ******** GX
+    b_combat_hit_test                                               ******** GX
     b_combat_stop                                                   ******** GX
     b_drag_begin                                                    ******** GX
     b_drag_tick                                                     ******** GX
@@ -465,7 +467,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG30                                     size     142A   flags    0
+   7 _SEG30                                     size     1464   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

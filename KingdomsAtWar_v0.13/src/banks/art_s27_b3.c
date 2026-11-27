@@ -4,8 +4,12 @@ void init_world(void) __banked
  u8 x,y,i;
  nav_base_dirty=1;unit_count=4;building_count=1;building_selected=placement_mode=builder_working=research_level=0;build_kind=1;edge_hold=edge_keys=mouse_active=0;
  for(i=0;i<BMAX;++i){buildings[i].state=0;buildings[i].training=0;buildings[i].time=0;}
- buildings[0].type=0;buildings[0].state=2;buildings[0].x=BASE_X;buildings[0].y=BASE_Y;buildings[0].worker=NONE;buildings[0].training=0;
- buildings[0].rallyx=6;buildings[0].rallyy=10;
+ pb_x=BASE_X;pb_y=BASE_Y;eb_x=3;eb_y=27;ai_route_n=0;map_w=map_h=32;nav_x0=nav_y0=0;map_custom=mis.map?1:0;
+ for(i=0;i<N;++i)nav_partial[i]=0;
+ if(mis.map)map_load(mis.map); /* campaign map: layers and base positions come from ROM (tools/maps.py) */
+ buildings[0].type=0;buildings[0].state=2;buildings[0].x=pb_x;buildings[0].y=pb_y;buildings[0].worker=NONE;buildings[0].training=0;
+ buildings[0].rallyx=pb_x+4;buildings[0].rallyy=pb_y+4;
+ if(!mis.map) {
  for(y=0;y<32;++y) for(x=0;x<32;++x) {
   u8 t=0;
   if(((((x>>1)*11+(y>>1)*7)%17)<3)) t=1;
@@ -26,42 +30,54 @@ void init_world(void) __banked
    if(a>=2 || b>=2 || c>=2)terrain[((u16)y<<5)+x]=0;
   }
  }
+ }
  for(x=0;x<N;++x) {unit_kind[x]=x<2?0:1;unit_build[x]=NONE;deposit_id[x]=0;mine_phase[x]=mine_step[x]=0;worker_task[x]=cargo[x]=cargo_kind[x]=work_timer[x]=worker_kind[x]=0;work_tries[x]=0;}
  for(i=0;i<unit_count;++i) {
   Unit* u=&units[i];
-  u->x=u->tx=u->nx=i<2?3+i*3:8+(i-2)*2; u->y=u->ty=u->ny=i<2?3:4;
+  u->x=u->tx=u->nx=pb_x+(i<2?1+i*3:6+(i-2)*2); u->y=u->ty=u->ny=pb_y-(i<2?3:2);
   u->px=(u16)u->x*16; u->py=(u16)u->y*16;
   unit_facing[i]=unit_walk_dist[i]=unit_walk_phase[i]=0;unit_frame[i]=1;
   u->owner=0; u->len=u->pos=u->progress=u->phase=u->state=0;
  }
- {u16 cell;for(cell=0;cell<1024;++cell)stock[cell]=terrain[cell]==1?32:cell==233?240:0;}
-
+ if(!mis.map) {u8 x2,y2,row[32];
+  for(y2=0;y2<32;++y2)map_row_put(MAP_T,y2,terrain+((u16)y2<<5));
+  for(y2=0;y2<32;++y2) {for(x2=0;x2<32;++x2) {u16 cell=((u16)y2<<5)+x2;row[x2]=terrain[cell]==1?32:cell==233?240:0;}map_row_put(MAP_STOCK,y2,row);}
+ }
  combat_init();
- {u16 cell;for(cell=0;cell<1024;++cell)art_map[cell]=art_index(cell&31,cell>>5);}
+ if(!mis.map) {u8 x2,y2,row[32];
+  for(y2=0;y2<32;++y2) {for(x2=0;x2<32;++x2)row[x2]=art_index(x2,y2);map_row_put(MAP_ART,y2,row);}
+ } else {u8 x2,y2; /* the layers hold no art for the two keeps: it depends on the buildings */
+  for(y2=0;y2<4;++y2)for(x2=0;x2<4;++x2){art_set(pb_x+x2,pb_y+y2,art_index(pb_x+x2,pb_y+y2));art_set(eb_x+x2,eb_y+y2,art_index(eb_x+x2,eb_y+y2));}
+ }
  wood=gold=pickups=deposits=0;
  for(i=0;i<unit_count;++i) requested[i]=0;
 }
 
+/* terrain of a cell: the RAM window when inside it, else VRAM */
+static u8 tt(u8 x,u8 y) {
+ if(x>=nav_x0 && x<nav_x0+32 && y>=nav_y0 && y<nav_y0+32)return terrain[((u16)(y-nav_y0)<<5)+(x-nav_x0)];
+ return tile(x,y);
+}
 u8 art_index(u8 x,u8 y) __banked {
- u8 t=terrain[((u16)y<<5)+x],v=(x*13+y*7)&7,mask=0;
+ u8 t=tt(x,y),v=(x*13+y*7)&7,mask=0;
  if(t>=10) {
   Building* b=&buildings[t-10];
   return b->state==1?185+(y-b->y)*4+x-b->x:build_base[b->type]+(y-b->y)*building_size(b->type)+x-b->x;
  }
- if(buildings[0].state && x>=BASE_X && x<BASE_X+4 && y>=BASE_Y && y<BASE_Y+4)return build_base[0]+(y-BASE_Y)*4+x-BASE_X;
- if(terrain[(7<<5)+9]==4 && x>=9 && x<11 && y>=7 && y<9)return 25+(y-7)*2+x-9;
+ if(buildings[0].state && x>=buildings[0].x && x<buildings[0].x+4 && y>=buildings[0].y && y<buildings[0].y+4)return build_base[0]+(y-buildings[0].y)*4+x-buildings[0].x;
+ if(t==4)return 25+((y && tt(x,y-1)==4)?2:0)+((x && tt(x-1,y)==4)?1:0);
  if(t==2) {
-  if(x && terrain[((u16)y<<5)+x-1]!=2)return 10;
-  if(x<31 && terrain[((u16)y<<5)+x+1]!=2)return 11;
-  if(y && terrain[((u16)(y-1)<<5)+x]!=2)return 12;
-  if(y<31 && terrain[((u16)(y+1)<<5)+x]!=2)return 13;
+  if(x && tt(x-1,y)!=2)return 10;
+  if(x+1<map_w && tt(x+1,y)!=2)return 11;
+  if(y && tt(x,y-1)!=2)return 12;
+  if(y+1<map_h && tt(x,y+1)!=2)return 13;
   return 2;
  }
  if(t==3)return 3;
- if(x && terrain[((u16)y<<5)+x-1]==1)mask|=1;
+ if(x && tt(x-1,y)==1)mask|=1;
  if(t==1)mask|=2;
- if(x && y<31 && terrain[((u16)(y+1)<<5)+x-1]==1)mask|=4;
- if(y<31 && terrain[((u16)(y+1)<<5)+x]==1)mask|=8;
+ if(x && y+1<map_h && tt(x-1,y+1)==1)mask|=4;
+ if(y+1<map_h && tt(x,y+1)==1)mask|=8;
  if(mask)return 29+((x+y)&1)*15+mask-1;
  return v<4?0:v==4?6:v==5?7:v==6?14:15;
 }
@@ -73,7 +89,7 @@ void camera_update(u16 dt) __banked {
  if(d>8)d=8;
  if(cam_keys&1)x-=d; if(cam_keys&2)x+=d;
  if(cam_keys&4)y-=d; if(cam_keys&8)y+=d;
- if(x<0)x=0; if(x>256)x=256; if(y<0)y=0; if(y>352)y=352;
+ {i16 mx=(i16)map_w*16-256,my=(i16)map_h*16-160;if(x<0)x=0;if(x>mx)x=mx;if(y<0)y=0;if(y>my)y=my;}
  if(x==cam_x && y==cam_y)return;
  if(!video_camera_ready(y))return;
  cam_x=x;cam_y=y;
