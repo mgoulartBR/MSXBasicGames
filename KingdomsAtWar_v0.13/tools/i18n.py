@@ -69,10 +69,14 @@ STRINGS=[
  ('KINGDOM',L('REINO HUMANO','HUMAN KINGDOM','REINO HUMANO','にんげんのおうこく')),
  ('WORKING',L('CONSTRUINDO','WORK IN PROGRESS','CONSTRUYENDO','こうじちゅう')),
  ('AGAIN',L('ENTER PARA JOGAR DE NOVO','PRESS ENTER TO PLAY AGAIN','ENTER PARA JUGAR OTRA VEZ','エンターでもういちど')),
- ('VICTORY_MSG',L('VITÓRIA: INIMIGO DERROTADO','VICTORY: ENEMY KEEP DESTROYED','VICTORIA: ENEMIGO DERROTADO','しょうり: てきのしろをたおした')),
- ('DEFEAT_MSG',L('DERROTA: SUA FORTALEZA CAIU','DEFEAT: YOUR KEEP DESTROYED','DERROTA: TU FORTALEZA CAYÓ','はいぼく: しろがおちた')),
+ ('VICTORY_MSG',L('VITÓRIA: MISSÃO CUMPRIDA','VICTORY: MISSION COMPLETE','VICTORIA: MISIÓN CUMPLIDA','しょうり: ミッションクリア')),
+ ('DEFEAT_MSG',L('DERROTA: MISSÃO FALHOU','DEFEAT: MISSION FAILED','DERROTA: MISIÓN FALLIDA','はいぼく: しっぱい')),
  ('END_VICTORY',L('VITÓRIA','VICTORY','VICTORIA','しょうり')),
  ('END_DEFEAT',L('DERROTA','DEFEAT','DERROTA','はいぼく')),
+ ('END_NEXT',L('ENTER: PRÓXIMA MISSÃO','ENTER: NEXT MISSION','ENTER: SIGUIENTE MISIÓN','エンター: つぎのミッション')),
+ ('END_RETRY',L('ENTER: TENTAR DE NOVO','ENTER: TRY AGAIN','ENTER: REINTENTAR','エンター: もういちど')),
+ ('END_CAMPAIGN',L('FIM DA CAMPANHA','END OF THE CAMPAIGN','FIN DE LA CAMPAÑA','キャンペーンクリア')),
+ ('END_MENU',L('ENTER: VOLTAR AO MENU','ENTER: BACK TO MENU','ENTER: VOLVER AL MENÚ','エンター: メニューへ')),
  ('UPGRADE',L('MELHORAR','UPGRADE','MEJORAR','きょうか')),
  ('ATKARMOR',L('ATQ+2  ARMAD+1','ATK+2  ARMOR+1','ATQ+2  ARMAD+1','こうげき+2 ぼうぎょ+1')),
  ('HP',L('PV','HP','PV','HP')),
@@ -89,6 +93,25 @@ STRINGS=[
  ('ACT_BARRACKS',L(cols((0,'ESPADA'),(9,'LANCEIRO'),(18,'ARQUEIRO')),cols((0,'SWORD'),(9,'SPEAR'),(18,'ARCHER')),
   cols((0,'ESPADA'),(9,'LANCERO'),(18,'ARQUERO')),cols((0,'けんし'),(9,'やりへい'),(18,'ゆみへい')))),
 ]
+def wrap(t,width=30,lines=4):
+    """quebra em linhas de ate `width` celulas (contando marcas dos sons vozeados); palavras inteiras quando ha espacos."""
+    out=[];cur=''
+    for w in (t.split(' ') if ' ' in t else list(t)):
+        sep=' ' if (cur and ' ' in t) else ''
+        if xlen(cur+sep+w)<=width:cur=cur+sep+w
+        else:out.append(cur);cur=w
+    out.append(cur)
+    assert len(out)<=lines,('briefing longo',t,out)
+    return out+['']*(lines-len(out))
+import sys as _sys
+_sys.path.insert(0,str(Path(__file__).resolve().parent))
+import campaign
+MISSION_FIRST=len(STRINGS)
+for _i,_m in enumerate(campaign.MISSIONS,1):
+    STRINGS.append(('M%d_T'%_i,_m['title']))
+    _lines=[wrap(b) for b in _m['brief']]
+    for _k in range(4):STRINGS.append(('M%d_B%d'%(_i,_k+1),tuple(l[_k] for l in _lines)))
+    STRINGS.append(('M%d_OBJ'%_i,_m['goal']))
 # ---- fonte base (5x7 maiuscula, ver art/reference_v68_font.bin)
 b=np.frombuffer(open(r/'art/reference_v68_font.bin','rb').read(),dtype=np.uint8)
 STRIP=np.zeros((16,256),np.uint8);STRIP[:,0::2]=(b>>4).reshape(16,128);STRIP[:,1::2]=(b&15).reshape(16,128)
@@ -177,6 +200,9 @@ def main():
     cfile(51,body);fnt=lz_pack(ext);assert len(fnt)<=8192;cfile(52,fnt)
     h='/* gerado por tools/i18n.py */\n#define TEXT_BANK 51\n#define TXT_COUNT %d\n#define LANGS 4\n'%n+''.join('#define TXT_%s %d\n'%(sid,i) for i,(sid,_) in enumerate(texts))
     (r/'src/text.h').write_text(h)
+    tb=campaign.table()
+    for i in range(len(campaign.MISSIONS)):tb[i*16+11]=MISSION_FIRST+i*6
+    (r/'src/mission_table.h').write_text('/* gerado por tools/i18n.py (campaign.py) */\n#define MISSIONS %d\nstatic const u8 mission_table[]={%s};\n'%(len(campaign.MISSIONS),','.join(map(str,tb))))
     (r/'src/text_asset.h').write_text('/* gerado por tools/i18n.py */\nconst Asset font_ext_asset={52,0xA000};\n')
     out=r/'reference/fonte';out.mkdir(exist_ok=True)
     pal=np.array([(0,0,0),(0x21,0x21,0x21)]+[(0,0,0)]*13+[(0xFF,0xFF,0xDE)],np.uint8)

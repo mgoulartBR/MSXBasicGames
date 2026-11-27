@@ -15,6 +15,8 @@ proc mf_case {} {
  ck language_japanese {[b lang]==3}
  shot menu-main-ja
  tapkey 8 32;tapkey 7 128
+ delay 6;shot menu-briefing
+ tapkey 7 128
  delay 4
  ck game_started {[w loops]>0}
  shot menu-game

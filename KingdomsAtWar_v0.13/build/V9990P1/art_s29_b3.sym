@@ -8,11 +8,11 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        0000191D R
-  7 ___str_1                                                        0000191E R
-  7 ___str_2                                                        00001926 R
-  7 ___str_3                                                        0000192E R
-  7 ___str_4                                                        00001936 R
+  7 ___str_0                                                        00001920 R
+  7 ___str_1                                                        00001921 R
+  7 ___str_2                                                        00001929 R
+  7 ___str_3                                                        00001931 R
+  7 ___str_4                                                        00001939 R
     __divuchar                                                      ******** GX
     __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
@@ -339,6 +339,7 @@ Symbol Table
     _military_selected                                              ******** GX
     _mine_phase                                                     ******** GX
     _mine_step                                                      ******** GX
+    _mis                                                            ******** GX
     _nav_base_dirty                                                 ******** GX
     _order_one                                                      ******** GX
     _place_valid                                                    ******** GX
@@ -357,12 +358,12 @@ Symbol Table
   7 _recruit_allowed                                                00000871 GR
     _recruit_gold                                                   ******** GX
     _recruit_wood                                                   ******** GX
-    _repair_active                                                  ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _repair_active                                                  ******** GX
     _repair_context                                                 ******** GX
     _repair_order                                                   ******** GX
     _repair_target                                                  ******** GX
@@ -417,12 +418,12 @@ Symbol Table
     b_has_building                                              =   0000001D G
     b_hud_actions                                               =   0000001D G
     b_hud_context_text                                          =   0000001D G
-    b_military_selected                                             ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_military_selected                                             ******** GX
     b_placement_choose                                          =   0000001D G
     b_placement_confirm                                         =   0000001D G
     b_placement_toggle                                          =   0000001D G
@@ -455,7 +456,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG29                                     size     193E   flags    0
+   7 _SEG29                                     size     1941   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

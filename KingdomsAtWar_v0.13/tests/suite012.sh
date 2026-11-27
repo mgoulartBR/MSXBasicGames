@@ -10,5 +10,9 @@ KAW_TEST_SCRIPT="$KAW_SUITE_CASE.tcl" python3 tests/run_tests.py "$KAW_SUITE_VAR
 python3 tests/run_mouse.py "$KAW_SUITE_VARIANT" box011.tcl 1
 if [[ "$KAW_SUITE_VARIANT" == V9990P1 ]]; then
  for KAW_P1_CASE in occl_p1 flash_p1 flashseq_p1 mine_crop_p1 enemy_kinds defend011 enemy_tower endgame enemy_visual enemy_site human_site enemy_extras; do KAW_TEST_SCRIPT="$KAW_P1_CASE.tcl" python3 tests/run_tests.py V9990P1; done
+ KAW_MENU=1 KAW_TEST_SCRIPT=menu_flow.tcl python3 tests/run_tests.py V9990P1
+ KAW_MENU=1 KAW_OBJ=1 KAW_TEST_SCRIPT=campaign_flow.tcl python3 tests/run_tests.py V9990P1
+ python3 tests/run_mouse.py V9990P1 edge_bottom.tcl 1
+ KAW_TEST_SCRIPT=stale_heal.tcl python3 tests/run_tests.py V9990P1
  python3 tests/verify_fog_p1.py
 fi

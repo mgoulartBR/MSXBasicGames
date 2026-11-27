@@ -176,7 +176,7 @@ void hud_actions(void) __banked {
  else if(repair_context() || combat_context() || structure_context()) {}
  else if(building_selected)hud_context_text(bname(buildings[building_selected-1].type));
  else if(selected!=NONE)hud_context_text(rname(unit_kind[selected]));
- else hud_context_text(tr(TXT_KINGDOM));
+ else hud_context_text(tr(mis.text+5)); /* the mission objective */
  if(game_over)line=tr(TXT_AGAIN);
  else if(military_selected())line=tr(TXT_ACT_MIL);
  else if(WORKER(selected))line=tr(TXT_ACT_BUILD);

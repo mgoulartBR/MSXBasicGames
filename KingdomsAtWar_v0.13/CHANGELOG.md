@@ -263,3 +263,10 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - `end_screen` (banco 50): 1,5 s depois de `game_over`, a imagem do lado jogado (`side`: 0 humanos, 1 Insepultos) cobre a camada A, os sprites do mundo somem, e aparecem o titulo (VITORIA/DERROTA) e a dica de reinicio nos 4 idiomas; Enter reinicia (volta ao titulo). `end_show`/`end_hide` em video.h; `src/screens.h` (ids SCR_*) separado de `art08.h`.
 - `asset_read` agora restaura a janela de banco que o chamador usava (antes forcava o segmento 3 e quebrava chamadas a partir de codigo em banco, como o menu e as telas de fim); `main()` inicia `g_Bank3Segment=3`.
 - Correcao de bug latente: `emit_block` (blocos de pose dos sprites) com 0 colunas ou linhas repetia 256 vezes e escrevia fora do buffer de atributos (p1_shared), corrompendo RAM vizinha (`unit_hp`, `game_over`...). Agora retorna se o bloco e vazio ou se faltar espaco (limite 460 + 36 bytes).
+
+## v0.14 - estrutura de campanha
+- Missoes (`tools/campaign.py` -> `src/mission_table.h`, banco 53): recursos iniciais, primeira onda, intervalo, reforcos leves, IA, objetivo e limite de tempo; 5 missoes dos humanos com briefing e objetivo nos 4 idiomas (6 textos por missao).
+- Objetivos (`end_check`): DESTROY (fortaleza inimiga), SURVIVE (segundos), KILLS (`enemy_kills`), GOLD, BUILD (tipo + quantidade); a queda da fortaleza humana e sempre derrota; limite de tempo opcional.
+- Reinicio suave: `game_reset(m)` + `video_game_reset()` preparam a missao sem recarregar os assets (antes o reinicio era um reset de hardware de ~30 s). `briefing(m)`: pergaminho com titulo e 4 linhas no HUD. `end_screen` devolve proxima missao / tentar de novo / menu; apos a ultima missao vem a imagem de fim da campanha. `hud_context`/`hud_action_cache` sao zerados a cada missao.
+- Em jogo o HUD mostra o objetivo da missao no lugar de "HUMAN KINGDOM". Testes: `campaign_flow.tcl` (KAW_MENU=1 KAW_OBJ=1), os antigos poem o objetivo DESTROY (KAW_OBJ) e pulam briefing/menu (menu_auto).
+- Codigo fixo em 9F2E (margem de 210 bytes): `reset_caches()` compartilhado, `game_restart` removido.

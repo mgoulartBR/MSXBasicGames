@@ -47,7 +47,7 @@ static void die(u8 i) {
  }
  units[i].progress=units[i].len=units[i].pos=0;units[i].state=IDLE;
  if(enemy_selected==i)enemy_selected=NONE;
- ++combat_kills;hud_dirty=3;sprites_dirty=3;
+ ++combat_kills;if(i>=N)++enemy_kills;hud_dirty=3;sprites_dirty=3;
 }
 void combat_impact(u8 t,u8 damage,u8 owner) __banked {
  if(t==NONE)return;
@@ -81,7 +81,7 @@ static void strike(u8 i,u8 t) {
 void combat_init(void) __banked {
  u8 i,x,y;
  for(i=0;i<PS;++i)shot_time[i]=0;
- combat_shots=shot_active=0;combat_active=0;combat_hits=combat_kills=combat_buildings=0;enemy_selected=NONE;command_last=0;
+ combat_shots=shot_active=0;combat_active=0;combat_hits=combat_kills=combat_buildings=enemy_kills=0;enemy_selected=NONE;command_last=0;
  for(i=0;i<RN;++i) {shot_time[i]=0;unit_hp[i]=i<unit_count?unit_max_hp[unit_kind[i]]:0;combat_target[i]=NONE;attack_cooldown[i]=attack_flash[i]=hurt_flash[i]=0;}
  for(i=0;i<N;++i){stance[i]=0;auto_hx[i]=255;}
  for(i=0;i<BMAX;++i) {building_owner[i]=0;building_hp[i]=i?0:240;}

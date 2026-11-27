@@ -28,14 +28,13 @@ proc eg_case {} {
  wr building_hp 0 0;wr buildings 1 0
  await {[b game_over]==2} 5
  set sec [w game_seconds]
- keymatrixdown 7 128;delay 0.5;delay 0.5;keymatrixup 7 128
- # a carga inicial leva ~45 s emulados
- await {[b video_enabled]==0} 20
- # depois do reinicio o jogo volta ao titulo: o teste pula o menu como no primeiro inicio
- delay 6;debug write memory $::S(menu_auto) 1
- await {[b video_enabled]==1 && [w sim_ticks]>100} 100
+ delay 4 ;# a tela de fim aparece apos a pausa de 1,5 s
+ keymatrixdown 7 128;delay 0.5;keymatrixup 7 128
+ # derrota: Enter tenta a missao de novo (reinicio suave, sem recarregar os assets)
+ await {[b game_over]==0 && [w game_seconds]<5} 20
+ delay 3
  ck restarted {[b game_over]==0 && [w game_seconds]<20}
- ck new_game_running {[w sim_ticks]>100 && [b building_hp 0]==240 && [b building_hp 1]==180 && [bd 0 state]==2 && [bd 1 state]==2 && [b game_over]==0}
+ ck new_game_running {[w sim_ticks]>0 && [b building_hp 0]==240 && [b building_hp 1]==180 && [bd 0 state]==2 && [bd 1 state]==2 && [b game_over]==0}
  shot endgame-restarted
  puts stderr "RESULT failures=$::failures";exit
 }

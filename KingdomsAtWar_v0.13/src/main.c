@@ -101,6 +101,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 #include "banked_calls.h"
 #include "art07.h"
 #include "screens.h"
+#include "mission.h"
 #include "art08.h"
 #include "text.h"
 #include "text_asset.h"
@@ -111,14 +112,12 @@ u8 graphics_slot,bios_slot,asset_bank;
 /* One matrix scan per video frame; every key test below is a constant-mask lookup. */
 u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
 extern u8 game_over;
-void game_restart(void); /* video.h: soft reset after a victory or defeat */
 #define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
 void poll_input(void) {
  u8 keys=0,commands=0;u16 tick;
  if(!video_enabled)return;
  tick=video_clock();if(tick==raw_tick)return;raw_tick=tick;
  {u8 r;for(r=0;r<9;++r)kbrow[r]=Keyboard_Read(r);}
- if(game_over && KP(KEY_RET))game_restart();
  {
   u8 rescan=KP(KEY_M);
   if(rescan && !mouse_rescan_down) {
@@ -184,7 +183,7 @@ get_bank::
 
 
 u8 drag_down,drag_moved,drag_add,drag_prior;
-u8 lang,menu_auto,side;u16 end_t0; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
+u8 lang,menu_auto,side,mission_n,mission_total;u16 end_t0;Mission mis;u16 enemy_kills; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
 u16 drag_anchor_x,drag_anchor_y,drag_l,drag_t,drag_r,drag_b;
 
 u8 unit_hp[RN],combat_target[RN],attack_cooldown[RN],attack_flash[RN],hurt_flash[RN],stance[N];
@@ -467,7 +466,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- lang=0;menu_auto=0;side=0;end_t0=0;left_seen=0;drag_down=drag_moved=0;
+ lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
  mouse_probe_tick=mouse_connections=mouse_rescan_down=mouse_probe_port=0;mouse_warmup=2;
@@ -479,29 +478,38 @@ void main(void) {
  selection_mask=selection_count=nav_cursor=0;group_orders=replans=0;
  for(mode=0;mode<N;++mode)retry_wait[mode]=retry_left[mode]=0;mode=0;
  game_seconds=second_phase=hud_dirty=0;hud_live=hud_ready=hud_pending=hud_draw=video_enabled=0;hud_char_writes=hud_swaps=hud_erase_count=0;
- init_world();fog_init(); graphics_slot=Sys_GetPageSlot(1);bios_slot=Sys_GetPageSlot(0);
+ mission_load(0);init_world();fog_init(); graphics_slot=Sys_GetPageSlot(1);bios_slot=Sys_GetPageSlot(0);
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}
  video_menu_enable();menu_run();
- screen_clear();video_hud_band();hud_erase_count=0;mouse_x=mouse_y=56;
- video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
+ {u8 first=1,res;
  for(;;) {
-  u16 now,dt;
-  /* With the retrace interrupt doing the page flip, only idle (nothing to draw or flip) waits. */
-  video_hud_swap();
-  if(!sprites_dirty)video_wait();
-  ++loops;input();now=video_clock();dt=now-last_time;last_time=now;
-  if(dt>60)dt=60;
-  accumulator+=dt;
-  while(accumulator>=2) {simulate();accumulator-=2;}
-  /* After a victory or defeat: a short pause on the final scene, then the end screen. */
-  if(game_over){if(!end_t0)end_t0=now|1;else if((u16)(now-end_t0)>=90){end_screen();end_t0=0;}} else end_t0=0;
-  /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
-  if(fog_pending){fog_pending=0;fog_apply();}
-  else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}
-  video_stream();camera_update(dt);
-  if(sprites_dirty) {video_sprites();sprites_dirty=0;}
-  hud();
- }
+  briefing(mission_n);
+  if(!first || !menu_auto){game_reset(mission_n);video_game_reset();} /* tests (menu_auto) keep the boot state */
+  first=0;
+  screen_clear();video_hud_band();hud_erase_count=0;mouse_x=mouse_y=56;
+  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
+  res=0;
+  while(!res) {
+   u16 now,dt;
+   /* With the retrace interrupt doing the page flip, only idle (nothing to draw or flip) waits. */
+   video_hud_swap();
+   if(!sprites_dirty)video_wait();
+   ++loops;input();now=video_clock();dt=now-last_time;last_time=now;
+   if(dt>60)dt=60;
+   accumulator+=dt;
+   while(accumulator>=2) {simulate();accumulator-=2;}
+   /* After a victory or defeat: a short pause on the final scene, then the end screen. */
+   if(game_over){if(!end_t0)end_t0=now|1;else if((u16)(now-end_t0)>=90){res=end_screen();end_t0=0;}} else end_t0=0;
+   /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
+   if(fog_pending){fog_pending=0;fog_apply();}
+   else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}
+   video_stream();camera_update(dt);
+   if(sprites_dirty) {video_sprites();sprites_dirty=0;}
+   hud();
+  }
+  if(res==1)++mission_n;
+  else if(res==3){mission_n=0;end_show(SCR_TITLE);menu_run();}
+ }}
 }

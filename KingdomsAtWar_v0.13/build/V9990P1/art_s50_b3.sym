@@ -287,22 +287,23 @@ Symbol Table
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
     _game_over                                                      ******** GX
-    _game_restart                                                   ******** GX
     _hud_dirty                                                      ******** GX
     _hud_init                                                       ******** GX
     _kbrow                                                          ******** GX
     _lang                                                           ******** GX
     _menu_auto                                                      ******** GX
   7 _menu_run                                                       000000E3 GR
+    _mission_n                                                      ******** GX
+    _mission_total                                                  ******** GX
     _mouse_x                                                        ******** GX
     _mouse_y                                                        ******** GX
     _poll_input                                                     ******** GX
-    _raw_dx                                                         ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _raw_dx                                                         ******** GX
     _raw_dy                                                         ******** GX
     _raw_latched                                                    ******** GX
     _side                                                           ******** GX
@@ -316,7 +317,6 @@ Symbol Table
     b_hud_init                                                      ******** GX
     b_menu_run                                                  =   00000032 G
 
-
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
@@ -329,7 +329,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG50                                     size      4BB   flags    0
+   7 _SEG50                                     size      5AE   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

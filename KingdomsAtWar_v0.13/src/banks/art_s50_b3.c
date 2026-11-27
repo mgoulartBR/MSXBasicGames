@@ -56,23 +56,41 @@ void menu_run(void) __banked {
   if((edge&8) && state==2){state=1;sel=1;dirty=1;}
  }
 }
-/* Victory / defeat screen: the picture of the side being played (side 0 humans, 1 the Unburied), a headline and the restart
- * hint. Enter restarts the game (back to the title); if the game state is cleared meanwhile (tests) the screen is removed. */
-void end_screen(void) __banked {
- u8 code=game_over,id,prev=1;
+/* Victory / defeat screen: the picture of the side being played (side 0 humans, 1 the Unburied), a headline and the next step.
+ * Returns 1 next mission, 2 retry, 3 back to the title (after the last mission the end-of-campaign picture comes first);
+ * 0 if the game state was cleared meanwhile (tests): the screen is removed and play continues. */
+u8 end_screen(void) __banked {
+ u8 code=game_over,id,prev=1,last=(u8)(mission_n+1>=mission_total),hint;
  u16 t;
  id=(code==1)?(side?SCR_VICTORY_UNDEAD:SCR_VICTORY_HUMAN):(side?SCR_DEFEAT_UNDEAD:SCR_DEFEAT_HUMAN);
+ hint=(code==1)?(last?TXT_END_MENU:TXT_END_NEXT):TXT_END_RETRY;
  end_show(id);
  video_text(128-(u8)(slen(tr(code==1?TXT_END_VICTORY:TXT_END_DEFEAT))*4),176,tr(code==1?TXT_END_VICTORY:TXT_END_DEFEAT));
- video_text(128-(u8)(slen(tr(TXT_AGAIN))*4),192,tr(TXT_AGAIN));
+ video_text(128-(u8)(slen(tr(hint))*4),192,tr(hint));
  for(;;) {
   u8 k;
   t=video_clock();while(video_clock()==t){}
   poll_input();
   raw_dx=raw_dy=0;raw_latched=0;
   k=KP(KEY_RET)?1:0;
-  if(k && !prev)game_restart();
+  if(KP(KEY_ESC))return 3;
+  if(k && !prev) {
+   if(code==2)return 2;
+   if(!last)return 1;
+   /* the campaign is complete: the closing picture, then the title */
+   end_show(side?SCR_END_UNDEAD:SCR_END_HUMAN);
+   video_text(128-(u8)(slen(tr(TXT_END_CAMPAIGN))*4),176,tr(TXT_END_CAMPAIGN));
+   video_text(128-(u8)(slen(tr(TXT_END_MENU))*4),192,tr(TXT_END_MENU));
+   prev=1;
+   for(;;) {
+    t=video_clock();while(video_clock()==t){}
+    poll_input();raw_dx=raw_dy=0;raw_latched=0;
+    k=KP(KEY_RET)?1:0;
+    if(k && !prev)return 3;
+    prev=k;
+   }
+  }
   prev=k;
-  if(game_over!=code) {end_hide();video_hud_band();hud_init();hud_dirty=3;return;}
+  if(game_over!=code) {end_hide();video_hud_band();hud_init();hud_dirty=3;return 0;}
  }
 }

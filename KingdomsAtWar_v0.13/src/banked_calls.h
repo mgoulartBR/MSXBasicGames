@@ -112,4 +112,5 @@ void video_known_tile(u8 x,u8 y);
 
 void fog_stamp(u8 x,u8 y,u8 r) __banked;
 void menu_run(void) __banked;
-void end_screen(void) __banked;
+u8 end_screen(void) __banked;
+void mission_load(u8 m) __banked;void game_reset(u8 m) __banked;void briefing(u8 m) __banked;

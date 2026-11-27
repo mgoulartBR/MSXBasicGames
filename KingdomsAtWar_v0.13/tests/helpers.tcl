@@ -25,6 +25,8 @@ if {![info exists ::env(KAW_DEF)]} {after time 9 {debug write memory $::S(auto_d
 if {![info exists ::env(KAW_MENU)]} {after time 9 {debug write memory $::S(menu_auto) 1}}
 # KAW_LANG=<0..3>: idioma do jogo (PT EN ES JA) quando o menu e pulado.
 if {[info exists ::env(KAW_LANG)]} {after time 9 {debug write memory $::S(lang) $::env(KAW_LANG)}}
+# Os testes antigos assumem o objetivo classico (derrubar a fortaleza inimiga, OBJ_DESTROY=0): a missao 1 da campanha e outra.
+if {![info exists ::env(KAW_OBJ)]} {after time 9 {debug write memory [expr {$::S(mis)+7}] 0}}
 proc b {name {off 0}} {return [debug read memory [expr {$::S($name)+$off}]]}
 proc w {name} {return [expr {[b $name]+256*[b $name 1]}]}
 proc ck {label expression} {

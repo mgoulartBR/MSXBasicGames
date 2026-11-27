@@ -6,9 +6,7 @@
 static const u8 ord_type[8]={2,3,1,6,5,7,1,6};
 static const u8 ord_x[8]={7,0,0,8,7,0,0,8},ord_y[8]={24,19,24,19,28,15,28,15};
 /* Balance knobs (see CHANGELOG): first wave, gap between launches, training times, gold income, wave table. */
-#define AI_EXTRAS 1 /* 1: two light reinforcements (actors 10 and 11) join the waves; 0: only the two heavy fighters (cheaper fights) */
-#define AI_FIRST_WAVE 150
-#define AI_WAVE_GAP 40
+/* The mission (mis) sets the first wave, the wave gap and whether the two light reinforcements (actors 10 and 11) join. */
 #define AI_TRAIN_LIGHT 15
 #define AI_TRAIN_HEAVY 25
 static const u8 wave_kind[12]={2,3, 4,1, 4,3, 4,4, 5,4, 4,4};
@@ -20,7 +18,7 @@ static const u8 face_of[4]={1,0,3,2},muster_x[4]={3,8,5,6};
 static u8 tg_x,tg_y,tg_n;
 void ai_init(void) __banked {
  u8 i;
- ai_enabled=1;ai_wood=60;ai_gold=40;ai_launch=AI_FIRST_WAVE;ai_step=ai_wave=0;ai_site=NONE;ai_left=0;
+ ai_enabled=mis.ai_on;ai_wood=60;ai_gold=40;ai_launch=mis.first_wave;ai_step=ai_wave=0;ai_site=NONE;ai_left=0;
  for(i=0;i<4;++i)ai_state[i]=ai_timer[i]=ai_stuck[i]=ai_dir[i]=ai_kind[i]=0;
  ai_state[2]=ai_state[3]=2; /* the reinforcements start dead, waiting for a barracks */
  /* Trees at the edge of the enemy base (x=0 and x=10, y=15..19) are cleared so that the 4x4 sites fit. */
@@ -78,7 +76,7 @@ void ai_second(void) __banked {
   if(ai_state[s]==2) {
    if(s<2)k=ai_wave?wave_kind[(ai_wave>6?5:ai_wave-1)*2+s]:wave_kind[s];
    else {
-    if(!AI_EXTRAS || ai_state[0]==2 || ai_state[1]==2)continue; /* the heavy fighters are paid first */
+    if(!mis.extras || ai_state[0]==2 || ai_state[1]==2)continue; /* the heavy fighters are paid first */
     k=extra_kind[(ai_wave>5?5:ai_wave)*2+s-2];
    }
    while(k>1 && !ai_has(need_of(k)))k=k==5?4:k==4?2:k==3?1:1;
@@ -93,15 +91,26 @@ void ai_second(void) __banked {
  }
  if(!ai_state[0] && !ai_state[1] && unit_hp[8] && unit_hp[9] && game_seconds>=ai_launch) {
   ai_state[0]=ai_state[1]=1;if(!ai_state[2])ai_state[2]=1;if(!ai_state[3])ai_state[3]=1;
-  ++ai_wave;ai_launch=game_seconds+AI_WAVE_GAP;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;
+  ++ai_wave;ai_launch=game_seconds+mis.wave_gap;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;
  }
 }
 /* Once per second: the game ends when a keep falls (defeat wins a tie). The simulation then stops (simulate). */
+/* Mission objectives (tools/campaign.py): the keep falling is always a defeat; the objective decides the victory. */
+static u8 built_count(u8 type) {u8 i,n=0;for(i=0;i<building_count;++i)if(!building_owner[i] && buildings[i].state==2 && buildings[i].type==type)++n;return n;}
 void end_check(void) __banked {
  u8 i;
  if(game_over || !end_enabled)return;
  if(!buildings[0].state || !building_hp[0])game_over=2;
- else if(!buildings[1].state || !building_hp[1])game_over=1;
+ else {
+  switch(mis.obj) {
+   case OBJ_DESTROY:if(!buildings[1].state || !building_hp[1])game_over=1;break;
+   case OBJ_SURVIVE:if(game_seconds>=mis.obj_param)game_over=1;break;
+   case OBJ_KILLS:if(enemy_kills>=mis.obj_param)game_over=1;break;
+   case OBJ_GOLD:if(gold>=mis.obj_param)game_over=1;break;
+   case OBJ_BUILD:if(built_count((u8)mis.obj_param)>=(u8)(mis.obj_param>>8))game_over=1;break;
+  }
+  if(!game_over && mis.limit && mis.obj!=OBJ_SURVIVE && game_seconds>=(u16)mis.limit*60)game_over=2;
+ }
  if(game_over) {for(i=0;i<RN;++i)attack_flash[i]=hurt_flash[i]=0;combat_active=0;hud_dirty=3;sprites_dirty=3;}
 }
 static u8 bdist(u8 ux,u8 uy,u8 x,u8 y,u8 n) {

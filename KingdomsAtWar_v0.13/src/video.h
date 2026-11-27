@@ -367,13 +367,6 @@ void video_irq_install(void) {
 }
 /* After the game ends, Enter restarts everything like a power-on: silence the V9990 interrupt (the BIOS knows nothing
  * about it) and jump to the BIOS reset vector; the cartridge boots again. */
-void game_restart(void) {
- __asm di __endasm;
- V9_SetInterrupt(V9_INT_NONE);io_int=7;
- __asm
-  jp 0
- __endasm;
-}
 void video_cursor(void) {}
 /* Z80: write the n x n sprite attributes (Y, pattern, X, info) of one actor block. */
 static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;static u16 pal_o;
@@ -1351,10 +1344,7 @@ void video_init(void) {
  /* sprite palette group 1 belongs to the enemy kingdom (its poses use their own 15 colours) */
  for(i=0;i<16;++i)V9_SetPaletteEntry(16+i,enemy_palette+i*3);
  cache_tick=frame_uploads=rendered_frames=0;
- for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;disp_crop[i]=pend_crop[i]=0;actor_crop[i]=0;act_blk[i]=0;bar_sig[i]=65535;}
- for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
- units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
- for(i=0;i<OCC_N;++i){occ_key[i]=0xFFFF;occ_stamp[i]=0;occ_pend[i]=0;}
+ reset_caches();
  p1_ready=0;rw_n=rc_n=rw_dirty=rw_lock=0;V9_FillVRAM(P1_SGT,0,32768); for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
  sused=0;ord_n=0;
  /* clear both name tables and the HUD pattern table head */
@@ -1479,6 +1469,26 @@ void end_hide(void) {
  screen_clear();
  __asm di __endasm;rc_n=rw_n=0;rw_lock=0;rw_dirty=0;__asm ei __endasm;
  sprites_dirty=3;
+}
+/* Pose, bar and occluder caches back to empty (boot and every new mission). */
+static void reset_caches(void) {
+ u8 i;
+ for(i=0;i<RN;++i){disp_key[i]=pend_key[i]=NONE;disp_crop[i]=pend_crop[i]=0;actor_crop[i]=0;act_blk[i]=0;bar_sig[i]=65535;}
+ for(i=0;i<BMAX;++i)bv_state[i]=0;bv_epoch=fog_epoch;
+ units_prep_reset();draw_opt=0;bl_ok=0;for(i=0;i<BMAX;++i)bw_hp[i]=bw_w[i]=bw_mx[i]=0;
+ for(i=0;i<OCC_N;++i){occ_key[i]=0xFFFF;occ_stamp[i]=0;occ_pend[i]=0;}
+}
+/* New mission without reloading the assets: sprite/pose caches, overlay, both name tables and the HUD band restart. */
+void video_game_reset(void) {
+ u8 i,x,y;
+ reset_caches();
+ screen_clear();
+ __asm di __endasm;rc_n=rw_n=0;rw_lock=0;rw_dirty=0;p1_ready=0;__asm ei __endasm;
+ sused=0;ord_n=0;rf_cx=rf_cy=0;
+ for(i=0;i<125;++i)V9_Poke(SPAT+(u16)i*4+3,0x10);
+ V9_FillVRAM(PNT_B,0,8192);
+ for(y=0;y<32;++y)for(x=0;x<32;++x)p1_cell(x,y);
+ hud_erase_count=0;sprites_dirty=3;
 }
 void video_hud_band(void) {
  u8 i;
