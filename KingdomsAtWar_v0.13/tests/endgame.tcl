@@ -18,7 +18,7 @@ proc eg_case {} {
  wr game_over 0 0;wr building_hp 0 0;wr buildings 1 0
  await {[b game_over]!=0} 5
  ck defeat_wins_tie {[b game_over]==2}
- delay 1;shot endgame-defeat
+ delay 4;shot endgame-defeat
  # sem fim: com end_enabled=0 nada acontece
  wr game_over 0 0;wr end_enabled 0 0;delay 3
  ck disabled_does_nothing {[b game_over]==0}

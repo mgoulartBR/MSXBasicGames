@@ -258,3 +258,8 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - Todos os textos do jogo passam por `tr()` (tools/i18n.py): nomes de predios e unidades, grupos (plural), rotulos do HUD (madeira, ouro, tempo, vagas), linhas de botoes com colunas fixas (as colunas definem os cliques), custos, mensagens de vitoria/derrota/reinicio, reparo, PV. `bname()`/`rname()` substituem `build_names`/`recruit_names`.
 - PT, EN, ES e JA (kana; marcas ゛ ゜ em celula propria). Teste `lang_hud.tcl` com `KAW_LANG=0..3` (capturas hud-<idioma>-*).
 - Rotulos do HUD limitados a 6 letras (o valor comeca na coluna x=64): ES usa HORA/LIBRE, PT usa LENHA/TEMPO/VAGAS.
+
+## v0.14 - telas de vitoria e derrota
+- `end_screen` (banco 50): 1,5 s depois de `game_over`, a imagem do lado jogado (`side`: 0 humanos, 1 Insepultos) cobre a camada A, os sprites do mundo somem, e aparecem o titulo (VITORIA/DERROTA) e a dica de reinicio nos 4 idiomas; Enter reinicia (volta ao titulo). `end_show`/`end_hide` em video.h; `src/screens.h` (ids SCR_*) separado de `art08.h`.
+- `asset_read` agora restaura a janela de banco que o chamador usava (antes forcava o segmento 3 e quebrava chamadas a partir de codigo em banco, como o menu e as telas de fim); `main()` inicia `g_Bank3Segment=3`.
+- Correcao de bug latente: `emit_block` (blocos de pose dos sprites) com 0 colunas ou linhas repetia 256 vezes e escrevia fora do buffer de atributos (p1_shared), corrompendo RAM vizinha (`unit_hp`, `game_over`...). Agora retorna se o bloco e vazio ou se faltar espaco (limite 460 + 36 bytes).

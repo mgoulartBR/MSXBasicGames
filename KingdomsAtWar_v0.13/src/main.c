@@ -100,6 +100,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 
 #include "banked_calls.h"
 #include "art07.h"
+#include "screens.h"
 #include "art08.h"
 #include "text.h"
 #include "text_asset.h"
@@ -183,7 +184,7 @@ get_bank::
 
 
 u8 drag_down,drag_moved,drag_add,drag_prior;
-u8 lang,menu_auto; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
+u8 lang,menu_auto,side;u16 end_t0; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
 u16 drag_anchor_x,drag_anchor_y,drag_l,drag_t,drag_r,drag_b;
 
 u8 unit_hp[RN],combat_target[RN],attack_cooldown[RN],attack_flash[RN],hurt_flash[RN],stance[N];
@@ -464,8 +465,9 @@ void main(void) {
   ld a,#0
   ld (0xF3DB),a
  __endasm;
+ g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- lang=0;menu_auto=0;left_seen=0;drag_down=drag_moved=0;
+ lang=0;menu_auto=0;side=0;end_t0=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
  mouse_probe_tick=mouse_connections=mouse_rescan_down=mouse_probe_port=0;mouse_warmup=2;
@@ -493,6 +495,8 @@ void main(void) {
   if(dt>60)dt=60;
   accumulator+=dt;
   while(accumulator>=2) {simulate();accumulator-=2;}
+  /* After a victory or defeat: a short pause on the final scene, then the end screen. */
+  if(game_over){if(!end_t0)end_t0=now|1;else if((u16)(now-end_t0)>=90){end_screen();end_t0=0;}} else end_t0=0;
   /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
   if(fog_pending){fog_pending=0;fog_apply();}
   else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}

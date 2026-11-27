@@ -2,7 +2,7 @@
 """Telas de 256x160 (camada A: patterns 0..639 em identidade com a tabela de nomes) para bancos de ROM.
 Le reference/telas/<nome>_idx.npy (192x256, indices 0..15; so as 160 primeiras linhas entram), corta em 4 blocos de 40 linhas,
 comprime cada bloco (LZ do jogo) e empacota em bancos a partir do segmento 32 (maximo 8192 B por banco).
-Grava src/banks/art_s<N>_b3.c e src/art08.h (Asset screen_chunks[8*4], ids SCR_*)."""
+Grava src/banks/art_s<N>_b3.c e src/art08.h (Asset screen_chunks[8*4]) e src/screens.h (ids SCR_*)."""
 import re
 from pathlib import Path
 import numpy as np
@@ -21,7 +21,8 @@ for n in NAMES:
 for i,b in enumerate(banks):
     body=bytes(b)
     (r/'src/banks'/f'art_s{FIRST+i}_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_%d[] = {\n'%(FIRST+i)+'\n'.join(','.join(map(str,body[j:j+32]))+',' for j in range(0,len(body),32))+'\n};\n')
-h='/* gerado por tools/integrate_screens.py */\n'+''.join('#define SCR_%s %d\n'%(n,i) for i,n in enumerate(IDS))
+(r/'src/screens.h').write_text('/* gerado por tools/integrate_screens.py */\n'+''.join('#define SCR_%s %d\n'%(n,i) for i,n in enumerate(IDS)))
+h='/* gerado por tools/integrate_screens.py */\n'
 h+='const Asset screen_chunks[]={'+','.join('{%d,0x%X}'%t for t in refs)+'};\n'
 (r/'src/art08.h').write_text(h)
 print('bancos',FIRST,'..',FIRST+len(banks)-1,'bytes',[len(b) for b in banks])

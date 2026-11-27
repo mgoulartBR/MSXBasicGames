@@ -1,6 +1,6 @@
 /* gerado por tools/i18n.py */
 #define TEXT_BANK 51
-#define TXT_COUNT 48
+#define TXT_COUNT 50
 #define LANGS 4
 #define TXT_PRESS 0
 #define TXT_NEW_GAME 1
@@ -40,13 +40,15 @@
 #define TXT_AGAIN 35
 #define TXT_VICTORY_MSG 36
 #define TXT_DEFEAT_MSG 37
-#define TXT_UPGRADE 38
-#define TXT_ATKARMOR 39
-#define TXT_HP 40
-#define TXT_L_WOOD 41
-#define TXT_L_GOLD 42
-#define TXT_L_TIME 43
-#define TXT_L_FREE 44
-#define TXT_ACT_BUILD 45
-#define TXT_ACT_MIL 46
-#define TXT_ACT_BARRACKS 47
+#define TXT_END_VICTORY 38
+#define TXT_END_DEFEAT 39
+#define TXT_UPGRADE 40
+#define TXT_ATKARMOR 41
+#define TXT_HP 42
+#define TXT_L_WOOD 43
+#define TXT_L_GOLD 44
+#define TXT_L_TIME 45
+#define TXT_L_FREE 46
+#define TXT_ACT_BUILD 47
+#define TXT_ACT_MIL 48
+#define TXT_ACT_BARRACKS 49

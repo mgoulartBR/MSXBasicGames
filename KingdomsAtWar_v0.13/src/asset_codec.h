@@ -112,7 +112,9 @@ lz_done:
  ret
  __endasm;
 }
+extern u8 g_Bank3Segment;
 void asset_read(u8* dst,u8 count) {
+ u8 old_bank=g_Bank3Segment; /* callers may run from a banked segment (menu, end screens): restore the window they were using */
  poll_input();
  /* The decoder and raster hook both reside in fixed banks below A000h.
   * Keep raster interrupts alive while bank 3 holds read-only asset data. */
@@ -121,5 +123,5 @@ void asset_read(u8* dst,u8 count) {
   * Forward byte copies preserve overlap and the 256-byte ring wrap. */
  lz_dst=(u16)dst;lz_cnt=count;lz_decode();
 
- __asm di __endasm;SET_BANK_SEGMENT(3,3);__asm ei __endasm;poll_input();
+ __asm di __endasm;SET_BANK_SEGMENT(3,old_bank);__asm ei __endasm;poll_input();
 }

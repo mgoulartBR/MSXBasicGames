@@ -159,7 +159,7 @@ void video_stream(void);
 void video_tile(u8 x,u8 y);
 void video_init(void);
 void video_enable(void);void video_menu_enable(void);void screen_show(u8 id);void screen_clear(void);void video_hud_band(void);
-extern u8 lang,menu_auto;const c8* tr(u8 id);void menu_run(void) __banked;
+extern u8 lang,menu_auto,side;void game_restart(void);void end_show(u8 id);void end_hide(void);void video_hud_band(void);void end_screen(void) __banked;const c8* tr(u8 id);void menu_run(void) __banked;
 u16 video_clock(void);
 void video_wait(void);
 void video_char(u8 x,u16 y,u8 c);

@@ -379,6 +379,17 @@ void video_cursor(void) {}
 static u16 e_o;static i16 e_x,e_y,e_bx,e_by;static u8 e_cell,e_n,e_rows,e_bc,e_r,e_c;static u8 bb_off;static u16 pal_o;
 static void emit_block(void) __naked {
  __asm
+ ld a,(_e_n) ; an empty block (0 columns or rows) would loop 256 times and overflow the sprite buffer
+ or a,a
+ ret z
+ ld a,(_e_rows)
+ or a,a
+ ret z
+ ld hl,(_e_o)
+ ld de,#_p1_shared+460 ; room for a 3x3 block (36 bytes) below the 496 byte limit, else skip the block (no RAM overflow)
+ or a,a
+ sbc hl,de
+ ret nc
  ld hl,(_e_o)
  ld a,(_e_by)
  dec a
@@ -1453,6 +1464,22 @@ V9_FillVRAM(0x00000UL,0,30720);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
 void video_menu_enable(void) {video_irq_install();video_enabled=1;}
 /* Game start: layer A returns to a transparent overlay, the HUD frame and labels are drawn. */
 void screen_clear(void) {V9_FillVRAM(0x00000UL,0,20480);}
+/* End screens: the picture replaces the layer A overlay, the world sprites are switched off, the HUD band is cleared. The
+ * LZ window shares RAM with the sprite attributes (p1_shared), so they are rebuilt afterwards (sprites_dirty). */
+void end_show(u8 id) {
+ u8 k;
+ __asm di __endasm;rw_lock=1;rw_dirty=0;__asm ei __endasm;
+ screen_show(id);
+ for(k=1;k<125;++k){sattr[(u16)k*4]=0;sattr[(u16)k*4+1]=0;sattr[(u16)k*4+2]=0;sattr[(u16)k*4+3]=0x10;}
+ __asm di __endasm;p1_n=125;p1_ready=1;__asm ei __endasm;
+ sused=124;
+ video_fill(0,168,256,40,1);
+}
+void end_hide(void) {
+ screen_clear();
+ __asm di __endasm;rc_n=rw_n=0;rw_lock=0;rw_dirty=0;__asm ei __endasm;
+ sprites_dirty=3;
+}
 void video_hud_band(void) {
  u8 i;
  for(i=0;i<2;++i) {hud_draw=i;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);video_text(8,168,tr(TXT_L_WOOD));video_text(136,168,tr(TXT_L_GOLD));video_text(8,184,tr(TXT_L_TIME));video_text(136,184,tr(TXT_L_FREE));}

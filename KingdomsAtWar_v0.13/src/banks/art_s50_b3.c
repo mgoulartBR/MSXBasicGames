@@ -1,6 +1,7 @@
 #include "../shared.h"
 /* Title and main menu (first piece of the game shell). All texts come from tr() (tools/i18n.py). */
 #include "../text.h"
+#include "../screens.h"
 #define ITEM_Y 176
 static u8 slen(const c8* s) {u8 n=0;while(s[n])++n;return n;}
 static void band_clear(void) {video_fill(0,168,256,40,1);}
@@ -53,5 +54,25 @@ void menu_run(void) __banked {
    } else {lang=sel;state=1;sel=1;dirty=1;}
   }
   if((edge&8) && state==2){state=1;sel=1;dirty=1;}
+ }
+}
+/* Victory / defeat screen: the picture of the side being played (side 0 humans, 1 the Unburied), a headline and the restart
+ * hint. Enter restarts the game (back to the title); if the game state is cleared meanwhile (tests) the screen is removed. */
+void end_screen(void) __banked {
+ u8 code=game_over,id,prev=1;
+ u16 t;
+ id=(code==1)?(side?SCR_VICTORY_UNDEAD:SCR_VICTORY_HUMAN):(side?SCR_DEFEAT_UNDEAD:SCR_DEFEAT_HUMAN);
+ end_show(id);
+ video_text(128-(u8)(slen(tr(code==1?TXT_END_VICTORY:TXT_END_DEFEAT))*4),176,tr(code==1?TXT_END_VICTORY:TXT_END_DEFEAT));
+ video_text(128-(u8)(slen(tr(TXT_AGAIN))*4),192,tr(TXT_AGAIN));
+ for(;;) {
+  u8 k;
+  t=video_clock();while(video_clock()==t){}
+  poll_input();
+  raw_dx=raw_dy=0;raw_latched=0;
+  k=KP(KEY_RET)?1:0;
+  if(k && !prev)game_restart();
+  prev=k;
+  if(game_over!=code) {end_hide();video_hud_band();hud_init();hud_dirty=3;return;}
  }
 }
