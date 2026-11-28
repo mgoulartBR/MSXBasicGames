@@ -399,7 +399,7 @@ void main(void) {
  for(mode=0;mode<N;++mode)retry_wait[mode]=retry_left[mode]=0;mode=0;
  game_seconds=second_phase=hud_dirty=0;hud_live=hud_ready=hud_pending=hud_draw=video_enabled=0;hud_char_writes=hud_swaps=hud_erase_count=0;
  graphics_slot=Sys_GetPageSlot(1);bios_slot=Sys_GetPageSlot(0);
- video_boot();mission_load(0);init_world();fog_init(); /* the world lives in VRAM: the V9990 is reset first */
+ video_boot();mission_load(0);mis.map=0;init_world();fog_init(); /* boot world = built-in 32x32 (kept only for the tests; the campaign always loads big maps) */ /* the world lives in VRAM: the V9990 is reset first */
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}

@@ -281,3 +281,8 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - ROM de 1 MiB (`ROMSize=1024`). `video_init` e auxiliares de boot foram para o banco 54 (liberou ~2,9 KB de codigo fixo): codigo fixo 97E1, RAM ate E382.
 - Testes novos: `bigmap` (64x64: camera, rolagem, caminho longo, fog, mina, arvore), `bigmap_ai` (onda 64x64 chega a base em 18 s), `bigmap128` (128x128: onda de 196 celulas chega em 54 s; 30 ticks/s). Tempo de carga de missao ~4,75 s com mensagem de carregamento.
 - Nao testado em V9990 real: leituras de VRAM dos acessores, fog v2, janela de desenho.
+
+## v0.15b - campanha de 8 missoes, todas em mapas grandes
+- 8 missoes dos humanos (`tools/campaign.py`): 1 construir quartel (64x64), 2 sobreviver 6 min (64), 3 derrotar 12 (64), 4 juntar 500 de ouro (64), 5 destruir a fortaleza (128), 6 sobreviver 10 min (128), 7 derrotar 25 (128), 8 o Rei Insepulto (128). Titulo, briefing e meta nos 4 idiomas. O mapa embutido 32x32 so sobra como mundo de boot dos testes (`mis.map=0` no boot); a campanha sempre carrega mapa grande.
+- `tools/maps.py`: 8 mapas (quatro 64x64 e quatro 128x128), bancos 56..62. A rota da onda inimiga agora desvia das areas onde a IA constroi (mesmos deslocamentos de `ord_dx/ord_dy`): antes, nos mapas em que a rota saia pela area de obras, a onda ficava presa diante da fortaleza (mapas 3 e 8).
+- Teste `allmaps.tcl`: percorre as 8 missoes (tamanho, bases, IA, onda chegando a base humana); suite012 completa sem falhas (box011 repete ate 3 vezes: teste de corrida do arrasto rapido do mouse).

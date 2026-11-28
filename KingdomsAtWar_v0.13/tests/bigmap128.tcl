@@ -8,12 +8,12 @@ proc dist8 {} {return [expr {abs([unit 8 x]-[b pb_x])+abs([unit 8 y]-[b pb_y])}]
 proc ba_case {} {
  delay 38
  tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
- for {set m 0} {$m<3} {incr m} {
+ for {set m 0} {$m<4} {incr m} {
   quick_win;await {[b game_over]==1} 15
   delay 4;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  }
  debug write memory [expr {$::S(mis)+8}] 104;debug write memory [expr {$::S(mis)+9}] 1
- ck map128 {[b map_w]==128 && [b map_h]==128 && [b mission_n]==3}
+ ck map128 {[b map_w]==128 && [b map_h]==128 && [b mission_n]==4}
  puts stderr "INFO base=[b pb_x],[b pb_y] enemy=[b eb_x],[b eb_y] route=[b ai_route_n] cam=[w cam_x],[w cam_y] fps_ticks=[w sim_ticks]"
  ck ai_on {[b ai_enabled]==1 && [b ai_route_n]>0}
  ck camera_at_base {[w cam_y]>=([b pb_y]-8)*16-16 && [w cam_x]<=([b pb_x]*16)}

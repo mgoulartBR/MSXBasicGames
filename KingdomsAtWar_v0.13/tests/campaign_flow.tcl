@@ -9,7 +9,7 @@ proc cf_case {} {
  delay 38
  tapkey 7 128;tapkey 7 128;delay 6;shot camp-brief1
  tapkey 7 128;wait_game
- ck mission1_started {[b mission_n]==0 && [w wood]==60 && [w gold]==40 && [b game_over]==0}
+ ck mission1_started {[b mission_n]==0 && [b map_w]==64 && [w wood]==60 && [w gold]==40 && [b game_over]==0}
  ck mission1_objective_build {[b mis 7]==4}
  quick_win;await {[b game_over]==1} 15
  delay 4;shot camp-victory1
@@ -19,7 +19,7 @@ proc cf_case {} {
  ck mission2_started {[b mission_n]==1 && [w wood]==40 && [w gold]==30 && [b game_over]==0 && [w game_seconds]<10 && [b mis 7]==1}
  shot camp-game2
  # ultima missao: vitoria leva ao fim da campanha e ao titulo
- debug write memory $::S(mission_n) 4;quick_win;await {[b game_over]==1} 15
+ debug write memory $::S(mission_n) 7;quick_win;await {[b game_over]==1} 15
  delay 4;tapkey 7 128;delay 5;shot camp-end
  tapkey 7 128;delay 3;shot camp-back-to-title
  ck back_to_start {[b mission_n]==0}

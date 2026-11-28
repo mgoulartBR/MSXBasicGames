@@ -15,7 +15,7 @@ Decisões do autor (24/11/2026): mapper no máximo, sem teto de ROM; mapa de 64�
 ## Ordem de entrega
 1. Base: estados, título, menu, seleção de idioma, tabelas de texto (4 idiomas) e fontes. *(rolagem na borda inferior já corrigida)*
 2. Campanha: formato de missão, objetivos, briefings, telas de vitória/derrota/fim, storyline (humanos × Insepultos).
-3. Mapas grandes: janela deslizante da camada B, mapa e fog na VRAM — **feito (v0.15)**: mapas 64×64 e 128×128 na campanha (missões 2–5); falta ponte/vau com arte própria (os mapas já usam código de terreno vau).
+3. Mapas grandes: janela deslizante da camada B, mapa e fog na VRAM — **feito (v0.15)**: campanha de 8 missões, todas em mapas 64×64 (1–4) e 128×128 (5–8); falta ponte/vau com arte própria (os mapas já usam código de terreno vau).
 4. Áudio FM.
 5. Interface e polimento; balanceamento; testes no V9990 real a cada marco.
 

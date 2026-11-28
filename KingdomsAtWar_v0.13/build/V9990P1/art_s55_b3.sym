@@ -286,11 +286,11 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _map_chunks                                                     00000486 R
+  7 _map_chunks                                                     00000672 R
     _map_h                                                          ******** GX
   7 _map_hdr                                                        0000021A R
   7 _map_load                                                       00000000 GR
-  7 _map_route                                                      0000024A R
+  7 _map_route                                                      0000027A R
     _map_w                                                          ******** GX
     _map_window_load                                                ******** GX
     _nav_x0                                                         ******** GX
@@ -317,7 +317,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG55                                     size      55E   flags    0
+   7 _SEG55                                     size      822   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

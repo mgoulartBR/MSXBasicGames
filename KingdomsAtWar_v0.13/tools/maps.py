@@ -12,10 +12,14 @@ src=(r/'tools/prepare09.py').read_text();ns={};exec(re.search(r'def lz\(a\):.*?r
 def pack(a):return bytes((a[:,::2]*16+a[:,1::2]).flatten()) if False else None
 FIRST_BANK=56;ROWS=16
 # nome, largura, altura, semente, base humana, base inimiga, rio, lagos, florestas, minas extras
-MAPS=[
+MAPS=[   # indice do mapa = numero da missao (1..8)
+ dict(w=64,h=64,seed=6,pb=(8,50),eb=(50,14),river=False,lakes=4,forests=12,mines=2),
  dict(w=64,h=64,seed=2,pb=(5,50),eb=(46,18),river=True,lakes=5,forests=14,mines=3),
  dict(w=64,h=64,seed=3,pb=(52,48),eb=(8,18),river=False,lakes=7,forests=16,mines=3),
+ dict(w=64,h=64,seed=7,pb=(28,50),eb=(30,16),river=True,lakes=6,forests=15,mines=3),
  dict(w=128,h=128,seed=4,pb=(6,112),eb=(108,22),river=True,lakes=14,forests=40,mines=8),
+ dict(w=128,h=128,seed=8,pb=(60,112),eb=(66,20),river=True,lakes=16,forests=42,mines=8),
+ dict(w=128,h=128,seed=9,pb=(12,16),eb=(112,104),river=True,lakes=16,forests=44,mines=9),
  dict(w=128,h=128,seed=5,pb=(112,108),eb=(10,26),river=True,lakes=18,forests=46,mines=9),
 ]
 def generate(c):
@@ -78,6 +82,10 @@ def generate(c):
         for xx in range(ebx,ebx+4):T[yy][xx]=11
     # conectividade: da frente do castelo ao portao da base inimiga
     start=(pbx+1,pby+5);goal=(ebx+1,eby-5)
+    sites=set()
+    for ddx,ddy in zip((4,-3,-3,5,4,-3,-3,5),(-3,-8,-3,-8,1,-12,1,-12)):
+        for yy in range(eby+ddy,eby+ddy+4):
+            for xx in range(ebx+ddx,ebx+ddx+4):sites.add((xx,yy))
     def bfs(a,b):
         prev={a:None};q=deque([a])
         while q:
@@ -85,7 +93,7 @@ def generate(c):
             if p==b:break
             for dx,dy in ((1,0),(0,1),(-1,0),(0,-1)):
                 n=(p[0]+dx,p[1]+dy)
-                if 0<=n[0]<w and 0<=n[1]<h and n not in prev and T[n[1]][n[0]] in (0,3):prev[n]=p;q.append(n)
+                if 0<=n[0]<w and 0<=n[1]<h and n not in prev and n not in sites and T[n[1]][n[0]] in (0,3):prev[n]=p;q.append(n)
         return prev
     prev=bfs(start,goal)
     if goal not in prev:                              # abre um corredor em L
@@ -100,8 +108,10 @@ def generate(c):
     path=[];p=goal
     while p:path.append(p);p=prev[p]
     path=path[::-1]     # do castelo humano ao portao inimigo
-    route=path[::-1][::2]  # do portao inimigo para o castelo, um ponto a cada 2 celulas
+    step=2 if len(path)<=250 else 3
+    route=path[::-1][::step]  # do portao inimigo para o castelo, um ponto a cada 2-3 celulas
     route=[p for p in route][1:]+[start]
+    assert len(route)<=127,len(route)
     return T,route
 def art_layer(T,w,h):
     A=[[0]*w for _ in range(h)]

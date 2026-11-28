@@ -1,6 +1,6 @@
 /* gerado por tools/i18n.py */
 #define TEXT_BANK 51
-#define TXT_COUNT 85
+#define TXT_COUNT 103
 #define LANGS 4
 #define TXT_PRESS 0
 #define TXT_NEW_GAME 1
@@ -87,3 +87,21 @@
 #define TXT_M5_B3 82
 #define TXT_M5_B4 83
 #define TXT_M5_OBJ 84
+#define TXT_M6_T 85
+#define TXT_M6_B1 86
+#define TXT_M6_B2 87
+#define TXT_M6_B3 88
+#define TXT_M6_B4 89
+#define TXT_M6_OBJ 90
+#define TXT_M7_T 91
+#define TXT_M7_B1 92
+#define TXT_M7_B2 93
+#define TXT_M7_B3 94
+#define TXT_M7_B4 95
+#define TXT_M7_OBJ 96
+#define TXT_M8_T 97
+#define TXT_M8_B1 98
+#define TXT_M8_B2 99
+#define TXT_M8_B3 100
+#define TXT_M8_B4 101
+#define TXT_M8_OBJ 102
