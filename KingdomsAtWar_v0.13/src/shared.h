@@ -78,7 +78,7 @@ typedef struct {u8 type,state,x,y,worker;u16 remaining;u8 training;u16 time;u8 r
 extern Building buildings[BMAX];
 extern u8 building_count,building_selected,build_kind,placement_mode,place_worker,place_x,place_y,place_valid;
 extern u8 builder_working,research_level,hud_context[2][30],hud_action_cache[2][30];
-extern u8 hud_markers[2][2],hud_progress[2][2];
+extern u8 hud_markers[2][2],hud_progress[2][2],hud_act_mode[2],hud_icon_cache[2][9],hover_slot;void video_icon(u8 x,u8 y,u8 k);void video_cells(u16 x,u16 y,u16 w,u16 h,u8 c);
 extern const u8 site_tiles[];
 extern const u8 build_wood[];
 extern const u8 build_gold[];

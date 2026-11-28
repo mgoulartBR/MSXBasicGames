@@ -87,7 +87,7 @@ typedef struct {u8 type,state,x,y,worker;u16 remaining;u8 training;u16 time;u8 r
 Building buildings[BMAX];
 u8 building_count,building_selected,build_kind,placement_mode,place_worker,place_x,place_y,place_valid;
 u8 builder_working,research_level,hud_context[2][30],hud_action_cache[2][30];
-u8 hud_markers[2][2],hud_progress[2][2];
+u8 hud_markers[2][2],hud_progress[2][2],hud_act_mode[2],hud_icon_cache[2][9],hover_slot;
 const u8 site_tiles[]={1,4,5,8};
 const u8 build_wood[]={0,16,24,24,24,32,24,40};
 const u8 build_gold[]={0,0,16,8,16,24,8,24};
@@ -105,6 +105,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 #include "art08.h"
 #include "text.h"
 #include "text_asset.h"
+#include "icons_asset.h"
 #include "rom_mapper.h"
 u8 graphics_slot,bios_slot,asset_bank;
 #include "asset_codec.h"
@@ -388,7 +389,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- ms.on=sx.on=0;music_cur=255;fm_found=fm_ok=music_detect();ui_note_t=0;
+ ms.on=sx.on=0;music_cur=255;fm_found=fm_ok=music_detect();ui_note_t=0;hover_slot=255;
  map_w=map_h=32;nav_x0=nav_y0=0;lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;

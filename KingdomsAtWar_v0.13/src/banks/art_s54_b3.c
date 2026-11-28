@@ -8,7 +8,7 @@
 __sfr __at(0x60) io_vram;
 __sfr __at(0x63) io_reg;
 __sfr __at(0x64) io_sel;
-extern const Asset static_assets[],font_asset,poses[],enemy_tiles_asset,enemy_tiles_asset2,font_ext_asset;
+extern const Asset static_assets[],font_asset,poses[],enemy_tiles_asset,enemy_tiles_asset2,font_ext_asset,icons_asset;
 extern const u8 kind_sizes[],pose_count[],pose_base[],palette9[],enemy_palette[],cursor[],ring_pixels[];
 static void io_vset(u32 a) {io_sel=0;io_reg=(u8)a;io_reg=(u8)(a>>8);io_reg=(u8)(a>>16);}
 /* ---- pattern memory ---- */
@@ -178,6 +178,9 @@ V9_FillVRAM(0x00000UL,0,30720);V9_FillVRAM(P1_PGT_B_BASE,0,1024);
  /* extended glyphs (accents, kana): codes 96..255 = patterns 736..895, lines 184..223 */
  asset_begin(&font_ext_asset);
  for(i=0;i<40;++i) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(184+i)*128,tile_buffer,128);}
+ /* command icons: a 256x16 strip, VRAM lines 224..239 (layer A patterns 896..959) */
+ asset_begin(&icons_asset);
+ for(i=0;i<16;++i) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(224+i)*128,tile_buffer,128);}
  screen_show(SCR_TITLE);
  {u8 r;for(r=0;r<2;++r){hud_draw=r;video_fill(0,160,256,52,1);video_fill(0,160,256,2,10);}hud_draw=0;}
  V9_SetDisplayEnable(TRUE);V9_SetPort(V9_P15,0x10);

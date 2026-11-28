@@ -24,7 +24,7 @@ void game_reset(u8 m) __banked {
  selection_mask=selection_count=nav_cursor=0;group_orders=replans=0;
  for(i=0;i<N;++i)retry_wait[i]=retry_left[i]=0;
  game_seconds=second_phase=hud_dirty=0;hud_live=hud_ready=hud_pending=hud_draw=0;
- {u8 p;for(p=0;p<2;++p)for(i=0;i<30;++i)hud_context[p][i]=hud_action_cache[p][i]=0;} /* the band is redrawn from scratch */
+ {u8 p;for(p=0;p<2;++p) {for(i=0;i<30;++i)hud_context[p][i]=hud_action_cache[p][i]=0;hud_act_mode[p]=255;for(i=0;i<9;++i)hud_icon_cache[p][i]=0;}} /* the band is redrawn from scratch */
  init_world();fog_init();
  wood=mis.wood;gold=mis.gold;
  {u16 mx=(u16)map_w*16-256,my=(u16)map_h*16-160,cx=(u16)(pb_x>2?pb_x-2:0)*16,cy=(u16)(pb_y>6?pb_y-6:0)*16;cam_x=cx>mx?mx:cx;cam_y=cy>my?my:cy;} /* the camera starts at the castle */

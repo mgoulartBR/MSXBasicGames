@@ -15,8 +15,8 @@ proc ui_case {} {
  set py [expr {110+38}]
  ck castle_on_minimap {([layerA $py 107]>>4)==15}
  # clique no minimapa: centro (231,134) => celula (30,32)
- debug write memory $::S(mouse_x) 231;debug write memory [expr {$::S(mouse_x)+1}] 0
- debug write memory $::S(mouse_y) 134;debug write memory [expr {$::S(mouse_y)+1}] 0
+ debug write memory $::S(mouse_x) 231
+ debug write memory $::S(mouse_y) 134
  delay 0.3
  keymatrixdown 5 128;delay 0.3;keymatrixup 5 128;delay 0.6
  puts stderr "INFO cam after click [w cam_x],[w cam_y]"

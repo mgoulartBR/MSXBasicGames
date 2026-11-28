@@ -26,8 +26,8 @@ proc kingdom011 {} {
  move_unit 0 6 5;move_unit 1 7 6;move_unit 3 11 5
  set h [build 1 0 0]
  set bar [build 2 7 0];set saw [build 3 8 10];set forge [build 4 0 10];set stable [build 5 4 15];set siege [build 7 7 26]
- choose_building $bar;point 112 204;tap 5 128;await {[b unit_count]==5} 25;move_unit 4 8 9
- choose_building $bar;point 192 204;tap 5 128;await {[b unit_count]==6} 25;move_unit 5 10 5
+ choose_building $bar;point 36 204;tap 5 128;await {[b unit_count]==5} 25;move_unit 4 8 9
+ choose_building $bar;point 60 204;tap 5 128;await {[b unit_count]==6} 25;move_unit 5 10 5
  choose_building $stable;tap 4 128;await {[b unit_count]==7} 25;move_unit 6 9 18
  choose_building $siege;tap 4 128;await {[b unit_count]==8} 25
  ck all_classes_recruited {[b unit_kind 4]==2 && [b unit_kind 5]==3 && [b unit_kind 6]==4 && [b unit_kind 7]==5 && [conserved]}

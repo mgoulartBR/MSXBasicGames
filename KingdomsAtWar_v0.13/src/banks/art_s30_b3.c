@@ -8,6 +8,7 @@ void input(void) __banked {
  poll_input();keys=raw_down|raw_latched;last_keys&=~raw_latched;raw_latched=0;
  x+=raw_dx;y+=raw_dy;raw_dx=raw_dy=0;
  cam_keys=0;ui_keys();
+ {u8 hs=(mouse_y>=192 && mouse_y<208 && mouse_x>=8 && (mouse_x-8)%24<16)?(u8)((mouse_x-8)/24):255;if(hs!=hover_slot) {hover_slot=hs;hud_dirty=3;}}
  /* Keyboard cursor: one 3-pixel step per video frame, not per loop pass (the loop is free-running now). */
  {u16 ct=video_clock();if(ct!=cursor_tick) {cursor_tick=ct;
  if(KP(KEY_J)) x-=3;
@@ -43,11 +44,12 @@ void input(void) __banked {
  }
  if((keys&2) && !(last_keys&2)) {
   left_prepare();
-  if(left_y>=200 && left_y<208) {
-   if(military_selected())combat_stop(left_x>=80);
-   else if(WORKER(selected) && left_x>=8 && left_x<232)placement_choose(1+(left_x-8)/32);
-   else if(building_selected && buildings[building_selected-1].type==2)train_kind(1+(left_x<80?0:left_x<152?1:2));
-   else train_start();
+  if(left_y>=192 && left_y<208) { /* command icons: slot pitch 24 px starting at x=8 */
+   u8 slot=left_x>=8?(u8)((left_x-8)/24):255;
+   if(military_selected()) {if(slot<2)combat_stop(slot);}
+   else if(WORKER(selected)) {if(slot<7)placement_choose(1+slot);}
+   else if(building_selected && buildings[building_selected-1].type==2) {if(slot<3)train_kind(1+slot);}
+   else if(slot==0)train_start();
   }
   else if(mm_hit(left_x,left_y))mm_click(left_x,left_y,0);
   else if(left_y<160) {if(placement_mode){place_x=left_wx>>4;place_y=left_wy>>4;placement_confirm();}else drag_begin();}
@@ -55,7 +57,7 @@ void input(void) __banked {
  if((keys&4) && !(last_keys&4)) {
   if(drag_down){drag_down=0;sprites_dirty=3;}
   if(placement_mode) {placement_mode=0;hud_dirty=3;sprites_dirty=3;}
-  else if(mouse_y>=200 && mouse_y<208)production_cancel();
+  else if(mouse_y>=192 && mouse_y<208)production_cancel();
   else if(mm_hit((u8)mouse_x,(u8)mouse_y))mm_click((u8)mouse_x,(u8)mouse_y,1);
   else if(mouse_y<160) {
    u8 tx=(cam_x+mouse_x)>>4,ty=(cam_y+mouse_y)>>4;
@@ -106,6 +108,7 @@ u8 hud_render(void) __banked {
 }
 void hud_init(void) __banked {
  u8 p,f,i;
+ for(p=0;p<2;++p) {hud_act_mode[p]=255;for(i=0;i<9;++i)hud_icon_cache[p][i]=0;}
  for(p=0;p<2;++p)for(f=0;f<2;++f) {hud_markers[p][f]=0;hud_progress[p][f]=255;}
  for(p=0;p<2;++p)for(f=0;f<4;++f) {hud_values[p][f]=65535;for(i=0;i<8;++i)hud_cache[p][f][i]=0;}
  for(p=0;p<2;++p) {hud_draw=p;hud_render();}

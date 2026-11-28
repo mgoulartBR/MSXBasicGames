@@ -2,7 +2,7 @@ source helpers011.tcl
 proc worker_case {} {
  delay 45;materials;fund 96 48
  ck harvested_start {[w wood]>=64 && [w gold]>=32 && [conserved]}
- choose 0;camera_until cam_y 0 32;point 120 204;tap 5 128;world_point 0 10
+ choose 0;camera_until cam_y 0 32;point 84 204;tap 5 128;world_point 0 10
  ck forge_locked_without_quartel {[b build_kind]==4 && ![b place_valid] && [conserved]};tap 7 4
  set house [build 1 0 0]
  choose_building 0;tap 4 128
@@ -23,7 +23,7 @@ proc worker_case {} {
  await {[b mine_phase 4]==0 && [unit 4 state]==3} 40
  ck miner_can_exit_on_order {[b worker_task 4]==0 && [conserved]}
  move_unit 3 11 5
- choose 4;camera_until cam_y 0 32;point 56 204;tap 5 128;world_point 8 0;tap 5 128
+ choose 4;camera_until cam_y 0 32;point 36 204;tap 5 128;world_point 8 0;tap 5 128
  set id [b unit_build 4]
  await {([b builder_working]&16)!=0 && [bd $id remaining]<180} 40
  ck recruited_worker_builds {[bd $id state]==1 && [bd $id remaining]<180 && [conserved]}

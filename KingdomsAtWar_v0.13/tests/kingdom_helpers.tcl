@@ -26,7 +26,7 @@ proc move_unit {id x y} {
  await {[unit $id x]==$x && [unit $id y]==$y && [unit $id state]==3} 40
 }
 proc build {kind x y} {
- choose 0;camera_until cam_y 0 32;point [expr {24+($kind-1)*32}] 204;tap 5 128
+ choose 0;camera_until cam_y 0 32;point [expr {16+($kind-1)*24}] 204;tap 5 128
  world_point $x $y
  if {![b place_valid]} {error "invalid build kind=$kind x=$x y=$y cursor=[b mouse_x],[b mouse_y]"}
  set id 1;while {$id<[b building_count] && [bd $id state]!=0} {incr id};tap 5 128

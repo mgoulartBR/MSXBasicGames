@@ -17,7 +17,7 @@ Decisões do autor (24/11/2026): mapper no máximo, sem teto de ROM; mapa de 64�
 2. Campanha: formato de missão, objetivos, briefings, telas de vitória/derrota/fim, storyline (humanos × Insepultos).
 3. Mapas grandes: janela deslizante da camada B, mapa e fog na VRAM — **feito (v0.15)**: campanha de 8 missões, todas em mapas 64×64 (1–4) e 128×128 (5–8); falta ponte/vau com arte própria (os mapas já usam código de terreno vau).
 4. Áudio FM — **feito (v0.16)**: 6 músicas e 12 efeitos em OPLL; falta ajuste de timbre/volume por ouvido, opção de silenciar no menu e músicas por missão.
-5. Interface e polimento — **minimapa, grupos de controle, atalhos e silenciar feitos (v0.17)**; faltam HUD novo/ícones de comandos, tooltips e menu de opções; balanceamento; testes no V9990 real a cada marco.
+5. Interface e polimento — **minimapa, grupos de controle, atalhos e silenciar feitos (v0.17)**; **HUD com ícones de comandos e dicas de custo feitos (v0.18)**; falta menu de opções (silenciar, idioma); balanceamento; testes no V9990 real a cada marco.
 
 ## Pendências de arte (do autor)
 Tela de título, telas de vitória/derrota/fim, retratos para briefing, tiles de ponte/vau, novos cenários de mapa; ícones do HUD novo.

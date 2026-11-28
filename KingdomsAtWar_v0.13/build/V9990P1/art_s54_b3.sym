@@ -315,6 +315,7 @@ Symbol Table
     _g_YSAVE                                                    =   0000FB00 G
     _hud_draw                                                       ******** GX
     _hud_name                                                       ******** GX
+    _icons_asset                                                    ******** GX
     _io_reg                                                     =   00000063 
     _io_sel                                                     =   00000064 
     _io_vram                                                    =   00000060 
@@ -323,7 +324,7 @@ Symbol Table
   7 _load_progress                                                  00000337 R
   7 _music_detect                                                   000003BE GR
   7 _opll_ident                                                     00000356 R
-  7 _opll_ident_id_10000_1689                                       000003BA R
+  7 _opll_ident_id_10000_1691                                       000003BA R
     _ord_n                                                          ******** GX
     _p1_ready                                                       ******** GX
     _palette9                                                       ******** GX
@@ -352,17 +353,17 @@ Symbol Table
   7 _video_boot                                                     00000413 GR
     _video_fill                                                     ******** GX
   7 _video_init                                                     000004A7 GR
-  7 _video_init_vc_30000_1776                                       00000E33 R
-  7 _video_init_vcell_30000_1776                                    00000E36 R
+  7 _video_init_vc_30000_1780                                       00000E74 R
+  7 _video_init_vcell_30000_1780                                    00000E77 R
     _video_scroll_update                                            ******** GX
   1 _vr_hi                                                          00000002 R
   1 _vr_lo                                                          00000000 R
-  1 _vr_rows                                                        00000005 R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  1 _vr_rows                                                        00000005 R
   1 _vr_s                                                           00000004 R
   1 _vr_src                                                         00000006 R
   1 _vr_w                                                           00000003 R
@@ -384,7 +385,6 @@ Symbol Table
   7 vr_loop                                                         0000000F R
   7 vr_nc                                                           00000048 R
 
-
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
@@ -397,7 +397,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG54                                     size      E39   flags    0
+   7 _SEG54                                     size      E7A   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

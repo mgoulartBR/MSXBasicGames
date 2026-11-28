@@ -300,3 +300,11 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - **Grupos de controle** 1..5 (Ctrl+n guarda, n chama; chamar o grupo ja selecionado em ate 0,5 s centraliza a camera), **B** = camera no castelo, **P** = som liga/desliga (aviso na linha de contexto do HUD, 4 idiomas; "SEM MSX-MUSIC" se nao houver FM).
 - Teclas lidas direto da matriz (`kbrow`), `input()` chama `ui_keys()`.
 - Teste `ui_polish.tcl` (KAW_MACHINE=C-BIOS_MSX2+): desenho do minimapa, castelo no minimapa, clique move a camera, Tab, B, grupos, P. RAM +2,5 KB (buffers do minimapa), codigo fixo 9C32.
+
+## v0.18 - HUD com icones de comandos
+- A linha de comandos de texto (STOP/HOLD, CAS/QUA/..., ESPADA/LANCEIRO/...) virou uma faixa de **icones 16x16** (passo de 24 px, linhas 192..207 do HUD): parar e manter (soldados), as 7 construcoes (campones), campones/espadachim/lanceiro/arqueiro/cavaleiro/ariete/melhoria (castelo, quartel, estabulo, oficina, ferraria). Texto so para "construindo", "melhoria feita" e fim de jogo.
+- **Dica ao passar o ponteiro**: a linha de contexto mostra nome e custo `[madeira]ouro` do icone sob o ponteiro (e "L" se a construcao ainda esta bloqueada).
+- **Barra de progresso** de obra/treino: dez celulas na ultima linha (so os 4 pixels de cima aparecem); apagada quando nada esta em andamento.
+- Icones: `tools/hud_icons.py` gera a faixa 256x16 (predios e unidades reduzidos da arte de referencia e quantizados para a paleta do HUD; parar/manter/melhorar desenhados no script), banco 71, VRAM linhas 224..239 (padroes 896..959 da camada A); previa em `reference/hud_icones.png`. `video_icon`/`video_cells` em `video.h` (`video_cells` nao conta como apagamento do HUD).
+- Cliques: faixa y=192..207, slot = (x-8)/24; clique direito na faixa cancela obra/producao. Testes antigos atualizados para a nova geometria; `ui_hud.tcl` (capturas por contexto, dica, treino pelo icone).
+- Limite conhecido: icones sem versao "apagada" para recurso insuficiente (o custo aparece na dica).

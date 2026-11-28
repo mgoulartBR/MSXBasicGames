@@ -151,12 +151,12 @@ Cavaleiros deslocam-se mais rápido; aríetes, mais devagar. O combate dos espad
 | Acrescentar/remover seleção | Shift + esquerdo | Shift + Z |
 | Selecionar todos | — | A |
 | Mover/coletar/retomar obra/atacar inimigo | Direito | X |
-| Parar militares | STOP no rodapé | S |
-| Manter posição e reagir no alcance | HOLD no rodapé | H |
-| Escolher construção | HOU/BAR/SAW/FOR/STA/TOW/SIE no rodapé, com camponês selecionado | Q ativa e percorre os tipos |
+| Parar militares | Ícone de parar no rodapé | S |
+| Manter posição e reagir no alcance | Ícone de escudo no rodapé | H |
+| Escolher construção | Ícones das 7 construções no rodapé, com camponês selecionado (passar o ponteiro mostra nome e custo) | Q ativa e percorre os tipos |
 | Confirmar posicionamento | Esquerdo no terreno | Z |
 | Cancelar posicionamento | Direito | Esc |
-| Recrutar/pesquisar | Opção no rodapé com edifício selecionado | R aciona a opção principal |
+| Recrutar/pesquisar | Ícone da unidade (ou da melhoria) no rodapé com o edifício selecionado | R aciona a opção principal |
 | Cancelar obra/produção | Direito no rodapé | C |
 | Ponto de encontro | Direito no chão com edifício selecionado | X |
 | Câmera | Permanecer na borda do mapa | Setas |

@@ -10,7 +10,7 @@ Symbol Table
     ___sdcc_bcall_ehl                                               ******** GX
     _accumulator                                                    ******** GX
     _alternate_approaches                                           ******** GX
-  7 _briefing                                                       000002AF GR
+  7 _briefing                                                       000002E9 GR
     _cam_keys                                                       ******** GX
     _cam_x                                                          ******** GX
     _cam_y                                                          ******** GX
@@ -294,15 +294,17 @@ Symbol Table
     _game_seconds                                                   ******** GX
     _gold                                                           ******** GX
     _group_orders                                                   ******** GX
+    _hud_act_mode                                                   ******** GX
     _hud_action_cache                                               ******** GX
     _hud_context                                                    ******** GX
     _hud_dirty                                                      ******** GX
-    _hud_draw                                                       ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _hud_draw                                                       ******** GX
+    _hud_icon_cache                                                 ******** GX
     _hud_live                                                       ******** GX
     _hud_mode                                                       ******** GX
     _hud_pending                                                    ******** GX
@@ -345,7 +347,7 @@ Symbol Table
     _selection_mask                                                 ******** GX
     _sim_ticks                                                      ******** GX
     _tr                                                             ******** GX
-  7 _tr_len                                                         0000029E R
+  7 _tr_len                                                         000002D8 R
     _video_clock                                                    ******** GX
     _video_fill                                                     ******** GX
     _video_text                                                     ******** GX
@@ -355,6 +357,7 @@ Symbol Table
     b_game_reset                                                =   00000035 G
     b_init_world                                                    ******** GX
     b_mission_load                                              =   00000035 G
+
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
@@ -368,7 +371,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG53                                     size      389   flags    0
+   7 _SEG53                                     size      3C3   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

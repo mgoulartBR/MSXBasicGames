@@ -163,9 +163,8 @@ void hud_context_text(const c8* text) __banked {
   if(hud_context[p][i]!=c) {video_char(8+i*8,176,c);hud_context[p][i]=c;}
  }
 }
-static void cat(c8* d,const c8* a,const c8* b) {while(*a)*d++=*a++;while(*b)*d++=*b++;*d=0;}
 void hud_actions(void) __banked {
- u8 p=hud_draw,i,step=0,old;const c8* line;c8 lb[34];
+ u8 p=hud_draw,i,step=0,old,n=0,wm,show=0,ic[9],kd[9];const c8* line;
  if(game_over)hud_context_text(tr(game_over==1?TXT_VICTORY_MSG:TXT_DEFEAT_MSG));
  else if(ui_note_t)hud_context_text(tr(ui_note_id));
  else if(placement_mode) {
@@ -178,29 +177,56 @@ void hud_actions(void) __banked {
  else if(building_selected)hud_context_text(bname(buildings[building_selected-1].type));
  else if(selected!=NONE)hud_context_text(rname(unit_kind[selected]));
  else hud_context_text(tr(mis.text+5)); /* the mission objective */
+ /* Command icons (16x16, slot pitch 24 px on rows 192..207): the list depends on what is selected. Text only for "working",
+  * "upgraded" and the end of the game. */
  if(game_over)line=tr(TXT_AGAIN);
- else if(military_selected())line=tr(TXT_ACT_MIL);
- else if(WORKER(selected))line=tr(TXT_ACT_BUILD);
+ else if(military_selected()) {n=2;ic[0]=0;ic[1]=1;kd[0]=200;kd[1]=201;line="";}
+ else if(WORKER(selected)) {for(i=0;i<7;++i) {ic[i]=2+i;kd[i]=1+i;}n=7;line="";}
  else if(building_selected) {
   Building* b=&buildings[building_selected-1];
   line="";
   if(b->state==1)line=tr(TXT_WORKING);
-  else if(b->type==2)line=tr(TXT_ACT_BARRACKS);
+  else if(b->type==2) {n=3;ic[0]=10;ic[1]=11;ic[2]=12;kd[0]=101;kd[1]=102;kd[2]=103;}
   else if(b->type==4 && research_level)line=tr(TXT_ATKARMOR);
-  else {
-   if(b->type==0)cat(lb,rname(0)," [00]08");else if(b->type==5)cat(lb,rname(4)," [16]24");else if(b->type==7)cat(lb,rname(5)," [24]16");else if(b->type==4)cat(lb,tr(TXT_UPGRADE)," [16]16");else lb[0]=0;
-   line=lb;
-  }
-  if(b->state==1)step=b->type==2?(180-b->remaining)/18:(240-b->remaining)/24;
-  else if(b->training) {u16 total=b->training==1?90:b->training>=5?180:120;step=(total-b->time)*10/total;}
+  else if(b->type==0) {n=1;ic[0]=9;kd[0]=100;}
+  else if(b->type==5) {n=1;ic[0]=13;kd[0]=104;}
+  else if(b->type==7) {n=1;ic[0]=14;kd[0]=105;}
+  else if(b->type==4) {n=1;ic[0]=15;kd[0]=106;}
+  if(b->state==1) {step=b->type==2?(180-b->remaining)/18:(240-b->remaining)/24;show=1;}
+  else if(b->training) {u16 total=b->training==1?90:b->training>=5?180:120;step=(total-b->time)*10/total;show=1;}
  } else line="";
- for(i=0;i<29;++i) {
+ wm=n?1:0;
+ if(hud_act_mode[p]!=wm) { /* the action area changes between icons and text: clear it and forget what was drawn */
+  video_cells(0,192,256,16,1);hud_act_mode[p]=wm;
+  for(i=0;i<9;++i)hud_icon_cache[p][i]=0;for(i=0;i<29;++i)hud_action_cache[p][i]=' ';
+ }
+ if(wm) {
+  for(i=0;i<9;++i) {
+   u8 want=i<n?ic[i]+1:0;
+   if(hud_icon_cache[p][i]!=want) {
+    if(want)video_icon(8+i*24,192,ic[i]);else video_cells(8+i*24,192,16,16,1);
+    hud_icon_cache[p][i]=want;
+   }
+  }
+ } else for(i=0;i<29;++i) {
   u8 c=*line?*line++:' ';
   if(hud_action_cache[p][i]!=c) {video_char(8+i*8,200,c);hud_action_cache[p][i]=c;}
  }
- /* Action row is rendered only when its context changes, tracked separately. */
- old=hud_progress[p][0];
+ /* Tooltip: the icon under the pointer names itself and shows its cost in the context line. */
+ if(hover_slot<n && !game_over && !ui_note_t && !placement_mode) {
+  c8 t[30];u8 k=0,code=kd[hover_slot];const c8* name;u8 w,g;
+  if(code>=200)name=tr(code==200?TXT_CMD_STOP:TXT_CMD_HOLD),w=g=255;
+  else if(code>=100) {u8 kind=code-100;if(kind==6)name=tr(TXT_UPGRADE),w=g=16;else name=rname(kind),w=recruit_wood[kind],g=recruit_gold[kind];}
+  else name=bname(code),w=build_wood[code],g=build_gold[code];
+  while(*name && k<18)t[k++]=*name++;
+  if(w!=255) {t[k++]=' ';t[k++]='[';t[k++]='0'+w/10;t[k++]='0'+w%10;t[k++]=']';t[k++]='0'+g/10;t[k++]='0'+g%10;}
+  if(code<100 && !build_unlocked(code)) {t[k++]=' ';t[k++]='L';}
+  t[k]=0;hud_context_text(t);
+ }
+ /* Progress bar: ten cells on the last row (only its top 4 lines are visible), filled up to `step`; blank when nothing is in progress. */
  if(step>10)step=10;
- if(old!=step)for(i=0;i<10;++i)if(old==255 || (i<old)!=(i<step))video_char(8+i*8,192,i<step?'<':'>');
+ step=show?step+1:0;
+ old=hud_progress[p][0];
+ if(old!=step)for(i=0;i<10;++i)video_cells(8+i*8,208,8,8,!step?1:(i<step-1?11:12));
  hud_progress[p][0]=step;
 }

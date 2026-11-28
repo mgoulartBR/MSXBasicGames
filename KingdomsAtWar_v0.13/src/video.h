@@ -138,11 +138,18 @@ void video_tile(u8 x,u8 y) {
 }
 /* ---- HUD (layer A) ---- */
 void hud_name(u8 col,u8 row,u16 n) {__asm di __endasm;io_vset(PNT_A+((u16)row<<7)+((u16)col<<1));io_vram=(u8)n;io_vram=(u8)(n>>8);__asm ei __endasm;}
+/* 16x16 command icon k (layer A patterns 896..959, VRAM lines 224..239): four name cells */
+void video_icon(u8 x,u8 y,u8 k) {u16 n=896U+(u16)(k<<1);hud_name(x>>3,y>>3,n);hud_name((x>>3)+1,y>>3,n+1);hud_name(x>>3,(y>>3)+1,n+32);hud_name((x>>3)+1,(y>>3)+1,n+33);}
 void video_char(u8 x,u16 y,u8 c) {hud_name(x>>3,(u8)(y>>3),PA_FONT+(u8)(c-32));}
 void video_text(u8 x,u16 y,const c8* s) {while(*s && x<249){video_char(x,y,*s++);x+=8;}}
 void video_fill(u16 x,u16 y,u16 w,u16 h,u8 c) {
  u8 col,row;u16 n=h<8?PA_HUDTOP:PA_SOLID+c;
  if(video_enabled)++hud_erase_count;
+ for(row=y>>3;row<=(u8)((y+h-1)>>3);++row)for(col=x>>3;col<=(u8)((x+w-1)>>3);++col)hud_name(col,row,n);
+}
+/* Same as video_fill but not counted as a HUD erase (cell-wise redraws of the icon and progress rows). */
+void video_cells(u16 x,u16 y,u16 w,u16 h,u8 c) {
+ u8 col,row;u16 n=h<8?PA_HUDTOP:PA_SOLID+c;
  for(row=y>>3;row<=(u8)((y+h-1)>>3);++row)for(col=x>>3;col<=(u8)((x+w-1)>>3);++col)hud_name(col,row,n);
 }
 /* ---- sprites ---- */
