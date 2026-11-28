@@ -324,7 +324,7 @@ Symbol Table
   7 _load_progress                                                  00000337 R
   7 _music_detect                                                   000003BE GR
   7 _opll_ident                                                     00000356 R
-  7 _opll_ident_id_10000_1691                                       000003BA R
+  7 _opll_ident_id_10000_1693                                       000003BA R
     _ord_n                                                          ******** GX
     _p1_ready                                                       ******** GX
     _palette9                                                       ******** GX
@@ -353,8 +353,8 @@ Symbol Table
   7 _video_boot                                                     00000413 GR
     _video_fill                                                     ******** GX
   7 _video_init                                                     000004A7 GR
-  7 _video_init_vc_30000_1780                                       00000E74 R
-  7 _video_init_vcell_30000_1780                                    00000E77 R
+  7 _video_init_vc_30000_1782                                       00000E74 R
+  7 _video_init_vcell_30000_1782                                    00000E77 R
     _video_scroll_update                                            ******** GX
   1 _vr_hi                                                          00000002 R
   1 _vr_lo                                                          00000000 R

@@ -8,13 +8,13 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        0000025D R
-  7 ___str_1                                                        0000025F R
+  7 ___str_0                                                        0000028C R
+  7 ___str_1                                                        0000028E R
   7 _band_clear                                                     00000011 R
   7 _draw_items                                                     00000196 R
   7 _draw_title                                                     00000025 R
     _end_hide                                                       ******** GX
-  7 _end_screen                                                     0000068A GR
+  7 _end_screen                                                     000006ED GR
     _end_show                                                       ******** GX
     _fm_found                                                       ******** GX
     _g_ACPAGE                                                   =   0000FAF6 G
@@ -293,7 +293,7 @@ Symbol Table
     _kbrow                                                          ******** GX
     _lang                                                           ******** GX
     _menu_auto                                                      ******** GX
-  7 _menu_run                                                       000002F0 GR
+  7 _menu_run                                                       0000031F GR
     _mission_n                                                      ******** GX
     _mission_total                                                  ******** GX
     _mouse_x                                                        ******** GX
@@ -306,7 +306,7 @@ Symbol Table
     _music_cur                                                      ******** GX
     _music_play                                                     ******** GX
     _music_stop                                                     ******** GX
-  7 _opt_change                                                     00000284 R
+  7 _opt_change                                                     000002B3 R
   7 _opt_line                                                       00000061 R
     _opt_music                                                      ******** GX
     _opt_sfx                                                        ******** GX
@@ -318,7 +318,7 @@ Symbol Table
     _sfx_play                                                       ******** GX
     _side                                                           ******** GX
   7 _slen                                                           00000000 R
-  7 _sound_changed                                                  00000261 R
+  7 _sound_changed                                                  00000290 R
     _tr                                                             ******** GX
     _video_clock                                                    ******** GX
     _video_fill                                                     ******** GX
@@ -341,7 +341,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG50                                     size      865   flags    0
+   7 _SEG50                                     size      8C8   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

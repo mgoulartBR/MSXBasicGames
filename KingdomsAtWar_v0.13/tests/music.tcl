@@ -47,7 +47,7 @@ proc mus_case {} {
  delay 0.5
  ck sfx_ends {[keyon 5]==0 && [b sx 0]==0}
  # em jogo: calma; inimigo visivel -> batalha; vitoria -> fanfarra
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  delay 2
  puts stderr "INFO cur=[b music_cur] sec=[w game_seconds] uc=[b unit_count] [lmap i {8 9 10 11} {list [b unit_hp $i] [unit $i x] [unit $i y]}] base=[b pb_x],[b pb_y]"
  ck calm_in_game {[b music_cur]==1}

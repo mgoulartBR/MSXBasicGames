@@ -104,10 +104,12 @@ static void names_put(u32 a,u16 n0,u16 n1,u16 n2,u16 n3) {
 /* Pool art of cell (x,y) of building t: a tile of enemy_tile_map (0 = empty), or 255 = use the original human art.
  * The pool holds the finished enemy buildings and the construction sites of both kingdoms (entries 128..191). */
 static u8 enemy_tile_of(u8 t,u8 x,u8 y) {
- Building* b=&buildings[t];u8 n=build_sizes[b->type],i=(u8)((y-b->y)*n+x-b->x);
- if(b->state==1)return enemy_tile_map[(building_owner[t]?128:160)+(n==3?16:0)+i];
- return building_owner[t]?enemy_tile_map[(b->type<<4)+i]:255;
+ Building* b=&buildings[t];u8 n=build_sizes[b->type],i=(u8)((y-b->y)*n+x-b->x),uf=(u8)(building_owner[t]^side); /* uf: the building belongs to the Unburied */
+ if(b->state==1)return enemy_tile_map[(uf?128:160)+(n==3?16:0)+i];
+ return uf?enemy_tile_map[(b->type<<4)+i]:255;
 }
+/* Building index of a world tile code: 10+id, or 5 = the player's castle (building 0); 255 = not a building. */
+#define BIDX(t) ((t)>=10?(u8)((t)-10):(t)==5?0:255)
 /* Layer B names form a torus of 32x32 cells; wv_* is the rectangle of world cells currently drawn in it (x1,y1 exclusive). */
 u8 wv_x0,wv_y0,wv_x1,wv_y1;
 void p1_cell(u8 x,u8 y) {
@@ -118,9 +120,9 @@ void p1_cell(u8 x,u8 y) {
  if(!st) {names_put(a,1,1,1,1);return;}
  {u8 art=fog_art(x,y);
   if(art>=64 && art<201) {
-   u8 t=tile(x,y);
-   if(t>=10) {
-    u8 e=enemy_tile_of(t-10,x,y);
+   u8 t=tile(x,y),bi=BIDX(t);
+   if(bi!=255) {
+    u8 e=enemy_tile_of(bi,x,y);
     if(e!=255) {
      n=ENEMY_PAT+(u16)e*4;
      names_put(a,n,n+1,n+2,n+3);return;
@@ -623,7 +625,7 @@ void ae_occ(u8 i) {
     t=fog_art(cx,cy);if(t<64)continue;
     {u8 tt=tile(cx,cy);
      u8 e=255;
-     if(t<201 && tt>=10 && (building_owner[tt-10] || buildings[tt-10].state==1))e=enemy_tile_of(tt-10,cx,cy); /* finished human buildings keep their own art: no pool lookup */
+     if(t<201 && BIDX(tt)!=255 && ((building_owner[BIDX(tt)]^side) || buildings[BIDX(tt)].state==1))e=enemy_tile_of(BIDX(tt),cx,cy); /* finished human buildings keep their own art: no pool lookup */
      if(e==0)continue;
      s2=e!=255?occ_get((u16)OCC_ENEMY+e):occ_get(tile_source[t]-50);}
     if(s2!=255 && o<sattr+496)SPR(((i16)cx<<4)-(i16)cam_x,((i16)cy<<4)-(i16)cam_y,occ_cell[s2],0x20);
@@ -1010,7 +1012,15 @@ ae_mul:
 ae_emit:
  ld a,(_ae_i)
  cp a,#8
- jp c,ae_emit1
+ ld a,(_side)
+ jp c,ae_lt8
+ or a,a
+ jp nz,ae_emit1
+ jp ae_dopal
+ae_lt8:
+ or a,a
+ jp z,ae_emit1
+ae_dopal:
  ld hl,(_e_o)
  ld (_pal_o),hl
  call _emit_block
@@ -1196,11 +1206,14 @@ const c8* tr(u8 id) {
  u16 p;u8 i,c;
  rp_bank=TEXT_BANK;rp_ptr=0xA000u+((u16)id*LANGS+lang)*2;
  p=rom_peek();++rp_ptr;p|=(u16)rom_peek()<<8;
+ rp_bank=id>=TXT_SPLIT?TEXT_BANK2:TEXT_BANK; /* the late strings (Unburied mission texts) live in a second bank */
  for(i=0;i<39;++i) {rp_ptr=p+i;c=rom_peek();tr_buf[i]=(c8)c;if(!c)return tr_buf;}
  tr_buf[39]=0;return tr_buf;
 }
-const c8* bname(u8 i) {return tr(TXT_B_CASTLE+i);}
-const c8* rname(u8 i) {return tr(TXT_R_PEASANT+i);}
+const c8* bname_f(u8 i,u8 f) {return tr((f?TXT_UB_CASTLE:TXT_B_CASTLE)+i);}
+const c8* rname_f(u8 i,u8 f) {return tr((f?TXT_UR_PEASANT:TXT_R_PEASANT)+(i>5?1:i));}
+const c8* bname(u8 i) {return bname_f(i,side);}
+const c8* rname(u8 i) {return rname_f(i,side);}
 
 /* Title/menu state: the V9990 interrupt (pointer sprite) runs, the world sprites do not. */
 void video_menu_enable(void) {video_irq_install();video_enabled=1;}

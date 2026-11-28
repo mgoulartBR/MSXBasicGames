@@ -30,6 +30,7 @@ static void draw_items(u8 state,u8 n,u8 sel) {
  for(i=0;i<n;++i) {
   video_text(72,ITEM_Y+i*8,i==sel?"*":" ");
   if(state==3) {opt_line(line,i);video_text(88,ITEM_Y+i*8,line);}
+  else if(state==4)video_text(88,ITEM_Y+i*8,tr(i?TXT_CAMP_UNDEAD:TXT_CAMP_HUMANS));
   else video_text(88,ITEM_Y+i*8,tr(state==1?(i==0?TXT_NEW_GAME:i==1?TXT_OPTIONS:TXT_LANGUAGE):(u8)(TXT_LANG_PT+i)));
  }
 }
@@ -56,6 +57,7 @@ void menu_run(void) __banked {
    if(state==0)draw_title();
    else if(state==1)draw_items(1,3,sel);
    else if(state==3)draw_items(3,4,sel);
+   else if(state==4)draw_items(4,2,sel);
    else draw_items(2,LANGS,sel);
    dirty=0;
   }
@@ -71,24 +73,25 @@ void menu_run(void) __banked {
    if((edge&4)||click){state=1;sel=0;dirty=1;}
    continue;
   }
-  n=(state==1)?3:(state==3)?4:LANGS;
+  n=(state==1)?3:(state==3)?4:(state==4)?2:LANGS;
   if(edge&1){sel=sel?sel-1:n-1;dirty=1;}
   if(edge&2){sel=(sel+1>=n)?0:sel+1;dirty=1;}
   if(moved && mouse_y>=ITEM_Y && mouse_y<ITEM_Y+n*8) {u8 h=(u8)((mouse_y-ITEM_Y)>>3);if(h!=sel){sel=h;dirty=1;}}
   if(state==3 && (edge&48) && sel<3) {opt_change(sel,(edge&16)?-1:1);dirty=1;}
   if((edge&4)||(click && mouse_y>=ITEM_Y && mouse_y<ITEM_Y+n*8)) {
    if(state==1) {
-    if(sel==0)return;
-    if(sel==1){state=3;sel=0;}
+    if(sel==0){state=4;sel=side;}
+    else if(sel==1){state=3;sel=0;}
     else {state=2;sel=lang;}
     dirty=1;
+   } else if(state==4) {side=sel;return;
    } else if(state==3) {
     if(sel==3){state=1;sel=1;}
     else opt_change(sel,0);
     dirty=1;
    } else {lang=sel;state=1;sel=2;dirty=1;}
   }
-  if((edge&8) && state>=2){sel=(state==3)?1:2;state=1;dirty=1;}
+  if((edge&8) && state>=2){sel=(state==4)?0:(state==3)?1:2;state=1;dirty=1;}
  }
 }
 /* Victory / defeat screen: the picture of the side being played (side 0 humans, 1 the Unburied), a headline and the next step.

@@ -7,7 +7,7 @@ proc wait_game {} {delay 1;set t0 [machine_info time];while {[w game_seconds]<1 
 proc dist8 {} {return [expr {abs([unit 8 x]-[b pb_x])+abs([unit 8 y]-[b pb_y])}]}
 proc ba_case {} {
  delay 38
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  quick_win;await {[b game_over]==1} 15
  delay 4;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  # a missao 2 nao termina por tempo curto: restaura o objetivo (sobreviver 360 s)

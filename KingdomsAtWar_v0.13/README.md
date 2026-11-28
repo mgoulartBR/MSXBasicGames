@@ -142,6 +142,10 @@ Novos camponeses podem coletar, entrar/sair da mina e construir, independentemen
 
 Cavaleiros deslocam-se mais rápido; aríetes, mais devagar. O combate dos espadachins está ativo; os demais papéis militares serão ampliados nas próximas versões. Camponês, espadachim e arqueiro usam telas de 32×32; lanceiro, cavaleiro e aríete usam 48×48. A caminhada usa quatro fases em cada direção e avança conforme a distância percorrida.
 
+## Campanhas
+
+Em NOVO JOGO escolha **Humanos** ou **Insepultos**: cada lado tem 8 missões nos mesmos mapas (64×64 e 128×128), com objetivos e textos próprios. As regras são iguais; muda a arte (unidades, prédios, ícones e nomes) e quem joga contra quem.
+
 ## Controles
 
 | Ação | Mouse | Teclado |

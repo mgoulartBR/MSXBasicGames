@@ -9,7 +9,10 @@ proc dist8 {} {return [expr {abs([unit 8 x]-[b pb_x])+abs([unit 8 y]-[b pb_y])}]
 set ::E {{64 64 8 50 50 14} {64 64 5 50 46 18} {64 64 52 48 8 18} {64 64 28 50 30 16} {128 128 6 112 108 22} {128 128 60 112 66 20} {128 128 12 16 112 104} {128 128 112 108 10 26}}
 proc am_case {} {
  delay 38
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128
+ if {[info exists ::env(KAW_SIDE)] && $::env(KAW_SIDE)==1} {tapkey 8 64}
+ tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ ck side_selected {[b side]==([info exists ::env(KAW_SIDE)]?$::env(KAW_SIDE):0)}
  for {set m 0} {$m<8} {incr m} {
   lassign [lindex $::E $m] ew eh px py ex ey
   ck m${m}_size {[b map_w]==$ew && [b map_h]==$eh && [b mission_n]==$m}

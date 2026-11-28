@@ -362,7 +362,7 @@ void combat_tick(void) __banked {
 static void number(c8* p,u8 value) {p[0]='0'+value/100;p[1]='0'+value/10%10;p[2]='0'+value%10;p[3]=0;}
 u8 combat_context(void) __banked {
  c8 text[30];u8 i=0,hp,max;const c8* name;
- if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {u8 bt=buildings[t&127].type;hp=building_hp[t&127];max=bt?96:180;name=bt?bname(bt):tr(TXT_ENEMY_KEEP);}else {hp=unit_hp[t];max=48;name=tr(TXT_ENEMY_SWORD);}}
+ if(enemy_selected!=NONE) {u8 t=enemy_selected;if(t&128) {u8 bt=buildings[t&127].type;hp=building_hp[t&127];max=bt?96:180;name=bt?bname_f(bt,(u8)(1-side)):tr(TXT_ENEMY_KEEP);}else {hp=unit_hp[t];max=48;name=side?rname_f(unit_kind[t],0):tr(TXT_ENEMY_SWORD);}}
  else if(selected!=NONE && unit_kind[selected]>=1 && unit_kind[selected]<=5) {hp=unit_hp[selected];max=unit_max_hp[unit_kind[selected]];name=rname(unit_kind[selected]);}
  else return 0;
  while(*name)text[i++]=*name++;text[i++]=' ';{const c8* h=tr(TXT_HP);text[i++]=h[0];text[i++]=h[1];}text[i++]=' ';number(text+i,hp);i+=3;text[i++]='/';number(text+i,max);i+=3;

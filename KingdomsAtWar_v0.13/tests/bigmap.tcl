@@ -14,7 +14,7 @@ proc order_far {id x y} {
 }
 proc bm_case {} {
  delay 38
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  quick_win;await {[b game_over]==1} 15
  delay 4;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  ck map64 {[b map_w]==64 && [b map_h]==64 && [b mission_n]==1}

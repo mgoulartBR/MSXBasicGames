@@ -6,7 +6,7 @@ proc wait_game {} {delay 1;set t0 [machine_info time];while {[w game_seconds]<1 
 proc layerA {y xb} {return [vrd [expr {$y*128+$xb}]]}
 proc ui_case {} {
  delay 38
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  delay 3
  ck map64 {[b map_w]==64}
  shot ui-minimap
@@ -18,7 +18,8 @@ proc ui_case {} {
  debug write memory $::S(mouse_x) 231
  debug write memory $::S(mouse_y) 134
  delay 0.3
- keymatrixdown 5 128;delay 0.3;keymatrixup 5 128;delay 0.6
+ set cx0 [w cam_x]
+ for {set try 0} {$try<4 && [w cam_x]==$cx0} {incr try} {keymatrixdown 5 128;delay 0.3;keymatrixup 5 128;delay 0.8}
  puts stderr "INFO cam after click [w cam_x],[w cam_y]"
  ck minimap_click_moves_camera {abs([w cam_x]-360)<=24 && abs([w cam_y]-440)<=24}
  delay 1

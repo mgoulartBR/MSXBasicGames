@@ -14,7 +14,7 @@ proc mf_case {} {
  tapkey 7 128;tapkey 8 64;tapkey 7 128
  ck language_japanese {[b lang]==3}
  shot menu-main-ja
- tapkey 8 32;tapkey 8 32;tapkey 7 128
+ tapkey 8 32;tapkey 8 32;tapkey 7 128;tapkey 7 128   ;# NOVO JOGO -> HUMANOS
  delay 6;shot menu-briefing
  tapkey 7 128
  delay 1;set t0 [machine_info time];while {[w game_seconds]<1 && [machine_info time]-$t0<40} {delay 0.25}

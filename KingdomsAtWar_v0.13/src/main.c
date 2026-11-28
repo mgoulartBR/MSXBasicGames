@@ -186,6 +186,7 @@ get_bank::
 
 
 u8 drag_down,drag_moved,drag_add,drag_prior;
+const u8 skin_h[]={0,1,2,3,4,5,1}; /* logical kind -> pose type for the human kingdom (the AI's generic soldier 6 is a swordsman) */
 u8 lang,menu_auto,side,mission_n,mission_total;u16 end_t0;Mission mis;u16 enemy_kills; /* current language (0 PT, 1 EN, 2 ES, 3 JA); tests set menu_auto to skip the title and the menu */
 u16 drag_anchor_x,drag_anchor_y,drag_l,drag_t,drag_r,drag_b;
 

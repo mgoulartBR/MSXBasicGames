@@ -54,9 +54,44 @@ MISSIONS=[
          'ほうむられざるおうが めざめた。 ぜんぐんで のろいを たちきれ。'),
   goal=('META: DESTRUIR A FORTALEZA','GOAL: DESTROY THE ENEMY KEEP','META: DESTRUIR LA FORTALEZA','もくひょう: てきのしろをたおせ')),
 ]
+MISSIONS_U=[
+ dict(map=1,wood=60,gold=40,first=240,gap=60,extras=0,ai=1,obj='BUILD',param=258,limit=0,
+  title=('MISSÃO 1: O DESPERTAR', 'MISSION 1: THE AWAKENING', 'MISIÓN 1: EL DESPERTAR', 'だい1わ: めざめ'),
+  brief=('As areias se abrem e os mortos despertam. Erga uma cripta antes que os vivos reajam.', 'The sands part and the dead awaken. Raise a crypt before the living react.', 'Las arenas se abren y los muertos despiertan. Alza una cripta antes de que actúen los vivos.', 'すなが ひらき しものたちが めざめた。 いきるものが うごくまえに クリプトを たてよ。'),
+  goal=('META: CONSTRUIR UMA CRIPTA', 'GOAL: BUILD A CRYPT', 'META: CONSTRUIR UNA CRIPTA', 'もくひょう: クリプトをたてる')),
+ dict(map=2,wood=40,gold=30,first=60,gap=45,extras=0,ai=1,obj='KILLS',param=10,limit=0,
+  title=('MISSÃO 2: A COLHEITA DE ALMAS', 'MISSION 2: THE HARVEST OF SOULS', 'MISIÓN 2: LA COSECHA DE ALMAS', 'だい2わ: たましいのしゅうかく'),
+  brief=('Os vivos mandam patrulhas ao deserto. Cada soldado vencido fortalece os mortos.', 'The living send patrols into the desert. Every fallen soldier strengthens the dead.', 'Los vivos envían patrullas al desierto. Cada soldado caído fortalece a los muertos.', 'いきるものの はいかが さばくに きた。 たおすたびに ほうむられざるぐんは つよくなる。'),
+  goal=('META: DERROTAR 10 INIMIGOS', 'GOAL: DEFEAT 10 ENEMIES', 'META: DERROTAR 10 ENEMIGOS', 'もくひょう: 10たいたおせ')),
+ dict(map=3,wood=80,gold=60,first=90,gap=45,extras=1,ai=1,obj='SURVIVE',param=360,limit=0,
+  title=('MISSÃO 3: A CONTRA-MARCHA', 'MISSION 3: THE COUNTER-MARCH', 'MISIÓN 3: LA CONTRAMARCHA', 'だい3わ: ぎゃくしゅう'),
+  brief=('Cavaleiros caem sobre nossas tumbas. Resista seis minutos até a noite trazer reforços.', 'Knights fall on our tombs. Hold six minutes until night brings reinforcements.', 'Caballeros caen sobre nuestras tumbas. Resiste seis minutos hasta la llegada de la noche.', 'きしだんが はかに おそいかかる。 よるが ふえいを つれてくるまで 6ぷん たえよ。'),
+  goal=('META: SOBREVIVER 6 MINUTOS', 'GOAL: SURVIVE 6 MINUTES', 'META: SOBREVIVIR 6 MINUTOS', 'もくひょう: 6ぷんたえろ')),
+ dict(map=4,wood=100,gold=60,first=100,gap=45,extras=1,ai=1,obj='GOLD',param=500,limit=0,
+  title=('MISSÃO 4: O TRIBUTO DE OURO', 'MISSION 4: THE TRIBUTE OF GOLD', 'MISIÓN 4: EL TRIBUTO DE ORO', 'だい4わ: こがねのみつぎ'),
+  brief=('O faraó exige ouro dos vales conquistados. Escravos às minas até encher o tesouro.', 'The pharaoh demands gold from the conquered valleys. Slaves to the mines until the vault is full.', 'El faraón exige oro de los valles conquistados. Esclavos a las minas hasta llenar el tesoro.', 'ファラオは せいふくした たにから きんを もとめる。 どれいに こうざんを ほらせ ほうこを みたせ。'),
+  goal=('META: JUNTAR 500 DE OURO', 'GOAL: HOLD 500 GOLD', 'META: JUNTAR 500 DE ORO', 'もくひょう: きん500をあつめろ')),
+ dict(map=5,wood=120,gold=80,first=200,gap=50,extras=1,ai=1,obj='DESTROY',param=0,limit=0,
+  title=('MISSÃO 5: A MARCHA SOBRE O REINO', 'MISSION 5: THE MARCH ON THE KINGDOM', 'MISIÓN 5: LA MARCHA SOBRE EL REINO', 'だい5わ: おうこくへの しんぐん'),
+  brief=('O deserto ficou pequeno. Marche ao norte e derrube a fortaleza dos vivos.', 'The desert grew too small. March north and tear down the fortress of the living.', 'El desierto se quedó pequeño. Marcha al norte y derriba la fortaleza de los vivos.', 'さばくは せまくなった。 きたへ すすみ いきるものの とりでを たおして おうこくへの みちを ひらけ。'),
+  goal=('META: DESTRUIR A FORTALEZA', 'GOAL: DESTROY THE ENEMY KEEP', 'META: DESTRUIR LA FORTALEZA', 'もくひょう: てきのしろをたおせ')),
+ dict(map=6,wood=150,gold=100,first=120,gap=40,extras=1,ai=1,obj='SURVIVE',param=600,limit=0,
+  title=('MISSÃO 6: A NOITE SEM FIM', 'MISSION 6: THE ENDLESS NIGHT', 'MISIÓN 6: LA NOCHE SIN FIN', 'だい6わ: おわらぬよる'),
+  brief=('Os sinos do reino tocam a rebate. Segure a posição por dez minutos de escuridão.', 'The kingdom bells ring the alarm. Hold your ground for ten minutes of darkness.', 'Las campanas del reino tocan a rebato. Mantén la posición diez minutos de oscuridad.', 'おうこくの かねが なりひびく。 やみが だいちを おおう 10ぷんかん もちこたえよ。'),
+  goal=('META: SOBREVIVER 10 MINUTOS', 'GOAL: SURVIVE 10 MINUTES', 'META: SOBREVIVIR 10 MINUTOS', 'もくひょう: 10ぷんたえろ')),
+ dict(map=7,wood=180,gold=120,first=100,gap=35,extras=1,ai=1,obj='KILLS',param=25,limit=0,
+  title=('MISSÃO 7: O CERCO DA CAPITAL', 'MISSION 7: THE SIEGE OF THE CAPITAL', 'MISIÓN 7: EL CERCO DE LA CAPITAL', 'だい7わ: しゅとの ほうい'),
+  brief=('As muralhas da capital se erguem. Quebre seus defensores e aperte o cerco.', 'The walls of the capital rise. Break its defenders and tighten the siege.', 'Las murallas de la capital se alzan. Quiebra a sus defensores y cierra el cerco.', 'しゅとの じょうへきが めのまえに ある。 しゅびへいを うちくだき ほういを せばめよ。'),
+  goal=('META: DERROTAR 25 INIMIGOS', 'GOAL: DEFEAT 25 ENEMIES', 'META: DERROTAR 25 ENEMIGOS', 'もくひょう: 25たいたおせ')),
+ dict(map=8,wood=150,gold=100,first=150,gap=40,extras=1,ai=1,obj='DESTROY',param=0,limit=0,
+  title=('MISSÃO 8: O TRONO DOS VIVOS', 'MISSION 8: THE THRONE OF THE LIVING', 'MISIÓN 8: EL TRONO DE LOS VIVOS', 'だい8わ: いきるものの おうざ'),
+  brief=('O último rei dos vivos treme no trono. Reúna a legião e apague a última chama.', 'The last king of the living trembles on his throne. Gather the legion and snuff the last flame.', 'El último rey de los vivos tiembla en su trono. Reúne la legión y apaga la última llama.', 'さいごの いきるものの おうが おうざで ふるえる。 ぜんぐんで おうこくの さいごの ひを けせ。'),
+  goal=('META: DESTRUIR A FORTALEZA', 'GOAL: DESTROY THE ENEMY KEEP', 'META: DESTRUIR LA FORTALEZA', 'もくひょう: てきのしろをたおせ')),
+]
+ALL=MISSIONS+MISSIONS_U   # 8 dos humanos seguidos de 8 dos Insepultos
 def table():
     out=bytearray()
-    for i,m in enumerate(MISSIONS):
+    for i,m in enumerate(ALL):
         r=bytearray(16)
         r[0]=m['wood'];r[1]=m['gold'];r[2:4]=m['first'].to_bytes(2,'little');r[4]=m['gap'];r[5]=m['extras'];r[6]=m['ai']
         r[7]=OBJ[m['obj']];r[8:10]=m['param'].to_bytes(2,'little');r[10]=m['limit'];r[12]=m['map']

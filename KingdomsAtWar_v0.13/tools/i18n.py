@@ -32,6 +32,8 @@ def L(pt,en,es,ja):return (pt,en,es,ja)
 STRINGS=[
  ('PRESS',('PRESSIONE ENTER','PRESS ENTER','PULSE ENTER','エンターキーをおしてください')),
  ('NEW_GAME',('NOVO JOGO','NEW GAME','NUEVO JUEGO','あたらしいゲーム')),
+ ('CAMP_HUMANS',('HUMANOS','HUMANS','HUMANOS','にんげん')),
+ ('CAMP_UNDEAD',('INSEPULTOS','THE UNBURIED','INSEPULTOS','ほうむられざるもの')),
  ('OPTIONS',('OPÇÕES','OPTIONS','OPCIONES','オプション')),
  ('OPT_MUSIC',('MÚSICA','MUSIC','MÚSICA','おんがく')),
  ('OPT_SFX',('EFEITOS','EFFECTS','EFECTOS','こうかおん')),
@@ -92,6 +94,20 @@ STRINGS=[
  ('NOTE_GROUP',L('GRUPO GUARDADO','GROUP SAVED','GRUPO GUARDADO','グループ ほぞん')),
  ('CMD_STOP',L('PARAR','STOP','PARAR','ていし')),
  ('CMD_HOLD',L('MANTER POSIÇÃO','HOLD POSITION','MANTENER POSICIÓN','ぼうえい')),
+ ('UB_CASTLE',('NECRÓPOLE','NECROPOLIS','NECRÓPOLIS','ネクロポリス')),
+ ('UB_HOUSE',('TÚMULO','TOMB','TÚMULO','はか')),
+ ('UB_BARRACKS',('CRIPTA','CRYPT','CRIPTA','クリプト')),
+ ('UB_SAWMILL',('SERRARIA','SAWMILL','ASERRADERO','せいざいしょ')),
+ ('UB_FORGE',('FORJA NEGRA','BLACK FORGE','FORJA NEGRA','くろいかじや')),
+ ('UB_STABLE',('CAMELARIA','CAMEL PEN','CAMELLERÍA','ラクダごや')),
+ ('UB_TOWER',('OBELISCO','OBELISK','OBELISCO','オベリスク')),
+ ('UB_SIEGE',('SARCÓFAGOS','SARCOPHAGI','SARCÓFAGOS','ひつぎこうじょう')),
+ ('UR_PEASANT',('ESCRAVO','SLAVE','ESCLAVO','どれい')),
+ ('UR_SWORD',('GUERREIRO','WARRIOR','GUERRERO','せんし')),
+ ('UR_SPEAR',('CHACAL','JACKAL','CHACAL','ジャッカル')),
+ ('UR_ARCHER',('ARQUEIRO','ARCHER','ARQUERO','ゆみへい')),
+ ('UR_KNIGHT',('CAMELEIRO','CAMEL RIDER','CAMELLERO','ラクダきし')),
+ ('UR_RAM',('SARCÓFAGO','SARCOPHAGUS','SARCÓFAGO','ひつぎ')),
  ('UPGRADE',L('MELHORAR','UPGRADE','MEJORAR','きょうか')),
  ('ATKARMOR',L('ATQ+2  ARMAD+1','ATK+2  ARMOR+1','ATQ+2  ARMAD+1','こうげき+2 ぼうぎょ+1')),
  ('HP',L('PV','HP','PV','HP')),
@@ -122,7 +138,7 @@ import sys as _sys
 _sys.path.insert(0,str(Path(__file__).resolve().parent))
 import campaign
 MISSION_FIRST=len(STRINGS)
-for _i,_m in enumerate(campaign.MISSIONS,1):
+for _i,_m in enumerate(campaign.ALL,1):
     STRINGS.append(('M%d_T'%_i,_m['title']))
     _lines=[wrap(b) for b in _m['brief']]
     for _k in range(4):STRINGS.append(('M%d_B%d'%(_i,_k+1),tuple(l[_k] for l in _lines)))
@@ -203,20 +219,23 @@ def lz_pack(a):
 def main():
     texts,code,ext=build()
     # tabela: ids x idiomas -> ponteiro; strings terminadas em 0
-    n=len(texts);off=n*LANGS*2;blob=bytearray();ptrs=[]
-    for sid,row in texts:
+    n=len(texts);off=n*LANGS*2;blob=bytearray();blob2=bytearray();ptrs=[]
+    split=MISSION_FIRST     # os textos das missoes (16 x 6 x 4 idiomas) vao para um segundo banco (73)
+    for k,(sid,row) in enumerate(texts):
         for chars in row:
-            ptrs.append(0xA000+off+len(blob));blob+=bytes(code.get(ch,ord(ch)) for ch in chars)+b'\0'
+            data=bytes(code.get(ch,ord(ch)) for ch in chars)+b'\0'
+            if k<split:ptrs.append(0xA000+off+len(blob));blob+=data
+            else:ptrs.append(0xA000+len(blob2));blob2+=data
     tab=b''.join(p.to_bytes(2,'little') for p in ptrs)
-    # ptrs sao enderecos absolutos na ordem [id][lang]; leitura: (id*LANGS+lang)*2
-    body=tab+bytes(blob);assert len(body)<=8192
+    # ptrs sao enderecos absolutos na ordem [id][lang]; leitura: (id*LANGS+lang)*2 (tabela no banco 51; a string esta no banco 51 ou 73)
+    body=tab+bytes(blob);assert len(body)<=8192,len(body);assert len(blob2)<=8192
     def cfile(num,data):
         (r/'src/banks'/f'art_s{num}_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_%d[] = {\n'%num+'\n'.join(','.join(map(str,data[j:j+32]))+',' for j in range(0,len(data),32))+'\n};\n')
-    cfile(51,body);fnt=lz_pack(ext);assert len(fnt)<=8192;cfile(52,fnt)
-    h='/* gerado por tools/i18n.py */\n#define TEXT_BANK 51\n#define TXT_COUNT %d\n#define LANGS 4\n'%n+''.join('#define TXT_%s %d\n'%(sid,i) for i,(sid,_) in enumerate(texts))
+    cfile(51,body);cfile(73,bytes(blob2));fnt=lz_pack(ext);assert len(fnt)<=8192;cfile(52,fnt)
+    h='/* gerado por tools/i18n.py */\n#define TEXT_BANK 51\n#define TEXT_BANK2 73\n#define TXT_SPLIT %d\n#define TXT_COUNT %d\n#define LANGS 4\n'%(split,n)+''.join('#define TXT_%s %d\n'%(sid,i) for i,(sid,_) in enumerate(texts))
     (r/'src/text.h').write_text(h)
     tb=campaign.table()
-    for i in range(len(campaign.MISSIONS)):tb[i*16+11]=MISSION_FIRST+i*6
+    for i in range(len(campaign.ALL)):tb[i*16+11]=MISSION_FIRST+i*6
     (r/'src/mission_table.h').write_text('/* gerado por tools/i18n.py (campaign.py) */\n#define MISSIONS %d\nstatic const u8 mission_table[]={%s};\n'%(len(campaign.MISSIONS),','.join(map(str,tb))))
     (r/'src/text_asset.h').write_text('/* gerado por tools/i18n.py */\nconst Asset font_ext_asset={52,0xA000};\n')
     out=r/'reference/fonte';out.mkdir(exist_ok=True)

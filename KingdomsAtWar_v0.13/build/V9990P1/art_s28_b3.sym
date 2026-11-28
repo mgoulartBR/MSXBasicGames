@@ -295,7 +295,7 @@ Symbol Table
     _g_WRPRIM                                                   =   0000F385 G
     _g_XSAVE                                                    =   0000FAFE G
     _g_YSAVE                                                    =   0000FB00 G
-  7 _group_context                                                  00000609 GR
+  7 _group_context                                                  00000469 GR
     _hud_context_text                                               ******** GX
     _left_edges                                                     ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 6
@@ -319,6 +319,8 @@ Symbol Table
     _selection_count                                                ******** GX
     _selection_mask                                                 ******** GX
     _selection_update                                               ******** GX
+    _side                                                           ******** GX
+    _skin_h                                                         ******** GX
     _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _tr                                                             ******** GX
@@ -338,6 +340,7 @@ Symbol Table
     b_selection_update                                              ******** GX
     b_unit_position                                                 ******** GX
 
+
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
@@ -350,7 +353,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG28                                     size      699   flags    0
+   7 _SEG28                                     size      4F9   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

@@ -84,7 +84,7 @@ extern const u8 build_wood[];
 extern const u8 build_gold[];
 extern const u8 recruit_wood[];
 extern const u8 recruit_gold[];
-const c8* bname(u8 i);const c8* rname(u8 i); /* tr() of the building / unit name */
+const c8* bname(u8 i);const c8* rname(u8 i);const c8* bname_f(u8 i,u8 f);const c8* rname_f(u8 i,u8 f); /* tr() of the building / unit name */
 extern u8 sprite_colors[16];
 
 extern const u8 cursor[];
@@ -177,8 +177,11 @@ void video_cursor(void);
 
 extern u8 unit_facing[RN],unit_frame[RN],unit_walk_dist[RN],unit_walk_phase[RN];
 
-#define POSE_KEY(i) ((u8)(pose_base[(i)<N?unit_kind[i]:skin_map[unit_kind[i]]]+unit_frame[i]))
-extern const u8 kind_sizes[],pose_bounds[],pose_cells[],build_base[],key_slot[],pose_base[],pose_count[],skin_map[];
+/* faction of an actor: 1 = Unburied (art, palette group 1). The player's units are slots < N and follow `side`; the AI's units the other kingdom. */
+#define UFAC(i) ((u8)(((i)>=N)^side))
+#define POSE_TYPE(i) ((UFAC(i)?skin_map:skin_h)[unit_kind[i]])
+#define POSE_KEY(i) ((u8)(pose_base[POSE_TYPE(i)]+unit_frame[i]))
+extern const u8 kind_sizes[],pose_bounds[],pose_cells[],build_base[],key_slot[],pose_base[],pose_count[],skin_map[],skin_h[];
 
 extern u8 raw_down,raw_latched;extern i16 raw_dx,raw_dy;
 void poll_input(void);

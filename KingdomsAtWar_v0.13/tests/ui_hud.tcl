@@ -14,7 +14,7 @@ proc sel {mask count selected bsel} {
 }
 proc hud_case {} {
  delay 38
- tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
+ tapkey 7 128;tapkey 7 128;tapkey 7 128;delay 6;tapkey 7 128;wait_game
  delay 2
  tapkey 7 8  ;# esconde o minimapa
  shot hud-none

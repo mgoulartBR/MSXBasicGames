@@ -14,11 +14,8 @@ PLATE,BORDER=12,14
 def quant(rgb):
     d=((rgb[...,None,:]-PAL[None,None,1:,:])**2).sum(-1)   # nunca cor 0 (transparente)
     return d.argmin(-1)+1
-def icon_from(img,box=None,bgtol=14):
-    im=img.convert('RGB');a=np.array(im).astype(float)
-    if box:a=a[box[1]:box[3],box[0]:box[2]]
-    bg=a[0,0];alpha=(np.abs(a-bg).max(-1)>bgtol).astype(float)
-    # tira ruido de borda (cinza dos paineis)
+def icon_arr(a,alpha):
+    """a: (h,w,3) float, alpha: (h,w) 0/1 -> 14x14 reduzido (area media) e cobertura"""
     ys,xs=np.where(alpha>0);y0,y1,x0,x1=ys.min(),ys.max()+1,xs.min(),xs.max()+1
     a=a[y0:y1,x0:x1];alpha=alpha[y0:y1,x0:x1]
     h,w=alpha.shape;s=max(h,w);pad=np.zeros((s,s,3));pa=np.zeros((s,s))
@@ -30,6 +27,17 @@ def icon_from(img,box=None,bgtol=14):
             blk=pa[y_a:y_b,x_a:x_b];cnt=blk.sum();oa[j,i]=cnt/blk.size
             if cnt>0:out[j,i]=(pad[y_a:y_b,x_a:x_b].sum((0,1)))/cnt
     return out,oa
+def icon_from(img,box=None,bgtol=14,extra_bg=()):
+    a=np.array(img.convert('RGB')).astype(float)
+    if box:a=a[box[1]:box[3],box[0]:box[2]]
+    flat=a.reshape(-1,3).astype(int);keys=flat[:,0]*65536+flat[:,1]*256+flat[:,2];vals,cnt=np.unique(keys,return_counts=True);bgk=vals[cnt.argmax()]
+    bg=np.array([bgk>>16,(bgk>>8)&255,bgk&255],float)   # fundo = cor mais frequente
+    alpha=(np.abs(a-bg).max(-1)>bgtol).astype(float)
+    for c in extra_bg:alpha*=(np.abs(a-np.array(c)).max(-1)>bgtol)
+    return icon_arr(a,alpha)
+def icon_idx(idx,pal,box):
+    sub=idx[box[1]:box[3],box[0]:box[2]];alpha=(sub>=0).astype(float)
+    return icon_arr(pal[np.clip(sub,0,len(pal)-1)].astype(float),alpha)
 def plate(rgb=None,alpha=None,pix=None):
     p=np.full((16,16),PLATE,np.uint8)
     p[0,:]=p[15,:]=p[:,0]=p[:,15]=BORDER
@@ -53,30 +61,39 @@ def shield():
     return [row.replace('C','B').replace('E','F') for row in pat]
 def upgrade():
     return ["......BB......",".....BAAB.....","....BAAAAB....","...BAAAAAAB...","..BAAAAAAAAB..",".BBBBAAAABBBB.","....BAAAAB....","....BAAAAB....","....BAAAAB....","..DDDDDDDDDD..",".DCCCCCCCCCCD.","..DDDDDDDDDD..","..D8888888 D..".replace(' ',''),"..DDDDDDDDDD.."]
-def main():
-    ref=r/'reference/humanos_estilo'
-    icons=[plate(pix=STOP if False else None) if False else None]*0
-    out=[]
-    out.append(plate(pix=[('.'+row.replace('F','E')+'.')[:14] if False else row for row in STOP]))
-    out.append(plate(pix=shield()))
-    for k in range(1,8):
-        im=Image.open(ref/['predio_1_casa','predio_2_quartel','predio_3_serraria','predio_4_ferraria','predio_5_estabulo','predio_6_torre','predio_7_oficina_cerco'][k-1]).with_suffix('.png') if False else Image.open(ref/(['predio_1_casa','predio_2_quartel','predio_3_serraria','predio_4_ferraria','predio_5_estabulo','predio_6_torre','predio_7_oficina_cerco'][k-1]+'.png'))
-        rgb,al=icon_from(im);out.append(plate(rgb,al))
-    sheet=Image.open(ref/'humanos_referencia_unica.png')
-    W=sheet.size[0]//6;H=sheet.size[1]//4
-    for c in (0,1,3,2,4,5):   # na folha: campones, espadachim, arqueiro, lanceiro, cavaleiro, ariete; no jogo: lanceiro vem antes do arqueiro
-        rgb,al=icon_from(sheet,(c*W,0,(c+1)*W,H));out.append(plate(rgb,al))
-    out.append(plate(pix=upgrade()))
-    strip=np.concatenate(out,axis=1)   # 16 x 256
+def pack(strip,name,asset,bank):
     assert strip.shape==(16,256)
-    # preview
-    img=PAL[strip].astype(np.uint8);Image.fromarray(img).resize((256*6,16*6),Image.NEAREST).save(r/'reference/hud_icones.png')
+    img=PAL[strip].astype(np.uint8);Image.fromarray(img).resize((256*6,16*6),Image.NEAREST).save(r/f'reference/{name}.png')
     raw=bytearray()
     for y in range(16):
         for x in range(0,256,2):raw.append((int(strip[y,x])<<4)|int(strip[y,x+1]))
     src=(r/'tools/prepare09.py').read_text();ns={};exec(re.search(r'def lz\(a\):.*?return bytes\(out\)',src,re.S)[0],ns)
     blob=ns['lz'](bytes(raw));assert len(blob)<=8192
-    (r/'src/banks/art_s71_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_71[] = {\n'+'\n'.join(','.join(map(str,blob[j:j+32]))+',' for j in range(0,len(blob),32))+'\n};\n')
-    (r/'src/icons_asset.h').write_text('/* gerado por tools/hud_icons.py */\nconst Asset icons_asset={71,0xA000};\n')
-    print('icones: faixa',len(raw),'B ->',len(blob),'B LZ')
+    (r/'src/banks'/f'art_s{bank}_b3.c').write_text('#include "msxgl.h"\nconst u8 artbank_%d[] = {\n'%bank+'\n'.join(','.join(map(str,blob[j:j+32]))+',' for j in range(0,len(blob),32))+'\n};\n')
+    print(name,': faixa',len(raw),'B ->',len(blob),'B LZ (banco',bank,')')
+def main():
+    ref=r/'reference/humanos_estilo'
+    names=['predio_1_casa','predio_2_quartel','predio_3_serraria','predio_4_ferraria','predio_5_estabulo','predio_6_torre','predio_7_oficina_cerco']
+    cmd=[plate(pix=[row for row in STOP]),plate(pix=shield())]
+    up=plate(pix=upgrade())
+    # humanos
+    out=list(cmd)
+    for n in names:
+        rgb,al=icon_from(Image.open(ref/(n+'.png')));out.append(plate(rgb,al))
+    sheet=Image.open(ref/'humanos_referencia_unica.png');W=sheet.size[0]//6;H=sheet.size[1]//4
+    for c in (0,1,3,2,4,5):   # na folha: campones, espadachim, arqueiro, lanceiro, cavaleiro, ariete; no jogo: lanceiro antes do arqueiro
+        rgb,al=icon_from(sheet,(c*W,0,(c+1)*W,H));out.append(plate(rgb,al))
+    out.append(up);pack(np.concatenate(out,axis=1),'hud_icones',None,71)
+    # insepultos: predios da folha de previa (grade 4x2) e unidades dos indices realistas
+    m=r/'reference/mumia'
+    out=list(cmd);sh=Image.open(m/"predios_previa_v3.png");cw,ch=sh.size[0]//4,385;im_green=sh.convert("RGB").getpixel((5,5))
+    for k in range(1,8):
+        gx,gy=k%4,k//4
+        rgb,al=icon_from(sh,(gx*cw+2,gy*ch+2,(gx+1)*cw-2,(gy+1)*ch-2),extra_bg=[(28,28,28),im_green]);out.append(plate(rgb,al))
+    pal=np.load(m/'realista/palette.npy')
+    for nm,cell in (('peasant',32),('sword',32),('spear',48),('archer',32),('knight',48),('ram',48)):
+        idx=np.load(m/f'realista/{nm}_idx.npy').astype(int)
+        rgb,al=icon_idx(idx,pal,(0,0,cell,cell));out.append(plate(rgb,al))
+    out.append(up);pack(np.concatenate(out,axis=1),'hud_icones_insepultos',None,72)
+    (r/'src/icons_asset.h').write_text('/* gerado por tools/hud_icons.py */\nconst Asset icons_asset={71,0xA000};\nconst Asset icons_undead_asset={72,0xA000};\n')
 if __name__=='__main__':main()

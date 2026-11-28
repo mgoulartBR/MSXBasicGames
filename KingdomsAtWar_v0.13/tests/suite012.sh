@@ -13,6 +13,8 @@ if [[ "$KAW_SUITE_VARIANT" == V9990P1 ]]; then
  KAW_MENU=1 KAW_TEST_SCRIPT=menu_flow.tcl python3 tests/run_tests.py V9990P1
  KAW_MENU=1 KAW_OBJ=1 KAW_TEST_SCRIPT=campaign_flow.tcl python3 tests/run_tests.py V9990P1
  for KAW_BIG in bigmap bigmap_ai bigmap128 allmaps; do KAW_MENU=1 KAW_OBJ=1 KAW_TEST_SCRIPT=$KAW_BIG.tcl python3 tests/run_tests.py V9990P1; done
+ KAW_SIDE=1 KAW_MENU=1 KAW_OBJ=1 KAW_TEST_SCRIPT=allmaps.tcl python3 tests/run_tests.py V9990P1
+ KAW_MENU=1 KAW_TEST_SCRIPT=undead_campaign.tcl python3 tests/run_tests.py V9990P1
  python3 tests/run_mouse.py V9990P1 edge_bottom.tcl 1
  KAW_TEST_SCRIPT=stale_heal.tcl python3 tests/run_tests.py V9990P1
  KAW_MENU=1 KAW_OBJ=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=music.tcl python3 tests/run_tests.py V9990P1

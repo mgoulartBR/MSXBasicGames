@@ -338,7 +338,7 @@ static u8 unit_prep_in(u8 i) {
 }
 void up_slow(u8 i) {
  actor_crop[i]=mine_phase[i]?(u8)(mine_step[i]*4):0;
- actor_visible[i]=unit_prep_in(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=pose_base[unit_kind[i]]+unit_prep_f;
+ actor_visible[i]=unit_prep_in(i);actor_x[i]=unit_draw_x+cam_x;actor_y[i]=unit_draw_y+cam_y;actor_key[i]=pose_base[POSE_TYPE(i)]+unit_prep_f;
 }
 static u8 upa_i,upa_v,up_idle[RN],up_par,up_kind[RN];static u16 up_fe;
 /* Z80: all render slots. Culled ones are hidden; workers take the C path; the others use up_plain. */
@@ -463,11 +463,16 @@ upa_do:
  ld b,#0
  ld a,e
  cp a,#8
- jp c,upa_k1
+ sbc a,a
+ inc a
+ ld hl,#_side
+ xor a,(hl)
+ ld hl,#_skin_h
+ jr z,upa_k1
  ld hl,#_skin_map
+upa_k1:
  add hl,bc
  ld c,(hl)
-upa_k1:
  ld hl,#_pose_base
  add hl,bc
  ld a,(hl)

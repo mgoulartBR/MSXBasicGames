@@ -2,12 +2,13 @@
 #include "../text.h"
 #include "../screens.h"
 #include "../mission_table.h"
+extern const Asset icons_asset,icons_undead_asset;
 /* Campaign: mission parameters (tools/campaign.py), a new game state for each mission without reloading the assets, and
  * the briefing screen. */
 void mission_load(u8 m) __banked {
  u8 i;const u8* src;u8* dst=(u8*)&mis;
  if(m>=MISSIONS)m=MISSIONS-1;
- src=mission_table+(u16)m*16;
+ src=mission_table+(u16)((u8)(side*MISSIONS)+m)*16; /* the table holds the human campaign, then the Unburied one */
  for(i=0;i<16;++i)dst[i]=src[i];
  mission_total=MISSIONS;
 }
@@ -27,6 +28,9 @@ void game_reset(u8 m) __banked {
  {u8 p;for(p=0;p<2;++p) {for(i=0;i<30;++i)hud_context[p][i]=hud_action_cache[p][i]=0;hud_act_mode[p]=255;for(i=0;i<9;++i)hud_icon_cache[p][i]=0;}} /* the band is redrawn from scratch */
  init_world();fog_init();
  wood=mis.wood;gold=mis.gold;
+ /* command icons of the player's kingdom (VRAM lines 224..239) */
+ asset_begin(side?&icons_undead_asset:&icons_asset);
+ for(i=0;i<16;++i) {asset_read(tile_buffer,128);V9_WriteVRAM((u32)(224+i)*128,tile_buffer,128);}
  {u16 mx=(u16)map_w*16-256,my=(u16)map_h*16-160,cx=(u16)(pb_x>2?pb_x-2:0)*16,cy=(u16)(pb_y>6?pb_y-6:0)*16;cam_x=cx>mx?mx:cx;cam_y=cy>my?my:cy;} /* the camera starts at the castle */
 }
 /* Briefing: the parchment picture, the mission title and four text lines in the HUD band; Enter or a click starts. */

@@ -25,23 +25,23 @@ Creating crt0 config file...
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
-In file included from ./main.c:231:
-./video.h:272:10: warning: missing terminating ' character
-  272 |  ex af,af'
+In file included from ./main.c:232:
+./video.h:274:10: warning: missing terminating ' character
+  274 |  ex af,af'
       |          ^
-./video.h:292:10: warning: missing terminating ' character
-  292 |  ex af,af'
+./video.h:294:10: warning: missing terminating ' character
+  294 |  ex af,af'
       |          ^
-./video.h:295:10: warning: missing terminating ' character
-  295 |  ex af,af'
+./video.h:297:10: warning: missing terminating ' character
+  297 |  ex af,af'
       |          ^
-./video.h:1167: warning 85: in function video_sprites unreferenced local variable : 'j'
-./video.h:1243: warning 85: in function video_game_reset unreferenced local variable : 'x'
-./video.h:1243: warning 85: in function video_game_reset unreferenced local variable : 'y'
-./video.h:1283: warning 85: in function video_scroll_update unreferenced local variable : 'nx0'
-./video.h:1283: warning 85: in function video_scroll_update unreferenced local variable : 'ny0'
-./video.h:1283: warning 85: in function video_scroll_update unreferenced local variable : 'nx1'
-./video.h:1283: warning 85: in function video_scroll_update unreferenced local variable : 'ny1'
+./video.h:1177: warning 85: in function video_sprites unreferenced local variable : 'j'
+./video.h:1256: warning 85: in function video_game_reset unreferenced local variable : 'x'
+./video.h:1256: warning 85: in function video_game_reset unreferenced local variable : 'y'
+./video.h:1296: warning 85: in function video_scroll_update unreferenced local variable : 'nx0'
+./video.h:1296: warning 85: in function video_scroll_update unreferenced local variable : 'ny0'
+./video.h:1296: warning 85: in function video_scroll_update unreferenced local variable : 'nx1'
+./video.h:1296: warning 85: in function video_scroll_update unreferenced local variable : 'ny1'
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -272,6 +272,12 @@ Segment found: banks/art_s70_b3.c (addr: 0046A000h)
 Segment found: banks/art_s71_b3.c (addr: 0047A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s71_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
+Segment found: banks/art_s72_b3.c (addr: 0048A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s72_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s73_b3.c (addr: 0049A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s73_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ LINK                                                                      │
@@ -290,7 +296,7 @@ published under GNU General Public License (GPL)
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
  Start=00004000h Size=00100000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=9DF5h Size=24054 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=9E70h Size=24177 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -312,9 +318,9 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0023]: Lower=A000h Higher=B09Ah Size=4251 (Holes=0)
  Seg[0024]: Lower=A000h Higher=A461h Size=1122 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
- Seg[0026]: Lower=A000h Higher=BBE6h Size=7143 (Holes=0)
- Seg[0027]: Lower=A000h Higher=B851h Size=6226 (Holes=0)
- Seg[0028]: Lower=A000h Higher=A698h Size=1689 (Holes=0)
+ Seg[0026]: Lower=A000h Higher=BC05h Size=7174 (Holes=0)
+ Seg[0027]: Lower=A000h Higher=B870h Size=6257 (Holes=0)
+ Seg[0028]: Lower=A000h Higher=A4F8h Size=1273 (Holes=0)
  Seg[0029]: Lower=A000h Higher=BB87h Size=7048 (Holes=0)
  Seg[0030]: Lower=A000h Higher=B4DFh Size=5344 (Holes=0)
  Seg[0031]: Lower=A000h Higher=BFF3h Size=8180 (Holes=0)
@@ -336,10 +342,10 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0047]: Lower=A000h Higher=BADEh Size=6879 (Holes=0)
  Seg[0048]: Lower=A000h Higher=BD88h Size=7561 (Holes=0)
  Seg[0049]: Lower=A000h Higher=BA3Fh Size=6720 (Holes=0)
- Seg[0050]: Lower=A000h Higher=A864h Size=2149 (Holes=0)
- Seg[0051]: Lower=A000h Higher=BD84h Size=7557 (Holes=0)
- Seg[0052]: Lower=A000h Higher=A479h Size=1146 (Holes=0)
- Seg[0053]: Lower=A000h Higher=A3C2h Size=963 (Holes=0)
+ Seg[0050]: Lower=A000h Higher=A8C7h Size=2248 (Holes=0)
+ Seg[0051]: Lower=A000h Higher=B2A6h Size=4775 (Holes=0)
+ Seg[0052]: Lower=A000h Higher=A4D9h Size=1242 (Holes=0)
+ Seg[0053]: Lower=A000h Higher=A495h Size=1174 (Holes=0)
  Seg[0054]: Lower=A000h Higher=AE79h Size=3706 (Holes=0)
  Seg[0055]: Lower=A000h Higher=A821h Size=2082 (Holes=0)
  Seg[0056]: Lower=A000h Higher=BEE8h Size=7913 (Holes=0)
@@ -358,7 +364,9 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0069]: Lower=A000h Higher=A198h Size=409 (Holes=0)
  Seg[0070]: Lower=A000h Higher=AC71h Size=3186 (Holes=0)
  Seg[0071]: Lower=A000h Higher=A4F2h Size=1267 (Holes=0)
- Total size: 357995
+ Seg[0072]: Lower=A000h Higher=A4DCh Size=1245 (Holes=0)
+ Seg[0073]: Lower=A000h Higher=BEE3h Size=7908 (Holes=0)
+ Total size: 364541
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

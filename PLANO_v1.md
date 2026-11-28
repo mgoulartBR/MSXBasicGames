@@ -19,5 +19,7 @@ Decisões do autor (24/11/2026): mapper no máximo, sem teto de ROM; mapa de 64�
 4. Áudio FM — **feito (v0.16)**: 6 músicas e 12 efeitos em OPLL; falta ajuste de timbre/volume por ouvido, opção de silenciar no menu e músicas por missão.
 5. Interface e polimento — **minimapa, grupos de controle, atalhos e silenciar feitos (v0.17)**; **HUD com ícones de comandos e dicas de custo feitos (v0.18)**; **menu de opções (música, efeitos, volume) feito (v0.19)**; balanceamento; testes no V9990 real a cada marco.
 
+## Campanha dos Insepultos: **jogável (v0.20)** — mesmas regras, arte própria (unidades, prédios, ícones, nomes), 8 missões; faltam regras e unidades exclusivas, música própria e telas de briefing por facção.
+
 ## Pendências de arte (do autor)
 Tela de título, telas de vitória/derrota/fim, retratos para briefing, tiles de ponte/vau, novos cenários de mapa; ícones do HUD novo.

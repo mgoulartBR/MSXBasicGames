@@ -398,6 +398,8 @@ Symbol Table
     _selection_mask                                                 ******** GX
   7 _selection_update                                               00000ACC GR
     _sfx_play                                                       ******** GX
+    _side                                                           ******** GX
+    _skin_h                                                         ******** GX
     _skin_map                                                       ******** GX
     _sprites_dirty                                                  ******** GX
     _stance                                                         ******** GX
@@ -416,13 +418,13 @@ Symbol Table
     _units                                                          ******** GX
     _video_char                                                     ******** GX
     _video_clock                                                    ******** GX
-    _video_cursor                                                   ******** GX
-    _video_hud_begin                                                ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    _video_cursor                                                   ******** GX
+    _video_hud_begin                                                ******** GX
     _video_hud_end                                                  ******** GX
     _video_hud_flush                                                ******** GX
     _wood                                                           ******** GX
@@ -465,7 +467,6 @@ Symbol Table
     b_ui_keys                                                       ******** GX
     b_unit_position                                                 ******** GX
     b_work_stop                                                     ******** GX
-
 
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 9
 Hexadecimal [32-Bits]
