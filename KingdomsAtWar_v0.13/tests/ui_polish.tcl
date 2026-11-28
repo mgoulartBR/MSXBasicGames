@@ -39,11 +39,11 @@ proc ui_case {} {
  tapkey 0 2
  ck group_recalled {[b selection_mask]==3}
  # P: som liga/desliga
- ck fm_on {[b fm_ok]==1}
+ ck fm_on {[b opt_music]==1}
  tapkey 4 32
- ck sound_off {[b fm_ok]==0 && [b ms 0]==0}
+ ck sound_off {[b opt_music]==0 && [b ms 0]==0}
  tapkey 4 32
- ck sound_on {[b fm_ok]==1 && [b ms 0]==1}
+ ck sound_on {[b opt_music]==1 && [b ms 0]==1}
  puts stderr "RESULT failures=$::failures";exit
 }
 coroutine ui_run guard ui_case

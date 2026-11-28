@@ -389,7 +389,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- ms.on=sx.on=0;music_cur=255;fm_found=fm_ok=music_detect();ui_note_t=0;hover_slot=255;
+ ms.on=sx.on=0;music_cur=255;opt_music=opt_sfx=1;opt_vol=4;fm_found=fm_ok=music_detect();ui_note_t=0;hover_slot=255;
  map_w=map_h=32;nav_x0=nav_y0=0;lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;

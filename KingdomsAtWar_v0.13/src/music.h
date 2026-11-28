@@ -8,7 +8,7 @@
 #include "music_data.h"
 typedef struct {u8 on,delay,bank,lbank;u16 ptr,lptr;} MStream;
 MStream ms,sx;
-u8 fm_ok,fm_found,music_cur,sfx_cur,battle_t;
+u8 fm_ok,fm_found,music_cur,sfx_cur,battle_t,opt_music,opt_sfx,opt_vol; /* options: music on/off, effects on/off, music volume 1..4 */
 extern u8 g_Bank3Segment;
 static void opll_w(u16 rv) __z88dk_fastcall __naked { /* L = register, H = value */
  (void)rv;
@@ -24,14 +24,20 @@ static void opll_w(u16 rv) __z88dk_fastcall __naked { /* L = register, H = value
  ret
  __endasm;
 }
-static void stream_run(MStream* s) {
- const u8* p;u8 b;
+static void stream_run(MStream* s,u8 music) {
+ const u8* p;u8 b,v,off=(u8)((4-opt_vol)*2);
  if(s->delay) {--s->delay;return;}
  *(volatile u8*)0x7800=s->bank;
  p=(const u8*)s->ptr;
  for(;;) {
   b=*p++;
-  if(b<0x40) {opll_w((u16)b|((u16)(*p++)<<8));}
+  if(b<0x40) {
+   v=*p++;
+   if(music && off && b>=0x30 && b<=0x38) { /* music volume: add attenuation to the channel/rhythm volume nibbles */
+    u8 lo=(v&15)+off,hi=(v>>4);if(lo>15)lo=15;if(b>=0x36){hi+=off;if(hi>15)hi=15;v=(u8)((hi<<4)|lo);}else v=(u8)((v&0xF0)|lo);
+   }
+   opll_w((u16)b|((u16)v<<8));
+  }
   else if(b>=0x80 && b<0xFD) {s->delay=b-0x80;break;}
   else if(b==0xFD) {++s->bank;*(volatile u8*)0x7800=s->bank;p=(const u8*)0xA000;}
   else if(b==0xFE) {s->bank=s->lbank;*(volatile u8*)0x7800=s->bank;p=(const u8*)s->lptr;}
@@ -42,12 +48,12 @@ static void stream_run(MStream* s) {
 /* Called by the vertical-blank interrupt (interrupts are disabled there). */
 void music_isr(void) {
  if(!fm_ok || !(ms.on|sx.on))return;
- if(ms.on)stream_run(&ms);
- if(sx.on)stream_run(&sx);
+ if(ms.on)stream_run(&ms,1);
+ if(sx.on)stream_run(&sx,0);
  *(volatile u8*)0x7800=g_Bank3Segment;
 }
 void music_play(u8 id) {
- if(!fm_ok || id==music_cur)return;
+ if(!fm_ok || !opt_music || id==music_cur)return;
  __asm di __endasm;
  music_cur=id;ms.on=0;ms.delay=0;ms.bank=song_bank[id];ms.ptr=0xA000;ms.lbank=song_loop_bank[id];ms.lptr=song_loop_ptr[id];ms.on=1;
  __asm ei __endasm;
@@ -62,7 +68,7 @@ void music_stop(void) {
  __asm ei __endasm;
 }
 void sfx_play(u8 id) {
- if(!fm_ok || (sx.on && sfx_prio[id]<sfx_prio[sfx_cur]))return; /* a more important effect keeps the channel */
+ if(!fm_ok || !opt_sfx || (sx.on && sfx_prio[id]<sfx_prio[sfx_cur]))return; /* a more important effect keeps the channel */
  __asm di __endasm;
  sfx_cur=id;sx.on=0;sx.delay=0;sx.bank=SFX_BANK;sx.ptr=sfx_ptr[id];sx.on=1;
  __asm ei __endasm;

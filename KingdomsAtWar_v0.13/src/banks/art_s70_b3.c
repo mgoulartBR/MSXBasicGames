@@ -192,8 +192,8 @@ void ui_keys(void) __banked {
  if(edge&2)cam_center(buildings[0].x+2,buildings[0].y+2);
  if(edge&4) {
   if(!fm_found)say(TXT_NOTE_NO_FM);
-  else if(fm_ok) {music_stop();fm_ok=0;say(TXT_NOTE_SOUND_OFF);}
-  else {fm_ok=1;music_cur=255;music_play(SONG_CALM);say(TXT_NOTE_SOUND_ON);}
+  else if(opt_music || opt_sfx) {music_stop();opt_music=opt_sfx=0;say(TXT_NOTE_SOUND_OFF);}
+  else {opt_music=opt_sfx=1;music_cur=255;music_play(SONG_CALM);say(TXT_NOTE_SOUND_ON);}
  }
  for(i=0;i<5;++i)if(edge&(u8)(8<<i)) {
   if(KP(KEY_CTRL)) {grp_mask[i]=selection_mask;sfx_play(SFX_CONFIRM);say(TXT_NOTE_GROUP);}

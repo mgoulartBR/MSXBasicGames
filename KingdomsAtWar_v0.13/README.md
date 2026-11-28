@@ -165,6 +165,7 @@ Cavaleiros deslocam-se mais rápido; aríetes, mais devagar. O combate dos espad
 | Câmera no castelo | — | B |
 | Grupos de controle (1 a 5): guardar / chamar | — | Ctrl+número / número (duas vezes: centraliza a câmera) |
 | Som (música e efeitos) liga/desliga | — | P |
+| Menu de opções (título → OPÇÕES): música, efeitos, volume da música (1–4) | Mouse ou ↑/↓, Enter, ←/→ | Esc volta |
 | Perfil Classic/Advanced | — | Espaço |
 | Reiniciar depois da vitória ou derrota | — | Enter |
 

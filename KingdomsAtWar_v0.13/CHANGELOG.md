@@ -308,3 +308,8 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - Icones: `tools/hud_icons.py` gera a faixa 256x16 (predios e unidades reduzidos da arte de referencia e quantizados para a paleta do HUD; parar/manter/melhorar desenhados no script), banco 71, VRAM linhas 224..239 (padroes 896..959 da camada A); previa em `reference/hud_icones.png`. `video_icon`/`video_cells` em `video.h` (`video_cells` nao conta como apagamento do HUD).
 - Cliques: faixa y=192..207, slot = (x-8)/24; clique direito na faixa cancela obra/producao. Testes antigos atualizados para a nova geometria; `ui_hud.tcl` (capturas por contexto, dica, treino pelo icone).
 - Limite conhecido: icones sem versao "apagada" para recurso insuficiente (o custo aparece na dica).
+
+## v0.19 - menu de opcoes
+- Menu principal: NOVO JOGO / OPCOES / IDIOMA. **Opcoes**: musica ON/OFF, efeitos ON/OFF, volume da musica 1..4 (setas ou Enter/clique; Esc ou VOLTAR retorna). Sem MSX-Music o menu mostra "SEM MSX-MUSIC".
+- Motor (`music.h`): `opt_music`, `opt_sfx`, `opt_vol`. O volume soma atenuacao (0/2/4/6) nos registradores de volume dos canais melodicos e da bateria ao ler o fluxo da musica (os efeitos nao mudam); mudar o volume reinicia a musica atual para aplicar. A tecla P passou a ser o "mudo geral" (liga/desliga as duas opcoes); `fm_ok` agora so indica que ha chip.
+- Textos novos nos 4 idiomas (OPTIONS, OPT_*). Teste `options_menu.tcl` (musica, efeitos, volume com leitura do atenuador do OPLL); `menu_flow.tcl` atualizado.

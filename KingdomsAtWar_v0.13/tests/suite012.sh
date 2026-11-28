@@ -18,5 +18,6 @@ if [[ "$KAW_SUITE_VARIANT" == V9990P1 ]]; then
  KAW_MENU=1 KAW_OBJ=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=music.tcl python3 tests/run_tests.py V9990P1
  KAW_MENU=1 KAW_OBJ=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=ui_polish.tcl python3 tests/run_tests.py V9990P1
  KAW_MENU=1 KAW_OBJ=1 KAW_TEST_SCRIPT=ui_hud.tcl python3 tests/run_tests.py V9990P1
+ KAW_MENU=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=options_menu.tcl python3 tests/run_tests.py V9990P1
  python3 tests/verify_fog_p1.py
 fi

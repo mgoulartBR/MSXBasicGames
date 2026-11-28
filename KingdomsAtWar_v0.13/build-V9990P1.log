@@ -290,7 +290,7 @@ published under GNU General Public License (GPL)
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
  Start=00004000h Size=00100000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=9D61h Size=23906 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=9DF5h Size=24054 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -336,9 +336,9 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0047]: Lower=A000h Higher=BADEh Size=6879 (Holes=0)
  Seg[0048]: Lower=A000h Higher=BD88h Size=7561 (Holes=0)
  Seg[0049]: Lower=A000h Higher=BA3Fh Size=6720 (Holes=0)
- Seg[0050]: Lower=A000h Higher=A5ADh Size=1454 (Holes=0)
- Seg[0051]: Lower=A000h Higher=BC67h Size=7272 (Holes=0)
- Seg[0052]: Lower=A000h Higher=A472h Size=1139 (Holes=0)
+ Seg[0050]: Lower=A000h Higher=A864h Size=2149 (Holes=0)
+ Seg[0051]: Lower=A000h Higher=BD84h Size=7557 (Holes=0)
+ Seg[0052]: Lower=A000h Higher=A479h Size=1146 (Holes=0)
  Seg[0053]: Lower=A000h Higher=A3C2h Size=963 (Holes=0)
  Seg[0054]: Lower=A000h Higher=AE79h Size=3706 (Holes=0)
  Seg[0055]: Lower=A000h Higher=A821h Size=2082 (Holes=0)
@@ -356,9 +356,9 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0067]: Lower=A000h Higher=A09Eh Size=159 (Holes=0)
  Seg[0068]: Lower=A000h Higher=A4D0h Size=1233 (Holes=0)
  Seg[0069]: Lower=A000h Higher=A198h Size=409 (Holes=0)
- Seg[0070]: Lower=A000h Higher=AC63h Size=3172 (Holes=0)
+ Seg[0070]: Lower=A000h Higher=AC71h Size=3186 (Holes=0)
  Seg[0071]: Lower=A000h Higher=A4F2h Size=1267 (Holes=0)
- Total size: 356846
+ Total size: 357995
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
