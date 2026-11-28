@@ -258,4 +258,4 @@ extern u8 tile_buffer[128],boot_poses,cache_tick,p1_ready,ord_n,sused,rc_n,rw_n,
 extern u8 wv_x0,wv_y0,wv_x1,wv_y1;void hud_name(u8 col,u8 row,u16 n);void p1_cell(u8 x,u8 y);void pose_pos(u8 key,u8 sz,u16* x,u16* y);void reset_caches(void);
 
 #include "music_ids.h"
-extern u8 battle_t;void music_play(u8 id);void music_stop(void);void sfx_play(u8 id);
+extern u8 mm_dirty[16],battle_t,fm_ok,fm_found,ui_note_id,ui_note_t,kbrow[9];void minimap_init(void) __banked;void minimap_tick(void) __banked;u8 mm_hit(u8 x,u8 y) __banked;void mm_click(u8 x,u8 y,u8 right) __banked;void ui_keys(void) __banked;void music_play(u8 id);void music_stop(void);void sfx_play(u8 id);

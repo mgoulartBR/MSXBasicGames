@@ -1252,7 +1252,8 @@ static u8 vm_get(u32 a) {u8 v;__asm di __endasm;io_sel=3;io_reg=(u8)a;io_reg=(u8
 static void vm_put(u32 a,u8 v) {__asm di __endasm;io_vset(a);io_vram=v;__asm ei __endasm;}
 #define MAPA(base,x,y) ((base)+((u32)(y)<<7)+(x))
 u8 tile(u8 x,u8 y) {return vm_get(MAPA(MAP_T,x,y));}
-void tile_set(u8 x,u8 y,u8 t) {vm_put(MAPA(MAP_T,x,y),t);if(x>=nav_x0 && x<nav_x0+32 && y>=nav_y0 && y<nav_y0+32)terrain[((u16)(y-nav_y0)<<5)+(x-nav_x0)]=t;}
+u8 mm_dirty[16]; /* map rows whose terrain or explored flags changed since the minimap last sampled them (bit y&7 of byte y>>3) */
+void tile_set(u8 x,u8 y,u8 t) {mm_dirty[y>>3]|=(u8)(1<<(y&7));vm_put(MAPA(MAP_T,x,y),t);if(x>=nav_x0 && x<nav_x0+32 && y>=nav_y0 && y<nav_y0+32)terrain[((u16)(y-nav_y0)<<5)+(x-nav_x0)]=t;}
 u8 art_tile(u8 x,u8 y) {return vm_get(MAPA(MAP_ART,x,y));}
 void art_set(u8 x,u8 y,u8 a) {vm_put(MAPA(MAP_ART,x,y),a);}
 u8 stock_get(u8 x,u8 y) {return vm_get(MAPA(MAP_STOCK,x,y));}
@@ -1260,7 +1261,7 @@ void stock_set(u8 x,u8 y,u8 n) {vm_put(MAPA(MAP_STOCK,x,y),n);}
 u8 fmem_get(u8 x,u8 y) {return vm_get(MAPA(MAP_FOGM,x,y));}
 void fmem_set(u8 x,u8 y,u8 a) {vm_put(MAPA(MAP_FOGM,x,y),a);}
 u8 fogx_get(u8 x,u8 y) {return vm_get(MAPA(MAP_FOGX,x,y));}
-void fogx_set(u8 x,u8 y,u8 v) {vm_put(MAPA(MAP_FOGX,x,y),v);}
+void fogx_set(u8 x,u8 y,u8 v) {mm_dirty[y>>3]|=(u8)(1<<(y&7));vm_put(MAPA(MAP_FOGX,x,y),v);}
 void map_clear_fog(void) {V9_FillVRAM(MAP_FOGM,0,16384);V9_FillVRAM(MAP_FOGX,0,16384);}
 /* The rendered rectangle follows the camera (view plus a margin of cells): cells entering it are drawn, the ones leaving are
  * simply overwritten by the torus. Called every frame before the sprites; a fresh rectangle (reset) draws everything. */

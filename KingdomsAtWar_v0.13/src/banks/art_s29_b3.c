@@ -167,6 +167,7 @@ static void cat(c8* d,const c8* a,const c8* b) {while(*a)*d++=*a++;while(*b)*d++
 void hud_actions(void) __banked {
  u8 p=hud_draw,i,step=0,old;const c8* line;c8 lb[34];
  if(game_over)hud_context_text(tr(game_over==1?TXT_VICTORY_MSG:TXT_DEFEAT_MSG));
+ else if(ui_note_t)hud_context_text(tr(ui_note_id));
  else if(placement_mode) {
   c8 text[30];u8 k=0;const c8* name=bname(build_kind);
   while(*name)text[k++]=*name++;text[k++]=' ';text[k++]='[';text[k++]='0'+build_wood[build_kind]/10;text[k++]='0'+build_wood[build_kind]%10;

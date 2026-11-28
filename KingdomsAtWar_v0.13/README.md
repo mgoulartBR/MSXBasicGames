@@ -160,6 +160,11 @@ Cavaleiros deslocam-se mais rápido; aríetes, mais devagar. O combate dos espad
 | Cancelar obra/produção | Direito no rodapé | C |
 | Ponto de encontro | Direito no chão com edifício selecionado | X |
 | Câmera | Permanecer na borda do mapa | Setas |
+| Minimapa: mostrar/esconder | — | Tab |
+| Minimapa: mover a câmera / enviar a seleção | Esquerdo / direito no minimapa | Z / X com o cursor no minimapa |
+| Câmera no castelo | — | B |
+| Grupos de controle (1 a 5): guardar / chamar | — | Ctrl+número / número (duas vezes: centraliza a câmera) |
+| Som (música e efeitos) liga/desliga | — | P |
 | Perfil Classic/Advanced | — | Espaço |
 | Reiniciar depois da vitória ou derrota | — | Enter |
 

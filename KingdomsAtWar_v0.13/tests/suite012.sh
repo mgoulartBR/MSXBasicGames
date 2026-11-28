@@ -16,5 +16,6 @@ if [[ "$KAW_SUITE_VARIANT" == V9990P1 ]]; then
  python3 tests/run_mouse.py V9990P1 edge_bottom.tcl 1
  KAW_TEST_SCRIPT=stale_heal.tcl python3 tests/run_tests.py V9990P1
  KAW_MENU=1 KAW_OBJ=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=music.tcl python3 tests/run_tests.py V9990P1
+ KAW_MENU=1 KAW_OBJ=1 KAW_MACHINE=C-BIOS_MSX2+ KAW_TEST_SCRIPT=ui_polish.tcl python3 tests/run_tests.py V9990P1
  python3 tests/verify_fog_p1.py
 fi

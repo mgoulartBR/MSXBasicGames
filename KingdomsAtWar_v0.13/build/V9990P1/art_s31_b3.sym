@@ -398,7 +398,7 @@ Symbol Table
   7 _sim_scan                                                       000019D0 R
     _sim_ticks                                                      ******** GX
   7 _simulate                                                       00001A76 GR
-  1 _simulate_pf_20000_1923                                         0000003C R
+  1 _simulate_pf_20000_1928                                         0000003C R
     _sprites_dirty                                                  ******** GX
   1 _ss_i                                                           0000003A R
   1 _ss_stage                                                       0000003B R

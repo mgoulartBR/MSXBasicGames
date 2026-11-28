@@ -7,7 +7,7 @@ void input(void) __banked {
  if(commands&~command_last)combat_stop((commands&2)?1:0);command_last=commands;
  poll_input();keys=raw_down|raw_latched;last_keys&=~raw_latched;raw_latched=0;
  x+=raw_dx;y+=raw_dy;raw_dx=raw_dy=0;
- cam_keys=0;
+ cam_keys=0;ui_keys();
  /* Keyboard cursor: one 3-pixel step per video frame, not per loop pass (the loop is free-running now). */
  {u16 ct=video_clock();if(ct!=cursor_tick) {cursor_tick=ct;
  if(KP(KEY_J)) x-=3;
@@ -49,12 +49,14 @@ void input(void) __banked {
    else if(building_selected && buildings[building_selected-1].type==2)train_kind(1+(left_x<80?0:left_x<152?1:2));
    else train_start();
   }
+  else if(mm_hit(left_x,left_y))mm_click(left_x,left_y,0);
   else if(left_y<160) {if(placement_mode){place_x=left_wx>>4;place_y=left_wy>>4;placement_confirm();}else drag_begin();}
  }
  if((keys&4) && !(last_keys&4)) {
   if(drag_down){drag_down=0;sprites_dirty=3;}
   if(placement_mode) {placement_mode=0;hud_dirty=3;sprites_dirty=3;}
   else if(mouse_y>=200 && mouse_y<208)production_cancel();
+  else if(mm_hit((u8)mouse_x,(u8)mouse_y))mm_click((u8)mouse_x,(u8)mouse_y,1);
   else if(mouse_y<160) {
    u8 tx=(cam_x+mouse_x)>>4,ty=(cam_y+mouse_y)>>4;
    if(building_selected && buildings[building_selected-1].state==2 && passable(tx,ty)) {buildings[building_selected-1].rallyx=tx;buildings[building_selected-1].rallyy=ty;}

@@ -18,7 +18,7 @@ Symbol Table
     _ai_kind                                                        ******** GX
     _ai_launch                                                      ******** GX
     _ai_left                                                        ******** GX
-  7 _ai_move                                                        0000106D GR
+  7 _ai_move                                                        0000107A GR
     _ai_route_n                                                     ******** GX
     _ai_rx                                                          ******** GX
     _ai_ry                                                          ******** GX
@@ -28,14 +28,14 @@ Symbol Table
     _ai_step                                                        ******** GX
     _ai_stuck                                                       ******** GX
     _ai_timer                                                       ******** GX
-  7 _ai_unit                                                        00000BBF R
+  7 _ai_unit                                                        00000BCC R
     _ai_wave                                                        ******** GX
     _ai_wood                                                        ******** GX
     _ai_wpi                                                         ******** GX
     _attack_cooldown                                                ******** GX
     _attack_flash                                                   ******** GX
     _battle_t                                                       ******** GX
-  7 _bdist                                                          00000A23 R
+  7 _bdist                                                          00000A30 R
     _build_gold                                                     ******** GX
     _build_wood                                                     ******** GX
     _building_count                                                 ******** GX
@@ -57,7 +57,7 @@ Symbol Table
     _enemy_kills                                                    ******** GX
   7 _extra_kind                                                     0000010D R
   7 _face_of                                                        00000119 R
-  7 _find_target                                                    00000A91 R
+  7 _find_target                                                    00000A9E R
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 2
 Hexadecimal [32-Bits]
 
@@ -369,6 +369,7 @@ Symbol Table
     _tile                                                           ******** GX
     _tile_set                                                       ******** GX
     _tower_cooldown                                                 ******** GX
+    _ui_note_t                                                      ******** GX
     _unit_count                                                     ******** GX
     _unit_facing                                                    ******** GX
     _unit_frame                                                     ******** GX
@@ -388,6 +389,7 @@ Symbol Table
     b_end_check                                                 =   00000017 G
     b_units_prep_reset                                              ******** GX
 
+
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
@@ -400,7 +402,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG23                                     size     108E   flags    0
+   7 _SEG23                                     size     109B   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

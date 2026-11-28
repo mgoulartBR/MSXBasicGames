@@ -8,7 +8,7 @@
 #include "music_data.h"
 typedef struct {u8 on,delay,bank,lbank;u16 ptr,lptr;} MStream;
 MStream ms,sx;
-u8 fm_ok,music_cur,sfx_cur,battle_t;
+u8 fm_ok,fm_found,music_cur,sfx_cur,battle_t;
 extern u8 g_Bank3Segment;
 static void opll_w(u16 rv) __z88dk_fastcall __naked { /* L = register, H = value */
  (void)rv;

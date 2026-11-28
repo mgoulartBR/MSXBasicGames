@@ -111,6 +111,7 @@ u8 graphics_slot,bios_slot,asset_bank;
 #include "music.h"
 /* Sample edges while the VDP is busy so short clicks survive a slow frame. */
 /* One matrix scan per video frame; every key test below is a constant-mask lookup. */
+u8 ui_note_id,ui_note_t;
 u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
 extern u8 game_over;
 #define KP(k) ((kbrow[KEY_ROW(k)]&(u8)(1<<KEY_IDX(k)))==0)
@@ -387,7 +388,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
- ms.on=sx.on=0;music_cur=255;fm_ok=music_detect();
+ ms.on=sx.on=0;music_cur=255;fm_found=fm_ok=music_detect();ui_note_t=0;
  map_w=map_h=32;nav_x0=nav_y0=0;lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
@@ -412,7 +413,7 @@ void main(void) {
   if(!first || !menu_auto){game_reset(mission_n);video_game_reset();} /* tests (menu_auto) keep the boot state */
   first=0;
   screen_clear();video_hud_band();hud_erase_count=0;mouse_x=mouse_y=56;
-  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;battle_t=0;music_play(SONG_CALM);
+  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;battle_t=0;minimap_init();music_play(SONG_CALM);
   res=0;
   while(!res) {
    u16 now,dt;
@@ -430,7 +431,7 @@ void main(void) {
    else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}
    video_stream();camera_update(dt);video_scroll_update();
    if(sprites_dirty) {video_sprites();sprites_dirty=0;}
-   hud();
+   hud();minimap_tick();
   }
   if(res==1)++mission_n;
   else if(res==3){mission_n=0;end_show(SCR_TITLE);menu_run();}

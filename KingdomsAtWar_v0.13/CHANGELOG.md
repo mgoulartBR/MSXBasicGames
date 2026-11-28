@@ -294,3 +294,9 @@ FREE mostra 0/4 porque os quatro lugares disponíveis no motor atual estão ocup
 - Gatilhos: titulo no menu/briefing, tranquila na missao, batalha quando um inimigo esta a vista (e 12 s depois), fanfarras de vitoria/derrota/fim; efeitos em selecao, ordem, golpe, flecha, morte, deposito de ouro/madeira, obra pronta, treino, construcao, erro de recurso/posicao e lancamento de onda.
 - Tempo: os fluxos assumem 60 quadros/s (tick = quadro da V9990, que o jogo fixa em NTSC).
 - Teste `music.tcl` (usa `KAW_MACHINE=C-BIOS_MSX2+`, que traz o MSX-Music do C-BIOS): deteccao, nota inicial e andamento da musica do titulo, baixo e bateria, efeito no canal 5, calma -> batalha -> vitoria. `music_render.tcl` grava as trilhas em WAV (`../musica/`).
+
+## v0.17 - polimento da interface
+- **Minimapa** (`src/banks/art_s70_b3.c`, Tab liga/desliga): 48x48 px no canto inferior direito da vista, desenhado direto no bitmap da camada A. Base = terreno onde ja explorado (escuro onde nao), predios, unidades humanas e inimigos a vista, retangulo da camera. Clique esquerdo leva a camera ao ponto; clique direito envia a selecao (`order_at`, usa as rotas parciais dos mapas grandes). Custo: so refaz linhas cujo mapa mudou (`mm_dirty`, marcado por `tile_set` e `fogx_set`) e so reescreve no VRAM as linhas que mudaram; leitura de VRAM em Z80 (INIR). Medido no openMSX: -2% de quadros parado, -4% com um soldado explorando.
+- **Grupos de controle** 1..5 (Ctrl+n guarda, n chama; chamar o grupo ja selecionado em ate 0,5 s centraliza a camera), **B** = camera no castelo, **P** = som liga/desliga (aviso na linha de contexto do HUD, 4 idiomas; "SEM MSX-MUSIC" se nao houver FM).
+- Teclas lidas direto da matriz (`kbrow`), `input()` chama `ui_keys()`.
+- Teste `ui_polish.tcl` (KAW_MACHINE=C-BIOS_MSX2+): desenho do minimapa, castelo no minimapa, clique move a camera, Tab, B, grupos, P. RAM +2,5 KB (buffers do minimapa), codigo fixo 9C32.

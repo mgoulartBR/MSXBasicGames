@@ -8,11 +8,11 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        000018FC R
-  7 ___str_1                                                        000018FD R
-  7 ___str_2                                                        00001905 R
-  7 ___str_3                                                        0000190D R
-  7 ___str_4                                                        00001915 R
+  7 ___str_0                                                        000018B6 R
+  7 ___str_1                                                        000018B7 R
+  7 ___str_2                                                        000018BF R
+  7 ___str_3                                                        000018C7 R
+  7 ___str_4                                                        000018CF R
     __divuchar                                                      ******** GX
     __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
@@ -391,6 +391,8 @@ Symbol Table
     _tr                                                             ******** GX
   7 _train_kind                                                     000008DB GR
   7 _train_start                                                    00000A2A GR
+    _ui_note_id                                                     ******** GX
+    _ui_note_t                                                      ******** GX
     _unit_build                                                     ******** GX
     _unit_count                                                     ******** GX
     _unit_facing                                                    ******** GX
@@ -416,13 +418,13 @@ Symbol Table
     b_build_unlocked                                            =   0000001D G
     b_building_order                                            =   0000001D G
     b_building_refresh                                          =   0000001D G
-    b_combat_context                                                ******** GX
-    b_group_context                                                 ******** GX
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_combat_context                                                ******** GX
+    b_group_context                                                 ******** GX
     b_has_building                                              =   0000001D G
     b_hud_actions                                               =   0000001D G
     b_hud_context_text                                          =   0000001D G
@@ -459,7 +461,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG29                                     size     191D   flags    0
+   7 _SEG29                                     size     18D7   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

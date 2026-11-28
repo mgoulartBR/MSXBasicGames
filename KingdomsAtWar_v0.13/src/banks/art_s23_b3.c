@@ -110,6 +110,7 @@ void end_check(void) __banked {
  u8 i;
  if(game_over)return;
  music_mood();
+ if(ui_note_t) {--ui_note_t;hud_dirty=3;}
  if(!end_enabled)return;
  if(!buildings[0].state || !building_hp[0])game_over=2;
  else {
