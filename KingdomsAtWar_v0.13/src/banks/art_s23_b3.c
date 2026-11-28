@@ -93,15 +93,24 @@ void ai_second(void) __banked {
  }
  if(!ai_state[0] && !ai_state[1] && unit_hp[8] && unit_hp[9] && game_seconds>=ai_launch) {
   ai_state[0]=ai_state[1]=1;if(!ai_state[2])ai_state[2]=1;if(!ai_state[3])ai_state[3]=1;
-  ++ai_wave;ai_launch=game_seconds+mis.wave_gap;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;ai_wpi[0]=ai_wpi[1]=ai_wpi[2]=ai_wpi[3]=0;
+  sfx_play(SFX_ALARM);++ai_wave;ai_launch=game_seconds+mis.wave_gap;ai_stuck[0]=ai_stuck[1]=ai_stuck[2]=ai_stuck[3]=0;ai_wpi[0]=ai_wpi[1]=ai_wpi[2]=ai_wpi[3]=0;
  }
 }
 /* Once per second: the game ends when a keep falls (defeat wins a tie). The simulation then stops (simulate). */
 /* Mission objectives (tools/campaign.py): the keep falling is always a defeat; the objective decides the victory. */
 static u8 built_count(u8 type) {u8 i,n=0;for(i=0;i<building_count;++i)if(!building_owner[i] && buildings[i].state==2 && buildings[i].type==type)++n;return n;}
+/* Music follows the situation: battle theme while an enemy is in sight (and 12 s after), calm theme otherwise. */
+static void music_mood(void) {
+ u8 i,vis=0;
+ for(i=N;i<RN && !vis;++i)if(unit_hp[i] && fog_at(units[i].x,units[i].y)==2)vis=1;
+ if(vis)battle_t=12;
+ if(battle_t) {--battle_t;music_play(SONG_BATTLE);} else music_play(SONG_CALM);
+}
 void end_check(void) __banked {
  u8 i;
- if(game_over || !end_enabled)return;
+ if(game_over)return;
+ music_mood();
+ if(!end_enabled)return;
  if(!buildings[0].state || !building_hp[0])game_over=2;
  else {
   switch(mis.obj) {

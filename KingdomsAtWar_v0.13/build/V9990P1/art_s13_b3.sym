@@ -305,15 +305,16 @@ Symbol Table
 
     _repair_active                                                  ******** GX
     _repair_healed                                                  ******** GX
-  7 _repair_order                                                   00000531 GR
+  7 _repair_order                                                   0000053F GR
     _repair_pending                                                 ******** GX
     _repair_spent                                                   ******** GX
     _repair_target                                                  ******** GX
-  7 _repair_tick                                                    00000677 GR
+  7 _repair_tick                                                    00000685 GR
     _repair_timer                                                   ******** GX
     _requested                                                      ******** GX
     _resource_empty                                                 ******** GX
     _selection_mask                                                 ******** GX
+    _sfx_play                                                       ******** GX
     _sim_ticks                                                      ******** GX
     _sprites_dirty                                                  ******** GX
     _stock_get                                                      ******** GX
@@ -344,6 +345,7 @@ Symbol Table
     b_work_route                                                    ******** GX
     b_work_stop                                                     ******** GX
 
+
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
@@ -356,7 +358,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG13                                     size      8D0   flags    0
+   7 _SEG13                                     size      8DE   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

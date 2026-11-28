@@ -206,6 +206,7 @@ otv_loop:
 static void irq_p1(void) {
  if(io_int&1) {
   io_int=1;*((volatile u8*)0xF3F6)=255;
+  music_isr();
   io_vset(SPAT);io_vram=(u8)(mouse_y-1);io_vram=CELL_PTR;io_vram=mouse_x;io_vram=0;
   if(p1_ready) {
    io_rw(21,(u8)p1_by);io_rw(22,r22|(u8)((p1_by>>8)&1));io_rw(23,(u8)(p1_bx&7));io_rw(24,(u8)((p1_bx>>3)&63));

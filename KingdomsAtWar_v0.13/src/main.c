@@ -108,6 +108,7 @@ const u8 cursor[] = {128,192,224,240,248,252,254,248,216,140,12,6,0,0,0,0,0,0,0,
 #include "rom_mapper.h"
 u8 graphics_slot,bios_slot,asset_bank;
 #include "asset_codec.h"
+#include "music.h"
 /* Sample edges while the VDP is busy so short clicks survive a slow frame. */
 /* One matrix scan per video frame; every key test below is a constant-mask lookup. */
 u8 kbrow[9]={255,255,255,255,255,255,255,255,255};
@@ -172,8 +173,8 @@ void bank_support(void) __naked {
  .globl get_bank
  .globl _g_Bank3Segment
 set_bank::
+ ld (_g_Bank3Segment),a /* variable first: the music ISR re-maps bank 3 from it, so an interrupt in between still restores the new bank */
  ld (#0x7800),a
- ld (_g_Bank3Segment),a
  ret
 get_bank::
  ld a,(_g_Bank3Segment)
@@ -386,6 +387,7 @@ void main(void) {
  __endasm;
  g_Bank3Segment=3; /* crt0 leaves the variable at 0 while segment 3 is mapped; asset_read restores it */
  v9990_check();
+ ms.on=sx.on=0;music_cur=255;fm_ok=music_detect();
  map_w=map_h=32;nav_x0=nav_y0=0;lang=0;menu_auto=0;side=0;end_t0=0;mission_n=0;enemy_kills=0;left_seen=0;drag_down=drag_moved=0;
  raw_command_down=raw_command_latched=0;
  raw_down=raw_latched=0;raw_tick=65535;raw_dx=raw_dy=0;
@@ -403,14 +405,14 @@ void main(void) {
  video_init(); ++full_redraws;
  mouse_port=MOUSE_PORT_1;mouse_present=(Input_Detect(INPUT_PORT1)==INPUT_TYPE_MOUSE);
  if(!mouse_present && Input_Detect(INPUT_PORT2)==INPUT_TYPE_MOUSE) {mouse_port=MOUSE_PORT_2;mouse_present=1;}
- video_menu_enable();menu_run();
+ video_menu_enable();music_play(SONG_TITLE);menu_run();
  {u8 first=1,res;
  for(;;) {
-  briefing(mission_n);
+  music_play(SONG_TITLE);briefing(mission_n);
   if(!first || !menu_auto){game_reset(mission_n);video_game_reset();} /* tests (menu_auto) keep the boot state */
   first=0;
   screen_clear();video_hud_band();hud_erase_count=0;mouse_x=mouse_y=56;
-  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;
+  video_sprites();hud_init();video_enable();last_time=video_clock();fog_last=last_time-FOG_GAP;battle_t=0;music_play(SONG_CALM);
   res=0;
   while(!res) {
    u16 now,dt;
@@ -422,7 +424,7 @@ void main(void) {
    accumulator+=dt;
    while(accumulator>=2) {simulate();accumulator-=2;}
    /* After a victory or defeat: a short pause on the final scene, then the end screen. */
-   if(game_over){if(!end_t0)end_t0=now|1;else if((u16)(now-end_t0)>=90){res=end_screen();end_t0=0;}} else end_t0=0;
+   if(game_over){if(!end_t0){end_t0=now|1;music_play(game_over==1?(mission_n+1==mission_total?SONG_ENDING:SONG_VICTORY):SONG_DEFEAT);}else if((u16)(now-end_t0)>=90){res=end_screen();end_t0=0;}} else end_t0=0;
    /* Sight is recomputed at most every FOG_GAP video ticks; the reveal lags by a fraction of a second. */
    if(fog_pending){fog_pending=fog_apply();}
    else if(fog_refresh && (u16)(now-fog_last)>=FOG_GAP){fog_last=now;fog_pending=fog_update();}

@@ -256,3 +256,6 @@ extern u8 fog_build_dirty,repair_pending;
 void asset_begin(const Asset* a);void asset_read(u8* dst,u8 count);
 extern u8 tile_buffer[128],boot_poses,cache_tick,p1_ready,ord_n,sused,rc_n,rw_n,rw_lock,rw_dirty,rf_cx,rf_cy;extern u16 frame_uploads,rendered_frames;
 extern u8 wv_x0,wv_y0,wv_x1,wv_y1;void hud_name(u8 col,u8 row,u16 n);void p1_cell(u8 x,u8 y);void pose_pos(u8 key,u8 sz,u16* x,u16* y);void reset_caches(void);
+
+#include "music_ids.h"
+extern u8 battle_t;void music_play(u8 id);void music_stop(void);void sfx_play(u8 id);

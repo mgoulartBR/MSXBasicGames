@@ -25,23 +25,23 @@ Creating crt0 config file...
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/crt0/crt0_rom_mapper.asm using SDASZ80 ASM compiler...[0m
 [92mSuccess[0m
 [94mCompiling ./main.c using SDCC C compiler...[0m
-In file included from ./main.c:228:
-./video.h:264:10: warning: missing terminating ' character
-  264 |  ex af,af'
+In file included from ./main.c:229:
+./video.h:265:10: warning: missing terminating ' character
+  265 |  ex af,af'
       |          ^
-./video.h:284:10: warning: missing terminating ' character
-  284 |  ex af,af'
+./video.h:285:10: warning: missing terminating ' character
+  285 |  ex af,af'
       |          ^
-./video.h:287:10: warning: missing terminating ' character
-  287 |  ex af,af'
+./video.h:288:10: warning: missing terminating ' character
+  288 |  ex af,af'
       |          ^
-./video.h:1159: warning 85: in function video_sprites unreferenced local variable : 'j'
-./video.h:1235: warning 85: in function video_game_reset unreferenced local variable : 'x'
-./video.h:1235: warning 85: in function video_game_reset unreferenced local variable : 'y'
-./video.h:1274: warning 85: in function video_scroll_update unreferenced local variable : 'nx0'
-./video.h:1274: warning 85: in function video_scroll_update unreferenced local variable : 'ny0'
-./video.h:1274: warning 85: in function video_scroll_update unreferenced local variable : 'nx1'
-./video.h:1274: warning 85: in function video_scroll_update unreferenced local variable : 'ny1'
+./video.h:1160: warning 85: in function video_sprites unreferenced local variable : 'j'
+./video.h:1236: warning 85: in function video_game_reset unreferenced local variable : 'x'
+./video.h:1236: warning 85: in function video_game_reset unreferenced local variable : 'y'
+./video.h:1275: warning 85: in function video_scroll_update unreferenced local variable : 'nx0'
+./video.h:1275: warning 85: in function video_scroll_update unreferenced local variable : 'ny0'
+./video.h:1275: warning 85: in function video_scroll_update unreferenced local variable : 'nx1'
+./video.h:1275: warning 85: in function video_scroll_update unreferenced local variable : 'ny1'
 [92mSuccess[0m
 [94mCompiling /home/user/aoineko-fr/msxgl/engine/src/system.c using SDCC C compiler...[0m
 [92mSuccess[0m
@@ -121,15 +121,15 @@ Segment found: banks/art_s25_b3.c (addr: 0019A000h)
 [92mSuccess[0m
 Segment found: banks/art_s26_b3.c (addr: 001AA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c using SDCC C compiler...[0m
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:348: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:348: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:350: warning 84: 'auto' variable 'n' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:350: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:350: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:354: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:354: warning 84: 'auto' variable 'x' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:357: warning 84: 'auto' variable 'y' may be used before initialization
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:357: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:349: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:349: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:351: warning 84: 'auto' variable 'n' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:351: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:351: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:355: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:355: warning 84: 'auto' variable 'x' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:358: warning 84: 'auto' variable 'y' may be used before initialization
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s26_b3.c:358: warning 84: 'auto' variable 'x' may be used before initialization
 [92mSuccess[0m
 Segment found: banks/art_s27_b3.c (addr: 001BA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s27_b3.c using SDCC C compiler...[0m
@@ -216,9 +216,9 @@ Segment found: banks/art_s53_b3.c (addr: 0035A000h)
 [92mSuccess[0m
 Segment found: banks/art_s54_b3.c (addr: 0036A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c using SDCC C compiler...[0m
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:253: warning 85: in function video_init unreferenced local variable : 'y'
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:253: warning 85: in function video_init unreferenced local variable : 'b'
-/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:253: warning 85: in function video_init unreferenced local variable : 'k'
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:268: warning 85: in function video_init unreferenced local variable : 'y'
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:268: warning 85: in function video_init unreferenced local variable : 'b'
+/home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s54_b3.c:268: warning 85: in function video_init unreferenced local variable : 'k'
 [92mSuccess[0m
 Segment found: banks/art_s55_b3.c (addr: 0037A000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s55_b3.c using SDCC C compiler...[0m
@@ -244,6 +244,27 @@ Segment found: banks/art_s61_b3.c (addr: 003DA000h)
 Segment found: banks/art_s62_b3.c (addr: 003EA000h)
 [94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s62_b3.c using SDCC C compiler...[0m
 [92mSuccess[0m
+Segment found: banks/art_s63_b3.c (addr: 003FA000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s63_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s64_b3.c (addr: 0040A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s64_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s65_b3.c (addr: 0041A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s65_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s66_b3.c (addr: 0042A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s66_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s67_b3.c (addr: 0043A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s67_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s68_b3.c (addr: 0044A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s68_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
+Segment found: banks/art_s69_b3.c (addr: 0045A000h)
+[94mCompiling /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/banks/art_s69_b3.c using SDCC C compiler...[0m
+[92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ LINK                                                                      │
@@ -262,7 +283,7 @@ published under GNU General Public License (GPL)
 MSXhex 1.0.0 - Convert an Intel HEX file to binary
  Start=00004000h Size=00100000h Bank=00002000h Pad=FFh
 Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
- Seg[0000]: Lower=4000h Higher=97EFh Size=22512 (Holes=0)
+ Seg[0000]: Lower=4000h Higher=9BCFh Size=23504 (Holes=0)
  Seg[0004]: Lower=A000h Higher=BEF6h Size=7927 (Holes=0)
  Seg[0005]: Lower=A000h Higher=BF45h Size=8006 (Holes=0)
  Seg[0006]: Lower=A000h Higher=BEB3h Size=7860 (Holes=0)
@@ -272,7 +293,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0010]: Lower=A000h Higher=A000h Size=1 (Holes=0)
  Seg[0011]: Lower=A000h Higher=A717h Size=1816 (Holes=0)
  Seg[0012]: Lower=A000h Higher=A7EFh Size=2032 (Holes=0)
- Seg[0013]: Lower=A000h Higher=A8CFh Size=2256 (Holes=0)
+ Seg[0013]: Lower=A000h Higher=A8DDh Size=2270 (Holes=0)
  Seg[0015]: Lower=A000h Higher=A000h Size=1 (Holes=0)
  Seg[0016]: Lower=A000h Higher=BFE7h Size=8168 (Holes=0)
  Seg[0017]: Lower=A000h Higher=BFD4h Size=8149 (Holes=0)
@@ -281,14 +302,14 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0020]: Lower=A000h Higher=BE61h Size=7778 (Holes=0)
  Seg[0021]: Lower=A000h Higher=A5ADh Size=1454 (Holes=0)
  Seg[0022]: Lower=A000h Higher=BFC0h Size=8129 (Holes=0)
- Seg[0023]: Lower=A000h Higher=B027h Size=4136 (Holes=0)
+ Seg[0023]: Lower=A000h Higher=B08Dh Size=4238 (Holes=0)
  Seg[0024]: Lower=A000h Higher=A461h Size=1122 (Holes=0)
  Seg[0025]: Lower=A000h Higher=A111h Size=274 (Holes=0)
- Seg[0026]: Lower=A000h Higher=BBD5h Size=7126 (Holes=0)
+ Seg[0026]: Lower=A000h Higher=BBE6h Size=7143 (Holes=0)
  Seg[0027]: Lower=A000h Higher=B851h Size=6226 (Holes=0)
  Seg[0028]: Lower=A000h Higher=A698h Size=1689 (Holes=0)
- Seg[0029]: Lower=A000h Higher=B8FEh Size=6399 (Holes=0)
- Seg[0030]: Lower=A000h Higher=B463h Size=5220 (Holes=0)
+ Seg[0029]: Lower=A000h Higher=B91Ch Size=6429 (Holes=0)
+ Seg[0030]: Lower=A000h Higher=B46Ch Size=5229 (Holes=0)
  Seg[0031]: Lower=A000h Higher=BFF3h Size=8180 (Holes=0)
  Seg[0032]: Lower=A000h Higher=B668h Size=5737 (Holes=0)
  Seg[0033]: Lower=A000h Higher=BB67h Size=7016 (Holes=0)
@@ -312,7 +333,7 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0051]: Lower=A000h Higher=BB29h Size=6954 (Holes=0)
  Seg[0052]: Lower=A000h Higher=A452h Size=1107 (Holes=0)
  Seg[0053]: Lower=A000h Higher=A388h Size=905 (Holes=0)
- Seg[0054]: Lower=A000h Higher=AD7Bh Size=3452 (Holes=0)
+ Seg[0054]: Lower=A000h Higher=AE38h Size=3641 (Holes=0)
  Seg[0055]: Lower=A000h Higher=A821h Size=2082 (Holes=0)
  Seg[0056]: Lower=A000h Higher=BEE8h Size=7913 (Holes=0)
  Seg[0057]: Lower=A000h Higher=BF76h Size=8055 (Holes=0)
@@ -321,7 +342,14 @@ Saving /home/user/MSXBasicGames/KingdomsAtWar_v0.13/src/out/KAW9990P1.rom...
  Seg[0060]: Lower=A000h Higher=BFC4h Size=8133 (Holes=0)
  Seg[0061]: Lower=A000h Higher=BDFDh Size=7678 (Holes=0)
  Seg[0062]: Lower=A000h Higher=AE78h Size=3705 (Holes=0)
- Total size: 339996
+ Seg[0063]: Lower=A000h Higher=A97Ah Size=2427 (Holes=0)
+ Seg[0064]: Lower=A000h Higher=A700h Size=1793 (Holes=0)
+ Seg[0065]: Lower=A000h Higher=AC7Bh Size=3196 (Holes=0)
+ Seg[0066]: Lower=A000h Higher=A0DAh Size=219 (Holes=0)
+ Seg[0067]: Lower=A000h Higher=A09Eh Size=159 (Holes=0)
+ Seg[0068]: Lower=A000h Higher=A4D0h Size=1233 (Holes=0)
+ Seg[0069]: Lower=A000h Higher=A198h Size=409 (Holes=0)
+ Total size: 350785
 [92mSuccess[0m
 
 ┌───────────────────────────────────────────────────────────────────────────┐

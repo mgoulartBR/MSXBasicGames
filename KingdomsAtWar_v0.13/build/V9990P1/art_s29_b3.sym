@@ -8,11 +8,11 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     ___sdcc_bcall_ehl                                               ******** GX
-  7 ___str_0                                                        000018DE R
-  7 ___str_1                                                        000018DF R
-  7 ___str_2                                                        000018E7 R
-  7 ___str_3                                                        000018EF R
-  7 ___str_4                                                        000018F7 R
+  7 ___str_0                                                        000018FC R
+  7 ___str_1                                                        000018FD R
+  7 ___str_2                                                        00001905 R
+  7 ___str_3                                                        0000190D R
+  7 ___str_4                                                        00001915 R
     __divuchar                                                      ******** GX
     __divuint                                                       ******** GX
     __moduchar                                                      ******** GX
@@ -39,7 +39,7 @@ Symbol Table
     _buildings                                                      ******** GX
     _cargo                                                          ******** GX
     _cargo_kind                                                     ******** GX
-  7 _cat                                                            00001398 R
+  7 _cat                                                            000013B6 R
     _combat_alive                                                   ******** GX
     _combat_context                                                 ******** GX
     _combat_target                                                  ******** GX
@@ -328,9 +328,9 @@ Symbol Table
     _group_context                                                  ******** GX
   7 _has_building                                                   00000000 GR
     _hud_action_cache                                               ******** GX
-  7 _hud_actions                                                    000013C1 GR
+  7 _hud_actions                                                    000013DF GR
     _hud_context                                                    ******** GX
-  7 _hud_context_text                                               00001334 GR
+  7 _hud_context_text                                               00001352 GR
     _hud_dirty                                                      ******** GX
     _hud_draw                                                       ******** GX
     _hud_progress                                                   ******** GX
@@ -355,9 +355,9 @@ Symbol Table
   7 _placement_valid                                                00000246 GR
   7 _population_free                                                0000007E GR
   7 _population_limit                                               00000041 GR
-  7 _production                                                     00000BCD GR
-  7 _production_cancel                                              00000A5D GR
-  7 _recruit_allowed                                                00000823 GR
+  7 _production                                                     00000BDE GR
+  7 _production_cancel                                              00000A6E GR
+  7 _recruit_allowed                                                0000082C GR
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 7
 Hexadecimal [32-Bits]
 
@@ -378,6 +378,7 @@ Symbol Table
     _selected                                                       ******** GX
     _selection_count                                                ******** GX
     _selection_mask                                                 ******** GX
+    _sfx_play                                                       ******** GX
     _shot_time                                                      ******** GX
     _sim_ticks                                                      ******** GX
     _sprites_dirty                                                  ******** GX
@@ -388,8 +389,8 @@ Symbol Table
     _tile_set                                                       ******** GX
     _tower_cooldown                                                 ******** GX
     _tr                                                             ******** GX
-  7 _train_kind                                                     000008D2 GR
-  7 _train_start                                                    00000A19 GR
+  7 _train_kind                                                     000008DB GR
+  7 _train_start                                                    00000A2A GR
     _unit_build                                                     ******** GX
     _unit_count                                                     ******** GX
     _unit_facing                                                    ******** GX
@@ -417,12 +418,12 @@ Symbol Table
     b_building_refresh                                          =   0000001D G
     b_combat_context                                                ******** GX
     b_group_context                                                 ******** GX
-    b_has_building                                              =   0000001D G
 ASxxxx Assembler V05.50.4+NoICE+SDCCmods-WIP-R14  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80 / R800)                               Page 8
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+    b_has_building                                              =   0000001D G
     b_hud_actions                                               =   0000001D G
     b_hud_context_text                                          =   0000001D G
     b_military_selected                                             ******** GX
@@ -458,7 +459,7 @@ Area Table
    4 _HOME                                      size        0   flags    0
    5 _GSINIT                                    size        0   flags    0
    6 _GSFINAL                                   size        0   flags    0
-   7 _SEG29                                     size     18FF   flags    0
+   7 _SEG29                                     size     191D   flags    0
    8 _INITIALIZER                               size        0   flags    0
    9 _CABS                                      size        0   flags    8
 

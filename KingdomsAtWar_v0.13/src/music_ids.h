@@ -1,0 +1,21 @@
+/* gerado por tools/music.py */
+#define SONG_COUNT 6
+#define SFX_COUNT 12
+#define SONG_TITLE 0
+#define SONG_CALM 1
+#define SONG_BATTLE 2
+#define SONG_VICTORY 3
+#define SONG_DEFEAT 4
+#define SONG_ENDING 5
+#define SFX_CLICK 0
+#define SFX_CONFIRM 1
+#define SFX_HIT 2
+#define SFX_ARROW 3
+#define SFX_BUILD 4
+#define SFX_DONE 5
+#define SFX_TRAINED 6
+#define SFX_GOLD 7
+#define SFX_WOOD 8
+#define SFX_ALARM 9
+#define SFX_DEATH 10
+#define SFX_ERROR 11

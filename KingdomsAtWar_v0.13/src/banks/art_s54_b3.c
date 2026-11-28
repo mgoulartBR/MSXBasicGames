@@ -130,6 +130,21 @@ static void cell_write(u8 cell,const u8* src16rows) {
 
 static void load_progress(u8 v) {u8 i;if(v>16)v=16;for(i=0;i<v;++i)hud_name(8+i,24,PA_SOLID+10);}
 
+/* Look for an MSX-MUSIC (YM2413) in every slot: the internal one shows APRLOPLL at 4018h, the FM-PAC cartridge PAC2OPLL (enabled through 7FF6h). */
+static u8 opll_ident(u8 slot) {
+ static const u8 id[4]={'O','P','L','L'};u8 i;
+ for(i=0;i<4;++i)if(BIOS_InterSlotRead(slot,0x401C+i)!=id[i])return 0;
+ if(BIOS_InterSlotRead(slot,0x4018)!='A')BIOS_InterSlotWrite(slot,0x7FF6,BIOS_InterSlotRead(slot,0x7FF6)|1);
+ return 1;
+}
+u8 music_detect(void) __banked {
+ u8 s,ss,n;
+ for(s=0;s<4;++s) {
+  u8 exp=(*(volatile u8*)(0xFCC1+s))&0x80;n=exp?4:1;
+  for(ss=0;ss<n;++ss)if(opll_ident(exp?(u8)(0x80|s|(ss<<2)):s))return 1;
+ }
+ return 0;
+}
 /* V9990 reset and P1 mode (once, before the world is written to VRAM). */
 void video_boot(void) __banked {
  VDP_SetMode(VDP_MODE_SCREEN5);VDP_SetFrequency(VDP_FREQ_60HZ);VDP_EnableVBlank(TRUE);VDP_EnableDisplay(FALSE);

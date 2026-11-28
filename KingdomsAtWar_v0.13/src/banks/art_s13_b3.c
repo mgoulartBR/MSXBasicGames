@@ -30,7 +30,7 @@ void economy(void) __banked {
     if(worker_kind[i]==2) {mine_phase[i]=1;mine_step[i]=0;}
     sprites_dirty=3;
    } else if(task==TO_BASE && work_adjacent(i,buildings[deposit_id[i]].x,buildings[deposit_id[i]].y)) {
-    if(cargo_kind[i]==1)wood+=cargo[i];else gold+=cargo[i];
+    if(cargo_kind[i]==1)wood+=cargo[i];else gold+=cargo[i];sfx_play(cargo_kind[i]==1?SFX_WOOD:SFX_GOLD);
     hud_dirty=3;
     if(cargo[i])++deposits;
     work_tries[i]=0;cargo[i]=0;cargo_kind[i]=0;worker_task[i]=worker_kind[i]?WAIT_NODE:0;work_timer[i]=0;

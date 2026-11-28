@@ -39,6 +39,7 @@ static void face(u8 i,u8 x,u8 y) {
  if(dx>0)unit_facing[i]=1;else if(dx<0)unit_facing[i]=3;else unit_facing[i]=dy<0?2:0;
 }
 static void die(u8 i) {
+ sfx_play(SFX_DEATH);
  unit_hp[i]=0;fog_refresh=1;attack_flash[i]=0;combat_target[i]=NONE;
  if(i<N) {repair_target[i]=NONE;repair_active&=~(1<<i);work_stop(i);requested[i]=retry_wait[i]=0;worker_task[i]=0;
   if(unit_build[i]!=NONE) {buildings[unit_build[i]].worker=NONE;unit_build[i]=NONE;builder_working&=~(1<<i);}
@@ -74,8 +75,8 @@ static void strike(u8 i,u8 t) {
   if(units[i].y>=y+n)y+=n-1;else if(units[i].y>=y)y=units[i].y;
   shot_x[i]=units[i].px+8;shot_y[i]=units[i].py+4;
   shot_dx[i]=(i16)x-units[i].x;shot_dy[i]=(i16)y-units[i].y;
-  shot_target[i]=t;shot_owner[i]=units[i].owner;shot_damage[i]=damage;shot_time[i]=16;shot_active|=((u16)1<<i);++combat_shots;
- } else combat_impact(t,damage,units[i].owner);
+  shot_target[i]=t;shot_owner[i]=units[i].owner;shot_damage[i]=damage;shot_time[i]=16;shot_active|=((u16)1<<i);++combat_shots;sfx_play(SFX_ARROW);
+ } else {sfx_play(SFX_HIT);combat_impact(t,damage,units[i].owner);}
  sprites_dirty=3; /* the HUD only shows the selected unit/building: combat_impact marks it dirty when that one is hit */
 }
 void combat_init(void) __banked {

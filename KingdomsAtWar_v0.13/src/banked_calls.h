@@ -115,5 +115,5 @@ u8 end_screen(void) __banked;
 void mission_load(u8 m) __banked;void game_reset(u8 m) __banked;void briefing(u8 m) __banked;
 void tile_set(u8 x,u8 y,u8 t);void art_set(u8 x,u8 y,u8 a);u8 stock_get(u8 x,u8 y);void stock_set(u8 x,u8 y,u8 n);u8 fmem_get(u8 x,u8 y);void fmem_set(u8 x,u8 y,u8 a);void fmem_clear(void);void map_row_put(u32 base_sel,u8 y,const u8* src);
 void video_init(void) __banked;
-void video_boot(void) __banked;
+void video_boot(void) __banked;u8 music_detect(void) __banked;
 void map_window_load(void);void map_load(u8 m) __banked;u8 fogx_get(u8 x,u8 y);void fogx_set(u8 x,u8 y,u8 v);void map_clear_fog(void);void video_scroll_update(void);

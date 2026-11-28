@@ -67,13 +67,13 @@ void placement_choose(u8 kind) __banked {
 void placement_toggle(void) __banked {placement_choose(placement_mode?(build_kind==7?1:build_kind+1):build_kind);}
 void placement_confirm(void) __banked {
  Building* b;u8 id;
- if(!WORKER(place_worker) || !placement_valid(place_x,place_y))return;
+ if(!WORKER(place_worker) || !placement_valid(place_x,place_y)) {sfx_play(SFX_ERROR);return;}
  for(id=1;id<BMAX;++id)if(!buildings[id].state)break;
  building_owner[id]=0;building_hp[id]=96;tower_cooldown[id]=0;
  b=&buildings[id];b->type=build_kind;b->state=1;b->x=place_x;b->y=place_y;b->worker=NONE;
  b->remaining=build_kind==2?180:240;b->training=0;b->time=0;b->rallyx=place_x;b->rallyy=place_y+building_size(build_kind);
  if(id>=building_count)building_count=id+1;
- wood-=build_wood[build_kind];gold-=build_gold[build_kind];placement_mode=0;
+ wood-=build_wood[build_kind];gold-=build_gold[build_kind];placement_mode=0;sfx_play(SFX_BUILD);
  building_refresh(id);build_assign(id,place_worker);hud_dirty=3;sprites_dirty=3;
 }
 u8 recruit_allowed(u8 id,u8 kind) __banked {
@@ -93,7 +93,7 @@ void train_kind(u8 kind) __banked {
   u8 j;for(j=0;j<building_count;++j)if(buildings[j].training==7)return;
   if(wood<16 || gold<16)return;wood-=16;gold-=16;b->time=180;
  } else {
-  if(!population_free() || wood<recruit_wood[kind] || gold<recruit_gold[kind])return;
+  if(!population_free() || wood<recruit_wood[kind] || gold<recruit_gold[kind]) {sfx_play(SFX_ERROR);return;}
   wood-=recruit_wood[kind];gold-=recruit_gold[kind];b->time=kind==0?90:kind>=4?180:120;
  }
  b->training=kind+1;hud_dirty=3;
@@ -127,7 +127,7 @@ void production(void) __banked {
     if(work_adjacent(who,b->x,b->y)) {
      builder_working|=1<<who;
      if(b->remaining && !(--b->remaining%18))hud_dirty=3;
-     if(!b->remaining) {b->state=2;unit_build[who]=NONE;b->worker=NONE;builder_working&=~(1<<who);building_refresh(id);hud_dirty=3;}
+     if(!b->remaining) {sfx_play(SFX_DONE);b->state=2;unit_build[who]=NONE;b->worker=NONE;builder_working&=~(1<<who);building_refresh(id);hud_dirty=3;}
     } else if(!(sim_ticks%30))work_route(who,b->x,b->y);
    }
   }
@@ -150,7 +150,7 @@ void production(void) __banked {
     unit_walk_dist[who]=unit_walk_phase[who]=0;requested[who]=retry_wait[who]=retry_left[who]=unit_facing[who]=unit_frame[who]=worker_task[who]=mine_phase[who]=mine_step[who]=cargo[who]=cargo_kind[who]=worker_kind[who]=work_timer[who]=0;
     work_tries[who]=0;deposit_id[who]=0;
    }
-   if(who==unit_count)++unit_count;b->training=0;hud_dirty=3;sprites_dirty=3;
+   if(who==unit_count)++unit_count;sfx_play(SFX_TRAINED);b->training=0;hud_dirty=3;sprites_dirty=3;
    if(free_at(b->rallyx,b->rallyy,who))order_one(who,b->rallyx,b->rallyy);
    break;
   }

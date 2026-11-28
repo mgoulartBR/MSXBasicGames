@@ -142,7 +142,7 @@ void select_at(u16 wx,u16 wy,u8 additive) __banked {
   }
  }
  if(hit==NONE && bid!=NONE) {selection_mask=0;building_selected=bid+1;selection_update();return;}
- if(!additive)selection_mask=0;if(hit!=NONE)selection_mask^=1<<hit;selection_update();
+ if(!additive)selection_mask=0;if(hit!=NONE) {selection_mask^=1<<hit;sfx_play(SFX_CLICK);}selection_update();
 }
 u8 goal_free(u8 x,u8 y,u8 id,u8 assigned) __banked {
  u8 j;
@@ -160,6 +160,7 @@ void order_at(u8 x,u8 y) __banked {
  i8 dx,dy;
  i16 gx,gy;
  if(!selection_mask)return;
+ sfx_play(SFX_CONFIRM);
  enemy_selected=NONE;for(i=0;i<unit_count;++i)if(unit_hp[i] && (selection_mask&(1<<i))) {combat_target[i]=NONE;stance[i]=0;auto_hx[i]=255;if(WORKER(i)){repair_target[i]=NONE;repair_timer[i]=0;repair_active&=~(1<<i);}}
  if((fog_at(x,y)==2 && building_order(x,y)) || economy_order(x,y))return;
  ++group_orders;
